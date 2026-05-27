@@ -263,9 +263,14 @@ export async function insertLineItemsForTransaction(
           ? "($14::date)::timestamptz"
           : "($14::timestamptz)";
     // ends_at: only computed when the line carries a duration; otherwise NULL.
+    // The no-duration branch still REFERENCES $8 (total units) so Postgres can
+    // determine its type — $8 is always bound in `params`, and a param bound
+    // but never referenced raises "could not determine data type of parameter
+    // $8". The CASE always yields NULL and is cast to timestamptz so the value
+    // assigns cleanly to the ends_at column (a bare NULLIF would infer numeric).
     const endsAtExpr = hasDuration
       ? `${startedAtExpr} + ${intervalSqlFor(line.duration_unit as ValidUnit)}`
-      : "NULL";
+      : "(CASE WHEN $8::numeric IS NULL THEN NULL ELSE NULL END)::timestamptz";
 
     const params: Array<string | number | null> = [
       transactionId, // $1
