@@ -1,0 +1,123 @@
+name: Deploy
+
+# Deploys ONLY this plugin to the single host server, with NO secrets.
+#
+# It runs on the `kserp-prod` self-hosted runner, which lives ON the prod box
+# and runs as the non-root `cicd` service user that also owns /opt/kserp and the
+# app's pm2 (kserp-api / kserp-web / kplugin_transactions). So the deploy is all
+# LOCAL: build the UI bundle against the box's own node_modules, rsync the plugin
+# into /opt/kserp/plugins, and `pm2 reload` — no SSH, no DEPLOY_SSH_KEY, no
+# HOST_REPO_TOKEN. (CI's e2e still uses HOST_REPO_TOKEN on a different runner.)
+#
+# A plugin code/migration/UI change reloads ONLY the plugin's pm2 app; the kernel
+# (kserp-api) is reloaded only when plugin.manifest.json changes (its proxy/auth
+# contract), detected by a hash across deploys.
+#
+# Triggered after a successful Release via workflow_run, or manually. Deploys
+# whatever the latest GitHub Release tag is.
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-plugin-transactions
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, kserp-prod]
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Resolve latest release tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          TAG=$(curl -sf -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${REPO}/releases/latest" \
+            | node -p "JSON.parse(require('fs').readFileSync(0)).tag_name")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Resolved latest release: $TAG"
+
+      - name: Skip if this version is already deployed
+        id: gate
+        # Release runs (and so triggers this Deploy) on every green CI, even
+        # CI-only/doc commits that cut no new tag. Without this gate we'd rsync +
+        # pm2-reload prod on every such commit. Compare the latest release tag to
+        # the version marker on the box and skip the prod-touching steps when
+        # they match. A manual workflow_dispatch always deploys.
+        run: |
+          DEPLOYED=$(cat /opt/kserp/.plugin-hashes/transactions.version 2>/dev/null || echo "")
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] && [ "${{ steps.tag.outputs.tag }}" = "$DEPLOYED" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "[deploy] ${DEPLOYED} already deployed — no new release, skipping."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "[deploy] deploying ${{ steps.tag.outputs.tag }} (was: ${DEPLOYED:-none})"
+          fi
+
+      - name: Checkout plugin at the release tag
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - name: Build the runtime UI bundle (against the box's node_modules)
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          # The box already has the full host install; build the tiny UI bundle
+          # against it — no host checkout, no HOST_REPO_TOKEN.
+          ln -sfn /opt/kserp/node_modules node_modules
+          npm run build:ui
+          test -f dist-ui/remote.js || { echo "build:ui produced no bundle"; exit 1; }
+
+      - name: Deploy locally + reload only the plugin (as cicd, no sudo)
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          PLUGIN_DIR=/opt/kserp/plugins/transactions
+          APP=kplugin_transactions
+          HASH_DIR=/opt/kserp/.plugin-hashes
+          HASH_FILE="$HASH_DIR/transactions.manifest.sha256"
+          VERSION_FILE="$HASH_DIR/transactions.version"
+          mkdir -p "$HASH_DIR"
+
+          # Did the kernel's proxy/auth contract (the manifest) change?
+          NEW_HASH=$(sha256sum plugin.manifest.json | cut -d' ' -f1)
+          OLD_HASH=$(cat "$HASH_FILE" 2>/dev/null || echo "")
+
+          # Local rsync of the checkout (incl. the pre-built dist-ui) into place.
+          # node_modules is the box's host symlink — excluded + protected from --delete.
+          rsync -a --delete --exclude node_modules --exclude .git \
+            "$GITHUB_WORKSPACE/" "$PLUGIN_DIR/"
+          ln -sfn /opt/kserp/node_modules "$PLUGIN_DIR/node_modules"
+          test -f "$PLUGIN_DIR/dist-ui/remote.js" || { echo "FATAL: dist-ui missing"; exit 1; }
+
+          # cicd's pm2 owns the apps, so this needs no sudo.
+          if pm2 describe "$APP" >/dev/null 2>&1; then
+            echo "[deploy] reloading plugin process '$APP' (kernel untouched)"
+            pm2 reload "$APP" --update-env
+          else
+            echo "[deploy] first run — starting plugin process '$APP' (port from manifest)"
+            pm2 start /opt/kserp/node_modules/.bin/tsx --name "$APP" --cwd /opt/kserp \
+              -- "$PLUGIN_DIR/server/main.ts"
+          fi
+
+          if [ "$NEW_HASH" != "$OLD_HASH" ]; then
+            echo "[deploy] manifest changed — reloading kernel for new proxy/auth contract"
+            pm2 reload kserp-api --update-env
+          else
+            echo "[deploy] manifest unchanged — kernel NOT restarted (zero kernel downtime)"
+          fi
+          echo "$NEW_HASH" > "$HASH_FILE"
+          echo "${{ steps.tag.outputs.tag }}" > "$VERSION_FILE"
+          pm2 save
+          echo "[deploy] done"
+
+      - name: Report skipped deploy
+        if: steps.gate.outputs.skip == 'true'
+        run: echo "No new release tag — prod left untouched."

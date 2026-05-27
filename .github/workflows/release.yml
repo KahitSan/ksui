@@ -1,0 +1,51 @@
+name: Release
+
+# Versioning, GATED ON CI. Runs only after the CI workflow (the plugin's e2e
+# against a real host) succeeds on main — so a red e2e can never cut a release
+# or deploy. If package.json declares a version with no matching git tag yet,
+# tag it (vX.Y.Z) and cut a GitHub Release, which in turn triggers Deploy. Bump
+# the version in package.json to ship. Runs on the self-hosted runner.
+#
+# Chain: push to main -> CI (e2e) -> [success] -> Release (this) -> Deploy.
+# A version bump with no green CI produces no tag and no deploy.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  tag-and-release:
+    runs-on: [self-hosted, kserp-plugin]
+    # Only on a SUCCESSFUL CI run that was on main (ignore failed CI + PR runs).
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Tag the exact commit CI validated, not whatever main's HEAD is now.
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Tag + release if the version is new
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists — nothing to release."
+            exit 0
+          fi
+          echo "Releasing $TAG"
+          git tag "$TAG"
+          git push origin "$TAG"
+          # The runner has no gh CLI; create the release via the REST API.
+          curl -sf -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/releases" \
+            -d "{\"tag_name\":\"${TAG}\",\"name\":\"${TAG}\",\"generate_release_notes\":true}"
