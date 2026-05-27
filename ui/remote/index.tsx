@@ -18,6 +18,7 @@
 //    folds the monolith's /api/transaction-subcategories under its basePath).
 //  - Attachments are URL-based on the plugin server; uploads POST metadata.
 
+import "./styles.css"; // plugin Tailwind utilities (host injects /_ui/remote.css)
 import {
   createEffect,
   createResource,

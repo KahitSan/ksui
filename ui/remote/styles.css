@@ -1,0 +1,16 @@
+/* Tailwind utilities for this plugin's remote bundle.
+ *
+ * WHY: the host compiles its CSS by scanning only the HOST source, and plugin
+ * remotes are built + loaded separately at runtime — so any Tailwind class a
+ * plugin uses that no host file also uses would be missing from the host CSS
+ * and render unstyled. We therefore ship this plugin's OWN utilities, compiled
+ * from THIS plugin's source (@tailwindcss/vite scans ui/remote/**), and the
+ * host injects this file's <link> when it loads the remote.
+ *
+ * No preflight: the host already provides base/reset + the ksc design-system.
+ * Re-importing preflight here would re-reset the host's elements. We emit only
+ * the theme variables + the utilities this plugin actually uses.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
