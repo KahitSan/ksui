@@ -1173,8 +1173,24 @@ export function buildRouter(deps: RouterDeps): Router {
         notes,
         transaction_date,
         reference_number,
+        is_private,
+        backdate_reason,
+        tax_type,
+        has_ewt,
+        ewt_rate,
+        payable_kind,
+        due_date,
+        cheque_number,
+        pdc_status,
         reason,
       } = req.body ?? {};
+
+      // Reject an unrecognized tax_type up front so a typo doesn't silently
+      // skip the apply path and leave the column untouched.
+      if (tax_type !== undefined && tax_type !== null && !VALID_TAX_TYPES.includes(tax_type)) {
+        res.status(400).json({ error: `tax_type must be one of: ${VALID_TAX_TYPES.join(", ")}` });
+        return;
+      }
 
       try {
         const existing = await pool.query(
@@ -1185,6 +1201,7 @@ export function buildRouter(deps: RouterDeps): Router {
           res.status(404).json({ error: "Not found" });
           return;
         }
+        const existingRow = existing.rows[0];
 
         const sets: string[] = [];
         const params: unknown[] = [];
@@ -1243,12 +1260,128 @@ export function buildRouter(deps: RouterDeps): Router {
             res.status(400).json({ error: "transaction_date must be YYYY-MM-DD" });
             return;
           }
+          // Recompute the backdate posture. Flipping the date to/from today
+          // must keep is_backdated + backdate_reason consistent so the detail
+          // banner reflects reality after an edit.
+          const backdated = isBackdated(String(transaction_date));
+          const effectiveReason = backdate_reason?.trim() || reason?.trim();
+          if (backdated) {
+            const isAdmin = req.user?.role === "superuser" || req.orgRole === "admin";
+            const allowed = isAdmin || (req.permissions ?? []).includes("transactions.backdate");
+            if (!allowed) {
+              res.status(403).json({ error: "Missing permission: transactions.backdate" });
+              return;
+            }
+            if (!effectiveReason) {
+              res.status(400).json({ error: "A reason is required when backdating" });
+              return;
+            }
+          }
           sets.push(`transaction_date = $${idx++}`);
           params.push(transaction_date);
+          sets.push(`is_backdated = $${idx++}`);
+          params.push(backdated);
+          sets.push(`backdate_reason = $${idx++}`);
+          params.push(backdated ? effectiveReason : null);
         }
         if (reference_number !== undefined) {
           sets.push(`reference_number = $${idx++}`);
           params.push(reference_number?.trim() || null);
+        }
+        if (is_private !== undefined) {
+          sets.push(`is_private = $${idx++}`);
+          params.push(Boolean(is_private));
+        }
+
+        // Payable-specific fields. Nullable columns accept explicit null to
+        // clear them when switching away from `payable`.
+        const validPayableKinds = ["subscription", "utility", "rent", "loan", "tax", "other"];
+        const validPdcStatuses = ["issued", "presented", "cleared", "bounced"];
+        if (payable_kind !== undefined) {
+          if (payable_kind !== null && !validPayableKinds.includes(payable_kind)) {
+            res.status(400).json({ error: `payable_kind must be one of: ${validPayableKinds.join(", ")}` });
+            return;
+          }
+          sets.push(`payable_kind = $${idx++}`);
+          params.push(payable_kind || null);
+        }
+        if (due_date !== undefined) {
+          if (due_date !== null && due_date !== "") {
+            if (typeof due_date !== "string" || !isValidIsoDate(due_date)) {
+              res.status(400).json({ error: "due_date must be YYYY-MM-DD" });
+              return;
+            }
+          }
+          sets.push(`due_date = $${idx++}`);
+          params.push(due_date || null);
+        }
+        if (cheque_number !== undefined) {
+          sets.push(`cheque_number = $${idx++}`);
+          params.push(cheque_number?.trim() || null);
+        }
+        if (pdc_status !== undefined) {
+          if (pdc_status !== null && !validPdcStatuses.includes(pdc_status)) {
+            res.status(400).json({ error: `pdc_status must be one of: ${validPdcStatuses.join(", ")}` });
+            return;
+          }
+          sets.push(`pdc_status = $${idx++}`);
+          params.push(pdc_status || null);
+        }
+
+        // Tax type + derived VAT breakdown. Recompute subtotal/tax_amount from
+        // the effective amount (the body's amount when present, else the row's
+        // existing amount) so the books stay consistent after an edit.
+        if (tax_type !== undefined && VALID_TAX_TYPES.includes(tax_type)) {
+          const currentAmount =
+            amount !== undefined ? parseFloat(amount) : parseFloat(String(existingRow.amount));
+          let sub: number;
+          let tax: number;
+          if (tax_type === "vat_inclusive") {
+            sub = Math.round((currentAmount / 1.12) * 100) / 100;
+            tax = Math.round((currentAmount - sub) * 100) / 100;
+          } else if (tax_type === "vat_exclusive") {
+            sub = currentAmount;
+            tax = Math.round(currentAmount * 0.12 * 100) / 100;
+          } else {
+            sub = currentAmount;
+            tax = 0;
+          }
+          sets.push(`tax_type = $${idx++}`);
+          params.push(tax_type);
+          sets.push(`tax_amount = $${idx++}`);
+          params.push(tax);
+          sets.push(`subtotal = $${idx++}`);
+          params.push(sub);
+        }
+
+        // EWT. Touch the columns whenever has_ewt OR ewt_rate is sent so the
+        // dependent columns never hold inconsistent state.
+        if (has_ewt !== undefined || ewt_rate !== undefined) {
+          const flag = has_ewt === undefined ? existingRow.has_ewt : !!has_ewt;
+          if (flag) {
+            const incomingRate = ewt_rate !== undefined ? ewt_rate : existingRow.ewt_rate;
+            const parsedRate = parseFloat(String(incomingRate));
+            if (!Number.isFinite(parsedRate) || parsedRate <= 0 || parsedRate > 100) {
+              res.status(400).json({ error: "ewt_rate must be a number greater than 0 and at most 100" });
+              return;
+            }
+            const baseAmount =
+              amount !== undefined ? parseFloat(amount) : parseFloat(String(existingRow.amount));
+            const computed = Math.round(baseAmount * parsedRate) / 100;
+            sets.push(`has_ewt = $${idx++}`);
+            params.push(true);
+            sets.push(`ewt_rate = $${idx++}`);
+            params.push(parsedRate);
+            sets.push(`ewt_amount = $${idx++}`);
+            params.push(computed);
+          } else {
+            sets.push(`has_ewt = $${idx++}`);
+            params.push(false);
+            sets.push(`ewt_rate = $${idx++}`);
+            params.push(null);
+            sets.push(`ewt_amount = $${idx++}`);
+            params.push(null);
+          }
         }
         if (sets.length === 0) {
           res.status(400).json({ error: "No fields to update" });

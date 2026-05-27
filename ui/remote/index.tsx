@@ -35,6 +35,8 @@ import {
   PageShareButton,
   Modal,
   DataTable,
+  DatePicker,
+  SearchableSelect,
   Avatar,
   Button,
   confirm,
@@ -988,6 +990,11 @@ export function Component() {
     setFormError("");
     try {
       const isPayable = formCategory() === "payable";
+      const manualDiscountNumber = parseFloat(formSaleDiscount());
+      // Send the full field set so an edit persists every detail the create
+      // form captured — payee, tax, EWT, payable fields, privacy, backdate
+      // reason. Sales with line items carry the full cart so the parent +
+      // line items + voucher delta + billed-to client commit together.
       const body: Record<string, unknown> = {
         category: formCategory(),
         subcategory: formSubcategory().trim() || null,
@@ -997,8 +1004,36 @@ export function Component() {
         description: formDescription().trim(),
         notes: formNotes().trim() || null,
         transaction_date: formDate(),
+        is_private: formPrivate(),
+        backdate_reason: isFormBackdated() ? formBackdateReason().trim() : null,
+        payee: formPayee().trim() || null,
         reference_number: formRefNumber().trim() || null,
+        tax_type: formTaxType(),
+        has_ewt: formHasEwt(),
+        ewt_rate: formHasEwt() ? formEwtRate() : null,
+        payable_kind: isPayable ? formPayableKind() : null,
+        due_date: isPayable ? formDueDate() || null : null,
+        cheque_number: isPayable ? formChequeNumber().trim() || null : null,
+        pdc_status: isPayable && formChequeNumber().trim() ? formPdcStatus() : null,
       };
+      if (isSaleWithItems) {
+        body.items = formSaleItems().map((line) => ({
+          package_id: line.package_id,
+          package_variant_id: line.variant_id,
+          description: `${line.package_name} — ${line.variant_name}`,
+          quantity: line.quantity,
+          unit_price: line.unit_price,
+          duration_value: line.duration_value,
+          duration_unit: line.duration_unit,
+          client_id: null,
+        }));
+        body.client_id = formSaleClient()?.id ?? null;
+        body.voucher_id = formSaleVoucher()?.id ?? null;
+        body.discount_amount =
+          !formSaleVoucher() && Number.isFinite(manualDiscountNumber) && manualDiscountNumber > 0
+            ? manualDiscountNumber
+            : 0;
+      }
       const res = await fetch(`/api/transactions/${t.id}`, {
         method: "PUT",
         credentials: "include",
@@ -1470,60 +1505,6 @@ export function Component() {
     );
   }
 
-  // ── Summary stat-cards. One lightweight count fetch per category (limit=1
-  //    returns the filtered total), re-run when the filter window changes. The
-  //    cards sit above the table and give a quick read of how the current
-  //    filters split across the four categories.
-  const [statKey, setStatKey] = createSignal(0);
-  const bumpStats = () => setStatKey((k) => k + 1);
-  createEffect(
-    on(
-      () => ({
-        s: statusFilter(),
-        a: accountFilter(),
-        sub: subcategoryFilter(),
-        by: createdByFilter(),
-        org: activeOrg()?.org_id,
-      }),
-      () => bumpStats(),
-      { defer: true },
-    ),
-  );
-  async function fetchCategoryTotal(category: string): Promise<number> {
-    try {
-      const q = new URLSearchParams({
-        page: "1",
-        limit: "1",
-        status: statusFilter(),
-        category,
-        ...(subcategoryFilter() ? { subcategory: subcategoryFilter() } : {}),
-        ...(accountFilter() ? { accountId: accountFilter() } : {}),
-        ...(createdByFilter() ? { createdBy: createdByFilter() } : {}),
-      });
-      const res = await fetch(`/api/transactions?${q}`, { credentials: "include" });
-      if (!res.ok) return 0;
-      const json = (await res.json()) as { total: number };
-      return json.total ?? 0;
-    } catch {
-      return 0;
-    }
-  }
-  const [statCounts] = createResource(statKey, async () => {
-    const [sale, expense, payable, business] = await Promise.all([
-      fetchCategoryTotal("sale"),
-      fetchCategoryTotal("expense"),
-      fetchCategoryTotal("payable"),
-      fetchCategoryTotal("business"),
-    ]);
-    return { sale, expense, payable, business };
-  });
-  const STAT_CARDS: { key: "sale" | "expense" | "payable" | "business"; label: string }[] = [
-    { key: "sale", label: "Sales" },
-    { key: "expense", label: "Expenses" },
-    { key: "payable", label: "Payables" },
-    { key: "business", label: "Transfers" },
-  ];
-
   return (
     <PermissionGate when={canAccess()}>
       <PageShell
@@ -1560,38 +1541,6 @@ export function Component() {
           </>
         }
       >
-        {/* Summary stat-cards */}
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4" data-testid="transactions-stat-cards">
-          <For each={STAT_CARDS}>
-            {(card) => {
-              const tone = CATEGORY_TONE[card.key];
-              const c = TONE_CLASSES[tone.tone];
-              const Ico = tone.icon;
-              const count = () => statCounts()?.[card.key] ?? 0;
-              return (
-                <div
-                  class={`card-bg rounded-xl border p-4 flex items-center gap-3 ${c.border}`}
-                  data-testid={`transactions-stat-${card.key}`}
-                >
-                  <div class={`w-10 h-10 flex items-center justify-center border shrink-0 ${c.bg} ${c.text} ${c.border}`}>
-                    <Ico size={18} />
-                  </div>
-                  <div class="min-w-0">
-                    <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
-                      {card.label}
-                    </div>
-                    <div class={`text-xl font-bold tabular-nums ${c.text}`}>
-                      <Show when={!statCounts.loading} fallback={<span class="text-zinc-600">…</span>}>
-                        {count()}
-                      </Show>
-                    </div>
-                  </div>
-                </div>
-              );
-            }}
-          </For>
-        </div>
-
         <div class="min-w-0 overflow-hidden">
           <DataTable<TransactionRow>
             refetchKey={() => activeOrg()?.org_id}
@@ -1661,7 +1610,7 @@ export function Component() {
             paging={true}
             loadMore={true}
             searchPlaceholder="Search by description, payee, or notes..."
-            emptyMessage="No transactions yet. Click 'Record Transaction' to create one."
+            emptyMessage="No transactions yet. Click 'New Transaction' to create one."
             noResultsMessage="No transactions match your filters."
             dateField="transaction_date"
             dateRangeMode={true}
@@ -2716,9 +2665,6 @@ function AccountPicker(props: {
                     "bg-zinc-600 group-hover:bg-zinc-500": !selected(),
                   }}
                 />
-                <Show when={resolveAccount(useAccountsIndex()(), a.id)}>
-                  {(acct) => <AccountAvatar account={acct()} size={16} />}
-                </Show>
                 <span class="truncate">{a.name}</span>
               </button>
             );
@@ -2915,6 +2861,11 @@ function TransactionForm(props: TransactionFormProps) {
     return data.subcategories;
   });
 
+  // True once the async resource has resolved at least once. Gates the
+  // SearchableSelect mount so the loading-state placeholder shows while the
+  // per-org options are still in flight.
+  const subcategoryOptionsReady = () => subcategoryOptions() !== undefined;
+
   function addFiles(files: File[]) {
     const newPending = files.map(createPendingFile);
     props.setPendingFiles([...props.pendingFiles, ...newPending]);
@@ -3074,13 +3025,10 @@ function TransactionForm(props: TransactionFormProps) {
           </Show>
 
           <FormField label="Date *">
-            <input
-              type="date"
-              data-testid="transactions-form-date"
+            <DatePicker
               value={props.date}
+              onChange={(d: string | null) => d && props.setDate(d)}
               disabled={!props.isAdmin}
-              onInput={(e) => props.setDate(e.currentTarget.value)}
-              class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button focus:outline-none focus:border-amber-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <Show when={!props.isAdmin}>
               <p class="text-[10px] text-zinc-600 mt-0.5">Only admins can change the date</p>
@@ -3156,25 +3104,42 @@ function TransactionForm(props: TransactionFormProps) {
 
           <Show when={subcategoryAppliesTo() !== null}>
             <FormField label="Category">
-              <select
-                data-testid="transactions-form-subcategory"
-                value={props.subcategory}
-                onChange={(e) => props.setSubcategory(e.currentTarget.value)}
-                class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button cursor-pointer focus:outline-none focus:border-amber-500/50"
+              <Show
+                when={subcategoryOptionsReady()}
+                fallback={
+                  <select
+                    disabled
+                    data-testid="subcategory-select-loading"
+                    class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-500 ks-hud-clip-button focus:outline-none"
+                  >
+                    <option>Loading…</option>
+                  </select>
+                }
               >
-                <option value="">— Uncategorised —</option>
-                <For each={subcategoryOptions() ?? []}>
-                  {(opt) => <option value={opt.name}>{opt.name}</option>}
-                </For>
-                <Show
-                  when={
-                    props.subcategory &&
-                    !(subcategoryOptions() ?? []).some((o) => o.name === props.subcategory)
+                <SearchableSelect
+                  triggerTestId="subcategory-select"
+                  wrapperClass="relative w-full"
+                  value={props.subcategory}
+                  options={(() => {
+                    const list = (subcategoryOptions() || []).map((opt) => ({
+                      value: opt.name,
+                      label: opt.name,
+                    }));
+                    list.unshift({ value: "", label: "— Uncategorised —" });
+                    if (props.subcategory && !list.some((o) => o.value === props.subcategory)) {
+                      list.push({ value: props.subcategory, label: props.subcategory });
+                    }
+                    return list;
+                  })()}
+                  onChange={(opt: { value: string } | null) =>
+                    props.setSubcategory(opt ? String(opt.value) : "")
                   }
-                >
-                  <option value={props.subcategory}>{props.subcategory}</option>
-                </Show>
-              </select>
+                  placeholder="— Uncategorised —"
+                  searchPlaceholder="Search categories…"
+                  triggerClass="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button cursor-pointer focus:outline-none focus:border-amber-500/50 flex items-center justify-between gap-2"
+                  triggerLabelClass="truncate text-left flex-1 min-w-0"
+                />
+              </Show>
               <p class="text-[10px] text-zinc-600 mt-0.5">Optional. Used for tax-prep classification.</p>
             </FormField>
           </Show>
@@ -3196,11 +3161,9 @@ function TransactionForm(props: TransactionFormProps) {
                   </select>
                 </FormField>
                 <FormField label="Due date">
-                  <input
-                    type="date"
+                  <DatePicker
                     value={props.dueDate}
-                    onInput={(e) => props.setDueDate(e.currentTarget.value)}
-                    class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button focus:outline-none focus:border-amber-500/50"
+                    onChange={(d: string | null) => props.setDueDate(d || "")}
                   />
                   <p class="text-[10px] text-zinc-600 mt-0.5">
                     When payment is owed. Past-due payables show in the Payables tab.
