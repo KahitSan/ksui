@@ -95,6 +95,82 @@ async function start(): Promise<void> {
         return r.rows[0] ?? null;
       },
 
+      // getAccountBalances({ accountIds }) →
+      //   { [accountId]: { balance } }
+      // Per-account computed balance, org-scoped, mirroring the monolith's
+      // financial-accounts ACCOUNT_BALANCE_SQL definition — but computed HERE,
+      // inside the plugin that owns accounts.transactions / transaction_payments,
+      // because the financial-accounts plugin's DB role can't read these tables.
+      //
+      // The balance for an account is the sum of two mutually-exclusive halves
+      // (so a sale is never counted twice):
+      //   (a) Sales WITH recorded payment legs: each leg whose
+      //       financial_account_id matches credits its amount. Source of truth
+      //       for split payments (a sale split 60/40 across two accounts credits
+      //       each its share).
+      //   (b) Everything else routed by the legacy source_account_id /
+      //       destination_account_id columns: money in via destination minus
+      //       money out via source. Excludes sales that already have a leg
+      //       (the NOT EXISTS guard) so (a) and (b) don't double-count.
+      // Voided transactions are excluded on both sides. Returned as a plain
+      // object (JSON over the RPC can't carry a Map).
+      getAccountBalances: async (args, { req }) => {
+        const a = (args ?? {}) as { accountIds?: unknown };
+        const orgId = req.organizationId;
+        const accountIds = Array.isArray(a.accountIds)
+          ? a.accountIds
+              .map((v) => (typeof v === "number" ? v : parseInt(String(v), 10)))
+              .filter((n) => Number.isInteger(n))
+          : [];
+        const out: Record<number, { balance: number }> = {};
+        if (orgId == null || accountIds.length === 0) return out;
+        for (const id of accountIds) out[id] = { balance: 0 };
+
+        const r = await db.query<{ account_id: number; balance: string }>(
+          `WITH ids AS (SELECT UNNEST($2::int[]) AS account_id),
+                leg_sums AS (
+                  SELECT tp.financial_account_id AS account_id,
+                         SUM(tp.amount) AS amt
+                    FROM accounts.transaction_payments tp
+                    JOIN accounts.transactions t ON t.id = tp.transaction_id
+                   WHERE tp.organization_id = $1
+                     AND t.organization_id = $1
+                     AND tp.financial_account_id = ANY($2::int[])
+                     AND t.status <> 'voided'
+                     AND t.category = 'sale'
+                   GROUP BY tp.financial_account_id
+                ),
+                legacy_sums AS (
+                  SELECT i.account_id,
+                         SUM(CASE WHEN t.destination_account_id = i.account_id THEN t.amount ELSE 0 END)
+                       - SUM(CASE WHEN t.source_account_id = i.account_id THEN t.amount ELSE 0 END) AS amt
+                    FROM ids i
+                    JOIN accounts.transactions t
+                      ON (t.source_account_id = i.account_id OR t.destination_account_id = i.account_id)
+                   WHERE t.organization_id = $1
+                     AND t.status <> 'voided'
+                     AND (
+                       t.category <> 'sale'
+                       OR NOT EXISTS (
+                         SELECT 1 FROM accounts.transaction_payments tp2
+                          WHERE tp2.transaction_id = t.id
+                       )
+                     )
+                   GROUP BY i.account_id
+                )
+           SELECT i.account_id,
+                  (COALESCE(ls.amt, 0) + COALESCE(lg.amt, 0))::text AS balance
+             FROM ids i
+             LEFT JOIN leg_sums ls ON ls.account_id = i.account_id
+             LEFT JOIN legacy_sums lg ON lg.account_id = i.account_id`,
+          [orgId, accountIds],
+        );
+        for (const row of r.rows) {
+          out[row.account_id] = { balance: parseFloat(row.balance) || 0 };
+        }
+        return out;
+      },
+
       // getPackageCapacityUsage({ packageIds, at? }) →
       //   { [packageId]: { concurrent, daily, monthly } }
       // Computed from THIS plugin's transaction_line_items, org-scoped. Voided
