@@ -1,0 +1,34 @@
+{
+  "name": "@kahitsan/kplugin_transactions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ksERP plugin: transactions (income/expense/business entries + POS charge flow). Runs as its own process; the kserp kernel reverse-proxies to it and brokers cross-plugin RPC to packages/vouchers/clients.",
+  "scripts": {
+    "dev": "tsx watch server/main.ts",
+    "start": "tsx server/main.ts",
+    "build:ui": "vite build -c vite.remote.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "pg": "^8.16.0"
+  },
+  "peerDependencies": {
+    "@ks-erp/kernel": "*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.11",
+    "lucide-solid": "^1.7.0",
+    "solid-js": "^1.9.12",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vite-plugin-solid": "^2.11.0"
+  }
+}

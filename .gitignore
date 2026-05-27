@@ -1,0 +1,12 @@
+node_modules
+/node_modules/
+dist/
+*.tsbuildinfo
+.kserp/
+
+# Playwright outputs
+test-results/
+playwright-report/
+
+# Built plugin UI bundle (built in CI/deploy, served by the plugin process)
+dist-ui/
