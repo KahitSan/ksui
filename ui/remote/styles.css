@@ -14,3 +14,13 @@
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
+
+/* Safelist the RESPONSIVE variants the HOST KIT components (DataTable, Modal,
+ * PageShell, …) use. A plugin renders those host components, but @tailwindcss/vite
+ * only scans THIS plugin's source, so without this the plugin's remote.css would
+ * carry the base utility (e.g. `.hidden`) but NOT its responsive counterpart
+ * (`md:block`). Since the plugin CSS is injected AFTER the host CSS, the plugin's
+ * later `.hidden { display:none }` then beats the host's `.md\:block` even at
+ * desktop — and the DataTable's `hidden md:block` filter tabs disappear. Emitting
+ * these here keeps the correct base→responsive ordering inside the plugin CSS. */
+@source inline("md:block md:hidden lg:p-6 sm:items-center sm:max-w-sm sm:max-w-md sm:max-w-lg sm:max-w-xl sm:max-w-2xl sm:max-w-3xl sm:max-w-5xl sm:max-w-7xl sm:p-4 sm:p-6 sm:px-6 sm:rounded-xl sm:text-sm sm:text-xl sm:w-72 sm:w-auto");
