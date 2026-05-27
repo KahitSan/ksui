@@ -1,13 +1,14 @@
 import { test, expect } from "@playwright/test";
 
 // End-to-end coverage for the transactions plugin against a kserp host that
-// loaded it STANDALONE (no peer plugins). Exercises the 1:1 monolith-parity UI:
-// the page renders with its summary stat-cards, a manual expense can be recorded
-// through the rich Record Transaction modal (icon-card category selector + hero
-// amount + description), it appears in the list, its detail opens, and it can be
-// voided (soft-deleted) so it leaves the active list and reappears under the
-// "voided" filter. The POS charge + voucher + package RPC path is exercised in
-// the with-peers verification, not here.
+// loaded it STANDALONE (no peer plugins). Exercises the current UI: the page
+// renders with its ledger table (stat-cards were removed in the fork audit), a
+// manual expense can be recorded through the "Record Transaction" modal
+// (icon-card category selector + hero amount + host DatePicker date defaulting
+// to today + description), it appears in the list, its detail opens, and an
+// admin can void (soft-delete) it so it leaves the default active list. The POS
+// charge + voucher + package RPC path is exercised in the with-peers
+// verification, not here.
 
 const EMAIL = process.env.E2E_EMAIL || "admin@kahitsan.com";
 const PASSWORD = process.env.E2E_PASSWORD || "password";
@@ -25,8 +26,8 @@ test("record, view, and void a manual expense", async ({ page }) => {
 
   await page.goto("/transactions");
   await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
-  // Summary stat-cards render above the table.
-  await expect(page.getByTestId("transactions-stat-cards")).toBeVisible();
+  // The "Record Transaction" CTA confirms the page (and its remote bundle) loaded.
+  await expect(page.getByTestId("transactions-add-btn")).toBeVisible();
 
   // --- Record a manual expense via the rich modal ---
   const desc = `e2e-expense-${Date.now()}`;

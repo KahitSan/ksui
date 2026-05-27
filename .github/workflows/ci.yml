@@ -1,0 +1,118 @@
+name: CI
+
+# Runs this plugin's e2e against a PREBUILT host image
+# (ghcr.io/lluprisinglll/kserp-host) — it does NOT check out or build the host.
+# We pull the image, run it with this plugin mounted (the kernel spawns the
+# plugin and the image's entrypoint builds its UI bundle), then run Playwright
+# against it. This drops the old "install + build the whole host" cost (minutes)
+# to a cached image pull (seconds), and because the image serves the BUILT
+# frontend there's no dev cold-compile. Runs on the KahitSan self-hosted runner
+# (label `kserp-plugin`), which has Docker + the Playwright browser cache.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**/*.md", "LICENSE"]
+  pull_request:
+    paths-ignore: ["**/*.md", "LICENSE"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HOST_IMAGE: ghcr.io/lluprisinglll/kserp-host:latest
+
+jobs:
+  e2e:
+    runs-on: [self-hosted, kserp-plugin]
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v4
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          # No lockfile in this repo, so key on package.json. node_modules holds
+          # only the test-runner deps (Playwright et al.) — the host image
+          # carries everything the plugin needs at runtime. (Playwright browsers
+          # aren't cached here: ~/.cache/ms-playwright already persists between
+          # jobs on the self-hosted runner, so the install below is a no-op.)
+          key: plugin-nm-${{ runner.os }}-${{ hashFiles('package.json') }}
+
+      - name: Install Playwright (test runner only)
+        # --legacy-peer-deps skips the @ks-erp/kernel PEER dependency, which is
+        # provided by the host image at runtime (not published to a registry).
+        # Skipped entirely on a warm node_modules cache.
+        run: |
+          [ -d node_modules/@playwright/test ] || npm install --legacy-peer-deps
+          npx playwright install chromium
+
+      - name: Pull the prebuilt host image (layer-cached; only new layers download)
+        # `docker pull` only fetches CHANGED layers: an unchanged host image is a
+        # fast "up to date" no-op, and a new host SHA pulls just the diff — so we
+        # never re-download the whole image. Auth: log in with HOST_REPO_TOKEN if
+        # it can read packages (or if the GHCR package is public, the anonymous
+        # pull works); if neither, fall back to the locally built image, which the
+        # host repo's Image workflow keeps current on this same runner box.
+        env:
+          GHCR_TOKEN: ${{ secrets.HOST_REPO_TOKEN }}
+        run: |
+          if [ -n "${GHCR_TOKEN:-}" ]; then
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u llupRisinglll --password-stdin 2>/dev/null \
+              || echo "ghcr login failed (token may lack read:packages) — trying anonymous/local"
+          fi
+          docker pull "$HOST_IMAGE" || echo "pull unavailable — using locally built image if present"
+
+      - name: Boot the host with this plugin loaded
+        run: |
+          docker rm -f kserp-ci-host kserp-ci-pg >/dev/null 2>&1 || true
+          docker network rm kserp-ci-net >/dev/null 2>&1 || true
+          docker network create kserp-ci-net
+          docker run -d --name kserp-ci-pg --network kserp-ci-net \
+            -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=ks_erp \
+            postgres:16
+          # The plugin is mounted READ-ONLY: the host image copies it into a
+          # writable internal dir before building its UI, so it never writes to
+          # the checkout (no node_modules clobber, no root-owned leftovers).
+          # transactions is independent (its POS charge consumes other plugins
+          # but degrades gracefully), so KSERP_PLUGINS=/plugin (standalone) is a
+          # valid e2e shape.
+          docker run -d --name kserp-ci-host --network kserp-ci-net \
+            -e DB_HOST=kserp-ci-pg -e DB_PORT=5432 -e DB_USER=postgres -e DB_PASSWORD=postgres -e DB_NAME=ks_erp \
+            -e BETTER_AUTH_SECRET=ci-host-image-better-auth-secret-32-bytes \
+            -e BETTER_AUTH_URL=http://localhost:4000 \
+            -e KSERP_INTERNAL_SECRET=ci-host-image-internal-secret-32-bytesxx \
+            -e KSERP_PLUGINS=/plugin \
+            -v "${{ github.workspace }}:/plugin:ro" \
+            -p 4000:4000 \
+            "$HOST_IMAGE"
+          npx wait-on -t 180000 http://localhost:4000/api/health http://localhost:4000/transactions
+
+      - name: Run plugin e2e
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4000
+        run: npx playwright test --reporter=list
+
+      - name: Host logs on failure
+        if: failure()
+        run: docker logs kserp-ci-host 2>&1 | tail -150 || true
+
+      - name: Upload e2e artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore
+
+      - name: Teardown
+        if: always()
+        run: |
+          docker rm -f kserp-ci-host kserp-ci-pg >/dev/null 2>&1 || true
+          docker network rm kserp-ci-net >/dev/null 2>&1 || true
+
+# (validation: a CI-only change like this must NOT redeploy prod — deploy.yml gates on a new version)
