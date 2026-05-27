@@ -1,26 +1,25 @@
 /* Tailwind utilities for this plugin's remote bundle.
  *
- * WHY: the host compiles its CSS by scanning only the HOST source, and plugin
- * remotes are built + loaded separately at runtime — so any Tailwind class a
- * plugin uses that no host file also uses would be missing from the host CSS
- * and render unstyled. We therefore ship this plugin's OWN utilities, compiled
- * from THIS plugin's source (@tailwindcss/vite scans ui/remote/**), and the
- * host injects this file's <link> when it loads the remote.
+ * WHY: the host compiles its CSS from HOST source only; plugin remotes are built
+ * + loaded separately at runtime. A class a plugin uses that no host file uses
+ * would otherwise be missing and render unstyled, so we ship the plugin's OWN
+ * utilities compiled from THIS plugin's source (@tailwindcss/vite scans ui/remote).
+ *
+ * LAYER: the plugin's <link> is injected AFTER the host CSS, so plugin utilities
+ * in the `utilities` layer would WIN ties by source order — a bare `.grid-cols-1`
+ * here then clobbers the host's correctly-ordered `.sm\:grid-cols-2` / arbitrary
+ * grids and collapses host (and other plugins') responsive layouts to one column.
+ * Importing into the lower `components` layer lets the host's complete, correct
+ * `utilities` layer win for every shared class, while plugin-only classes (absent
+ * from the host) still apply since nothing higher competes.
  *
  * No preflight: the host already provides base/reset + the ksc design-system.
- * Re-importing preflight here would re-reset the host's elements. We emit only
- * the theme variables + the utilities this plugin actually uses.
  */
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+@import "tailwindcss/utilities.css" layer(components);
 
-/* Safelist the RESPONSIVE variants the HOST KIT components (DataTable, Modal,
- * PageShell, …) use. A plugin renders those host components, but @tailwindcss/vite
- * only scans THIS plugin's source, so without this the plugin's remote.css would
- * carry the base utility (e.g. `.hidden`) but NOT its responsive counterpart
- * (`md:block`). Since the plugin CSS is injected AFTER the host CSS, the plugin's
- * later `.hidden { display:none }` then beats the host's `.md\:block` even at
- * desktop — and the DataTable's `hidden md:block` filter tabs disappear. Emitting
- * these here keeps the correct base→responsive ordering inside the plugin CSS. */
+/* Safelist the responsive variants the host KIT components (DataTable, Modal, ...)
+ * use, so a plugin that renders them carries the correctly-ordered base->responsive
+ * pair too (belt-and-suspenders alongside the layer ordering above). */
 @source inline("md:block md:hidden lg:p-6 sm:items-center sm:max-w-sm sm:max-w-md sm:max-w-lg sm:max-w-xl sm:max-w-2xl sm:max-w-3xl sm:max-w-5xl sm:max-w-7xl sm:p-4 sm:p-6 sm:px-6 sm:rounded-xl sm:text-sm sm:text-xl sm:w-72 sm:w-auto");
