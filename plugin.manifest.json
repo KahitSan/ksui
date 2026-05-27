@@ -6,7 +6,7 @@
   "capabilityKey": "transactions",
   "label": "Transactions",
   "uiRouteBase": "transactions",
-  "nav": { "label": "Transactions", "section": "operations", "icon": "receipt" },
+  "nav": { "label": "Transactions", "section": "bookkeeping", "icon": "receipt" },
   "schemas": ["accounts"],
   "dependencies": [],
   "permissions": [

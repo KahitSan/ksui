@@ -1,0 +1,78 @@
+// Source: KahitSan/kserp src/components/ExistingAttachmentTile.tsx (vendored + adapted).
+// Adapted for the URL-based plugin attachment model: the tile's href is the
+// stored file_path directly (see lib/attachments.ts). confirm comes from the
+// host UI kit.
+
+import { Show, type Component } from "solid-js";
+import Paperclip from "lucide-solid/icons/paperclip";
+import X from "lucide-solid/icons/x";
+import { confirm } from "@kserp/host-ui";
+import { attachmentUrl } from "../lib/attachments";
+
+export interface ExistingAttachment {
+  id: number;
+  file_name: string;
+  file_path: string;
+  mime_type: string;
+}
+
+interface Props {
+  attachment: ExistingAttachment;
+  testId: string;
+  onDelete?: (attachmentId: number) => Promise<void> | void;
+  fallbackIcon?: Component<{ size?: number }>;
+}
+
+export default function ExistingAttachmentTile(props: Props) {
+  const url = () => attachmentUrl(props.attachment.file_path);
+  const FallbackIcon = () => {
+    const Icon = props.fallbackIcon ?? Paperclip;
+    return <Icon size={20} />;
+  };
+
+  return (
+    <div class="relative group shrink-0" data-testid={props.testId}>
+      <Show
+        when={props.attachment.mime_type.startsWith("image/")}
+        fallback={
+          <a
+            href={url()}
+            target="_blank"
+            rel="noopener"
+            class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300 hover:border-amber-500/30"
+          >
+            <FallbackIcon />
+            <span class="truncate max-w-full text-[10px]">{props.attachment.file_name}</span>
+          </a>
+        }
+      >
+        <a
+          href={url()}
+          target="_blank"
+          rel="noopener"
+          class="block rounded-lg border border-zinc-700 overflow-hidden hover:border-amber-500/30"
+        >
+          <img src={url()} alt={props.attachment.file_name} class="w-24 h-24 object-cover" />
+        </a>
+      </Show>
+      <Show when={props.onDelete}>
+        <button
+          type="button"
+          aria-label={`Remove ${props.attachment.file_name}`}
+          onClick={async () => {
+            const ok = await confirm({
+              title: "Remove attachment?",
+              message: `Remove attachment "${props.attachment.file_name}"?`,
+              confirmLabel: "Remove",
+              danger: true,
+            });
+            if (ok) await props.onDelete!(props.attachment.id);
+          }}
+          class="absolute -top-2 -right-2 flex w-7 h-7 items-center justify-center rounded-full bg-red-600/90 border border-red-400/60 text-white cursor-pointer hover:bg-red-500 active:bg-red-700 shadow-lg"
+        >
+          <X size={12} />
+        </button>
+      </Show>
+    </div>
+  );
+}
