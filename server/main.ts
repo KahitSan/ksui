@@ -30,6 +30,7 @@ import type { PluginManifest } from "@ks-erp/kernel/types";
 import { mountPluginServices } from "@ks-erp/kernel/service-rpc";
 import { parseIdentity, requireAuth, requireOrg, requirePermission } from "./identity.js";
 import { buildRouter } from "./routes.js";
+import { buildLineItemsRouter } from "./routes-line-items.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const manifest = JSON.parse(
@@ -241,6 +242,12 @@ async function start(): Promise<void> {
   // request; the per-route gates enforce it. The kernel proxies basePath/* here
   // with the prefix stripped, so the router mounts at "/".
   app.use(parseIdentity);
+  // Sibling basePath: the kernel proxies /api/transaction-line-items/* here
+  // (declared in plugin.manifest.json additionalBasePaths) WITHOUT stripping
+  // the prefix, so this router's routes are written at the full prefix and
+  // mount on the app root. Registered before the primary "/" router so the
+  // line-items paths match first.
+  app.use(buildLineItemsRouter({ db, requireAuth, requireOrg, requirePermission }));
   app.use("/", buildRouter({ db, requireAuth, requireOrg, requirePermission }));
 
   app.listen(PORT, "127.0.0.1", () => {
