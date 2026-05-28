@@ -1,7 +1,7 @@
 name: CI
 
 # Runs this plugin's e2e against a PREBUILT host image
-# (ghcr.io/lluprisinglll/kserp-host) — it does NOT check out or build the host.
+# (ghcr.io/kahitsan/kserp-host) — it does NOT check out or build the host.
 # We pull the image, run it with this plugin mounted (the kernel spawns the
 # plugin and the image's entrypoint builds its UI bundle), then run Playwright
 # against it. This drops the old "install + build the whole host" cost (minutes)
@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  HOST_IMAGE: ghcr.io/lluprisinglll/kserp-host:latest
+  HOST_IMAGE: ghcr.io/kahitsan/kserp-host:latest
 
 jobs:
   e2e:
