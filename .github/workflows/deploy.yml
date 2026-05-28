@@ -97,6 +97,14 @@ jobs:
           ln -sfn /opt/kserp/node_modules "$PLUGIN_DIR/node_modules"
           test -f "$PLUGIN_DIR/dist-ui/remote.js" || { echo "FATAL: dist-ui missing"; exit 1; }
 
+          # Restore the canonical kserp env into the shell before any pm2 reload.
+          # Without this, --update-env injects the GitHub Actions runner env into
+          # kserp-api and the kernel boots with KSERP_PLUGINS_DIR / DB_* /
+          # KSERP_INTERNAL_SECRET / BETTER_AUTH_SECRET stripped out.
+          set -a
+          . /opt/kserp/.env
+          set +a
+
           # cicd's pm2 owns the apps, so this needs no sudo.
           if pm2 describe "$APP" >/dev/null 2>&1; then
             echo "[deploy] reloading plugin process '$APP' (kernel untouched)"
