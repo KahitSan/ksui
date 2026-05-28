@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.1.2
+
+### Patch Changes
+
+- c2acd59: Record Transaction and Export Transactions modals now use their intended width (≈48rem at large screens, ≈42rem at medium) instead of stretching across the full window. The account-picker tiles inside the modal also switch from 2 columns to 3 columns at tablet widths as designed.
+
 ## 0.1.1
 
 ### Patch Changes
