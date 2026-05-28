@@ -1,13 +1,23 @@
 name: Release
 
 # Versioning, GATED ON CI. Runs only after the CI workflow (the plugin's e2e
-# against a real host) succeeds on main — so a red e2e can never cut a release
-# or deploy. If package.json declares a version with no matching git tag yet,
-# tag it (vX.Y.Z) and cut a GitHub Release, which in turn triggers Deploy. Bump
-# the version in package.json to ship. Runs on the self-hosted runner.
+# against a real host) succeeds on main — so a red e2e can never cut a
+# release or deploy.
+#
+# Two modes:
+#   1. If any pending changesets in .changeset/, run `changeset version`
+#      which bumps package.json + rewrites CHANGELOG.md, then commit + tag
+#      + push back to main, then force-sync the `staging` branch to match
+#      main.
+#   2. If no pending changesets but the current package.json version has no
+#      matching git tag yet, tag it (back-compat with the previous
+#      manual-bump flow).
 #
 # Chain: push to main -> CI (e2e) -> [success] -> Release (this) -> Deploy.
 # A version bump with no green CI produces no tag and no deploy.
+#
+# The release commit itself uses `chore(release):` as the message prefix so
+# the next CI run skips itself (no infinite loop).
 
 on:
   workflow_run:
@@ -18,20 +28,95 @@ permissions:
   contents: write
 
 jobs:
-  tag-and-release:
+  release:
     runs-on: [self-hosted, kserp-plugin]
-    # Only on a SUCCESSFUL CI run that was on main (ignore failed CI + PR runs).
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    # Only on a SUCCESSFUL CI run that was on main (ignore failed CI + PR
+    # runs), and skip the auto-commit this job makes so we don't loop.
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success'
+          && github.event.workflow_run.head_branch == 'main'
+          && !startsWith(github.event.workflow_run.head_commit.message, 'chore(release):') }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
-          # Tag the exact commit CI validated, not whatever main's HEAD is now.
-          ref: ${{ github.event.workflow_run.head_sha }}
+          # Use the auto-issued GITHUB_TOKEN. permissions: contents: write
+          # above gives it push access. No PAT needed.
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Tag + release if the version is new
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Identify the bot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Count pending changesets
+        id: check
+        run: |
+          COUNT=$(find .changeset -maxdepth 1 -name '*.md' \
+                   ! -name 'README.md' 2>/dev/null | wc -l)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      # --- Mode 1: pending changesets ---
+      - name: Bump version + write changelog
+        if: steps.check.outputs.count != '0'
+        run: npx changeset version
+
+      - name: Commit + tag the bump
+        if: steps.check.outputs.count != '0'
+        id: bump
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}"
+          git add -A
+          git commit -m "chore(release): ${TAG}"
+          git tag -a "$TAG" -m "$TAG"
+          echo "tag=$TAG"     >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Push commit + tag back to main
+        if: steps.check.outputs.count != '0'
+        run: |
+          git push origin main
+          git push origin "${{ steps.bump.outputs.tag }}"
+
+      - name: Sync staging to main
+        if: steps.check.outputs.count != '0'
+        run: |
+          # Staging is force-moved to match main after every release so the
+          # next feature branches off the released state. The remote-tracking
+          # ref must be fresh for --force-with-lease to have something to
+          # compare against.
+          git fetch origin staging || true
+          git push origin --force-with-lease=staging "main:staging" || \
+            git push origin "main:refs/heads/staging"
+
+      - name: Create GitHub release
+        if: steps.check.outputs.count != '0'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.bump.outputs.tag }}
+        run: |
+          # The runner has no `gh` CLI by default; use the REST API.
+          curl -sf -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/releases" \
+            -d "{\"tag_name\":\"${TAG}\",\"name\":\"${TAG}\",\"generate_release_notes\":true}"
+
+      # --- Mode 2: no changesets, but the version isn't tagged ---
+      - name: Tag the existing version (back-compat)
+        if: steps.check.outputs.count == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
@@ -40,10 +125,14 @@ jobs:
             echo "Tag $TAG already exists — nothing to release."
             exit 0
           fi
-          echo "Releasing $TAG"
+          echo "Releasing $TAG (no pending changesets — using existing version)"
           git tag "$TAG"
           git push origin "$TAG"
-          # The runner has no gh CLI; create the release via the REST API.
+          # Sync staging to main even on tag-only releases so the branches
+          # don't drift if someone bumped the version manually.
+          git fetch origin staging || true
+          git push origin --force-with-lease=staging "main:staging" || \
+            git push origin "main:refs/heads/staging"
           curl -sf -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \

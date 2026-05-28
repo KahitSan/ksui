@@ -5,11 +5,13 @@
   "type": "module",
   "description": "ksERP plugin: transactions (income/expense/business entries + POS charge flow). Runs as its own process; the kserp kernel reverse-proxies to it and brokers cross-plugin RPC to packages/vouchers/clients.",
   "scripts": {
+    "build:ui": "vite build -c vite.remote.config.ts",
+    "changeset": "changeset",
     "dev": "tsx watch server/main.ts",
     "start": "tsx server/main.ts",
-    "build:ui": "vite build -c vite.remote.config.ts",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "version": "changeset version"
   },
   "dependencies": {
     "dotenv": "^16.5.0",
@@ -20,6 +22,7 @@
     "@ks-erp/kernel": "*"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.0",
     "@playwright/test": "^1.50.0",
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
