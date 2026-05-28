@@ -250,9 +250,9 @@ async function start(): Promise<void> {
   app.use(buildLineItemsRouter({ db, requireAuth, requireOrg, requirePermission }));
   app.use("/", buildRouter({ db, requireAuth, requireOrg, requirePermission }));
 
-  app.listen(PORT, "127.0.0.1", () => {
+  app.listen(PORT, process.env.KSERP_PLUGIN_BIND || "127.0.0.1", () => {
     console.log(
-      `[transactions] standalone server on http://127.0.0.1:${PORT} (schemas: ${schemas.join(",") || "public"})`,
+      `[transactions] standalone server on http://${process.env.KSERP_PLUGIN_BIND || '127.0.0.1'}:${PORT} (schemas: ${schemas.join(",") || "public"})`,
     );
   });
 }
