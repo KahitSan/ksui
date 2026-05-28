@@ -10,11 +10,11 @@ name: CI
 # (label `kserp-plugin`), which has Docker + the Playwright browser cache.
 
 on:
-  push:
-    branches: [main]
-    paths: ['**', '!**/*.md', '!LICENSE', '.changeset/**']
+  # CI is a PR gate only (kernel model). The release / bump / deploy chain runs
+  # from release.yml's push:main trigger, decoupled from CI, so a changeset is
+  # never swallowed by a path filter on the way to a release.
   pull_request:
-    paths: ['**', '!**/*.md', '!LICENSE', '.changeset/**']
+    branches: [main, staging]
 
 concurrency:
   group: ci-${{ github.ref }}
