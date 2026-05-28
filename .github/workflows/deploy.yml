@@ -7,7 +7,7 @@ name: Deploy
 # app's pm2 (kserp-api / kserp-web / kplugin_transactions). So the deploy is all
 # LOCAL: build the UI bundle against the box's own node_modules, rsync the plugin
 # into /opt/kserp/plugins, and `pm2 reload` — no SSH, no DEPLOY_SSH_KEY, no
-# HOST_REPO_TOKEN. (CI's e2e still uses HOST_REPO_TOKEN on a different runner.)
+# PLUGIN_TOKEN. (CI's e2e still uses PLUGIN_TOKEN on a different runner.)
 #
 # A plugin code/migration/UI change reloads ONLY the plugin's pm2 app; the kernel
 # (kserp-api) is reloaded only when plugin.manifest.json changes (its proxy/auth
@@ -70,7 +70,7 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         run: |
           # The box already has the full host install; build the tiny UI bundle
-          # against it — no host checkout, no HOST_REPO_TOKEN.
+          # against it — no host checkout, no PLUGIN_TOKEN.
           ln -sfn /opt/kserp/node_modules node_modules
           npm run build:ui
           test -f dist-ui/remote.js || { echo "build:ui produced no bundle"; exit 1; }

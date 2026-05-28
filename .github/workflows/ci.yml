@@ -52,12 +52,12 @@ jobs:
       - name: Pull the prebuilt host image (layer-cached; only new layers download)
         # `docker pull` only fetches CHANGED layers: an unchanged host image is a
         # fast "up to date" no-op, and a new host SHA pulls just the diff — so we
-        # never re-download the whole image. Auth: log in with HOST_REPO_TOKEN if
+        # never re-download the whole image. Auth: log in with PLUGIN_TOKEN if
         # it can read packages (or if the GHCR package is public, the anonymous
         # pull works); if neither, fall back to the locally built image, which the
         # host repo's Image workflow keeps current on this same runner box.
         env:
-          GHCR_TOKEN: ${{ secrets.HOST_REPO_TOKEN }}
+          GHCR_TOKEN: ${{ secrets.PLUGIN_TOKEN }}
         run: |
           if [ -n "${GHCR_TOKEN:-}" ]; then
             echo "$GHCR_TOKEN" | docker login ghcr.io -u llupRisinglll --password-stdin 2>/dev/null \
