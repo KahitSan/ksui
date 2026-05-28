@@ -15,6 +15,7 @@ on:
   # never swallowed by a path filter on the way to a release.
   pull_request:
     branches: [main, staging]
+    paths: ['**', '!**/*.md', '!LICENSE', '.changeset/**']
 
 concurrency:
   group: ci-${{ github.ref }}
