@@ -18,7 +18,7 @@ The bookkeeping core: every **transaction** (income, expense, transfer between a
 | --- | --- |
 | Route prefix | `/api/transactions` |
 | UI route | `/transactions` (under **Bookkeeping** in the sidebar) |
-| Database schema | ``accounts`` |
+| Database schema | ``accounts`` (shared with `financial-accounts`; this plugin owns the `transactions`, `transaction_line_items`, `transaction_subcategories`, `transaction_attachments`, `transaction_visibility`, `transaction_visibility_role`, `transaction_payments`, `transaction_edits`, `transaction_customer_groups`, and `transaction_customers` tables — the `accounts.financial_accounts` table itself belongs to financial-accounts) |
 | Process port | `4020` (loopback only) |
 | Permissions | `transactions.view`, `transactions.create`, `transactions.edit`, `transactions.delete`, `transactions.backdate` |
 
