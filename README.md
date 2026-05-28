@@ -83,7 +83,7 @@ Now hitting `/api/transactions` through the kernel reaches the plugin.
 > A plugin's features disappear when the plugin is removed. The kernel must
 > never hardcode a plugin's concepts.
 
-This plugin owns its tables (``accounts``), its routes (`/api/transactions`), its
+This plugin owns its tables (`accounts`), its routes (`/api/transactions`), its
 permissions, and its capability (`transactions`). The kernel learns about
 all of those from `plugin.manifest.json` at boot time — no kernel file
 references this plugin by name. Other plugins that need this plugin's data
