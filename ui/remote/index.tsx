@@ -1654,7 +1654,7 @@ export function Component() {
       <Show when={createOpen()}>
         <Modal variant="sheet" onClose={() => closeCreate()}>
           <div
-            class="w-full sm:w-[42rem] lg:w-[48rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh]"
+            class="sm:w-[42rem] lg:w-[48rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh]"
             data-testid="transactions-create-modal"
           >
             <div class="px-5 sm:px-6 pt-5 pb-4 border-b border-zinc-800/60 flex items-center justify-between shrink-0">
@@ -1757,7 +1757,7 @@ export function Component() {
           }}
         >
           <div
-            class="w-full sm:w-[42rem] lg:w-[48rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh]"
+            class="sm:w-[42rem] lg:w-[48rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh]"
             data-testid="transactions-detail-modal"
           >
             <Show
@@ -2636,7 +2636,7 @@ function AccountPicker(props: {
         role="radiogroup"
         aria-label={props.ariaLabel}
         tabIndex={-1}
-        class="grid grid-cols-2 sm:grid-cols-3 gap-2"
+        class="grid max-sm:grid-cols-2 sm:grid-cols-3 gap-2"
         onKeyDown={onKeyDown}
       >
         <For each={visible()}>

@@ -235,7 +235,7 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
 
   return (
     <Modal variant="sheet" onClose={props.onClose} ariaLabel="Export transactions">
-      <div class="w-full sm:w-[32rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh] text-zinc-100">
+      <div class="sm:w-[32rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh] text-zinc-100">
         <header class="px-5 sm:px-6 pt-5 pb-4 border-b border-zinc-800/60">
           <p class="text-[10px] tracking-[0.3em] uppercase text-amber-400 font-semibold mb-0.5">
             Download
