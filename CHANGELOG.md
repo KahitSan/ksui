@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.1.3
+
+### Patch Changes
+
+- af79da3: Transaction receipt and attachment images now load from the kernel's new org-scoped `/assets/` URL. Previously-broken images will render again once their files are restored on the new server.
+
 ## 0.1.2
 
 ### Patch Changes
