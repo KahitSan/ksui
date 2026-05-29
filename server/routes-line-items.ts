@@ -152,6 +152,23 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
                 AND sib.ends_at IS NOT NULL AND sib.ends_at > NOW()
            ))`,
         );
+        // Backdated-but-currently-running rescue. The natural-day CASE above
+        // returns t.transaction_date for actively-running lines, so a charge
+        // rung up with a yesterday transaction_date but a today started_at
+        // (a backdated entry whose session is in progress NOW) falls through
+        // both arms when the user filters for today: the CASE points at
+        // yesterday, and the carryover arm above requires started_at <
+        // today::date which a today-started session doesn't satisfy. Catch
+        // these here so the live board always shows what's actually running.
+        // Scoped to Manila today so older active_on dates don't accidentally
+        // surface every currently-running session.
+        dateClauses.push(
+          `(li.started_at IS NOT NULL
+            AND li.ends_at IS NOT NULL
+            AND li.started_at <= NOW()
+            AND li.ends_at > NOW()
+            AND $${idx}::date = (NOW() AT TIME ZONE 'Asia/Manila')::date)`,
+        );
       }
       if (includeUpcoming) {
         dateClauses.push(

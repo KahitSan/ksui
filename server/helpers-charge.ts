@@ -48,6 +48,37 @@ export interface ChargeLineInput {
   client_id?: number | null;
 }
 
+// Multi-customer POS breakdown. A "customer group" is one customer in a shared
+// receipt: their own client (or walk-in), their own note, their own optional
+// voucher, and one or more line items attributed to them. One group has
+// is_payer=true; the receipt is issued in their name and the single payment
+// leg lands on the parent transaction. The parent transaction remains 1:1 with
+// the cashier-rung receipt so accounting stays clean.
+//
+// `item_indices` references positions in the parent ChargePayload.items array.
+// Every index in 0..items.length-1 must appear in exactly one group (the
+// validator enforces a clean partition).
+export interface ChargeCustomerGroup {
+  client_id?: number | null;
+  display_name: string;
+  note?: string | null;
+  // Per-group voucher is NOT yet supported in the plugin fork — the vouchers
+  // RPC only exposes findByCode/validate, not findById, so a per-cg voucher_id
+  // can't be looked up. Accepting the field shape so the UI doesn't have to
+  // diverge; validateCustomerGroups rejects any non-null value with a clear
+  // message until the vouchers RPC grows findById.
+  voucher_id?: number | null;
+  is_payer: boolean;
+  item_indices: number[];
+  // Per-customer-group booking anchor. When supplied, every line item in
+  // this group uses this ISO timestamp as started_at (and ends_at is
+  // computed from started_at + duration). When omitted/null, the group's
+  // lines anchor to NOW() at insert time. Under the customer_groups contract
+  // this is the ONLY way to anchor lines: top-level `started_at` is rejected
+  // so two customers on the same receipt can have different start times.
+  started_at?: string | null;
+}
+
 export interface ChargePayload {
   destination_account_id: number;
   client_id?: number | null;
@@ -64,6 +95,12 @@ export interface ChargePayload {
   notes?: string | null;
   amount_collected?: number | null;
   parent_transaction_id?: number | null;
+  // Multi-customer breakdown. When present, the parent transaction's
+  // client_id is taken from the payer group, per-line client_id falls back to
+  // the group's client_id (not the parent's, which doesn't apply to non-payer
+  // lines), and per-line started_at comes from each group's own `started_at`.
+  // Top-level `started_at` is rejected when this field is present.
+  customer_groups?: ChargeCustomerGroup[];
 }
 
 export interface ChargeResult {
@@ -167,9 +204,26 @@ export function validateChargePayload(payload: ChargePayload): void {
     throw new ChargeValidationError(400, "destination_account_id is required");
   }
   validateLineItems(payload.items);
+  // Legacy single-customer path: transaction_date and started_at are paired
+  // (either both as a custom start or neither, defaulting to NOW() /
+  // CURRENT_DATE). Mixed input would let the calendar entry drift from the
+  // line items' anchor.
+  //
+  // Multi-customer path (customer_groups present): top-level started_at is
+  // forbidden. Each customer_groups entry carries its own optional started_at
+  // so two customers on the same receipt can have different start times.
+  // transaction_date stays top-level (it's the parent transaction's calendar
+  // date, one per receipt); when absent the parent defaults to CURRENT_DATE.
   const hasDate = payload.transaction_date != null;
   const hasTs = payload.started_at != null;
-  if (hasDate !== hasTs) {
+  const hasGroups = payload.customer_groups != null;
+  if (hasGroups && hasTs) {
+    throw new ChargeValidationError(
+      400,
+      "started_at is not allowed at the top level when customer_groups is present (use customer_groups[].started_at instead)",
+    );
+  }
+  if (!hasGroups && hasDate !== hasTs) {
     throw new ChargeValidationError(
       400,
       "transaction_date and started_at must be provided together",
@@ -199,6 +253,100 @@ export function validateChargePayload(payload: ChargePayload): void {
   }
   if (payload.voucher_code != null && typeof payload.voucher_code !== "string") {
     throw new ChargeValidationError(400, "voucher_code must be a string");
+  }
+  if (payload.customer_groups != null) {
+    validateCustomerGroups(payload.customer_groups, payload.items.length);
+  }
+}
+
+// Multi-customer breakdown invariants. Enforces:
+//   - non-empty array of objects
+//   - exactly one is_payer=true
+//   - display_name is a non-empty string
+//   - client_id is a positive integer when present
+//   - voucher_id is NOT yet supported in the fork — must be null/absent
+//   - started_at is a valid ISO timestamp when present
+//   - item_indices partition exactly [0..itemsLength-1] across all groups
+export function validateCustomerGroups(
+  groups: unknown,
+  itemsLength: number,
+): asserts groups is ChargeCustomerGroup[] {
+  if (!Array.isArray(groups) || groups.length === 0) {
+    throw new ChargeValidationError(400, "customer_groups must be a non-empty array");
+  }
+  let payerCount = 0;
+  const claimedIndices = new Set<number>();
+  for (const [gIdx, raw] of groups.entries()) {
+    if (!raw || typeof raw !== "object") {
+      throw new ChargeValidationError(400, `customer_groups[${gIdx}] must be an object`);
+    }
+    const g = raw as Record<string, unknown>;
+    if (typeof g.display_name !== "string" || !g.display_name.trim()) {
+      throw new ChargeValidationError(400, `customer_groups[${gIdx}].display_name is required`);
+    }
+    if (g.client_id != null) {
+      if (typeof g.client_id !== "number" || !Number.isFinite(g.client_id) || g.client_id <= 0) {
+        throw new ChargeValidationError(
+          400,
+          `customer_groups[${gIdx}].client_id must be a positive integer`,
+        );
+      }
+    }
+    if (g.note != null && typeof g.note !== "string") {
+      throw new ChargeValidationError(400, `customer_groups[${gIdx}].note must be a string`);
+    }
+    if (g.voucher_id != null) {
+      // Vouchers RPC has no findById; deferring per-group voucher support.
+      throw new ChargeValidationError(
+        400,
+        `customer_groups[${gIdx}].voucher_id is not yet supported in this deployment`,
+      );
+    }
+    if (typeof g.is_payer !== "boolean") {
+      throw new ChargeValidationError(400, `customer_groups[${gIdx}].is_payer must be a boolean`);
+    }
+    if (g.is_payer) payerCount++;
+    if (g.started_at != null) {
+      if (typeof g.started_at !== "string" || Number.isNaN(Date.parse(g.started_at))) {
+        throw new ChargeValidationError(
+          400,
+          `customer_groups[${gIdx}].started_at must be a valid ISO timestamp`,
+        );
+      }
+    }
+    if (!Array.isArray(g.item_indices) || g.item_indices.length === 0) {
+      throw new ChargeValidationError(
+        400,
+        `customer_groups[${gIdx}].item_indices must be a non-empty array`,
+      );
+    }
+    for (const idx of g.item_indices) {
+      if (typeof idx !== "number" || !Number.isInteger(idx) || idx < 0 || idx >= itemsLength) {
+        throw new ChargeValidationError(
+          400,
+          `customer_groups[${gIdx}].item_indices must be integers in [0, items.length)`,
+        );
+      }
+      if (claimedIndices.has(idx)) {
+        throw new ChargeValidationError(
+          400,
+          `items[${idx}] is claimed by more than one customer group`,
+        );
+      }
+      claimedIndices.add(idx);
+    }
+  }
+  if (payerCount !== 1) {
+    throw new ChargeValidationError(
+      400,
+      "exactly one customer_groups entry must have is_payer=true",
+    );
+  }
+  if (claimedIndices.size !== itemsLength) {
+    throw new ChargeValidationError(
+      400,
+      "every item must be claimed by exactly one customer group",
+    );
   }
 }
 
@@ -234,6 +382,19 @@ export interface InsertLineItemsOptions {
   initialStatus: "active" | "completed";
   transactionDate?: string;
   startedAt?: string;
+  // Multi-customer breakdown. Parallel array to items[]: entry i carries the
+  // customer_group_id to attribute item i to (null = single-customer flow).
+  perLineCustomerGroupIds?: (number | null)[];
+  // Multi-customer breakdown. Parallel array to items[]: entry i overrides
+  // the per-line client_id (used in groups mode so each line gets ITS group's
+  // client, not the parent transaction's billed-to). null entry → walk-in.
+  // Undefined entry → fall back to line.client_id ?? parentClientId.
+  perLineClientIds?: (number | null)[];
+  // Per-line started_at override. Parallel array to items[]: a non-null entry
+  // forces that line's started_at to the given ISO; a null entry forces NOW()
+  // for that line regardless of `anchor`. Undefined entry → use `anchor` for
+  // that line. When the whole array is undefined, every line uses `anchor`.
+  perLineStartedAt?: (string | null)[];
 }
 
 export async function insertLineItemsForTransaction(
@@ -251,15 +412,36 @@ export async function insertLineItemsForTransaction(
     throw new Error("startedAt is required for anchor='started_at'");
   }
   const lineItems: Array<Record<string, unknown>> = [];
-  for (const line of items) {
+  for (const [lineIdx, line] of items.entries()) {
     const hasDuration = line.duration_unit != null && line.duration_value != null;
     const totalUnits = hasDuration ? (line.duration_value as number) * line.quantity : 0;
-    const lineClientId = line.client_id ?? parentClientId ?? null;
+    // Per-line client override wins in groups mode; otherwise the line's own
+    // client_id, then the parent transaction's billed-to.
+    const clientOverride = options.perLineClientIds?.[lineIdx];
+    const lineClientId =
+      clientOverride !== undefined ? clientOverride : (line.client_id ?? parentClientId ?? null);
+    const customerGroupId = options.perLineCustomerGroupIds?.[lineIdx] ?? null;
+    // Per-line anchor override (used by multi-customer charges so each cg
+    // uses its own started_at). Non-null override → explicit ISO; explicit
+    // null → NOW() (a cg with no Started at). Undefined → global `anchor`.
+    const perLineOverride = options.perLineStartedAt?.[lineIdx];
+    const effectiveAnchor: "now" | "transaction_date" | "started_at" =
+      perLineOverride === undefined
+        ? options.anchor
+        : perLineOverride === null
+          ? "now"
+          : "started_at";
+    const effectiveStartedAt =
+      perLineOverride === undefined
+        ? options.startedAt
+        : perLineOverride === null
+          ? undefined
+          : perLineOverride;
 
     const startedAtExpr =
-      options.anchor === "now"
+      effectiveAnchor === "now"
         ? "NOW()"
-        : options.anchor === "transaction_date"
+        : effectiveAnchor === "transaction_date"
           ? "($14::date)::timestamptz"
           : "($14::timestamptz)";
     // ends_at: only computed when the line carries a duration; otherwise NULL.
@@ -285,10 +467,13 @@ export async function insertLineItemsForTransaction(
       line.duration_unit ?? null, // $10
       lineClientId, // $11
       options.initialStatus, // $12
-      null, // $13 — customer_group_id (single-customer path)
+      customerGroupId, // $13
     ];
-    if (options.anchor === "transaction_date") params.push(options.transactionDate as string); // $14
-    else if (options.anchor === "started_at") params.push(options.startedAt as string); // $14
+    if (effectiveAnchor === "transaction_date") {
+      params.push(options.transactionDate as string); // $14
+    } else if (effectiveAnchor === "started_at") {
+      params.push(effectiveStartedAt as string); // $14
+    }
 
     const liResult = await client.query(
       `INSERT INTO accounts.transaction_line_items
@@ -402,6 +587,12 @@ export async function runCharge(opts: {
     .map((l) => `${l.quantity}× ${l.description}`)
     .join(", ");
   const useCustomDate = payload.transaction_date != null && payload.started_at != null;
+  // Multi-customer charges anchor per-line via customer_groups[].started_at,
+  // so the parent transaction takes its date from transaction_date alone
+  // (or CURRENT_DATE when absent). Top-level started_at is forbidden here.
+  const hasGroups =
+    Array.isArray(payload.customer_groups) && payload.customer_groups.length > 0;
+  const hasParentDate = hasGroups && payload.transaction_date != null;
   const backdateReason =
     typeof payload.backdate_reason === "string" && payload.backdate_reason.trim()
       ? payload.backdate_reason.trim()
@@ -427,70 +618,235 @@ export async function runCharge(opts: {
       );
     }
 
-    const txResult = await client.query(
-      `INSERT INTO accounts.transactions
-         (organization_id, category, subcategory, destination_account_id, amount, description,
-          notes,
-          transaction_date, status, created_by,
-          tax_type, tax_rate, tax_amount, subtotal,
-          client_id, discount_amount,
-          is_backdated, backdate_reason,
-          parent_transaction_id)
-       VALUES ($1, 'sale', 'Sales - services', $2, $3, $4,
-               $9,
-               COALESCE($7::date, CURRENT_DATE), 'completed', $5,
-               'vat_inclusive', 0, 0, $3,
-               $6, $8,
-               COALESCE($7::date, CURRENT_DATE) < CURRENT_DATE,
-               CASE WHEN COALESCE($7::date, CURRENT_DATE) < CURRENT_DATE THEN $10 ELSE NULL END,
-               $11)
-       RETURNING *`,
-      [
-        organizationId, // $1
-        payload.destination_account_id, // $2
-        total, // $3
-        txDescription || "Counter availment", // $4
-        userId, // $5
-        payload.client_id ?? null, // $6
-        useCustomDate ? payload.transaction_date : null, // $7
-        discount, // $8
-        notes, // $9
-        backdateReason, // $10
-        payload.parent_transaction_id ?? null, // $11
-      ],
-    );
-    const txn = txResult.rows[0];
+    let txn: Record<string, unknown>;
+    let lineItems: Array<Record<string, unknown>>;
 
-    const lineItems = useCustomDate
-      ? await insertLineItemsForTransaction(
-          client,
-          txn.id,
-          organizationId,
-          payload.client_id ?? null,
-          payload.items,
-          {
-            anchor: "started_at",
-            startedAt: payload.started_at as string,
-            initialStatus: txn.is_backdated ? "completed" : "active",
-          },
-        )
-      : await insertLineItemsForTransaction(
-          client,
-          txn.id,
-          organizationId,
-          payload.client_id ?? null,
-          payload.items,
-          { anchor: "now", initialStatus: "active" },
+    if (hasGroups) {
+      // ── Multi-customer path ──────────────────────────────────────────────
+      const groups = payload.customer_groups as ChargeCustomerGroup[];
+      const payerGroup = groups.find((g) => g.is_payer) as ChargeCustomerGroup;
+      const payerClientId = payerGroup.client_id ?? null;
+
+      // Index map: which group owns which line index. The validator
+      // guarantees a clean partition.
+      const groupOfLine = new Map<number, number>();
+      for (let gi = 0; gi < groups.length; gi++) {
+        for (const lineIdx of groups[gi].item_indices) {
+          groupOfLine.set(lineIdx, gi);
+        }
+      }
+      // Per-group subtotals (pre-discount). Stored on each group row so
+      // breakdown reads stay simple. Per-group voucher math is deferred
+      // (rejected at validation time); discount stays at the parent.
+      const perGroupSubtotal = new Array<number>(groups.length).fill(0);
+      for (let i = 0; i < payload.items.length; i++) {
+        const gi = groupOfLine.get(i) as number;
+        perGroupSubtotal[gi] += payload.items[i].quantity * payload.items[i].unit_price;
+      }
+
+      // Batch code stamps multi-customer receipts so staff can recognise rows
+      // that belong to the same group booking at a glance. Only assigned for
+      // 2+ customers; the UI prefixes "BA" at the display layer.
+      const batchCode =
+        groups.length > 1
+          ? ((
+              await client.query<{ code: number }>(
+                `SELECT nextval('accounts.transaction_batch_code_seq')::int AS code`,
+              )
+            ).rows[0]?.code ?? null)
+          : null;
+
+      // Parent transaction. client_id mirrors the payer's client (or NULL
+      // when payer is walk-in). transaction_date defaults to CURRENT_DATE
+      // when absent; per-line started_at is set from each cg's anchor below.
+      const txResult = await client.query(
+        `INSERT INTO accounts.transactions
+           (organization_id, category, subcategory, destination_account_id, amount, description,
+            notes,
+            transaction_date, status, created_by,
+            tax_type, tax_rate, tax_amount, subtotal,
+            client_id, discount_amount,
+            is_backdated, backdate_reason,
+            parent_transaction_id, batch_code)
+         VALUES ($1, 'sale', 'Sales - services', $2, $3, $4,
+                 $9,
+                 COALESCE($7::date, CURRENT_DATE), 'completed', $5,
+                 'vat_inclusive', 0, 0, $12,
+                 $6, $8,
+                 COALESCE($7::date, CURRENT_DATE) < CURRENT_DATE,
+                 CASE WHEN COALESCE($7::date, CURRENT_DATE) < CURRENT_DATE THEN $10 ELSE NULL END,
+                 $11, $13)
+         RETURNING *`,
+        [
+          organizationId, // $1
+          payload.destination_account_id, // $2
+          total, // $3
+          txDescription || "Counter availment", // $4
+          userId, // $5
+          payerClientId, // $6
+          hasParentDate ? payload.transaction_date : null, // $7
+          discount, // $8
+          notes, // $9
+          backdateReason, // $10
+          payload.parent_transaction_id ?? null, // $11
+          subtotal, // $12
+          batchCode, // $13
+        ],
+      );
+      txn = txResult.rows[0];
+
+      // Insert customer_groups in one multi-row INSERT, capture ids in
+      // insertion order. PG guarantees RETURNING rows come back in VALUES
+      // order, so groupRowIds[i] maps to groups[i]. 10 params per row.
+      const groupParams: unknown[] = [];
+      const groupValuesTuples: string[] = [];
+      for (let gi = 0; gi < groups.length; gi++) {
+        const g = groups[gi];
+        const base = gi * 10;
+        groupValuesTuples.push(
+          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9}, $${base + 10})`,
         );
+        groupParams.push(
+          txn.id,
+          organizationId,
+          gi,
+          g.client_id ?? null,
+          g.display_name.trim(),
+          typeof g.note === "string" && g.note.trim() ? g.note.trim() : null,
+          // Per-group voucher_id is rejected at validation; always NULL here.
+          null,
+          perGroupSubtotal[gi],
+          0,
+          g.is_payer,
+        );
+      }
+      const groupBatchRes = await client.query<{ id: number }>(
+        `INSERT INTO accounts.transaction_customer_groups
+           (transaction_id, organization_id, position,
+            client_id, display_name, note, voucher_id,
+            subtotal, discount_amount, is_payer)
+         VALUES ${groupValuesTuples.join(", ")}
+         RETURNING id`,
+        groupParams,
+      );
+      const groupRowIds = groupBatchRes.rows.map((r) => r.id);
 
-    // Client pool persistence.
-    const poolIds: number[] = Array.isArray(payload.client_ids)
-      ? Array.from(
-          new Set(payload.client_ids.filter((v) => typeof v === "number" && Number.isFinite(v))),
-        )
-      : payload.client_id != null
-        ? [payload.client_id]
-        : [];
+      // Build per-line attribution arrays (parallel to payload.items[]).
+      // perLineStartedAt mirrors each cg's started_at: a string pins that
+      // line's anchor; an explicit null forces NOW(); undefined would fall
+      // back to the global anchor. Under the multi-customer contract we
+      // always provide an explicit choice, so the global anchor never fires.
+      const perLineCustomerGroupIds: (number | null)[] = new Array(payload.items.length).fill(
+        null,
+      );
+      const perLineClientIds: (number | null)[] = new Array(payload.items.length).fill(null);
+      const perLineStartedAt: (string | null)[] = new Array(payload.items.length).fill(null);
+      for (let i = 0; i < payload.items.length; i++) {
+        const gi = groupOfLine.get(i) as number;
+        perLineCustomerGroupIds[i] = groupRowIds[gi];
+        perLineClientIds[i] = groups[gi].client_id ?? null;
+        const cgStartedAt = groups[gi].started_at;
+        perLineStartedAt[i] =
+          typeof cgStartedAt === "string" && cgStartedAt.length > 0 ? cgStartedAt : null;
+      }
+
+      lineItems = await insertLineItemsForTransaction(
+        client,
+        txn.id as number,
+        organizationId,
+        payerClientId,
+        payload.items,
+        {
+          anchor: "now",
+          initialStatus: (txn.is_backdated as boolean) ? "completed" : "active",
+          perLineCustomerGroupIds,
+          perLineClientIds,
+          perLineStartedAt,
+        },
+      );
+    } else {
+      // ── Legacy single-customer path ──────────────────────────────────────
+      const txResult = await client.query(
+        `INSERT INTO accounts.transactions
+           (organization_id, category, subcategory, destination_account_id, amount, description,
+            notes,
+            transaction_date, status, created_by,
+            tax_type, tax_rate, tax_amount, subtotal,
+            client_id, discount_amount,
+            is_backdated, backdate_reason,
+            parent_transaction_id)
+         VALUES ($1, 'sale', 'Sales - services', $2, $3, $4,
+                 $9,
+                 COALESCE($7::date, CURRENT_DATE), 'completed', $5,
+                 'vat_inclusive', 0, 0, $3,
+                 $6, $8,
+                 COALESCE($7::date, CURRENT_DATE) < CURRENT_DATE,
+                 CASE WHEN COALESCE($7::date, CURRENT_DATE) < CURRENT_DATE THEN $10 ELSE NULL END,
+                 $11)
+         RETURNING *`,
+        [
+          organizationId, // $1
+          payload.destination_account_id, // $2
+          total, // $3
+          txDescription || "Counter availment", // $4
+          userId, // $5
+          payload.client_id ?? null, // $6
+          useCustomDate ? payload.transaction_date : null, // $7
+          discount, // $8
+          notes, // $9
+          backdateReason, // $10
+          payload.parent_transaction_id ?? null, // $11
+        ],
+      );
+      txn = txResult.rows[0];
+
+      lineItems = useCustomDate
+        ? await insertLineItemsForTransaction(
+            client,
+            txn.id as number,
+            organizationId,
+            payload.client_id ?? null,
+            payload.items,
+            {
+              anchor: "started_at",
+              startedAt: payload.started_at as string,
+              initialStatus: (txn.is_backdated as boolean) ? "completed" : "active",
+            },
+          )
+        : await insertLineItemsForTransaction(
+            client,
+            txn.id as number,
+            organizationId,
+            payload.client_id ?? null,
+            payload.items,
+            { anchor: "now", initialStatus: "active" },
+          );
+    }
+
+    // Client pool persistence. Multi-customer charges aggregate
+    // payload.client_ids (primaries + multi-occupant extras) when present;
+    // otherwise fall back to groups[*].client_id (multi-customer) or
+    // [client_id] (single-customer). Same dedup semantics either way.
+    const poolIds: number[] = [];
+    const seenPool = new Set<number>();
+    if (Array.isArray(payload.client_ids)) {
+      for (const cid of payload.client_ids) {
+        if (typeof cid !== "number" || !Number.isFinite(cid)) continue;
+        if (seenPool.has(cid)) continue;
+        poolIds.push(cid);
+        seenPool.add(cid);
+      }
+    } else if (hasGroups) {
+      for (const g of payload.customer_groups as ChargeCustomerGroup[]) {
+        if (g.client_id != null && !seenPool.has(g.client_id)) {
+          poolIds.push(g.client_id);
+          seenPool.add(g.client_id);
+        }
+      }
+    } else if (payload.client_id != null) {
+      poolIds.push(payload.client_id);
+      seenPool.add(payload.client_id);
+    }
     if (poolIds.length > 0) {
       const values: string[] = [];
       const params: unknown[] = [];
