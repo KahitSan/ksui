@@ -1,24 +1,11 @@
 // Source: KahitSan/kserp src/lib/account-logo-url.ts (vendored into the plugin remote).
-// Build the <img src> for a financial account logo. The logo endpoint is
-// gated by requireOrg, which reads the active org id from X-Organization-Id
-// or a ?orgId= query-string fallback. A plain <img> can't set headers, so we
-// pass orgId in the URL. `v` (the file path/UUID) is a cache-buster.
+//
+// Build the <img src> for a financial account logo. logoPath is the on-disk
+// suffix stored in financial_accounts.logo_path, shaped
+// "financial-accounts/<orgId>/<uuid>.webp". The kernel's /assets/ mount
+// (server/middleware/assets.ts) is session-authed and org-membership-gated
+// on the orgId segment in the path, so no query-string params are needed.
 
-const LS_KEY = "ks_active_org_id";
-
-export function activeOrgId(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem(LS_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function buildLogoSrc(accountId: number, logoPath: string | null | undefined): string {
-  const params = new URLSearchParams();
-  params.set("v", logoPath ?? "");
-  const orgId = activeOrgId();
-  if (orgId) params.set("orgId", orgId);
-  return `/api/financial-accounts/${accountId}/logo?${params.toString()}`;
+export function buildLogoSrc(logoPath: string | null | undefined): string {
+  return `/assets/${logoPath ?? ""}`;
 }

@@ -45,7 +45,7 @@ export default function AccountAvatar(props: AccountAvatarProps) {
         }
       >
         <img
-          src={buildLogoSrc(props.account.id, props.account.logo_path)}
+          src={buildLogoSrc(props.account.logo_path)}
           alt={props.alt ?? ""}
           class="w-full h-full rounded-md object-cover"
         />
