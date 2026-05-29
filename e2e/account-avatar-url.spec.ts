@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { Client } from "pg";
+import { randomUUID } from "node:crypto";
 
 // Regression guard for the account-avatar URL shape inside transaction
 // payment-leg rows. The kernel switched from `/api/financial-accounts/:id/logo`
@@ -45,7 +46,9 @@ test.describe("transaction payment-leg — avatar URL shape", () => {
   let txnId: number | undefined;
   let paymentId: number | undefined;
   const description = `avatar-url-spec-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-  const TEST_LOGO_PATH = `financial-accounts/${ORG_ID}/avatar-url-spec-${Date.now()}.webp`;
+  // logo_path must match the financial_accounts_logo_path_format_check
+  // CHECK constraint: `^financial-accounts/\d+/[0-9a-f-]+\.webp$` (UUID shape).
+  const TEST_LOGO_PATH = `financial-accounts/${ORG_ID}/${randomUUID()}.webp`;
 
   test.beforeAll(async () => {
     const c = db();
