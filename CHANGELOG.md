@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.3.0
+
+### Minor Changes
+
+- 41662bc: The payment accounts behind each transaction are now surfaced to the counter, so booking cards can show how a customer paid — including when a payment was split across several accounts.
+
 ## 0.2.0
 
 ### Minor Changes
