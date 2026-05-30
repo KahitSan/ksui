@@ -26,7 +26,7 @@
 //   GET    /:id/line-items         list line items
 //   POST   /:id/line-items/:lid/void   void a single line item
 //   GET    /:id/attachments        list attachments (metadata)
-//   POST   /:id/attachments        attach a file URL (URL-based; no disk upload)
+//   POST   /:id/attachments        upload a receipt image/PDF (multipart "file")
 //   DELETE /:id/attachments/:aid   delete an attachment
 //
 // Every query carries WHERE organization_id = $N from req.organizationId
@@ -38,6 +38,12 @@
 import { Router, type Request, type Response, type RequestHandler } from "express";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import {
+  createTransactionUpload,
+  getRelativePath,
+  deleteUploadedFile,
+  MAX_FILE_SIZE,
+} from "@ks-erp/server-runtime/upload";
 import {
   runCharge,
   ChargeValidationError,
@@ -1719,19 +1725,34 @@ export function buildRouter(deps: RouterDeps): Router {
     },
   );
 
-  // ── Attachments (URL-based; no disk upload in the isolated plugin) ───────
+  // ── Attachments (real disk upload via server-runtime → kernel /assets) ────
+  // The plugin process writes the bytes under UPLOAD_DIR/transactions/<orgId>/
+  // and stores that relative path in file_path. The kernel serves it back at
+  // /assets/transactions/<orgId>/<file> (membership-gated). UPLOAD_DIR must be
+  // an absolute path shared by the kernel + plugin processes (see deploy env).
+  const ATTACHMENT_COLUMNS =
+    "id, transaction_id, file_name, file_path, file_size, mime_type, uploaded_by, created_at";
+
   router.get(
     "/:id/attachments",
     requireAuth,
     requireOrg,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
+      const txId = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(txId) || txId <= 0) {
+        res.status(400).json({ error: "Invalid transaction id" });
+        return;
+      }
       try {
         const rows = await pool.query(
-          `SELECT a.* FROM accounts.transaction_attachments a
+          `SELECT ${ATTACHMENT_COLUMNS.split(", ")
+            .map((c) => `a.${c}`)
+            .join(", ")}
+             FROM accounts.transaction_attachments a
              JOIN accounts.transactions t ON t.id = a.transaction_id
             WHERE a.transaction_id = $1 AND t.organization_id = $2 ORDER BY a.created_at`,
-          [req.params.id, req.organizationId],
+          [txId, req.organizationId],
         );
         res.json({ attachments: rows.rows });
       } catch (err) {
@@ -1746,43 +1767,65 @@ export function buildRouter(deps: RouterDeps): Router {
     requireAuth,
     requireOrg,
     requirePermission("transactions.edit"),
+    // Validate the id + build the per-org multer uploader AFTER requireOrg has
+    // set req.organizationId (the upload dir is per-org), then run .single.
+    (req: Request, res: Response, next) => {
+      const txId = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(txId) || txId <= 0) {
+        res.status(400).json({ error: "Invalid transaction id" });
+        return;
+      }
+      const orgId = req.organizationId;
+      if (orgId == null) {
+        res.status(400).json({ error: "Organization context required" });
+        return;
+      }
+      const upload = createTransactionUpload(orgId).single("file");
+      upload(req, res, (err: unknown) => {
+        if (err) {
+          const code = (err as { code?: string }).code;
+          res.status(400).json({
+            error:
+              code === "LIMIT_FILE_SIZE"
+                ? `File exceeds the ${Math.round(MAX_FILE_SIZE / (1024 * 1024))}MB limit`
+                : "Upload failed",
+          });
+          return;
+        }
+        next();
+      });
+    },
     async (req: Request, res: Response) => {
-      // The monolith stored uploaded files via server-runtime/upload to a disk
-      // path the host served. The isolated plugin accepts a file URL +
-      // metadata instead (the host or an object store owns the bytes), keeping
-      // the plugin stateless on disk. file_path holds the URL.
-      const { file_name, file_url, file_size, mime_type } = req.body ?? {};
-      if (!file_name || typeof file_name !== "string") {
-        res.status(400).json({ error: "file_name is required" });
+      const file = req.file;
+      const orgId = req.organizationId as number;
+      // multer's fileFilter rejects disallowed mime types by dropping the file
+      // (no error), so an absent req.file means "no file" OR "unsupported type".
+      if (!file) {
+        res.status(400).json({ error: "A valid image (JPEG/PNG/WEBP/HEIC) or PDF file is required" });
         return;
       }
-      if (!file_url || typeof file_url !== "string") {
-        res.status(400).json({ error: "file_url is required" });
-        return;
-      }
+      const relPath = getRelativePath(orgId, file.filename);
       try {
         const tx = await pool.query(
           `SELECT id FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
-          [req.params.id, req.organizationId],
+          [req.params.id, orgId],
         );
         if (tx.rows.length === 0) {
+          // The transaction isn't ours — don't leave orphaned bytes on disk.
+          deleteUploadedFile(relPath);
           res.status(404).json({ error: "Not found" });
           return;
         }
         const result = await pool.query(
-          `INSERT INTO accounts.transaction_attachments (transaction_id, file_name, file_path, file_size, mime_type, uploaded_by)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-          [
-            req.params.id,
-            file_name,
-            file_url,
-            Number.isFinite(file_size) ? file_size : 0,
-            mime_type || "application/octet-stream",
-            req.user?.id ?? "",
-          ],
+          `INSERT INTO accounts.transaction_attachments
+             (transaction_id, file_name, file_path, file_size, mime_type, uploaded_by)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING ${ATTACHMENT_COLUMNS}`,
+          [req.params.id, file.originalname, relPath, file.size, file.mimetype, req.user?.id ?? ""],
         );
         res.status(201).json(result.rows[0]);
       } catch (err) {
+        deleteUploadedFile(relPath);
         console.error("[transactions] attachment create error:", err);
         res.status(500).json({ error: "Internal server error" });
       }
@@ -1801,12 +1844,19 @@ export function buildRouter(deps: RouterDeps): Router {
              USING accounts.transactions t
             WHERE a.transaction_id = t.id
               AND a.id = $1 AND a.transaction_id = $2 AND t.organization_id = $3
-            RETURNING a.id`,
+            RETURNING a.file_path`,
           [req.params.attachmentId, req.params.id, req.organizationId],
         );
         if (result.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
           return;
+        }
+        // Best-effort disk cleanup for files we own (relative paths written by
+        // this plugin). External/legacy URLs (http(s)://, blob:, absolute) are
+        // left alone — deleteUploadedFile no-ops on a missing path anyway.
+        const filePath = result.rows[0].file_path as string | null;
+        if (filePath && !/^[a-z]+:\/\//i.test(filePath) && !filePath.startsWith("/")) {
+          deleteUploadedFile(filePath);
         }
         res.status(204).send();
       } catch (err) {

@@ -10,6 +10,15 @@
   "nav": { "label": "Transactions", "section": "bookkeeping", "icon": "receipt" },
   "schemas": ["accounts"],
   "dependencies": [],
+  "tier": "composite",
+  "requires": [
+    "service:findByIds@clients",
+    "service:findVariantsByIds@packages",
+    "service:findByCode@vouchers",
+    "service:findById@vouchers"
+  ],
+  "ciCoMounts": ["clients", "packages", "vouchers"],
+  "provides": ["service:findById", "service:getAccountBalances", "service:getPackageCapacityUsage"],
   "permissions": [
     "transactions.view",
     "transactions.create",

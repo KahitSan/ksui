@@ -211,9 +211,12 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
     );
   });
 
-  test("rejects per-group voucher_id until findById lands on the vouchers RPC", async ({
+  test("accepts a per-group voucher_id and degrades gracefully when it doesn't resolve", async ({
     request,
   }) => {
+    // findById now backs per-group vouchers, but an id with no matching voucher
+    // row (here a bogus 99) must not block the charge: it degrades like the
+    // top-level voucher_code path — full subtotal, no discount, 201.
     const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
     const res = await request.post("/api/transactions/charge", {
       headers: { "x-organization-id": String(orgId), "content-type": "application/json" },
@@ -233,7 +236,55 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
         transaction_date: "2026-05-29",
       },
     });
-    expect(res.status()).toBe(400);
-    expect((await res.json()).error).toMatch(/voucher_id is not yet supported/);
+    expect(res.status(), await res.text()).toBe(201);
+    const body = await res.json();
+    // No discount applied — the bogus voucher resolved to nothing.
+    expect(Number(body.transaction.discount_amount)).toBe(0);
+    expect(Number(body.transaction.amount)).toBe(198); // 2 × ₱99, full subtotal
+  });
+
+  test("applies a per-group voucher discount when the voucher resolves", async ({ request }) => {
+    // vouchers is co-mounted in this plugin's CI (ciCoMounts). Create a real
+    // ₱50 fixed-amount voucher, attach it to one customer group, and assert the
+    // server resolved it via findById, computed the discount against that
+    // group's subtotal, and folded it into the parent transaction's total.
+    const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
+
+    const voucherRes = await request.post("/api/vouchers", {
+      headers: { "x-organization-id": String(orgId), "content-type": "application/json" },
+      // Omit `code` so the server mints a unique one (no cross-retry 23505).
+      data: { type: "fixed_amount", value: 50 },
+    });
+    expect(voucherRes.status(), await voucherRes.text()).toBe(201);
+    const voucherId = (await voucherRes.json()).id as number;
+    expect(voucherId).toBeTruthy();
+
+    const res = await request.post("/api/transactions/charge", {
+      headers: { "x-organization-id": String(orgId), "content-type": "application/json" },
+      data: {
+        destination_account_id: accountId,
+        client_id: client1Id,
+        client_ids: [client1Id, client2Id],
+        items: [manualLine("voucher line"), manualLine("plain line")],
+        customer_groups: [
+          {
+            client_id: client1Id,
+            display_name: "A",
+            is_payer: true,
+            item_indices: [0],
+            voucher_id: voucherId,
+          },
+          { client_id: client2Id, display_name: "B", is_payer: false, item_indices: [1] },
+        ],
+        transaction_date: "2026-05-29",
+        amount_collected: 148,
+      },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    const body = await res.json();
+    // Group A's ₱99 subtotal less the ₱50 fixed voucher = ₱50 discount on the
+    // parent; group B is undiscounted. Total = 198 − 50 = 148.
+    expect(Number(body.transaction.discount_amount)).toBe(50);
+    expect(Number(body.transaction.amount)).toBe(148);
   });
 });

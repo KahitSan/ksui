@@ -25,7 +25,7 @@
 // voucher over RPC and compute the discount, but we DO NOT increment usage as
 // part of the charge transaction — see chargeFlow's best-effort note.
 
-import { tryCallPlugin, type PluginUnavailableError } from "@ks-erp/kernel/service-rpc";
+import { tryCallPlugin, type PluginUnavailableError } from "@ks-erp/kernel-composite";
 
 export type IdentityHeader = string | undefined;
 
@@ -128,6 +128,17 @@ export async function findVoucherByCode(
   identityHeader: IdentityHeader,
 ): Promise<VoucherRow | null> {
   return tryCallPlugin<VoucherRow | null>("vouchers", "findByCode", { code }, { identityHeader });
+}
+
+/** Look up a voucher row by id. Null when vouchers absent OR no such id.
+ *  Backs the per-customer-group voucher discount in the multi-customer charge:
+ *  the new POS attaches a voucher per customer and sends only its id, so the
+ *  charge route resolves the row here to compute the discount server-side. */
+export async function findVoucherById(
+  id: number,
+  identityHeader: IdentityHeader,
+): Promise<VoucherRow | null> {
+  return tryCallPlugin<VoucherRow | null>("vouchers", "findById", { id }, { identityHeader });
 }
 
 // ── clients ──────────────────────────────────────────────────────────────────

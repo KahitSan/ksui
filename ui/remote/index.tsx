@@ -823,24 +823,22 @@ export function Component() {
     setEditing(true);
   }
 
-  // Upload pending files as URL-based attachments. The plugin server stores a
-  // file_url + metadata (no byte storage), so we POST a blob: object URL for
-  // the current session. A failure is surfaced inline; the transaction is
+  // Upload pending files as real multipart attachments. The plugin server
+  // writes the bytes under UPLOAD_DIR/transactions/<orgId>/ and serves them
+  // back through the kernel's /assets mount — so the stored path survives a
+  // reload (a blob: object URL does not). Field name "file" matches
+  // upload.single("file"). A failure is surfaced inline; the transaction is
   // already saved. Returns the names that failed.
   async function uploadPendingFiles(txnId: number, files: PendingFile[]): Promise<string[]> {
     const failed: string[] = [];
     for (const pf of files) {
       try {
+        const fd = new FormData();
+        fd.append("file", pf.file);
         const res = await fetch(`/api/transactions/${txnId}/attachments`, {
           method: "POST",
           credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            file_name: pf.file.name,
-            file_url: pf.previewUrl ?? URL.createObjectURL(pf.file),
-            file_size: pf.file.size,
-            mime_type: pf.file.type || "application/octet-stream",
-          }),
+          body: fd,
         });
         if (!res.ok) failed.push(pf.file.name);
       } catch {

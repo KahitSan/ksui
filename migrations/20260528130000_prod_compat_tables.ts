@@ -79,10 +79,13 @@ const migration = {
           WHERE table_schema = 'public' AND table_name = 'transaction_subcategories'
         ) THEN
           INSERT INTO accounts.transaction_subcategories
-                 (id, name, applies_to, sort_order, is_active, created_at, updated_at)
-          SELECT  id, name, applies_to, sort_order, is_active, created_at, updated_at
-            FROM public.transaction_subcategories
-          ON CONFLICT (id) DO NOTHING;
+                 (name, applies_to, sort_order, is_active, created_at, updated_at)
+          SELECT  p.name, p.applies_to, p.sort_order, p.is_active, p.created_at, p.updated_at
+            FROM public.transaction_subcategories p
+           WHERE NOT EXISTS (
+             SELECT 1 FROM accounts.transaction_subcategories a
+              WHERE lower(a.name) = lower(p.name) AND a.applies_to = p.applies_to
+           );
 
           SELECT COALESCE(MAX(id), 0) INTO new_max FROM accounts.transaction_subcategories;
           IF new_max > 0 THEN

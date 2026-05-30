@@ -8,7 +8,32 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@ks-erp/kernel-base": [
+        "../kserp/kernel-base/index.ts"
+      ],
+      "@ks-erp/kernel-composite": [
+        "../kserp/kernel-composite/index.ts"
+      ],
+      "@ks-erp/kernel-orchestrator": [
+        "../kserp/kernel-orchestrator/index.ts"
+      ],
+      "@ks-erp/kernel-gateway": [
+        "../kserp/kernel-gateway/index.ts"
+      ],
+      "@ks-erp/kernel-theme": [
+        "../kserp/kernel-theme/index.ts"
+      ]
+    },
+    "ignoreDeprecations": "6.0"
   },
-  "include": ["server", "migrations", "ui"]
+  "include": [
+    "server",
+    "migrations",
+    "ui"
+  ]
 }

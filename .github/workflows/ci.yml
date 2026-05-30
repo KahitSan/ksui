@@ -1,13 +1,18 @@
 name: CI
 
-# Runs this plugin's e2e against a PREBUILT host image
-# (ghcr.io/kahitsan/kserp-host) — it does NOT check out or build the host.
-# We pull the image, run it with this plugin mounted (the kernel spawns the
-# plugin and the image's entrypoint builds its UI bundle), then run Playwright
-# against it. This drops the old "install + build the whole host" cost (minutes)
-# to a cached image pull (seconds), and because the image serves the BUILT
-# frontend there's no dev cold-compile. Runs on the KahitSan self-hosted runner
-# (label `kserp-plugin`), which has Docker + the Playwright browser cache.
+# Runs this plugin's e2e against the kernel, by CLONING the kernel (and any
+# co-mounted sibling plugins) at the branch that matches this run and running it
+# in dev/source mode with the plugins mounted — the same shape `/worktree` (and
+# production, which runs `tsx` from source) use.
+#
+# Why not the prebuilt ghcr host image: that image only republishes on a kernel
+# push to main (a prod deploy), so during a coordinated change it lags behind
+# the kernel API the plugin needs, and the tiered `@ks-erp/kernel-*` SDK
+# packages resolve from SOURCE (via tsconfig paths) rather than a built `dist`.
+# Cloning the matching kernel branch tests the plugin against the REAL, current
+# kernel with no image republish and no prod deploy. Co-mounted siblings (the
+# plugin's manifest `ciCoMounts`) are cloned too so cross-plugin schemas/routes
+# exist. Runs on the KahitSan self-hosted runner (label `kserp-plugin`).
 
 on:
   # CI is a PR gate only (kernel model). The release / bump / deploy chain runs
@@ -21,9 +26,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  HOST_IMAGE: ghcr.io/kahitsan/kserp-host:latest
-
 jobs:
   e2e:
     runs-on: [self-hosted, kserp-plugin]
@@ -31,74 +33,122 @@ jobs:
       - name: Checkout plugin
         uses: actions/checkout@v4
 
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          # No lockfile in this repo, so key on package.json. node_modules holds
-          # only the test-runner deps (Playwright et al.) — the host image
-          # carries everything the plugin needs at runtime. (Playwright browsers
-          # aren't cached here: ~/.cache/ms-playwright already persists between
-          # jobs on the self-hosted runner, so the install below is a no-op.)
-          key: plugin-nm-${{ runner.os }}-${{ hashFiles('package.json') }}
-
-      - name: Install Playwright (test runner only)
-        # --legacy-peer-deps skips the @ks-erp/kernel PEER dependency, which is
-        # provided by the host image at runtime (not published to a registry).
-        # Skipped entirely on a warm node_modules cache.
-        run: |
-          [ -d node_modules/@playwright/test ] || npm install --legacy-peer-deps
-          npx playwright install chromium
-
-      - name: Pull the prebuilt host image (layer-cached; only new layers download)
-        # `docker pull` only fetches CHANGED layers: an unchanged host image is a
-        # fast "up to date" no-op, and a new host SHA pulls just the diff — so we
-        # never re-download the whole image. Auth: log in with PLUGIN_TOKEN if
-        # it can read packages (or if the GHCR package is public, the anonymous
-        # pull works); if neither, fall back to the locally built image, which the
-        # host repo's Image workflow keeps current on this same runner box.
+      - name: Clone the kernel + co-mounted sibling plugins (siblings of ../kserp)
         env:
-          GHCR_TOKEN: ${{ secrets.PLUGIN_TOKEN }}
+          CLONE_TOKEN: ${{ secrets.PLUGIN_TOKEN }}
         run: |
-          if [ -n "${GHCR_TOKEN:-}" ]; then
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u llupRisinglll --password-stdin 2>/dev/null \
-              || echo "ghcr login failed (token may lack read:packages) — trying anonymous/local"
-          fi
-          docker pull "$HOST_IMAGE" || echo "pull unavailable — using locally built image if present"
+          set -e
+          # On the self-hosted runner, actions/checkout leaves an
+          # `http.https://github.com/.extraheader` Authorization in THIS repo's
+          # git config pinning github.com auth to the plugin's GITHUB_TOKEN
+          # (which can't read other KahitSan repos). Clear it + any credential
+          # helper per command so our URL-embedded PLUGIN_TOKEN wins.
+          GITCFG=(-c "http.https://github.com/.extraheader=" -c credential.helper=)
+          BASE="https://x-access-token:${CLONE_TOKEN}@github.com/KahitSan"
+          PARENT="$(dirname "$GITHUB_WORKSPACE")"
+          # Branch matching this run for a given repo: the PR's own branch
+          # (coordinated feat/<task> shares a name), else the PR base, else
+          # staging, else main — first that exists wins.
+          pick_branch() {
+            local repo="$1" c
+            for c in "${{ github.head_ref }}" "${{ github.base_ref }}" staging main; do
+              [ -z "$c" ] && continue
+              if git "${GITCFG[@]}" ls-remote --exit-code --heads "$BASE/$repo.git" "$c" >/dev/null 2>&1; then
+                echo "$c"; return 0
+              fi
+            done
+            return 1
+          }
+          KREF="$(pick_branch kserp)" || { echo "::error::no matching kernel branch"; exit 1; }
+          echo "kernel @ $KREF"
+          rm -rf "$PARENT/kserp"
+          git "${GITCFG[@]}" clone --depth 1 --branch "$KREF" "$BASE/kserp.git" "$PARENT/kserp"
+          # Co-mounted siblings from this plugin's manifest (empty for base plugins).
+          MOUNTS="$GITHUB_WORKSPACE"
+          for sib in $(node -p "(require('$GITHUB_WORKSPACE/plugin.manifest.json').ciCoMounts||[]).join(' ')"); do
+            REPO="kplugin_$sib"; DIR="$PARENT/$REPO"
+            SREF="$(pick_branch "$REPO")" || { echo "::error::no branch for $REPO"; exit 1; }
+            echo "co-mount $REPO @ $SREF"
+            rm -rf "$DIR"
+            git "${GITCFG[@]}" clone --depth 1 --branch "$SREF" "$BASE/$REPO.git" "$DIR"
+            MOUNTS="$MOUNTS,$DIR"
+          done
+          echo "KSERP_PLUGINS=$MOUNTS" >> "$GITHUB_ENV"
 
-      - name: Boot the host with this plugin loaded
+      - name: Start Postgres
         run: |
-          docker rm -f kserp-ci-host kserp-ci-pg >/dev/null 2>&1 || true
-          docker network rm kserp-ci-net >/dev/null 2>&1 || true
-          docker network create kserp-ci-net
-          docker run -d --name kserp-ci-pg --network kserp-ci-net \
+          # Unique name + RANDOM host port: the self-hosted runner is shared, so
+          # a fixed 5432 collides with a persistent pg or a concurrent plugin run.
+          NAME="kserp-ci-pg-${{ github.run_id }}"
+          docker rm -f "$NAME" >/dev/null 2>&1 || true
+          docker run -d --name "$NAME" -p 127.0.0.1::5432 \
             -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=ks_erp \
             postgres:16
-          # The plugin is mounted READ-ONLY: the host image copies it into a
-          # writable internal dir before building its UI, so it never writes to
-          # the checkout (no node_modules clobber, no root-owned leftovers).
-          # transactions is independent (its POS charge consumes other plugins
-          # but degrades gracefully), so KSERP_PLUGINS=/plugin (standalone) is a
-          # valid e2e shape.
-          docker run -d --name kserp-ci-host --network kserp-ci-net \
-            -e DB_HOST=kserp-ci-pg -e DB_PORT=5432 -e DB_USER=postgres -e DB_PASSWORD=postgres -e DB_NAME=ks_erp \
-            -e BETTER_AUTH_SECRET=ci-host-image-better-auth-secret-32-bytes \
-            -e BETTER_AUTH_URL=http://localhost:4000 \
-            -e KSERP_INTERNAL_SECRET=ci-host-image-internal-secret-32-bytesxx \
-            -e KSERP_PLUGINS=/plugin \
-            -v "${{ github.workspace }}:/plugin:ro" \
-            -p 4000:4000 \
-            "$HOST_IMAGE"
-          npx wait-on -t 180000 http://localhost:4000/api/health http://localhost:4000/transactions
+          PORT=$(docker port "$NAME" 5432/tcp | head -1 | sed 's/.*://')
+          echo "PG_CONTAINER=$NAME" >> "$GITHUB_ENV"
+          echo "DB_PORT=$PORT" >> "$GITHUB_ENV"
+          for i in $(seq 1 30); do
+            docker exec "$NAME" pg_isready -U postgres >/dev/null 2>&1 && break
+            sleep 1
+          done
+
+      - name: Install kernel deps + build the @ks-erp packages
+        working-directory: ${{ github.workspace }}/../kserp
+        run: |
+          npm ci
+          npm run build:packages
+
+      - name: Link node_modules + build UI bundles (plugin + co-mounts)
+        # Each mounted plugin shares the kernel's node_modules (same as the
+        # worktree) so @ks-erp/* + the test runner resolve, and build:ui produces
+        # the remote bundle the host serves at /<route>/_ui.
+        run: |
+          PARENT="$(dirname "$GITHUB_WORKSPACE")"
+          IFS=',' read -ra MS <<< "$KSERP_PLUGINS"
+          for d in "${MS[@]}"; do
+            ln -sfn "$PARENT/kserp/node_modules" "$d/node_modules"
+            (cd "$d" && npm run build:ui)
+          done
+          npx playwright install chromium
+
+      - name: Migrate, seed, and run the dev stack with the plugin(s) mounted
+        working-directory: ${{ github.workspace }}/../kserp
+        env:
+          DB_HOST: 127.0.0.1
+          # DB_PORT + KSERP_PLUGINS come from earlier steps via $GITHUB_ENV.
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: ks_erp
+          BETTER_AUTH_SECRET: ci-dev-better-auth-secret-needs-32bytes
+          BETTER_AUTH_URL: http://localhost:4001
+          KSERP_INTERNAL_SECRET: ci-dev-internal-secret-needs-32-bytesxx
+          API_PORT: "4001"
+          ALLOWED_ORIGINS: http://localhost:4000
+          KSERP_PLUGIN_SPAWN: "1"
+        run: |
+          # Defensive: free the dev ports in case a prior run on this shared
+          # self-hosted runner leaked a server (otherwise wait-on could bind to a
+          # STALE server from another run and report phantom-green).
+          for p in 4000 4001 $(seq 4011 4029); do fuser -k "$p/tcp" 2>/dev/null || true; done
+          npm run db:migrate
+          npm run db:seed
+          # setsid so the whole dev tree (concurrently + vinxi + tsx + spawned
+          # plugins) becomes one process group we can kill in teardown.
+          setsid npm run dev > /tmp/kserp-dev.log 2>&1 &
+          echo "DEV_PGID=$!" >> "$GITHUB_ENV"
+          ROUTE=$(node -p "require('$GITHUB_WORKSPACE/plugin.manifest.json').uiRouteBase")
+          # vinxi dev cold-compiles the host shell + the plugin remote on first
+          # hit, so allow a generous window.
+          npx wait-on -t 240000 http://localhost:4000/api/health "http://localhost:4000/$ROUTE"
 
       - name: Run plugin e2e
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:4000
         run: npx playwright test --reporter=list
 
-      - name: Host logs on failure
+      - name: Kernel dev log on failure
         if: failure()
-        run: docker logs kserp-ci-host 2>&1 | tail -150 || true
+        run: tail -250 /tmp/kserp-dev.log || true
 
       - name: Upload e2e artifacts on failure
         if: failure()
@@ -113,7 +163,8 @@ jobs:
       - name: Teardown
         if: always()
         run: |
-          docker rm -f kserp-ci-host kserp-ci-pg >/dev/null 2>&1 || true
-          docker network rm kserp-ci-net >/dev/null 2>&1 || true
-
-# (validation: a CI-only change like this must NOT redeploy prod — deploy.yml gates on a new version)
+          # Kill the dev process group (self-hosted runners don't reap
+          # backgrounded procs), then free the ports as belt-and-suspenders.
+          kill -- -"${DEV_PGID:-0}" 2>/dev/null || true
+          for p in 4000 4001 $(seq 4011 4029); do fuser -k "$p/tcp" 2>/dev/null || true; done
+          docker rm -f "${PG_CONTAINER:-kserp-ci-pg-${{ github.run_id }}}" >/dev/null 2>&1 || true

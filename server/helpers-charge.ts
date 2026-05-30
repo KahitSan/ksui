@@ -30,6 +30,7 @@ import { computeVoucherDiscount, type VoucherForDiscount } from "./lib/voucher-d
 import {
   findVariantsByIds,
   findVoucherByCode,
+  findVoucherById,
   type IdentityHeader,
   type PackageVariantRow,
 } from "./lib/peers.js";
@@ -62,11 +63,11 @@ export interface ChargeCustomerGroup {
   client_id?: number | null;
   display_name: string;
   note?: string | null;
-  // Per-group voucher is NOT yet supported in the plugin fork — the vouchers
-  // RPC only exposes findByCode/validate, not findById, so a per-cg voucher_id
-  // can't be looked up. Accepting the field shape so the UI doesn't have to
-  // diverge; validateCustomerGroups rejects any non-null value with a clear
-  // message until the vouchers RPC grows findById.
+  // Per-group voucher. The new POS attaches a voucher per customer and sends
+  // its id here; the charge route resolves it via the vouchers `findById` RPC
+  // and computes the discount against this group's subtotal (see chargeFlow's
+  // per-customer-group block). The resolved discount lands on the group row
+  // and sums into the parent transaction's discount/total.
   voucher_id?: number | null;
   is_payer: boolean;
   item_indices: number[];
@@ -264,7 +265,8 @@ export function validateChargePayload(payload: ChargePayload): void {
 //   - exactly one is_payer=true
 //   - display_name is a non-empty string
 //   - client_id is a positive integer when present
-//   - voucher_id is NOT yet supported in the fork — must be null/absent
+//   - voucher_id, when present, is a positive integer (resolved + discounted
+//     server-side via the vouchers findById RPC)
 //   - started_at is a valid ISO timestamp when present
 //   - item_indices partition exactly [0..itemsLength-1] across all groups
 export function validateCustomerGroups(
@@ -296,11 +298,15 @@ export function validateCustomerGroups(
       throw new ChargeValidationError(400, `customer_groups[${gIdx}].note must be a string`);
     }
     if (g.voucher_id != null) {
-      // Vouchers RPC has no findById; deferring per-group voucher support.
-      throw new ChargeValidationError(
-        400,
-        `customer_groups[${gIdx}].voucher_id is not yet supported in this deployment`,
-      );
+      // Per-group voucher: the charge route resolves it via the vouchers
+      // `findById` RPC and computes the discount against this group's
+      // subtotal. Only shape-validate here.
+      if (typeof g.voucher_id !== "number" || !Number.isInteger(g.voucher_id) || g.voucher_id <= 0) {
+        throw new ChargeValidationError(
+          400,
+          `customer_groups[${gIdx}].voucher_id must be a positive integer`,
+        );
+      }
     }
     if (typeof g.is_payer !== "boolean") {
       throw new ChargeValidationError(400, `customer_groups[${gIdx}].is_payer must be a boolean`);
@@ -581,6 +587,60 @@ export async function runCharge(opts: {
     discount = payload.discount_amount;
   }
 
+  // ── Per-customer-group voucher discounts ───────────────────────────────────
+  // The new multi-customer POS attaches a voucher per customer and sends only
+  // its id (no top-level voucher_code, no client-computed discount). Resolve
+  // each voucher over the vouchers findById RPC and compute its discount
+  // against THAT group's subtotal — the same math computeVoucherDiscount runs
+  // for the top-level voucher_code path, and the same math the UI previews. The
+  // per-group amounts land on each customer_group row (so breakdown reads stay
+  // simple) and sum into the parent `discount` so the persisted total matches
+  // what the cashier collected. Indexed parallel to payload.customer_groups.
+  const perGroupDiscount: number[] = [];
+  const perGroupVoucherId: (number | null)[] = [];
+  if (Array.isArray(payload.customer_groups) && payload.customer_groups.length > 0) {
+    const groups = payload.customer_groups as ChargeCustomerGroup[];
+    const groupSub = new Array<number>(groups.length).fill(0);
+    for (let gi = 0; gi < groups.length; gi++) {
+      for (const li of groups[gi].item_indices) {
+        groupSub[gi] += payload.items[li].quantity * payload.items[li].unit_price;
+      }
+    }
+    for (let gi = 0; gi < groups.length; gi++) {
+      const vid = groups[gi].voucher_id ?? null;
+      // Default to NOT persisting a voucher reference. transaction_customer_
+      // groups.voucher_id carries an FK to vouchers(id), so a voucher_id that
+      // doesn't resolve in THIS org must be dropped (storing it would abort the
+      // charge on the FK). Only a confirmed-present voucher is persisted below.
+      perGroupVoucherId[gi] = null;
+      perGroupDiscount[gi] = 0;
+      if (vid == null) continue;
+      const voucher = await findVoucherById(vid, identityHeader);
+      if (voucher === null) {
+        // vouchers plugin absent OR no such id in this org. Degrade like the
+        // top-level voucher_code path: proceed at full subtotal, no discount,
+        // and don't persist the dangling reference.
+        vouchersAvailable = false;
+        continue;
+      }
+      perGroupVoucherId[gi] = vid;
+      const minPurchase =
+        voucher.minimum_purchase != null ? Number(voucher.minimum_purchase) : 0;
+      if (minPurchase > 0 && groupSub[gi] < minPurchase) {
+        throw new ChargeValidationError(
+          400,
+          `customer_groups[${gi}] subtotal below voucher minimum_purchase`,
+        );
+      }
+      const computed = computeVoucherDiscount(
+        groupSub[gi],
+        voucher as unknown as VoucherForDiscount,
+      );
+      perGroupDiscount[gi] = computed.discountAmount;
+      discount += computed.discountAmount;
+    }
+  }
+
   const total = Math.max(0, subtotal - discount);
   const txDescription = payload.items
     .slice(0, 3)
@@ -713,10 +773,10 @@ export async function runCharge(opts: {
           g.client_id ?? null,
           g.display_name.trim(),
           typeof g.note === "string" && g.note.trim() ? g.note.trim() : null,
-          // Per-group voucher_id is rejected at validation; always NULL here.
-          null,
+          // Per-group voucher + the discount it produced (computed above).
+          perGroupVoucherId[gi] ?? null,
           perGroupSubtotal[gi],
-          0,
+          perGroupDiscount[gi] ?? 0,
           g.is_payer,
         );
       }
