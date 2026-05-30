@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.1.7
+
+### Patch Changes
+
+- 5394f91: Adds the daily money-in vs money-out figures that power the new Finance Analytics cash-flow chart.
+
 ## 0.1.6
 
 ### Patch Changes
