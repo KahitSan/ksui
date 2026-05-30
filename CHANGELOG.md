@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.2.0
+
+### Minor Changes
+
+- d5049be: Powers the new Subscriptions page: lists each client's recurring plan (when it started, when it expires, how many renewals, lifetime value) and lets you renew a plan so the next billing window chains from where the current one ends.
+
 ## 0.1.8
 
 ### Patch Changes
