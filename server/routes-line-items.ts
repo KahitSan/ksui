@@ -223,6 +223,28 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
                FROM accounts.transaction_payments tp
               WHERE tp.organization_id = $1
               GROUP BY tp.transaction_id, tp.organization_id
+           ), payment_methods_by_txn AS (
+             -- Distinct payment accounts per transaction, ordered by first use,
+             -- so the counter card's "Method" row can surface what was actually
+             -- paid (the payment legs / payment history) rather than the line's
+             -- destination_account — which this read leaves null in the fork.
+             -- Names + avatars are resolved client-side from the accounts index,
+             -- so only the ids are carried here. A transaction split across two
+             -- accounts (e.g. part GCash, part Cash) yields both, in pay order.
+             SELECT transaction_id,
+                    organization_id,
+                    array_agg(financial_account_id ORDER BY first_at) AS payment_account_ids
+               FROM (
+                 SELECT tp.transaction_id,
+                        tp.organization_id,
+                        tp.financial_account_id,
+                        MIN(tp.created_at) AS first_at
+                   FROM accounts.transaction_payments tp
+                  WHERE tp.organization_id = $1
+                    AND tp.financial_account_id IS NOT NULL
+                  GROUP BY tp.transaction_id, tp.organization_id, tp.financial_account_id
+               ) distinct_accts
+              GROUP BY transaction_id, organization_id
            )
            SELECT
              li.id,
@@ -257,7 +279,8 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
              cg.display_name AS customer_group_display_name,
              cg.is_payer AS customer_group_is_payer,
              cg.client_id AS customer_group_client_id,
-             COALESCE(pc.payment_count, 0) AS payment_count
+             COALESCE(pc.payment_count, 0) AS payment_count,
+             COALESCE(pm.payment_account_ids, '{}') AS payment_account_ids
            FROM accounts.transaction_line_items li
            JOIN accounts.transactions t ON t.id = li.transaction_id
            LEFT JOIN accounts.transaction_customer_groups cg ON cg.id = li.customer_group_id
@@ -268,6 +291,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
            LEFT JOIN payment_count_by_txn pc
              ON pc.transaction_id = li.transaction_id
             AND pc.organization_id = li.organization_id
+           LEFT JOIN payment_methods_by_txn pm
+             ON pm.transaction_id = li.transaction_id
+            AND pm.organization_id = li.organization_id
            ${where}
            ORDER BY
              CASE WHEN li.status = 'active' AND li.ends_at IS NOT NULL THEN 0 ELSE 1 END,
