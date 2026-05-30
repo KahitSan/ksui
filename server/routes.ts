@@ -404,6 +404,78 @@ export function buildRouter(deps: RouterDeps): Router {
     },
   );
 
+  // GET /cashflow -- per-day inflow/outflow buckets for the analytics chart.
+  //
+  // One row per day that had activity (the bucket array is sparse) with:
+  //   in       sales — prefers the settled payment sum over the headline amount
+  //   out      expenses + payables
+  //   transfer business moves
+  // all in pesos. transaction_date is a stored `date`, so to_char gives the
+  // natural Manila day with no timezone cast (see the timezone discipline rule).
+  //
+  // Query params: dateFrom, dateTo (inclusive, applied to transaction_date;
+  // omit both for all-time). Privacy-gated identically to /summary.
+  //
+  // Response: { buckets: Array<{ date, in, out, transfer }> }
+  router.get(
+    "/cashflow",
+    requireAuth,
+    requireOrg,
+    requirePermission("transactions.view"),
+    async (req: Request, res: Response) => {
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
+
+      try {
+        const params: unknown[] = [req.organizationId];
+        const conditions = ["t.organization_id = $1", "t.status != 'voided'"];
+        const priv = privacyClause(req, params, params.length + 1);
+        if (priv) conditions.push(priv);
+
+        if (dateFrom) {
+          params.push(dateFrom);
+          conditions.push(`t.transaction_date >= $${params.length}`);
+        }
+        if (dateTo) {
+          params.push(dateTo);
+          conditions.push(`t.transaction_date <= $${params.length}`);
+        }
+
+        const result = await pool.query(
+          `SELECT
+              to_char(t.transaction_date, 'YYYY-MM-DD') AS date,
+              COALESCE(SUM(CASE WHEN t.category = 'sale'
+                                THEN COALESCE(tp.amount, t.amount) ELSE 0 END), 0) AS in_amt,
+              COALESCE(SUM(CASE WHEN t.category IN ('expense', 'payable')
+                                THEN t.amount ELSE 0 END), 0) AS out_amt,
+              COALESCE(SUM(CASE WHEN t.category = 'business'
+                                THEN t.amount ELSE 0 END), 0) AS transfer_amt
+             FROM accounts.transactions t
+             LEFT JOIN accounts.transaction_payments tp
+               ON tp.transaction_id = t.id AND t.category = 'sale'
+            WHERE ${conditions.join(" AND ")}
+            GROUP BY t.transaction_date
+            ORDER BY t.transaction_date ASC`,
+          params,
+        );
+
+        res.json({
+          buckets: (
+            result.rows as { date: string; in_amt: string; out_amt: string; transfer_amt: string }[]
+          ).map((r) => ({
+            date: r.date,
+            in: parseFloat(r.in_amt),
+            out: parseFloat(r.out_amt),
+            transfer: parseFloat(r.transfer_amt),
+          })),
+        });
+      } catch (err) {
+        console.error("[transactions] cashflow error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    },
+  );
+
   // GET /by-hour -- counter check-in/out counts by time of day.
   //
   // Aggregates counter activity from transaction_line_items into 24 hourly (or
