@@ -1,5 +1,17 @@
 # @kahitsan/kplugin_transactions
 
+## 0.1.8
+
+### Patch Changes
+
+- 35e5960: An attachment whose file is no longer available now shows a clear "Unavailable"
+  placeholder instead of a broken image or dead link, and can still be removed.
+- 35e5960: The transactions list and detail view now show the account, payee, and staff
+  member for each entry again — including the account name on each payment. If the
+  part of the app that owns one of those details is ever unavailable, a small
+  warning icon appears in its place so it's clear the name couldn't load rather
+  than showing a blank.
+
 ## 0.1.7
 
 ### Patch Changes
