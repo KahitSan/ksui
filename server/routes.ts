@@ -64,6 +64,7 @@ import {
   findPayeesByIds,
   validateVoucher,
 } from "./lib/peers.js";
+import { listSubscriptions, renewSubscription, RenewError } from "./lib/subscriptions.js";
 
 export type RouterDeps = {
   db: PluginDb;
@@ -588,6 +589,53 @@ export function buildRouter(deps: RouterDeps): Router {
         res.json({ buckets, bucketMinutes });
       } catch (err) {
         console.error("[transactions] by-hour error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    },
+  );
+
+  // ── Subscriptions (recurring-revenue view over line items) ───────────────
+  // Registered before "/:id" so the literal segment wins. The heavy grouping +
+  // renew logic lives in lib/subscriptions.ts (cross-schema data resolved over
+  // RPC, not SQL JOINs). Recovered from the monolith's /api/subscriptions.
+
+  // GET /subscriptions — grouped, bucketed, searchable, paginated.
+  router.get(
+    "/subscriptions",
+    requireAuth,
+    requireOrg,
+    requirePermission("transactions.view"),
+    async (req: Request, res: Response) => {
+      try {
+        res.json(await listSubscriptions(pool, req, privacyClause));
+      } catch (err) {
+        console.error("[transactions] subscriptions list error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    },
+  );
+
+  // POST /subscriptions/:line_item_id/renew — fresh sale chaining from prior expiry.
+  router.post(
+    "/subscriptions/:line_item_id/renew",
+    requireAuth,
+    requireOrg,
+    requirePermission("transactions.create"),
+    async (req: Request, res: Response) => {
+      const sourceId = parseInt(String(req.params.line_item_id), 10);
+      if (!Number.isInteger(sourceId) || sourceId <= 0) {
+        res.status(400).json({ error: "line_item_id is required" });
+        return;
+      }
+      try {
+        const out = await renewSubscription(pool, req, sourceId, req.body ?? {});
+        res.status(201).json(out);
+      } catch (err) {
+        if (err instanceof RenewError) {
+          res.status(err.status).json({ error: err.message });
+          return;
+        }
+        console.error("[transactions] subscriptions renew error:", err);
         res.status(500).json({ error: "Internal server error" });
       }
     },

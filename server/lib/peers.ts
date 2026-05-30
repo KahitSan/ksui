@@ -51,6 +51,13 @@ export interface PackageRow {
   max_per_day: number | null;
   max_per_month: number | null;
   is_active: boolean;
+  // Pricing-era lineage. The subscriptions view groups a client's renewals by
+  // lineage_slug so eras of the same plan chain into one subscription, and uses
+  // effective_to (NULL = current era) to default the renewal to a saleable
+  // package. Older kernels' packages plugin may not send these, so both are
+  // optional for back-compat.
+  lineage_slug?: string | null;
+  effective_to?: string | null;
 }
 
 /** Resolve package-variant rows by id via the packages plugin. Returns null
@@ -149,6 +156,10 @@ export interface ClientRow {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
+  // Optional: older kernels' clients plugin may not send phone. The
+  // subscriptions table surfaces a tap-to-call link so staff can chase
+  // expiring renewals.
+  phone?: string | null;
 }
 
 /** Resolve client display rows by id via the clients plugin. Null when the
