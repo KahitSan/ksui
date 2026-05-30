@@ -216,6 +216,13 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
                AND sib.duration_unit IS NOT NULL
              GROUP BY sib.transaction_id, sib.organization_id, COALESCE(sib.client_id, -1)
              HAVING COUNT(*) >= 2
+             -- NOTE: payment_count_by_txn and payment_methods_by_txn both scan
+             -- accounts.transaction_payments. PostgreSQL may inline them into one
+             -- pass; the separate CTEs are kept because the Method CTE needs
+             -- ORDER BY first_at (MIN(created_at)) ordering that conflates with
+             -- the unconditional COUNT(*) in a single aggregation. The planner
+             -- handles this fine at current transaction volumes.
+
            ), payment_count_by_txn AS (
              SELECT tp.transaction_id,
                     tp.organization_id,
@@ -224,13 +231,10 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
               WHERE tp.organization_id = $1
               GROUP BY tp.transaction_id, tp.organization_id
            ), payment_methods_by_txn AS (
-             -- Distinct payment accounts per transaction, ordered by first use,
-             -- so the counter card's "Method" row can surface what was actually
-             -- paid (the payment legs / payment history) rather than the line's
-             -- destination_account — which this read leaves null in the fork.
-             -- Names + avatars are resolved client-side from the accounts index,
-             -- so only the ids are carried here. A transaction split across two
-             -- accounts (e.g. part GCash, part Cash) yields both, in pay order.
+              -- Distinct payment accounts per transaction, ordered by first use.
+              -- Names + avatars resolve client-side from the accounts index so
+              -- only the ids are carried. A split payment across two accounts
+              -- (e.g. part GCash, part Cash) yields both, in pay order.
              SELECT transaction_id,
                     organization_id,
                     array_agg(financial_account_id ORDER BY first_at) AS payment_account_ids
