@@ -38,6 +38,10 @@ jobs:
           CLONE_TOKEN: ${{ secrets.PLUGIN_TOKEN }}
         run: |
           set -e
+          # Belt-and-suspenders: GitHub Actions already masks the registered
+          # PLUGIN_TOKEN secret, but mask it explicitly so a git error that echoes
+          # the token-bearing clone URL can never leak it into the log.
+          echo "::add-mask::$CLONE_TOKEN"
           # On the self-hosted runner, actions/checkout leaves an
           # `http.https://github.com/.extraheader` Authorization in THIS repo's
           # git config pinning github.com auth to the plugin's GITHUB_TOKEN
@@ -91,6 +95,8 @@ jobs:
             docker exec "$NAME" pg_isready -U postgres >/dev/null 2>&1 && break
             sleep 1
           done
+          docker exec "$NAME" pg_isready -U postgres >/dev/null 2>&1 \
+            || { echo "::error::Postgres did not become ready in 30s"; exit 1; }
 
       - name: Install kernel deps + build the @ks-erp packages
         working-directory: ${{ github.workspace }}/../kserp
@@ -134,7 +140,7 @@ jobs:
           npm run db:seed
           # setsid so the whole dev tree (concurrently + vinxi + tsx + spawned
           # plugins) becomes one process group we can kill in teardown.
-          setsid npm run dev > /tmp/kserp-dev.log 2>&1 &
+          setsid npm run dev > "/tmp/kserp-dev-${{ github.run_id }}.log" 2>&1 &
           echo "DEV_PGID=$!" >> "$GITHUB_ENV"
           ROUTE=$(node -p "require('$GITHUB_WORKSPACE/plugin.manifest.json').uiRouteBase")
           # vinxi dev cold-compiles the host shell + the plugin remote on first
@@ -148,7 +154,7 @@ jobs:
 
       - name: Kernel dev log on failure
         if: failure()
-        run: tail -250 /tmp/kserp-dev.log || true
+        run: tail -250 "/tmp/kserp-dev-${{ github.run_id }}.log" || true
 
       - name: Upload e2e artifacts on failure
         if: failure()
