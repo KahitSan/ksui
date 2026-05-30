@@ -161,5 +161,53 @@ export async function findClientsByIds(
   return tryCallPlugin<ClientRow[]>("clients", "findByIds", { ids }, { identityHeader });
 }
 
+// ── financial-accounts ───────────────────────────────────────────────────────
+
+export interface AccountRow {
+  id: number;
+  name: string;
+  type: string | null;
+  icon: string | null;
+  color: string | null;
+  logo_path: string | null;
+}
+
+/** Resolve financial-account display rows by id via the financial-accounts
+ *  plugin. Null when that plugin isn't loaded — callers surface a "couldn't
+ *  load" marker rather than a wrong/empty name. Deliberately NOT in manifest
+ *  `requires`: name enrichment is an optional read, so transactions must keep
+ *  serving the list even when financial-accounts is absent (an unsatisfied
+ *  `requires` would make the loader skip transactions entirely). */
+export async function findAccountsByIds(
+  ids: number[],
+  identityHeader: IdentityHeader,
+): Promise<AccountRow[] | null> {
+  if (ids.length === 0) return [];
+  return tryCallPlugin<AccountRow[]>(
+    "financial-accounts",
+    "findByIds",
+    { ids },
+    { identityHeader },
+  );
+}
+
+// ── payees ───────────────────────────────────────────────────────────────────
+
+export interface PayeeRow {
+  id: number;
+  name: string;
+  kind: string | null;
+}
+
+/** Resolve payee display rows by id via the payees plugin. Null when the payees
+ *  plugin isn't loaded (graceful degradation — see findAccountsByIds). */
+export async function findPayeesByIds(
+  ids: number[],
+  identityHeader: IdentityHeader,
+): Promise<PayeeRow[] | null> {
+  if (ids.length === 0) return [];
+  return tryCallPlugin<PayeeRow[]>("payees", "findByIds", { ids }, { identityHeader });
+}
+
 // Re-export for callers that want to distinguish unavailable from other errors.
 export type { PluginUnavailableError };

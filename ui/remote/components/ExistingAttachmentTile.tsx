@@ -6,8 +6,9 @@
 import { Show, type Component } from "solid-js";
 import Paperclip from "lucide-solid/icons/paperclip";
 import X from "lucide-solid/icons/x";
+import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { confirm } from "@kserp/host-ui";
-import { attachmentUrl } from "../lib/attachments";
+import { attachmentUrl, isResolvableAttachment } from "../lib/attachments";
 
 export interface ExistingAttachment {
   id: number;
@@ -33,27 +34,41 @@ export default function ExistingAttachmentTile(props: Props) {
   return (
     <div class="relative group shrink-0" data-testid={props.testId}>
       <Show
-        when={props.attachment.mime_type.startsWith("image/")}
+        when={isResolvableAttachment(props.attachment.file_path)}
         fallback={
+          <div
+            class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/40 px-2 text-center text-zinc-500"
+            title={`${props.attachment.file_name} — file is no longer available`}
+          >
+            <TriangleAlert size={18} class="text-amber-500/70" />
+            <span class="truncate max-w-full text-[10px]">{props.attachment.file_name}</span>
+            <span class="text-[9px] uppercase tracking-wider">Unavailable</span>
+          </div>
+        }
+      >
+        <Show
+          when={props.attachment.mime_type.startsWith("image/")}
+          fallback={
+            <a
+              href={url()}
+              target="_blank"
+              rel="noopener"
+              class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300 hover:border-amber-500/30"
+            >
+              <FallbackIcon />
+              <span class="truncate max-w-full text-[10px]">{props.attachment.file_name}</span>
+            </a>
+          }
+        >
           <a
             href={url()}
             target="_blank"
             rel="noopener"
-            class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300 hover:border-amber-500/30"
+            class="block rounded-lg border border-zinc-700 overflow-hidden hover:border-amber-500/30"
           >
-            <FallbackIcon />
-            <span class="truncate max-w-full text-[10px]">{props.attachment.file_name}</span>
+            <img src={url()} alt={props.attachment.file_name} class="w-24 h-24 object-cover" />
           </a>
-        }
-      >
-        <a
-          href={url()}
-          target="_blank"
-          rel="noopener"
-          class="block rounded-lg border border-zinc-700 overflow-hidden hover:border-amber-500/30"
-        >
-          <img src={url()} alt={props.attachment.file_name} class="w-24 h-24 object-cover" />
-        </a>
+        </Show>
       </Show>
       <Show when={props.onDelete}>
         <button

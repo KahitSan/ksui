@@ -19,3 +19,13 @@ export function attachmentUrl(filePath: string): string {
   if (/^(https?|blob):/i.test(filePath) || filePath.startsWith("/")) return filePath;
   return `/assets/${filePath}`;
 }
+
+// Whether a stored file_path can actually be fetched. Returns false for the dead
+// `blob:` object URLs persisted by the old (pre-multipart) upload model — those
+// only ever resolved in the browser session that minted them, so rendering them
+// as a link/img just yields a broken request. Render sites show an "unavailable"
+// placeholder for these instead. New uploads store a relative path and are fine.
+export function isResolvableAttachment(filePath: string | null | undefined): boolean {
+  if (!filePath) return false;
+  return !/^blob:/i.test(filePath);
+}

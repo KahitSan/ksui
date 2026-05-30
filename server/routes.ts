@@ -60,6 +60,8 @@ import {
   findPackagesByIds,
   findVariantsByIds,
   findClientsByIds,
+  findAccountsByIds,
+  findPayeesByIds,
   validateVoucher,
 } from "./lib/peers.js";
 
@@ -846,7 +848,65 @@ export function buildRouter(deps: RouterDeps): Router {
         );
         const total = parseInt(countResult.rows[0].count);
 
-        res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
+        // Display-name enrichment. The list query reads only accounts.transactions
+        // — process isolation forbids joining the financial-accounts / payees
+        // schemas — so account + payee names resolve out-of-process over the
+        // kernel RPC, batched per page (one findByIds per peer). When a peer
+        // plugin is absent tryCallPlugin returns null; we leave the name unset and
+        // flag the peer unavailable so the UI shows a "couldn't load" marker
+        // instead of a misleading blank. (created_by display names come from the
+        // kernel user table and are resolved client-side from the host member
+        // list — see GET /creators.)
+        const rows = result.rows as Array<Record<string, unknown>>;
+        const idh = identityHeaderOf(req);
+
+        const accountIds = [
+          ...new Set(
+            rows.flatMap((r) =>
+              [r.source_account_id, r.destination_account_id].filter(
+                (v): v is number => typeof v === "number",
+              ),
+            ),
+          ),
+        ];
+        const payeeIds = [
+          ...new Set(
+            rows.map((r) => r.payee_id).filter((v): v is number => typeof v === "number"),
+          ),
+        ];
+
+        const [accounts, payees] = await Promise.all([
+          findAccountsByIds(accountIds, idh),
+          findPayeesByIds(payeeIds, idh),
+        ]);
+
+        const accountsUnavailable = accountIds.length > 0 && accounts === null;
+        const payeesUnavailable = payeeIds.length > 0 && payees === null;
+
+        const accountName = new Map((accounts ?? []).map((a) => [a.id, a.name]));
+        const payeeName = new Map((payees ?? []).map((p) => [p.id, p.name]));
+
+        for (const r of rows) {
+          r.source_account_name =
+            typeof r.source_account_id === "number"
+              ? (accountName.get(r.source_account_id) ?? null)
+              : null;
+          r.destination_account_name =
+            typeof r.destination_account_id === "number"
+              ? (accountName.get(r.destination_account_id) ?? null)
+              : null;
+          r.payee =
+            typeof r.payee_id === "number" ? (payeeName.get(r.payee_id) ?? null) : null;
+        }
+
+        res.json({
+          data: rows,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+          peersUnavailable: { accounts: accountsUnavailable, payees: payeesUnavailable },
+        });
       } catch (err) {
         console.error("[transactions] list error:", err);
         res.status(500).json({ error: "Internal server error" });
@@ -1211,8 +1271,50 @@ export function buildRouter(deps: RouterDeps): Router {
         const poolName = new Map<number, string>((poolClients ?? []).map((c) => [c.id, c.name]));
         const client_pool = clientPoolRows.map((r) => ({ id: r.client_id, name: poolName.get(r.client_id) ?? null }));
 
+        // Account + payee display names — same out-of-process RPC enrichment as
+        // the list route (accounts.transactions can't join the financial-accounts
+        // / payees schemas). Null when the peer plugin is absent.
+        const detailAcctIds = [
+          ...new Set(
+            [
+              txn.source_account_id,
+              txn.destination_account_id,
+              ...payments.map((p) => p.financial_account_id),
+            ].filter((v): v is number => typeof v === "number"),
+          ),
+        ];
+        const [detailAccounts, detailPayees] = await Promise.all([
+          findAccountsByIds(detailAcctIds, idh),
+          typeof txn.payee_id === "number"
+            ? findPayeesByIds([txn.payee_id], idh)
+            : Promise.resolve([]),
+        ]);
+        const detailAcctName = new Map((detailAccounts ?? []).map((a) => [a.id, a.name]));
+        const source_account_name =
+          typeof txn.source_account_id === "number"
+            ? (detailAcctName.get(txn.source_account_id) ?? null)
+            : null;
+        const destination_account_name =
+          typeof txn.destination_account_id === "number"
+            ? (detailAcctName.get(txn.destination_account_id) ?? null)
+            : null;
+        const payee = typeof txn.payee_id === "number" ? (detailPayees?.[0]?.name ?? null) : null;
+
+        // Each payment leg shows which account it landed in — resolve the same
+        // way (the payments query carries only financial_account_id).
+        const paymentsEnriched = payments.map((p) => ({
+          ...p,
+          financial_account_name:
+            typeof p.financial_account_id === "number"
+              ? (detailAcctName.get(p.financial_account_id) ?? null)
+              : null,
+        }));
+
         res.json({
           ...txn,
+          source_account_name,
+          destination_account_name,
+          payee,
           attachments: attachments.rows,
           shared_with,
           shared_with_roles,
@@ -1220,7 +1322,7 @@ export function buildRouter(deps: RouterDeps): Router {
           client_name,
           client_pool,
           edits,
-          payments,
+          payments: paymentsEnriched,
         });
       } catch (err) {
         console.error("[transactions] get error:", err);

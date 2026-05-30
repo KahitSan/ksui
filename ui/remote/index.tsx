@@ -66,6 +66,7 @@ import ArrowRightLeft from "lucide-solid/icons/arrow-right-left";
 import ArrowRight from "lucide-solid/icons/arrow-right";
 import CalendarDays from "lucide-solid/icons/calendar-days";
 import ChevronRight from "lucide-solid/icons/chevron-right";
+import TriangleAlert from "lucide-solid/icons/triangle-alert";
 
 import SalesBodyEditor, { type SalesLine } from "./components/SalesBodyEditor";
 import MarkdownNotes from "./components/MarkdownNotes";
@@ -81,7 +82,7 @@ import TransactionFilters from "./components/TransactionFilters";
 import { type ClientOption } from "./components/ClientPicker";
 import { type VoucherOption } from "./components/VoucherPicker";
 import { useAccountsIndex, resolveAccount } from "./lib/accounts-index";
-import { attachmentUrl } from "./lib/attachments";
+import { attachmentUrl, isResolvableAttachment } from "./lib/attachments";
 
 /** A pending file with a stable id for keying and an optional preview URL */
 interface PendingFile {
@@ -129,6 +130,7 @@ interface Transaction {
   updated_by_image: string | null;
   attachment_count: string;
   payee: string | null;
+  payee_id: number | null;
   reference_number: string | null;
   tax_type: string;
   tax_rate: string;
@@ -228,6 +230,21 @@ const CATEGORY_TONE: Record<
   business: { tone: "blue", sign: "", icon: ArrowRightLeft },
 };
 
+// Inline marker for a cell whose display name couldn't be resolved because the
+// owning plugin (financial-accounts / payees) was unavailable for the fetch.
+// Distinguishes "couldn't load" from a genuinely empty value ("—").
+function PeerUnavailable(props: { title: string }) {
+  return (
+    <span
+      class="inline-flex items-center text-amber-400/80"
+      title={props.title}
+      aria-label={props.title}
+    >
+      <TriangleAlert size={12} />
+    </span>
+  );
+}
+
 const TONE_CLASSES: Record<
   "emerald" | "red" | "blue" | "amber",
   { bg: string; text: string; border: string }
@@ -324,17 +341,31 @@ export function Component() {
       /* nice-to-have */
     }
   }
-  const [creators, setCreators] = createSignal<
-    { id: string; name: string; image?: string | null; count?: number }[]
-  >([]);
+  // Distinct creator ids + counts from the server (the kernel `user` table is
+  // off the plugin's search_path, so /creators returns no names — see GET
+  // /creators). Names are resolved reactively via `creatorNameById` (below) and
+  // surfaced in the `creators` memo.
+  const [creatorStats, setCreatorStats] = createSignal<{ id: string; count?: number }[]>([]);
+  // user id -> display name for every creator. Filled from the kernel's
+  // /api/users/names so it covers creators who aren't in the caller's org member
+  // list (superusers, ex-members, import accounts) — members/basic can't name
+  // those. Authenticated, returns only { id, name }.
+  const [creatorNameById, setCreatorNameById] = createSignal<Map<string, string>>(new Map());
   async function reloadCreators() {
     try {
       const r = await fetch("/api/transactions/creators", { credentials: "include" });
-      if (r.ok) {
-        const json = (await r.json()) as {
-          creators: { id: string; name: string; image: string | null; count: number }[];
-        };
-        setCreators(json.creators || []);
+      if (!r.ok) return;
+      const json = (await r.json()) as { creators: { id: string; count: number }[] };
+      const stats = json.creators || [];
+      setCreatorStats(stats);
+      const ids = stats.map((c) => c.id).filter(Boolean);
+      if (ids.length === 0) return;
+      const nr = await fetch(`/api/users/names?ids=${encodeURIComponent(ids.join(","))}`, {
+        credentials: "include",
+      });
+      if (nr.ok) {
+        const nj = (await nr.json()) as { users: { id: string; name: string }[] };
+        setCreatorNameById(new Map((nj.users || []).map((u) => [u.id, u.name])));
       }
     } catch {
       /* nice-to-have */
@@ -559,6 +590,7 @@ export function Component() {
       updated_by_image: null,
       attachment_count: "0",
       payee: null,
+      payee_id: null,
       reference_number: null,
       tax_type: "none",
       tax_rate: "0",
@@ -585,6 +617,40 @@ export function Component() {
   const [accounts, setAccounts] = createSignal<FinancialAccount[]>([]);
   const [orgMembers, setOrgMembers] = createSignal<OrgMember[]>([]);
   const [shareableRoles, setShareableRoles] = createSignal<{ code: string; label: string }[]>([]);
+
+  // Set from the list response: which name-resolving peer plugins were absent
+  // for the last fetch. Account + payee names resolve over kernel RPC server-
+  // side; when a peer is down the row carries no name and we render a ⚠️ marker
+  // (see the Accounts/Payee columns) instead of a misleading blank.
+  const [peersUnavailable, setPeersUnavailable] = createSignal<{
+    accounts: boolean;
+    payees: boolean;
+  }>({ accounts: false, payees: false });
+
+  // Resolve a transaction's created_by user id to a display name. The server
+  // returns only the id (kernel `user` table is off the plugin's search_path —
+  // see GET /creators), so names come from the kernel /api/users/names map
+  // (covers non-members), falling back to the org member list.
+  const creatorName = (userId: string | null | undefined): string | null => {
+    if (!userId) return null;
+    return (
+      creatorNameById().get(userId) ??
+      orgMembers().find((m) => m.user_id === userId)?.name ??
+      null
+    );
+  };
+
+  // The "By" filter's options: raw creator ids/counts from the server, with names
+  // resolved from the org member list. Recomputes when members load, so labels go
+  // from "Unknown" to the real name without a refetch. Ex-members (not in the
+  // current member list) stay "Unknown".
+  const creators = createMemo(() =>
+    creatorStats().map((c) => ({
+      id: c.id,
+      name: creatorName(c.id) ?? "Unknown",
+      count: c.count,
+    })),
+  );
 
   createEffect(() => {
     const gen = activeOrg()?.org_id;
@@ -614,6 +680,28 @@ export function Component() {
         setShareableRoles(rows.filter((r) => r.code !== "admin"));
       } catch {
         /* roles endpoint may be absent; role-share buttons degrade */
+      }
+    })();
+  });
+
+  // Load org members for the list's "By" column (created_by → display name).
+  // Independent of the share-picker's gated loader below: every viewer of the
+  // list needs creator names, not just users who can share. Degrades to initials
+  // / "Unknown" when the endpoint is unavailable or forbidden for the role.
+  createEffect(() => {
+    const gen = activeOrg()?.org_id;
+    if (!gen) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/organizations/${gen}/members/basic`, {
+          credentials: "include",
+        });
+        if (res.ok && activeOrg()?.org_id === gen) {
+          const data = await res.json();
+          setOrgMembers(data.data || data.members || data || []);
+        }
+      } catch {
+        /* members endpoint absent/forbidden; By column degrades to initials */
       }
     })();
   });
@@ -1271,16 +1359,23 @@ export function Component() {
       data: "payee",
       title: "Payee",
       className: "hidden md:table-cell w-[160px]",
-      render: (_val, _type, row) => (
-        <Show
-          when={!row._grouped && row.payee}
-          fallback={<span class="text-[11px] text-zinc-700">—</span>}
-        >
-          <span class="text-xs text-zinc-300 truncate">
-            {highlightMatch(row.payee ?? "", tableSearchTerm())}
-          </span>
-        </Show>
-      ),
+      /* eslint-disable solid/components-return-once */
+      render: (_val, _type, row) => {
+        if (!row._grouped && row.payee) {
+          return (
+            <span class="text-xs text-zinc-300 truncate">
+              {highlightMatch(row.payee ?? "", tableSearchTerm())}
+            </span>
+          );
+        }
+        // Has a payee but the name couldn't be loaded because the payees plugin
+        // was unavailable for this fetch — show a marker, not a blank.
+        if (!row._grouped && row.payee_id != null && peersUnavailable().payees) {
+          return <PeerUnavailable title="Payees plugin unavailable — couldn't load payee name" />;
+        }
+        return <span class="text-[11px] text-zinc-700">—</span>;
+      },
+      /* eslint-enable solid/components-return-once */
     },
     {
       data: null,
@@ -1290,6 +1385,16 @@ export function Component() {
       render: (_val, _type, row) => {
         if (row._grouped) {
           return <span class="text-[11px] text-zinc-700">—</span>;
+        }
+        // The row references an account but no name resolved because the
+        // financial-accounts plugin was unavailable for this fetch — show a
+        // marker for the whole cell instead of misleading dashes.
+        const hasAccount = row.source_account_id != null || row.destination_account_id != null;
+        const nameResolved = !!(row.source_account_name || row.destination_account_name);
+        if (hasAccount && !nameResolved && peersUnavailable().accounts) {
+          return (
+            <PeerUnavailable title="Financial accounts plugin unavailable — couldn't load accounts" />
+          );
         }
         const srcAcct = resolveAccount(accountsIndex(), row.source_account_id);
         const dstAcct = resolveAccount(accountsIndex(), row.destination_account_id);
@@ -1355,9 +1460,13 @@ export function Component() {
         if (row._grouped) {
           return <span class="text-[11px] text-zinc-700">—</span>;
         }
+        // created_by is a kernel user id; the server can't join the kernel
+        // `user` table, so resolve the display name from the host's org member
+        // list. Falls back to "Unknown" until members load / for ex-members.
+        const name = creatorName(row.created_by) || row.created_by_name || "Unknown";
         return (
           <div class="flex justify-center">
-            <Avatar name={row.created_by_name || "Unknown"} image={row.created_by_image} size="sm" />
+            <Avatar name={name} image={row.created_by_image} size="sm" />
           </div>
         );
       },
@@ -1569,6 +1678,9 @@ export function Component() {
                   data: Array<{ date: string; count: number; total: string; currency: string }>;
                   total: number;
                 };
+                // Grouped view shows synthetic per-day rows (no account/payee
+                // columns to resolve) — clear any stale peer-unavailable flags.
+                setPeersUnavailable({ accounts: false, payees: false });
                 return { data: result.data.map(makeAggregatedRow), total: result.total };
               }
               const q = new URLSearchParams({
@@ -1586,7 +1698,12 @@ export function Component() {
               if (params.dateFrom) q.set("dateFrom", params.dateFrom);
               if (params.dateTo) q.set("dateTo", params.dateTo);
               const res = await fetch(`/api/transactions?${q}`, { credentials: "include" });
-              const result = (await res.json()) as FetchResult<Transaction>;
+              const result = (await res.json()) as FetchResult<Transaction> & {
+                peersUnavailable?: { accounts: boolean; payees: boolean };
+              };
+              setPeersUnavailable(
+                result.peersUnavailable ?? { accounts: false, payees: false },
+              );
               return { data: result.data as TransactionRow[], total: result.total };
             }}
             expansionContent={(row: TransactionRow) => {
@@ -1841,6 +1958,7 @@ export function Component() {
               <Show when={detailTxn() && detailTxn()!.id === detailId() && !editing()}>
                 <TransactionDetail
                   txn={detailTxn()!}
+                  creatorName={creatorName(detailTxn()!.created_by)}
                   canEdit={canEdit()}
                   isAdmin={isAdmin()}
                   uploading={uploading()}
@@ -2049,6 +2167,7 @@ function TransactionDetailSkeleton() {
 
 function TransactionDetail(props: {
   txn: Transaction;
+  creatorName: string | null;
   canEdit: boolean;
   isAdmin: boolean;
   uploading: boolean;
@@ -2411,9 +2530,9 @@ function TransactionDetail(props: {
             Created by
           </span>
           <div class="flex items-center gap-2">
-            <Avatar name={t.created_by_name || "Unknown"} image={t.created_by_image} size="md" />
+            <Avatar name={props.creatorName || t.created_by_name || "Unknown"} image={t.created_by_image} size="md" />
             <div class="min-w-0">
-              <span class="text-sm text-zinc-200 block truncate">{t.created_by_name || "Unknown"}</span>
+              <span class="text-sm text-zinc-200 block truncate">{props.creatorName || t.created_by_name || "Unknown"}</span>
               <span class="text-[11px] text-zinc-500 block">{new Date(t.created_at).toLocaleString()}</span>
             </div>
           </div>
@@ -2469,27 +2588,41 @@ function TransactionDetail(props: {
             {(att) => (
               <div class="relative group shrink-0">
                 <Show
-                  when={att.mime_type.startsWith("image/")}
+                  when={isResolvableAttachment(att.file_path)}
                   fallback={
+                    <div
+                      class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/40 px-2 text-center text-zinc-500"
+                      title={`${att.file_name} — file is no longer available`}
+                    >
+                      <TriangleAlert size={18} class="text-amber-500/70" />
+                      <span class="truncate max-w-full text-[10px]">{att.file_name}</span>
+                      <span class="text-[9px] uppercase tracking-wider">Unavailable</span>
+                    </div>
+                  }
+                >
+                  <Show
+                    when={att.mime_type.startsWith("image/")}
+                    fallback={
+                      <a
+                        href={attachmentUrl(att.file_path)}
+                        target="_blank"
+                        rel="noopener"
+                        class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300 hover:border-amber-500/30"
+                      >
+                        <Paperclip size={20} />
+                        <span class="truncate max-w-full text-[10px]">{att.file_name}</span>
+                      </a>
+                    }
+                  >
                     <a
                       href={attachmentUrl(att.file_path)}
                       target="_blank"
                       rel="noopener"
-                      class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300 hover:border-amber-500/30"
+                      class="block rounded-lg border border-zinc-700 overflow-hidden hover:border-amber-500/30"
                     >
-                      <Paperclip size={20} />
-                      <span class="truncate max-w-full text-[10px]">{att.file_name}</span>
+                      <img src={attachmentUrl(att.file_path)} alt={att.file_name} class="w-24 h-24 object-cover" />
                     </a>
-                  }
-                >
-                  <a
-                    href={attachmentUrl(att.file_path)}
-                    target="_blank"
-                    rel="noopener"
-                    class="block rounded-lg border border-zinc-700 overflow-hidden hover:border-amber-500/30"
-                  >
-                    <img src={attachmentUrl(att.file_path)} alt={att.file_name} class="w-24 h-24 object-cover" />
-                  </a>
+                  </Show>
                 </Show>
                 <Show when={props.canEdit}>
                   <button
