@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.1.6
+
+### Patch Changes
+
+- e81cead: Sales fixes: per-customer vouchers applied at the counter now discount the bill correctly, and receipt photos and attachments now upload and display reliably (previously some images failed to save and showed a broken link).
+
 ## 0.1.5
 
 ### Patch Changes
