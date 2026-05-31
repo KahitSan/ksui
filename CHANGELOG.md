@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.3.1
+
+### Patch Changes
+
+- 9880bc6: Fixed batch booking editing in the counter: the transaction detail endpoint now returns customer group data so the editor can properly render each customer's row. Also fixed the client pool name field to match what the counter UI expects.
+
 ## 0.3.0
 
 ### Minor Changes
