@@ -1317,7 +1317,47 @@ export function buildRouter(deps: RouterDeps): Router {
           ? await findClientsByIds(clientPoolRows.map((r) => r.client_id), idh)
           : [];
         const poolName = new Map<number, string>((poolClients ?? []).map((c) => [c.id, c.name]));
-        const client_pool = clientPoolRows.map((r) => ({ id: r.client_id, name: poolName.get(r.client_id) ?? null }));
+        const client_pool = clientPoolRows.map((r) => ({ id: r.client_id, name_raw: poolName.get(r.client_id) ?? null }));
+
+        const customerGroupsRows = (
+          await pool.query(
+            `SELECT id, position, client_id, display_name, note, voucher_id,
+                    subtotal::numeric(12,2) AS subtotal,
+                    discount_amount::numeric(12,2) AS discount_amount,
+                    is_payer
+               FROM accounts.transaction_customer_groups
+              WHERE transaction_id = $1 AND organization_id = $2
+              ORDER BY position ASC`,
+            [txn.id, req.organizationId],
+          )
+        ).rows;
+        const cgClientIds = [
+          ...new Set(
+            customerGroupsRows
+              .map((r) => r.client_id as number | null)
+              .filter((v): v is number => v != null),
+          ),
+        ];
+        const cgClients =
+          cgClientIds.length > 0 ? await findClientsByIds(cgClientIds, idh) : [];
+        const cgClientName = new Map<number, string>(
+          (cgClients ?? []).map((c) => [c.id, c.name]),
+        );
+        const customer_groups = customerGroupsRows.map((r) => ({
+          id: r.id,
+          position: r.position,
+          client_id: r.client_id,
+          client_name:
+            r.client_id != null
+              ? (cgClientName.get(r.client_id) ?? null)
+              : null,
+          display_name: r.display_name,
+          note: r.note,
+          voucher_id: r.voucher_id,
+          subtotal: String(r.subtotal),
+          discount_amount: String(r.discount_amount),
+          is_payer: r.is_payer,
+        }));
 
         // Account + payee display names — same out-of-process RPC enrichment as
         // the list route (accounts.transactions can't join the financial-accounts
@@ -1369,6 +1409,7 @@ export function buildRouter(deps: RouterDeps): Router {
           line_items,
           client_name,
           client_pool,
+          customer_groups,
           edits,
           payments: paymentsEnriched,
         });
