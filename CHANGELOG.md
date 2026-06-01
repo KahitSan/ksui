@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.4.3
+
+### Patch Changes
+
+- d5e8c9e: fix: add missing peer RPC imports so transaction detail and outstanding routes resolve package, variant, and client names without crashing
+
 ## 0.4.2
 
 ### Patch Changes
