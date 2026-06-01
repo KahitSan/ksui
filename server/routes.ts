@@ -26,7 +26,7 @@
 //   GET    /:id/line-items         list line items
 //   POST   /:id/line-items/:lid/void   void a single line item
 //   GET    /:id/attachments        list attachments (metadata)
-//   POST   /:id/attachments        attach a file URL (URL-based; no disk upload)
+//   POST   /:id/attachments        attach a file (multipart form: field "file")
 //   DELETE /:id/attachments/:aid   delete an attachment
 //
 // Every query carries WHERE organization_id = $N from req.organizationId
@@ -38,6 +38,10 @@
 import { Router, type Request, type Response, type RequestHandler } from "express";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import multer from "multer";
+import crypto from "crypto";
+import fs from "node:fs";
+import path from "node:path";
 import {
   runCharge,
   ChargeValidationError,
@@ -57,6 +61,29 @@ import {
   validateVoucher,
 } from "./lib/peers.js";
 import { listSubscriptions, renewSubscription, RenewError } from "./lib/subscriptions.js";
+
+// ── Attachment upload config ─────────────────────────────────────────────
+const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || "uploads");
+const ALLOWED_ATTACHMENT_MIMES = [
+  "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
+  "application/pdf",
+];
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB
+
+function createAttachmentUpload(orgId: number) {
+  const dir = path.join(UPLOAD_DIR, "transactions", String(orgId));
+  fs.mkdirSync(dir, { recursive: true });
+  return multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, dir),
+      filename: (_req, _file, cb) => cb(null, crypto.randomUUID() + path.extname(_file.originalname).toLowerCase()),
+    }),
+    limits: { fileSize: MAX_ATTACHMENT_SIZE },
+    fileFilter: (_req, file, cb) => {
+      cb(null, ALLOWED_ATTACHMENT_MIMES.includes(file.mimetype));
+    },
+  });
+}
 
 export type RouterDeps = {
   db: PluginDb;
@@ -1875,7 +1902,7 @@ export function buildRouter(deps: RouterDeps): Router {
     },
   );
 
-  // ── Attachments (URL-based; no disk upload in the isolated plugin) ───────
+  // ── Attachments (multipart file upload) ──────────────────────────────────
   router.get(
     "/:id/attachments",
     requireAuth,
@@ -1902,11 +1929,36 @@ export function buildRouter(deps: RouterDeps): Router {
     requireAuth,
     requireOrg,
     requirePermission("transactions.edit"),
+    (req: Request, res: Response, next) => {
+      const orgId = req.organizationId!;
+      const upload = createAttachmentUpload(orgId).single("file");
+      upload(req, res, (err) => {
+        if (err) {
+          if (err instanceof multer.MulterError) {
+            if (err.code === "LIMIT_FILE_SIZE") {
+              res.status(413).json({ error: "File too large (max 10MB)" });
+              return;
+            }
+            res.status(400).json({ error: err.message });
+            return;
+          }
+          res.status(400).json({ error: "File upload failed" });
+          return;
+        }
+        // Normalize: if a file was uploaded via multipart, populate req.body
+        // with the metadata the handler expects.
+        if (req.file) {
+          req.body = {
+            file_name: req.file.originalname,
+            file_url: `transactions/${orgId}/${req.file.filename}`,
+            file_size: req.file.size,
+            mime_type: req.file.mimetype,
+          };
+        }
+        next();
+      });
+    },
     async (req: Request, res: Response) => {
-      // The monolith stored uploaded files via server-runtime/upload to a disk
-      // path the host served. The isolated plugin accepts a file URL +
-      // metadata instead (the host or an object store owns the bytes), keeping
-      // the plugin stateless on disk. file_path holds the URL.
       const { file_name, file_url, file_size, mime_type } = req.body ?? {};
       if (!file_name || typeof file_name !== "string") {
         res.status(400).json({ error: "file_name is required" });
