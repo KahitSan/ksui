@@ -128,6 +128,86 @@ export function buildRouter(deps: RouterDeps): Router {
     },
   );
 
+  router.post(
+    "/subcategories",
+    requireAuth,
+    requireOrg,
+    requirePermission("transactions.edit"),
+    async (req: Request, res: Response) => {
+      const { name, applies_to, sort_order } = req.body ?? {};
+      if (!name || typeof name !== "string" || !name.trim()) {
+        res.status(400).json({ error: "name is required" });
+        return;
+      }
+      if (applies_to !== "income" && applies_to !== "expense") {
+        res.status(400).json({ error: "applies_to must be 'income' or 'expense'" });
+        return;
+      }
+      try {
+        const result = await pool.query(
+          `INSERT INTO transaction_subcategories (name, applies_to, sort_order)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (lower(name), applies_to) DO UPDATE SET is_active = TRUE, updated_at = NOW()
+             RETURNING *`,
+          [name.trim(), applies_to, Number.isFinite(sort_order) ? sort_order : 0],
+        );
+        res.status(201).json(result.rows[0]);
+      } catch (err) {
+        console.error("[transactions] subcategory create error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    },
+  );
+
+  router.put(
+    "/subcategories/:id",
+    requireAuth,
+    requireOrg,
+    requirePermission("transactions.edit"),
+    async (req: Request, res: Response) => {
+      const { name, sort_order, is_active } = req.body ?? {};
+      const sets: string[] = [];
+      const params: unknown[] = [];
+      let idx = 1;
+      if (name !== undefined) {
+        if (typeof name !== "string" || !name.trim()) {
+          res.status(400).json({ error: "name cannot be empty" });
+          return;
+        }
+        sets.push(`name = $${idx++}`);
+        params.push(name.trim());
+      }
+      if (sort_order !== undefined) {
+        sets.push(`sort_order = $${idx++}`);
+        params.push(Number.isFinite(sort_order) ? sort_order : 0);
+      }
+      if (is_active !== undefined) {
+        sets.push(`is_active = $${idx++}`);
+        params.push(Boolean(is_active));
+      }
+      if (sets.length === 0) {
+        res.status(400).json({ error: "No fields to update" });
+        return;
+      }
+      sets.push("updated_at = NOW()");
+      params.push(parseInt(String(req.params.id), 10));
+      try {
+        const result = await pool.query(
+          `UPDATE transaction_subcategories SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`,
+          params,
+        );
+        if (result.rows.length === 0) {
+          res.status(404).json({ error: "Not found" });
+          return;
+        }
+        res.json(result.rows[0]);
+      } catch (err) {
+        console.error("[transactions] subcategory update error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    },
+  );
+
   router.put(
     "/:id/payments/:paymentId",
     requireAuth,
@@ -140,8 +220,8 @@ export function buildRouter(deps: RouterDeps): Router {
         res.status(400).json({ error: "financial_account_id must be a number" });
         return;
       }
-      if (!(parsed > 0)) {
-        res.status(400).json({ error: "amount must be greater than 0" });
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        res.status(400).json({ error: "amount must be a finite number greater than 0" });
         return;
       }
       try {
@@ -149,7 +229,7 @@ export function buildRouter(deps: RouterDeps): Router {
           `UPDATE accounts.transaction_payments
              SET financial_account_id = $1, amount = $2
              WHERE id = $3 AND transaction_id = $4 AND organization_id = $5
-             RETURNING *`,
+             RETURNING id, transaction_id, organization_id, financial_account_id, amount, notes, created_at, updated_at, customer_group_id`,
           [financial_account_id, parsed, req.params.paymentId, req.params.id, req.organizationId],
         );
         if (result.rows.length === 0) {
