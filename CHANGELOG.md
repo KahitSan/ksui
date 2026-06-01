@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.4.2
+
+### Patch Changes
+
+- a15ce3a: Fix file attachment upload failing with "file_name is required" error when pasting or selecting files.
+
 ## 0.4.1
 
 ### Patch Changes
