@@ -38,6 +38,11 @@
 import { Router, type Request, type Response, type RequestHandler } from "express";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import {
+  findPackagesByIds,
+  findVariantsByIds,
+  findClientsByIds,
+} from "./lib/peers.js";
 import multer from "multer";
 import crypto from "crypto";
 import fs from "node:fs";
