@@ -42,28 +42,16 @@ import multer from "multer";
 import crypto from "crypto";
 import fs from "node:fs";
 import path from "node:path";
-import {
-  runCharge,
-  ChargeValidationError,
-  type ChargePayload,
-} from "./helpers-charge.js";
-import {
-  listSubcategories,
-  validateSubcategory,
-  appliesToFor,
-  type AppliesTo,
-} from "./lib/transaction-subcategories.js";
-import { isBackdated } from "./lib/backdate.js";
-import {
-  findPackagesByIds,
-  findVariantsByIds,
-  findClientsByIds,
-  validateVoucher,
-} from "./lib/peers.js";
-import { listSubscriptions, renewSubscription, RenewError } from "./lib/subscriptions.js";
+import { fileURLToPath } from "node:url";
 
 // ── Attachment upload config ─────────────────────────────────────────────
-const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || "uploads");
+// Resolve UPLOAD_DIR relative to the plugin root (two levels up from server/),
+// matching the kernel's uploads/ directory. In production this lands at
+// /opt/kserp/uploads/; in a worktree at <worktree>/kserp/uploads/.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOAD_DIR = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.resolve(__dirname, "..", "..", "uploads");
 const ALLOWED_ATTACHMENT_MIMES = [
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
   "application/pdf",
