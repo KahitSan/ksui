@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.4.0
+
+### Minor Changes
+
+- 4cff9d2: Add PUT /:id/payments/:paymentId for updating payment amount and financial account. Harden attachment routes with explicit column lists and URL protocol validation.
+
 ## 0.3.1
 
 ### Patch Changes
