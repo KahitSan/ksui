@@ -26,7 +26,7 @@
 //   GET    /:id/line-items         list line items
 //   POST   /:id/line-items/:lid/void   void a single line item
 //   GET    /:id/attachments        list attachments (metadata)
-//   POST   /:id/attachments        upload a receipt image/PDF (multipart "file")
+//   POST   /:id/attachments        attach a file URL (URL-based; no disk upload)
 //   DELETE /:id/attachments/:aid   delete an attachment
 //
 // Every query carries WHERE organization_id = $N from req.organizationId
@@ -38,12 +38,6 @@
 import { Router, type Request, type Response, type RequestHandler } from "express";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
-import {
-  createTransactionUpload,
-  getRelativePath,
-  deleteUploadedFile,
-  MAX_FILE_SIZE,
-} from "@ks-erp/server-runtime/upload";
 import {
   runCharge,
   ChargeValidationError,
@@ -60,11 +54,8 @@ import {
   findPackagesByIds,
   findVariantsByIds,
   findClientsByIds,
-  findAccountsByIds,
-  findPayeesByIds,
   validateVoucher,
 } from "./lib/peers.js";
-import { listSubscriptions, renewSubscription, RenewError } from "./lib/subscriptions.js";
 
 export type RouterDeps = {
   db: PluginDb;
@@ -137,73 +128,29 @@ export function buildRouter(deps: RouterDeps): Router {
     },
   );
 
-  router.post(
-    "/subcategories",
-    requireAuth,
-    requireOrg,
-    requirePermission("transactions.edit"),
-    async (req: Request, res: Response) => {
-      const { name, applies_to, sort_order } = req.body ?? {};
-      if (!name || typeof name !== "string" || !name.trim()) {
-        res.status(400).json({ error: "name is required" });
-        return;
-      }
-      if (applies_to !== "income" && applies_to !== "expense") {
-        res.status(400).json({ error: "applies_to must be 'income' or 'expense'" });
-        return;
-      }
-      try {
-        const result = await pool.query(
-          `INSERT INTO transaction_subcategories (name, applies_to, sort_order)
-             VALUES ($1, $2, $3)
-             ON CONFLICT (lower(name), applies_to) DO UPDATE SET is_active = TRUE, updated_at = NOW()
-             RETURNING *`,
-          [name.trim(), applies_to, Number.isFinite(sort_order) ? sort_order : 0],
-        );
-        res.status(201).json(result.rows[0]);
-      } catch (err) {
-        console.error("[transactions] subcategory create error:", err);
-        res.status(500).json({ error: "Internal server error" });
-      }
-    },
-  );
-
   router.put(
-    "/subcategories/:id",
+    "/:id/payments/:paymentId",
     requireAuth,
     requireOrg,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
-      const { name, sort_order, is_active } = req.body ?? {};
-      const sets: string[] = [];
-      const params: unknown[] = [];
-      let idx = 1;
-      if (name !== undefined) {
-        if (typeof name !== "string" || !name.trim()) {
-          res.status(400).json({ error: "name cannot be empty" });
-          return;
-        }
-        sets.push(`name = $${idx++}`);
-        params.push(name.trim());
-      }
-      if (sort_order !== undefined) {
-        sets.push(`sort_order = $${idx++}`);
-        params.push(Number.isFinite(sort_order) ? sort_order : 0);
-      }
-      if (is_active !== undefined) {
-        sets.push(`is_active = $${idx++}`);
-        params.push(Boolean(is_active));
-      }
-      if (sets.length === 0) {
-        res.status(400).json({ error: "No fields to update" });
+      const { financial_account_id, amount } = req.body ?? {};
+      const parsed = parseFloat(amount);
+      if (typeof financial_account_id !== "number" || !Number.isFinite(financial_account_id)) {
+        res.status(400).json({ error: "financial_account_id must be a number" });
         return;
       }
-      sets.push("updated_at = NOW()");
-      params.push(parseInt(String(req.params.id), 10));
+      if (!(parsed > 0)) {
+        res.status(400).json({ error: "amount must be greater than 0" });
+        return;
+      }
       try {
         const result = await pool.query(
-          `UPDATE transaction_subcategories SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`,
-          params,
+          `UPDATE accounts.transaction_payments
+             SET financial_account_id = $1, amount = $2
+             WHERE id = $3 AND transaction_id = $4 AND organization_id = $5
+             RETURNING *`,
+          [financial_account_id, parsed, req.params.paymentId, req.params.id, req.organizationId],
         );
         if (result.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
@@ -211,7 +158,7 @@ export function buildRouter(deps: RouterDeps): Router {
         }
         res.json(result.rows[0]);
       } catch (err) {
-        console.error("[transactions] subcategory update error:", err);
+        console.error("[transactions] payment update error:", err);
         res.status(500).json({ error: "Internal server error" });
       }
     },
@@ -407,78 +354,6 @@ export function buildRouter(deps: RouterDeps): Router {
     },
   );
 
-  // GET /cashflow -- per-day inflow/outflow buckets for the analytics chart.
-  //
-  // One row per day that had activity (the bucket array is sparse) with:
-  //   in       sales — prefers the settled payment sum over the headline amount
-  //   out      expenses + payables
-  //   transfer business moves
-  // all in pesos. transaction_date is a stored `date`, so to_char gives the
-  // natural Manila day with no timezone cast (see the timezone discipline rule).
-  //
-  // Query params: dateFrom, dateTo (inclusive, applied to transaction_date;
-  // omit both for all-time). Privacy-gated identically to /summary.
-  //
-  // Response: { buckets: Array<{ date, in, out, transfer }> }
-  router.get(
-    "/cashflow",
-    requireAuth,
-    requireOrg,
-    requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
-      const dateFrom = req.query.dateFrom as string | undefined;
-      const dateTo = req.query.dateTo as string | undefined;
-
-      try {
-        const params: unknown[] = [req.organizationId];
-        const conditions = ["t.organization_id = $1", "t.status != 'voided'"];
-        const priv = privacyClause(req, params, params.length + 1);
-        if (priv) conditions.push(priv);
-
-        if (dateFrom) {
-          params.push(dateFrom);
-          conditions.push(`t.transaction_date >= $${params.length}`);
-        }
-        if (dateTo) {
-          params.push(dateTo);
-          conditions.push(`t.transaction_date <= $${params.length}`);
-        }
-
-        const result = await pool.query(
-          `SELECT
-              to_char(t.transaction_date, 'YYYY-MM-DD') AS date,
-              COALESCE(SUM(CASE WHEN t.category = 'sale'
-                                THEN COALESCE(tp.amount, t.amount) ELSE 0 END), 0) AS in_amt,
-              COALESCE(SUM(CASE WHEN t.category IN ('expense', 'payable')
-                                THEN t.amount ELSE 0 END), 0) AS out_amt,
-              COALESCE(SUM(CASE WHEN t.category = 'business'
-                                THEN t.amount ELSE 0 END), 0) AS transfer_amt
-             FROM accounts.transactions t
-             LEFT JOIN accounts.transaction_payments tp
-               ON tp.transaction_id = t.id AND t.category = 'sale'
-            WHERE ${conditions.join(" AND ")}
-            GROUP BY t.transaction_date
-            ORDER BY t.transaction_date ASC`,
-          params,
-        );
-
-        res.json({
-          buckets: (
-            result.rows as { date: string; in_amt: string; out_amt: string; transfer_amt: string }[]
-          ).map((r) => ({
-            date: r.date,
-            in: parseFloat(r.in_amt),
-            out: parseFloat(r.out_amt),
-            transfer: parseFloat(r.transfer_amt),
-          })),
-        });
-      } catch (err) {
-        console.error("[transactions] cashflow error:", err);
-        res.status(500).json({ error: "Internal server error" });
-      }
-    },
-  );
-
   // GET /by-hour -- counter check-in/out counts by time of day.
   //
   // Aggregates counter activity from transaction_line_items into 24 hourly (or
@@ -589,53 +464,6 @@ export function buildRouter(deps: RouterDeps): Router {
         res.json({ buckets, bucketMinutes });
       } catch (err) {
         console.error("[transactions] by-hour error:", err);
-        res.status(500).json({ error: "Internal server error" });
-      }
-    },
-  );
-
-  // ── Subscriptions (recurring-revenue view over line items) ───────────────
-  // Registered before "/:id" so the literal segment wins. The heavy grouping +
-  // renew logic lives in lib/subscriptions.ts (cross-schema data resolved over
-  // RPC, not SQL JOINs). Recovered from the monolith's /api/subscriptions.
-
-  // GET /subscriptions — grouped, bucketed, searchable, paginated.
-  router.get(
-    "/subscriptions",
-    requireAuth,
-    requireOrg,
-    requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
-      try {
-        res.json(await listSubscriptions(pool, req, privacyClause));
-      } catch (err) {
-        console.error("[transactions] subscriptions list error:", err);
-        res.status(500).json({ error: "Internal server error" });
-      }
-    },
-  );
-
-  // POST /subscriptions/:line_item_id/renew — fresh sale chaining from prior expiry.
-  router.post(
-    "/subscriptions/:line_item_id/renew",
-    requireAuth,
-    requireOrg,
-    requirePermission("transactions.create"),
-    async (req: Request, res: Response) => {
-      const sourceId = parseInt(String(req.params.line_item_id), 10);
-      if (!Number.isInteger(sourceId) || sourceId <= 0) {
-        res.status(400).json({ error: "line_item_id is required" });
-        return;
-      }
-      try {
-        const out = await renewSubscription(pool, req, sourceId, req.body ?? {});
-        res.status(201).json(out);
-      } catch (err) {
-        if (err instanceof RenewError) {
-          res.status(err.status).json({ error: err.message });
-          return;
-        }
-        console.error("[transactions] subscriptions renew error:", err);
         res.status(500).json({ error: "Internal server error" });
       }
     },
@@ -896,65 +724,7 @@ export function buildRouter(deps: RouterDeps): Router {
         );
         const total = parseInt(countResult.rows[0].count);
 
-        // Display-name enrichment. The list query reads only accounts.transactions
-        // — process isolation forbids joining the financial-accounts / payees
-        // schemas — so account + payee names resolve out-of-process over the
-        // kernel RPC, batched per page (one findByIds per peer). When a peer
-        // plugin is absent tryCallPlugin returns null; we leave the name unset and
-        // flag the peer unavailable so the UI shows a "couldn't load" marker
-        // instead of a misleading blank. (created_by display names come from the
-        // kernel user table and are resolved client-side from the host member
-        // list — see GET /creators.)
-        const rows = result.rows as Array<Record<string, unknown>>;
-        const idh = identityHeaderOf(req);
-
-        const accountIds = [
-          ...new Set(
-            rows.flatMap((r) =>
-              [r.source_account_id, r.destination_account_id].filter(
-                (v): v is number => typeof v === "number",
-              ),
-            ),
-          ),
-        ];
-        const payeeIds = [
-          ...new Set(
-            rows.map((r) => r.payee_id).filter((v): v is number => typeof v === "number"),
-          ),
-        ];
-
-        const [accounts, payees] = await Promise.all([
-          findAccountsByIds(accountIds, idh),
-          findPayeesByIds(payeeIds, idh),
-        ]);
-
-        const accountsUnavailable = accountIds.length > 0 && accounts === null;
-        const payeesUnavailable = payeeIds.length > 0 && payees === null;
-
-        const accountName = new Map((accounts ?? []).map((a) => [a.id, a.name]));
-        const payeeName = new Map((payees ?? []).map((p) => [p.id, p.name]));
-
-        for (const r of rows) {
-          r.source_account_name =
-            typeof r.source_account_id === "number"
-              ? (accountName.get(r.source_account_id) ?? null)
-              : null;
-          r.destination_account_name =
-            typeof r.destination_account_id === "number"
-              ? (accountName.get(r.destination_account_id) ?? null)
-              : null;
-          r.payee =
-            typeof r.payee_id === "number" ? (payeeName.get(r.payee_id) ?? null) : null;
-        }
-
-        res.json({
-          data: rows,
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-          peersUnavailable: { accounts: accountsUnavailable, payees: payeesUnavailable },
-        });
+        res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
       } catch (err) {
         console.error("[transactions] list error:", err);
         res.status(500).json({ error: "Internal server error" });
@@ -1317,101 +1087,18 @@ export function buildRouter(deps: RouterDeps): Router {
           ? await findClientsByIds(clientPoolRows.map((r) => r.client_id), idh)
           : [];
         const poolName = new Map<number, string>((poolClients ?? []).map((c) => [c.id, c.name]));
-        const client_pool = clientPoolRows.map((r) => ({ id: r.client_id, name_raw: poolName.get(r.client_id) ?? null }));
-
-        const customerGroupsRows = (
-          await pool.query(
-            `SELECT id, position, client_id, display_name, note, voucher_id,
-                    subtotal::numeric(12,2) AS subtotal,
-                    discount_amount::numeric(12,2) AS discount_amount,
-                    is_payer
-               FROM accounts.transaction_customer_groups
-              WHERE transaction_id = $1 AND organization_id = $2
-              ORDER BY position ASC`,
-            [txn.id, req.organizationId],
-          )
-        ).rows;
-        const cgClientIds = [
-          ...new Set(
-            customerGroupsRows
-              .map((r) => r.client_id as number | null)
-              .filter((v): v is number => v != null),
-          ),
-        ];
-        const cgClients =
-          cgClientIds.length > 0 ? await findClientsByIds(cgClientIds, idh) : [];
-        const cgClientName = new Map<number, string>(
-          (cgClients ?? []).map((c) => [c.id, c.name]),
-        );
-        const customer_groups = customerGroupsRows.map((r) => ({
-          id: r.id,
-          position: r.position,
-          client_id: r.client_id,
-          client_name:
-            r.client_id != null
-              ? (cgClientName.get(r.client_id) ?? null)
-              : null,
-          display_name: r.display_name,
-          note: r.note,
-          voucher_id: r.voucher_id,
-          subtotal: String(r.subtotal),
-          discount_amount: String(r.discount_amount),
-          is_payer: r.is_payer,
-        }));
-
-        // Account + payee display names — same out-of-process RPC enrichment as
-        // the list route (accounts.transactions can't join the financial-accounts
-        // / payees schemas). Null when the peer plugin is absent.
-        const detailAcctIds = [
-          ...new Set(
-            [
-              txn.source_account_id,
-              txn.destination_account_id,
-              ...payments.map((p) => p.financial_account_id),
-            ].filter((v): v is number => typeof v === "number"),
-          ),
-        ];
-        const [detailAccounts, detailPayees] = await Promise.all([
-          findAccountsByIds(detailAcctIds, idh),
-          typeof txn.payee_id === "number"
-            ? findPayeesByIds([txn.payee_id], idh)
-            : Promise.resolve([]),
-        ]);
-        const detailAcctName = new Map((detailAccounts ?? []).map((a) => [a.id, a.name]));
-        const source_account_name =
-          typeof txn.source_account_id === "number"
-            ? (detailAcctName.get(txn.source_account_id) ?? null)
-            : null;
-        const destination_account_name =
-          typeof txn.destination_account_id === "number"
-            ? (detailAcctName.get(txn.destination_account_id) ?? null)
-            : null;
-        const payee = typeof txn.payee_id === "number" ? (detailPayees?.[0]?.name ?? null) : null;
-
-        // Each payment leg shows which account it landed in — resolve the same
-        // way (the payments query carries only financial_account_id).
-        const paymentsEnriched = payments.map((p) => ({
-          ...p,
-          financial_account_name:
-            typeof p.financial_account_id === "number"
-              ? (detailAcctName.get(p.financial_account_id) ?? null)
-              : null,
-        }));
+        const client_pool = clientPoolRows.map((r) => ({ id: r.client_id, name: poolName.get(r.client_id) ?? null }));
 
         res.json({
           ...txn,
-          source_account_name,
-          destination_account_name,
-          payee,
           attachments: attachments.rows,
           shared_with,
           shared_with_roles,
           line_items,
           client_name,
           client_pool,
-          customer_groups,
           edits,
-          payments: paymentsEnriched,
+          payments,
         });
       } catch (err) {
         console.error("[transactions] get error:", err);
@@ -1988,34 +1675,19 @@ export function buildRouter(deps: RouterDeps): Router {
     },
   );
 
-  // ── Attachments (real disk upload via server-runtime → kernel /assets) ────
-  // The plugin process writes the bytes under UPLOAD_DIR/transactions/<orgId>/
-  // and stores that relative path in file_path. The kernel serves it back at
-  // /assets/transactions/<orgId>/<file> (membership-gated). UPLOAD_DIR must be
-  // an absolute path shared by the kernel + plugin processes (see deploy env).
-  const ATTACHMENT_COLUMNS =
-    "id, transaction_id, file_name, file_path, file_size, mime_type, uploaded_by, created_at";
-
+  // ── Attachments (URL-based; no disk upload in the isolated plugin) ───────
   router.get(
     "/:id/attachments",
     requireAuth,
     requireOrg,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
-      const txId = parseInt(String(req.params.id), 10);
-      if (!Number.isInteger(txId) || txId <= 0) {
-        res.status(400).json({ error: "Invalid transaction id" });
-        return;
-      }
       try {
         const rows = await pool.query(
-          `SELECT ${ATTACHMENT_COLUMNS.split(", ")
-            .map((c) => `a.${c}`)
-            .join(", ")}
-             FROM accounts.transaction_attachments a
+          `SELECT a.* FROM accounts.transaction_attachments a
              JOIN accounts.transactions t ON t.id = a.transaction_id
             WHERE a.transaction_id = $1 AND t.organization_id = $2 ORDER BY a.created_at`,
-          [txId, req.organizationId],
+          [req.params.id, req.organizationId],
         );
         res.json({ attachments: rows.rows });
       } catch (err) {
@@ -2030,65 +1702,43 @@ export function buildRouter(deps: RouterDeps): Router {
     requireAuth,
     requireOrg,
     requirePermission("transactions.edit"),
-    // Validate the id + build the per-org multer uploader AFTER requireOrg has
-    // set req.organizationId (the upload dir is per-org), then run .single.
-    (req: Request, res: Response, next) => {
-      const txId = parseInt(String(req.params.id), 10);
-      if (!Number.isInteger(txId) || txId <= 0) {
-        res.status(400).json({ error: "Invalid transaction id" });
-        return;
-      }
-      const orgId = req.organizationId;
-      if (orgId == null) {
-        res.status(400).json({ error: "Organization context required" });
-        return;
-      }
-      const upload = createTransactionUpload(orgId).single("file");
-      upload(req, res, (err: unknown) => {
-        if (err) {
-          const code = (err as { code?: string }).code;
-          res.status(400).json({
-            error:
-              code === "LIMIT_FILE_SIZE"
-                ? `File exceeds the ${Math.round(MAX_FILE_SIZE / (1024 * 1024))}MB limit`
-                : "Upload failed",
-          });
-          return;
-        }
-        next();
-      });
-    },
     async (req: Request, res: Response) => {
-      const file = req.file;
-      const orgId = req.organizationId as number;
-      // multer's fileFilter rejects disallowed mime types by dropping the file
-      // (no error), so an absent req.file means "no file" OR "unsupported type".
-      if (!file) {
-        res.status(400).json({ error: "A valid image (JPEG/PNG/WEBP/HEIC) or PDF file is required" });
+      // The monolith stored uploaded files via server-runtime/upload to a disk
+      // path the host served. The isolated plugin accepts a file URL +
+      // metadata instead (the host or an object store owns the bytes), keeping
+      // the plugin stateless on disk. file_path holds the URL.
+      const { file_name, file_url, file_size, mime_type } = req.body ?? {};
+      if (!file_name || typeof file_name !== "string") {
+        res.status(400).json({ error: "file_name is required" });
         return;
       }
-      const relPath = getRelativePath(orgId, file.filename);
+      if (!file_url || typeof file_url !== "string") {
+        res.status(400).json({ error: "file_url is required" });
+        return;
+      }
       try {
         const tx = await pool.query(
           `SELECT id FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
-          [req.params.id, orgId],
+          [req.params.id, req.organizationId],
         );
         if (tx.rows.length === 0) {
-          // The transaction isn't ours — don't leave orphaned bytes on disk.
-          deleteUploadedFile(relPath);
           res.status(404).json({ error: "Not found" });
           return;
         }
         const result = await pool.query(
-          `INSERT INTO accounts.transaction_attachments
-             (transaction_id, file_name, file_path, file_size, mime_type, uploaded_by)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             RETURNING ${ATTACHMENT_COLUMNS}`,
-          [req.params.id, file.originalname, relPath, file.size, file.mimetype, req.user?.id ?? ""],
+          `INSERT INTO accounts.transaction_attachments (transaction_id, file_name, file_path, file_size, mime_type, uploaded_by)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+          [
+            req.params.id,
+            file_name,
+            file_url,
+            Number.isFinite(file_size) ? file_size : 0,
+            mime_type || "application/octet-stream",
+            req.user?.id ?? "",
+          ],
         );
         res.status(201).json(result.rows[0]);
       } catch (err) {
-        deleteUploadedFile(relPath);
         console.error("[transactions] attachment create error:", err);
         res.status(500).json({ error: "Internal server error" });
       }
@@ -2107,19 +1757,12 @@ export function buildRouter(deps: RouterDeps): Router {
              USING accounts.transactions t
             WHERE a.transaction_id = t.id
               AND a.id = $1 AND a.transaction_id = $2 AND t.organization_id = $3
-            RETURNING a.file_path`,
+            RETURNING a.id`,
           [req.params.attachmentId, req.params.id, req.organizationId],
         );
         if (result.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
           return;
-        }
-        // Best-effort disk cleanup for files we own (relative paths written by
-        // this plugin). External/legacy URLs (http(s)://, blob:, absolute) are
-        // left alone — deleteUploadedFile no-ops on a missing path anyway.
-        const filePath = result.rows[0].file_path as string | null;
-        if (filePath && !/^[a-z]+:\/\//i.test(filePath) && !filePath.startsWith("/")) {
-          deleteUploadedFile(filePath);
         }
         res.status(204).send();
       } catch (err) {
