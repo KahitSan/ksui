@@ -2998,7 +2998,14 @@ function TransactionForm(props: TransactionFormProps) {
   const subcategoryOptionsReady = () => subcategoryOptions() !== undefined;
 
   function addFiles(files: File[]) {
-    const newPending = files.map(createPendingFile);
+    const existing = new Set(
+      props.pendingFiles.map((pf) => `${pf.file.name}::${pf.file.size}::${pf.file.lastModified}`),
+    );
+    const deduped = files.filter(
+      (f) => !existing.has(`${f.name}::${f.size}::${f.lastModified}`),
+    );
+    if (deduped.length === 0) return;
+    const newPending = deduped.map(createPendingFile);
     props.setPendingFiles([...props.pendingFiles, ...newPending]);
   }
 
@@ -3040,6 +3047,7 @@ function TransactionForm(props: TransactionFormProps) {
     }
     if (files.length > 0) {
       e.preventDefault();
+      e.stopPropagation();
       addFiles(files);
     }
   }
