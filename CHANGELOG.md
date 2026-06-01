@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.4.1
+
+### Patch Changes
+
+- 277ba15: Restore cashflow endpoint for analytics plugin.
+
 ## 0.4.0
 
 ### Minor Changes
