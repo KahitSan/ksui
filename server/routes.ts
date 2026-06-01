@@ -42,7 +42,17 @@ import {
   findPackagesByIds,
   findVariantsByIds,
   findClientsByIds,
+  validateVoucher,
 } from "./lib/peers.js";
+import {
+  listSubcategories,
+  validateSubcategory,
+  appliesToFor,
+  type AppliesTo,
+} from "./lib/transaction-subcategories.js";
+import { listSubscriptions, renewSubscription, RenewError } from "./lib/subscriptions.js";
+import { runCharge, ChargeValidationError, type ChargePayload } from "./helpers-charge.js";
+import { isBackdated } from "./lib/backdate.js";
 import multer from "multer";
 import crypto from "crypto";
 import fs from "node:fs";
