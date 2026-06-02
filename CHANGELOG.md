@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.4.5
+
+### Patch Changes
+
+- bbf86e2: Include customer_groups in transaction detail API response so the edit cart correctly renders multi-client bookings.
+
 ## 0.4.4
 
 ### Patch Changes
