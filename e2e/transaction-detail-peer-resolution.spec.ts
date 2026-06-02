@@ -104,6 +104,7 @@ test.describe("payee and updated_by enrichment", () => {
         transaction_date: today,
         source_account_id: 1,
         payee_id: 99,
+        backdate_reason: "e2e test",
       },
     });
     expect(createRes.status(), await createRes.text()).toBe(201);
@@ -140,6 +141,7 @@ test.describe("payee and updated_by enrichment", () => {
         description: `e2e-update-updatedby-${Date.now()}`,
         transaction_date: today,
         source_account_id: 1,
+        backdate_reason: "e2e test",
       },
     });
     expect(createRes.status(), await createRes.text()).toBe(201);
@@ -176,6 +178,7 @@ test.describe("payee and updated_by enrichment", () => {
         description: `e2e-list-enrich-${Date.now()}`,
         transaction_date: today,
         source_account_id: 1,
+        backdate_reason: "e2e test",
       },
     });
     expect(createRes.status(), await createRes.text()).toBe(201);

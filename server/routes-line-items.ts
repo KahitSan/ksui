@@ -172,7 +172,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
       }
       if (includeUpcoming) {
         dateClauses.push(
-          `(li.started_at IS NOT NULL AND li.started_at > NOW() AND li.status != 'voided')`,
+          `(li.started_at IS NOT NULL AND li.started_at > NOW() AND li.status != 'voided' AND $${idx}::date >= (NOW() AT TIME ZONE 'Asia/Manila')::date)`,
         );
       }
       if (dateClauses.length === 0) {
