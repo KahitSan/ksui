@@ -1350,6 +1350,28 @@ export function buildRouter(deps: RouterDeps): Router {
           )
         ).rows;
 
+        const customerGroups = (
+          await pool.query(
+            `SELECT id, position, client_id, display_name, note, voucher_id, subtotal, discount_amount, is_payer
+               FROM accounts.transaction_customer_groups
+              WHERE transaction_id = $1 AND organization_id = $2
+              ORDER BY position ASC`,
+            [txn.id, req.organizationId],
+          )
+        ).rows;
+
+        // Resolve client names for customer groups.
+        const cgClientIds = [
+          ...new Set(customerGroups.map((g) => g.client_id as number | null).filter((v): v is number => v != null)),
+        ];
+        const cgClients =
+          cgClientIds.length > 0 ? await findClientsByIds(cgClientIds, idh) : [];
+        const cgClientName = new Map<number, string>((cgClients ?? []).map((c) => [c.id, c.name]));
+        const customer_groups = customerGroups.map((g) => ({
+          ...g,
+          client_name: g.client_id != null ? (cgClientName.get(g.client_id) ?? null) : null,
+        }));
+
         const clientPoolRows = (
           await pool.query(
             `SELECT client_id, position FROM accounts.transaction_customers
@@ -1391,6 +1413,7 @@ export function buildRouter(deps: RouterDeps): Router {
           line_items,
           client_name,
           client_pool,
+          customer_groups,
           edits,
           payments,
         });
