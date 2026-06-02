@@ -42,6 +42,7 @@ import {
   findPackagesByIds,
   findVariantsByIds,
   findClientsByIds,
+  findPayeesByIds,
   validateVoucher,
 } from "./lib/peers.js";
 import {
@@ -117,6 +118,20 @@ function isValidIsoDate(s: string): boolean {
 // Escape ILIKE wildcards so a search for "100%" doesn't match every row.
 function escapeLike(s: string): string {
   return s.replace(/[\\%_]/g, "\\$&");
+}
+
+/** Batch-resolve user ids to { id, name, image } from the kernel's user table. */
+async function resolveUserNames(
+  pool: import("pg").Pool,
+  ids: Set<string>,
+): Promise<Map<string, { name: string; image: string | null }>> {
+  const arr = [...ids].filter(Boolean);
+  if (arr.length === 0) return new Map();
+  const result = await pool.query(
+    `SELECT id, name, image FROM public."user" WHERE id = ANY($1::text[])`,
+    [arr],
+  );
+  return new Map(result.rows.map((r: { id: string; name: string; image: string | null }) => [r.id, { name: r.name, image: r.image }]));
 }
 
 export function buildRouter(deps: RouterDeps): Router {
@@ -954,6 +969,28 @@ export function buildRouter(deps: RouterDeps): Router {
         );
         const total = parseInt(countResult.rows[0].count);
 
+        // Enrich with payee names and user names.
+        const idh = identityHeaderOf(req);
+        const payeeIds = [...new Set(result.rows.map((r: { payee_id: number | null }) => r.payee_id).filter((v: number | null): v is number => v != null))];
+        const payeeMap = payeeIds.length > 0
+          ? new Map((await findPayeesByIds(payeeIds, idh))?.map((p: { id: number; name: string }) => [p.id, p.name]) ?? [])
+          : new Map<number, string>();
+        const userIds = new Set<string>();
+        for (const row of result.rows) {
+          if (row.created_by) userIds.add(row.created_by);
+          if (row.updated_by) userIds.add(row.updated_by);
+        }
+        const userMap = await resolveUserNames(pool, userIds);
+        for (const row of result.rows) {
+          row.payee = row.payee_id != null ? (payeeMap.get(row.payee_id) ?? null) : null;
+          const cUser = row.created_by ? userMap.get(row.created_by) : undefined;
+          const uUser = row.updated_by ? userMap.get(row.updated_by) : undefined;
+          row.created_by_name = cUser?.name ?? null;
+          row.created_by_image = cUser?.image ?? null;
+          row.updated_by_name = uUser?.name ?? null;
+          row.updated_by_image = uUser?.image ?? null;
+        }
+
         res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
       } catch (err) {
         console.error("[transactions] list error:", err);
@@ -990,6 +1027,7 @@ export function buildRouter(deps: RouterDeps): Router {
         due_date,
         cheque_number,
         pdc_status,
+        payee_id,
         client_id,
       } = req.body ?? {};
 
@@ -1116,9 +1154,10 @@ export function buildRouter(deps: RouterDeps): Router {
              (organization_id, category, subcategory, source_account_id, destination_account_id,
               amount, description, notes, transaction_date, is_private, is_backdated, backdate_reason,
               created_by, updated_by, reference_number, tax_type, tax_rate, tax_amount, subtotal,
-              payable_kind, due_date, cheque_number, pdc_status, has_ewt, ewt_rate, ewt_amount, client_id)
+              payable_kind, due_date, cheque_number, pdc_status, has_ewt, ewt_rate, ewt_amount, client_id,
+              payee_id)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, $18,
-                   $19, $20, $21, $22, $23, $24, $25, $26)
+                   $19, $20, $21, $22, $23, $24, $25, $26, $27)
            RETURNING *`,
           [
             req.organizationId,
@@ -1147,6 +1186,7 @@ export function buildRouter(deps: RouterDeps): Router {
             txEwtRate,
             txEwtAmount,
             client_id ?? null,
+            payee_id ?? null,
           ],
         );
         const txn = result.rows[0];
@@ -1319,8 +1359,28 @@ export function buildRouter(deps: RouterDeps): Router {
         const poolName = new Map<number, string>((poolClients ?? []).map((c) => [c.id, c.name]));
         const client_pool = clientPoolRows.map((r) => ({ id: r.client_id, name: poolName.get(r.client_id) ?? null }));
 
+        // Resolve payee name.
+        let payee: string | null = null;
+        if (txn.payee_id != null) {
+          const payees = await findPayeesByIds([txn.payee_id], idh);
+          payee = payees?.[0]?.name ?? null;
+        }
+
+        // Resolve user names (created_by / updated_by).
+        const userIds = new Set<string>();
+        if (txn.created_by) userIds.add(txn.created_by);
+        if (txn.updated_by) userIds.add(txn.updated_by);
+        const userMap = await resolveUserNames(pool, userIds);
+        const createdByUser = txn.created_by ? userMap.get(txn.created_by) : undefined;
+        const updatedByUser = txn.updated_by ? userMap.get(txn.updated_by) : undefined;
+
         res.json({
           ...txn,
+          payee,
+          created_by_name: createdByUser?.name ?? null,
+          created_by_image: createdByUser?.image ?? null,
+          updated_by_name: updatedByUser?.name ?? null,
+          updated_by_image: updatedByUser?.image ?? null,
           attachments: attachments.rows,
           shared_with,
           shared_with_roles,
@@ -1368,6 +1428,7 @@ export function buildRouter(deps: RouterDeps): Router {
         due_date,
         cheque_number,
         pdc_status,
+        payee_id,
         reason,
       } = req.body ?? {};
 
@@ -1513,6 +1574,10 @@ export function buildRouter(deps: RouterDeps): Router {
           sets.push(`pdc_status = $${idx++}`);
           params.push(pdc_status || null);
         }
+        if (payee_id !== undefined) {
+          sets.push(`payee_id = $${idx++}`);
+          params.push(payee_id || null);
+        }
 
         // Tax type + derived VAT breakdown. Recompute subtotal/tax_amount from
         // the effective amount (the body's amount when present, else the row's
@@ -1595,7 +1660,17 @@ export function buildRouter(deps: RouterDeps): Router {
             );
           }
           await dbClient.query("COMMIT");
-          res.json(result.rows[0]);
+          const updated = result.rows[0];
+          // Enrich response with payee name and user names.
+          let payee: string | null = null;
+          if (updated.payee_id != null) {
+            const payees = await findPayeesByIds([updated.payee_id], identityHeaderOf(req));
+            payee = payees?.[0]?.name ?? null;
+          }
+          const updUserId = updated.updated_by ? new Set([updated.updated_by]) : new Set<string>();
+          const updUserMap = await resolveUserNames(pool, updUserId);
+          const updUser = updated.updated_by ? updUserMap.get(updated.updated_by) : undefined;
+          res.json({ ...updated, payee, updated_by_name: updUser?.name ?? null, updated_by_image: updUser?.image ?? null });
         } catch (err) {
           if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
           throw err;

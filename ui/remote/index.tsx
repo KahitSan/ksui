@@ -752,6 +752,7 @@ export function Component() {
   const [formSharedWithRoles, setFormSharedWithRoles] = createSignal<string[]>([]);
   const [formBackdateReason, setFormBackdateReason] = createSignal("");
   const [formPayee, setFormPayee] = createSignal("");
+  const [formPayeeId, setFormPayeeId] = createSignal<number | null>(null);
   const [formRefNumber, setFormRefNumber] = createSignal("");
   const [formTaxType, setFormTaxType] = createSignal("vat_inclusive");
   const [formHasEwt, setFormHasEwt] = createSignal(false);
@@ -784,6 +785,7 @@ export function Component() {
     setFormSharedWithRoles([]);
     setFormBackdateReason("");
     setFormPayee("");
+    setFormPayeeId(null);
     setFormRefNumber("");
     setFormTaxType("vat_inclusive");
     setFormHasEwt(false);
@@ -818,6 +820,7 @@ export function Component() {
     setFormSharedWithRoles(t.shared_with_roles?.map((r) => r.role_code) || []);
     setFormBackdateReason(t.backdate_reason || "");
     setFormPayee(t.payee || "");
+    setFormPayeeId(t.payee_id ?? null);
     setFormRefNumber(t.reference_number || "");
     setFormTaxType(t.tax_type || "vat_inclusive");
     setFormHasEwt(!!t.has_ewt);
@@ -1014,6 +1017,7 @@ export function Component() {
             shared_with_roles: formPrivate() ? formSharedWithRoles() : [],
             backdate_reason: isFormBackdated() ? formBackdateReason().trim() : null,
             payee: formPayee().trim() || null,
+            payee_id: formPayeeId(),
             reference_number: formRefNumber().trim() || null,
             tax_type: formTaxType(),
             has_ewt: formHasEwt(),
@@ -1093,6 +1097,7 @@ export function Component() {
         is_private: formPrivate(),
         backdate_reason: isFormBackdated() ? formBackdateReason().trim() : null,
         payee: formPayee().trim() || null,
+        payee_id: formPayeeId(),
         reference_number: formRefNumber().trim() || null,
         tax_type: formTaxType(),
         has_ewt: formHasEwt(),
@@ -1816,6 +1821,8 @@ export function Component() {
               setBackdateReason={setFormBackdateReason}
               payee={formPayee()}
               setPayee={setFormPayee}
+              payeeId={formPayeeId()}
+              setPayeeId={setFormPayeeId}
               refNumber={formRefNumber()}
               setRefNumber={setFormRefNumber}
               taxType={formTaxType()}
@@ -2001,6 +2008,8 @@ export function Component() {
                   setBackdateReason={setFormBackdateReason}
                   payee={formPayee()}
                   setPayee={setFormPayee}
+                  payeeId={formPayeeId()}
+                  setPayeeId={setFormPayeeId}
                   refNumber={formRefNumber()}
                   setRefNumber={setFormRefNumber}
                   taxType={formTaxType()}
@@ -2860,6 +2869,8 @@ interface TransactionFormProps {
   setBackdateReason: (v: string) => void;
   payee: string;
   setPayee: (v: string) => void;
+  payeeId: number | null;
+  setPayeeId: (v: number | null) => void;
   refNumber: string;
   setRefNumber: (v: string) => void;
   taxType: string;
@@ -2967,8 +2978,11 @@ function TransactionForm(props: TransactionFormProps) {
   const [selectedPayee, setSelectedPayee] = createSignal<PayeeOption | null>(null);
   createEffect(() => {
     const name = props.payee;
+    const id = props.payeeId;
     const sel = selectedPayee();
-    if (sel && sel.name !== name) {
+    if (id != null && name && !sel) {
+      setSelectedPayee({ id, name, kind: "vendor" });
+    } else if (sel && sel.name !== name) {
       setSelectedPayee(null);
     } else if (!name && sel) {
       setSelectedPayee(null);
@@ -3215,6 +3229,7 @@ function TransactionForm(props: TransactionFormProps) {
                   onChange={(p) => {
                     setSelectedPayee(p);
                     props.setPayee(p ? p.name : "");
+                    props.setPayeeId(p ? p.id : null);
                   }}
                 />
               </FormField>
