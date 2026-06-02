@@ -1039,6 +1039,10 @@ export function buildRouter(deps: RouterDeps): Router {
         res.status(400).json({ error: "client_id must be a finite number" });
         return;
       }
+      if (payee_id != null && (typeof payee_id !== "number" || !Number.isFinite(payee_id))) {
+        res.status(400).json({ error: "payee_id must be a finite number" });
+        return;
+      }
 
       let validatedSubcategory: string | null;
       try {
@@ -1575,8 +1579,12 @@ export function buildRouter(deps: RouterDeps): Router {
           params.push(pdc_status || null);
         }
         if (payee_id !== undefined) {
+          if (payee_id != null && (typeof payee_id !== "number" || !Number.isFinite(payee_id))) {
+            res.status(400).json({ error: "payee_id must be a finite number" });
+            return;
+          }
           sets.push(`payee_id = $${idx++}`);
-          params.push(payee_id || null);
+          params.push(payee_id ?? null);
         }
 
         // Tax type + derived VAT breakdown. Recompute subtotal/tax_amount from
