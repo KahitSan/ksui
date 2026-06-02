@@ -83,7 +83,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
       if (activeOnRaw && /^\d{4}-\d{2}-\d{2}$/.test(activeOnRaw)) {
         activeOn = activeOnRaw;
       } else {
-        activeOn = new Date().toISOString().slice(0, 10);
+        activeOn = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
       }
 
       const userId = req.user?.id;
@@ -162,12 +162,31 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         // these here so the live board always shows what's actually running.
         // Scoped to Manila today so older active_on dates don't accidentally
         // surface every currently-running session.
+        //
+        // Uses ag.combined_end instead of li.ends_at for items that are part
+        // of a same-client subgroup (same transaction, same client, >=2 lines).
+        // The subgroup's combined duration can extend beyond the individual
+        // line's ends_at (e.g. one line is a flat-rate base, another is an
+        // hourly extension), and the counter card always surfaces the combined
+        // remaining time, so the rescue must match what the user sees.
         dateClauses.push(
           `(li.started_at IS NOT NULL
             AND li.ends_at IS NOT NULL
             AND li.started_at <= NOW()
-            AND li.ends_at > NOW()
+            AND COALESCE(ag.combined_end, li.ends_at) > NOW()
             AND $${idx}::date = (NOW() AT TIME ZONE 'Asia/Manila')::date)`,
+        );
+        // Prepaid credits / non-time-bound items: started_at is NULL but the
+        // item still has a future ends_at (validity window). The main CASE
+        // buckets these by t.transaction_date, which may be in the past, so
+        // they'd silently fall out of the today scope. Catch them here the
+        // same way we catch backdated time-bound sessions.
+        dateClauses.push(
+          `(li.started_at IS NULL
+            AND li.ends_at IS NOT NULL
+            AND li.ends_at > NOW()
+            AND li.status != 'voided'
+            AND $${idx}::date >= (NOW() AT TIME ZONE 'Asia/Manila')::date)`,
         );
       }
       if (includeUpcoming) {
