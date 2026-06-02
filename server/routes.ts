@@ -1675,10 +1675,13 @@ export function buildRouter(deps: RouterDeps): Router {
             const payees = await findPayeesByIds([updated.payee_id], identityHeaderOf(req));
             payee = payees?.[0]?.name ?? null;
           }
-          const updUserId = updated.updated_by ? new Set([updated.updated_by]) : new Set<string>();
-          const updUserMap = await resolveUserNames(pool, updUserId);
-          const updUser = updated.updated_by ? updUserMap.get(updated.updated_by) : undefined;
-          res.json({ ...updated, payee, updated_by_name: updUser?.name ?? null, updated_by_image: updUser?.image ?? null });
+          const updUserIds = new Set<string>();
+          if (updated.created_by) updUserIds.add(updated.created_by);
+          if (updated.updated_by) updUserIds.add(updated.updated_by);
+          const updUserMap = await resolveUserNames(pool, updUserIds);
+          const updCreatedBy = updated.created_by ? updUserMap.get(updated.created_by) : undefined;
+          const updUpdatedBy = updated.updated_by ? updUserMap.get(updated.updated_by) : undefined;
+          res.json({ ...updated, payee, created_by_name: updCreatedBy?.name ?? null, created_by_image: updCreatedBy?.image ?? null, updated_by_name: updUpdatedBy?.name ?? null, updated_by_image: updUpdatedBy?.image ?? null });
         } catch (err) {
           if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
           throw err;
