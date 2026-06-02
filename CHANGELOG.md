@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.4.4
+
+### Patch Changes
+
+- 12f2157: Fix payee not being saved or displayed on transaction create/edit, and resolve "Last updated by" showing "Unknown"
+
 ## 0.4.3
 
 ### Patch Changes
