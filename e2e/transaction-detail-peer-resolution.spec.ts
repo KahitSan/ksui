@@ -85,3 +85,116 @@ test.describe("GET /api/transactions/:id — cross-plugin peer resolution", () =
     expect(Array.isArray(body.data)).toBe(true);
   });
 });
+
+// Regression coverage for the payee-not-persisted and updated_by-always-Unknown
+// bugs. Create and update a manual transaction through the full lifecycle, then
+// verify the enrichments on detail, list, and update response.
+test.describe("payee and updated_by enrichment", () => {
+  const today = new Date().toISOString().slice(0, 10);
+
+  test("saves payee_id on create and enriches detail with payee + updated_by_name", async ({ request }) => {
+    const orgId = await signIn(request);
+
+    const createRes = await request.post("/api/transactions", {
+      headers: { "X-Organization-Id": String(orgId) },
+      data: {
+        category: "expense",
+        amount: 500,
+        description: `e2e-payee-updatedby-${Date.now()}`,
+        transaction_date: today,
+        source_account_id: 1,
+        payee_id: 99,
+      },
+    });
+    expect(createRes.status(), await createRes.text()).toBe(201);
+    const created = await createRes.json();
+    expect(created.payee_id).toBe(99);
+
+    const detailRes = await request.get(`/api/transactions/${created.id}`, {
+      headers: { "X-Organization-Id": String(orgId) },
+    });
+    expect(detailRes.status(), await detailRes.text()).toBe(200);
+    const detail = await detailRes.json();
+
+    expect(detail).toHaveProperty("payee_id", 99);
+    expect(detail).toHaveProperty("payee");
+    expect(detail).toHaveProperty("updated_by");
+    expect(detail).toHaveProperty("updated_by_name");
+    expect(detail.updated_by).toBeTruthy();
+    expect(detail.updated_by_name).toBeTruthy();
+    expect(typeof detail.updated_by_name).toBe("string");
+    expect(detail.updated_by_name).not.toBe("Unknown");
+    expect(detail).toHaveProperty("created_by_name");
+    expect(typeof detail.created_by_name).toBe("string");
+    expect(detail.created_by_name).not.toBe("Unknown");
+  });
+
+  test("update resolves updated_by_name in PUT response and in subsequent detail", async ({ request }) => {
+    const orgId = await signIn(request);
+
+    const createRes = await request.post("/api/transactions", {
+      headers: { "X-Organization-Id": String(orgId) },
+      data: {
+        category: "expense",
+        amount: 250,
+        description: `e2e-update-updatedby-${Date.now()}`,
+        transaction_date: today,
+        source_account_id: 1,
+      },
+    });
+    expect(createRes.status(), await createRes.text()).toBe(201);
+    const created = await createRes.json();
+
+    const putRes = await request.put(`/api/transactions/${created.id}`, {
+      headers: { "X-Organization-Id": String(orgId) },
+      data: { description: `${created.description} (edited)`, reason: "e2e test" },
+    });
+    expect(putRes.status(), await putRes.text()).toBe(200);
+    const updated = await putRes.json();
+    expect(updated).toHaveProperty("updated_by_name");
+    expect(updated.updated_by_name).toBeTruthy();
+    expect(typeof updated.updated_by_name).toBe("string");
+    expect(updated.updated_by_name).not.toBe("Unknown");
+
+    const detailRes = await request.get(`/api/transactions/${created.id}`, {
+      headers: { "X-Organization-Id": String(orgId) },
+    });
+    expect(detailRes.status(), await detailRes.text()).toBe(200);
+    const detail = await detailRes.json();
+    expect(detail.updated_by_name).toBeTruthy();
+    expect(detail.updated_by_name).not.toBe("Unknown");
+  });
+
+  test("list returns payee and updated_by_name per row", async ({ request }) => {
+    const orgId = await signIn(request);
+
+    const createRes = await request.post("/api/transactions", {
+      headers: { "X-Organization-Id": String(orgId) },
+      data: {
+        category: "expense",
+        amount: 100,
+        description: `e2e-list-enrich-${Date.now()}`,
+        transaction_date: today,
+        source_account_id: 1,
+      },
+    });
+    expect(createRes.status(), await createRes.text()).toBe(201);
+    const created = await createRes.json();
+
+    const listRes = await request.get("/api/transactions", {
+      headers: { "X-Organization-Id": String(orgId) },
+      params: { limit: "50", page: "1" },
+    });
+    expect(listRes.status(), await listRes.text()).toBe(200);
+    const body = await listRes.json();
+    expect(body).toHaveProperty("data");
+    expect(Array.isArray(body.data)).toBe(true);
+
+    const match = body.data.find((t: any) => t.id === created.id);
+    expect(match).toBeTruthy();
+    expect(match).toHaveProperty("payee");
+    expect(match).toHaveProperty("updated_by_name");
+    expect(match.updated_by_name).toBeTruthy();
+    expect(match.updated_by_name).not.toBe("Unknown");
+  });
+});
