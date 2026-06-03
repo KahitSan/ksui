@@ -25,7 +25,7 @@ test("record, view, and void a manual expense", async ({ page }) => {
   await login(page);
 
   await page.goto("/transactions");
-  await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
+  await expect(page.getByTestId("page-shell-header").getByRole("heading", { name: "Transactions" })).toBeVisible();
   // The "Record Transaction" CTA confirms the page (and its remote bundle) loaded.
   await expect(page.getByTestId("transactions-add-btn")).toBeVisible();
 

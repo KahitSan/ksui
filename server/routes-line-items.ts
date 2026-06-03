@@ -402,6 +402,14 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
             variant_name: variant?.name ?? null,
             variant_kind: variant?.kind ?? null,
             client_name: r.client_id != null ? (clientNameById.get(r.client_id) ?? null) : null,
+            // Same dynamic-resolution rule as the detail endpoint:
+            // customer_group_display_name prefers the live client name
+            // when the group has a registered client. The stored
+            // denormalized snapshot is only a fallback (walk-ins or
+            // RPC-failure survival). This keeps the counter listing
+            // responsive to client renames and client-swap edits.
+            customer_group_display_name:
+              r.customer_group_client_id != null ? (clientNameById.get(r.customer_group_client_id) ?? r.customer_group_display_name ?? null) : (r.customer_group_display_name ?? null),
             line_client_name:
               r.line_client_id != null ? (clientNameById.get(r.line_client_id) ?? null) : null,
             client_pool: poolByTxn.get(r.transaction_id) ?? [],

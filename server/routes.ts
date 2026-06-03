@@ -1360,16 +1360,21 @@ export function buildRouter(deps: RouterDeps): Router {
           )
         ).rows;
 
-        // Resolve client names for customer groups.
-        const cgClientIds = [
-          ...new Set(customerGroups.map((g) => g.client_id as number | null).filter((v): v is number => v != null)),
-        ];
-        const cgClients =
-          cgClientIds.length > 0 ? await findClientsByIds(cgClientIds, idh) : [];
-        const cgClientName = new Map<number, string>((cgClients ?? []).map((c) => [c.id, c.name]));
+        // display_name on transaction_customer_groups is a denormalized
+        // snapshot written at charge time. It is the sole name source for
+        // walk-in customers (client_id = NULL), but for client-linked
+        // groups it duplicates data that the clients table owns. When
+        // client_id changes (via the counter edit PATCH) or the client
+        // renames, the stored column goes stale.
+        //
+        // Resolve dynamically from the clients table when client_id is set,
+        // falling back to the stored value only when the clients RPC is
+        // unavailable. Walk-ins (client_id = NULL) keep their stored name
+        // because there is no other source.
         const customer_groups = customerGroups.map((g) => ({
           ...g,
           client_name: g.client_id != null ? (cgClientName.get(g.client_id) ?? null) : null,
+          display_name: g.client_id != null ? (cgClientName.get(g.client_id) ?? g.display_name) : (g.display_name ?? null),
         }));
 
         const clientPoolRows = (
@@ -2132,6 +2137,241 @@ export function buildRouter(deps: RouterDeps): Router {
       } catch (err) {
         console.error("[transactions] attachment delete error:", err);
         res.status(500).json({ error: "Internal server error" });
+      }
+    },
+  );
+
+  // ── Client-pool patch (counter: replace transaction_customers) ──────────
+  router.patch(
+    "/:id/client-pool",
+    requireAuth,
+    requireOrg,
+    requirePermission("transactions.edit"),
+    async (req: Request, res: Response) => {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id)) {
+        res.status(400).json({ error: "Invalid id" });
+        return;
+      }
+      const { client_ids, reason } = req.body ?? {};
+      if (!Array.isArray(client_ids) || client_ids.some((c: unknown) => typeof c !== "number" || !Number.isFinite(c) || c <= 0)) {
+        res.status(400).json({ error: "client_ids must be an array of positive integers" });
+        return;
+      }
+      if (!reason || !String(reason).trim()) {
+        res.status(400).json({ error: "reason is required" });
+        return;
+      }
+      let dbClient: import("pg").PoolClient | null = null;
+      try {
+        const exists = await pool.query(
+          `SELECT id FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
+          [id, req.organizationId],
+        );
+        if (exists.rows.length === 0) {
+          res.status(404).json({ error: "Not found" });
+          return;
+        }
+        dbClient = await pool.connect();
+        await dbClient.query("BEGIN");
+        await dbClient.query(
+          `DELETE FROM accounts.transaction_customers WHERE transaction_id = $1 AND organization_id = $2`,
+          [id, req.organizationId],
+        );
+        if (client_ids.length > 0) {
+          const values: string[] = [];
+          const params: unknown[] = [];
+          let idx = 1;
+          for (let i = 0; i < client_ids.length; i++) {
+            values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++})`);
+            params.push(id, client_ids[i], req.organizationId, i);
+          }
+          await dbClient.query(
+            `INSERT INTO accounts.transaction_customers (transaction_id, client_id, organization_id, position)
+             VALUES ${values.join(", ")}
+             ON CONFLICT (transaction_id, client_id) DO UPDATE SET position = EXCLUDED.position`,
+            params,
+          );
+        }
+        await dbClient.query(
+          `INSERT INTO accounts.transaction_edits (transaction_id, organization_id, edited_by, reason, kind)
+             VALUES ($1, $2, $3, $4, 'counter_edit')`,
+          [id, req.organizationId, req.user?.id ?? "", String(reason).trim()],
+        );
+        await dbClient.query("COMMIT");
+        res.json({ ok: true });
+      } catch (err) {
+        if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
+        console.error("[transactions] client-pool patch error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      } finally {
+        if (dbClient) dbClient.release();
+      }
+    },
+  );
+
+  // ── Customer-group started-at patch (counter: update line item times) ──
+  router.patch(
+    "/:id/customer-group-started-at",
+    requireAuth,
+    requireOrg,
+    requirePermission("transactions.edit"),
+    async (req: Request, res: Response) => {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id)) {
+        res.status(400).json({ error: "Invalid id" });
+        return;
+      }
+      const { updates, reason } = req.body ?? {};
+      if (!Array.isArray(updates) || updates.length === 0) {
+        res.status(400).json({ error: "updates must be a non-empty array" });
+        return;
+      }
+      for (const u of updates) {
+        if (typeof u.customer_group_id !== "number" || !Number.isFinite(u.customer_group_id) || u.customer_group_id <= 0) {
+          res.status(400).json({ error: "each update must have a valid customer_group_id" });
+          return;
+        }
+        if (typeof u.started_at !== "string" || Number.isNaN(Date.parse(u.started_at))) {
+          res.status(400).json({ error: "each update must have a valid ISO started_at" });
+          return;
+        }
+      }
+      if (!reason || !String(reason).trim()) {
+        res.status(400).json({ error: "reason is required" });
+        return;
+      }
+      let dbClient: import("pg").PoolClient | null = null;
+      try {
+        const exists = await pool.query(
+          `SELECT id FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
+          [id, req.organizationId],
+        );
+        if (exists.rows.length === 0) {
+          res.status(404).json({ error: "Not found" });
+          return;
+        }
+        dbClient = await pool.connect();
+        await dbClient.query("BEGIN");
+        for (const u of updates) {
+          await dbClient.query(
+            `UPDATE accounts.transaction_line_items
+                SET started_at = $1, updated_at = NOW()
+              WHERE customer_group_id = $2 AND transaction_id = $3 AND organization_id = $4`,
+            [u.started_at, u.customer_group_id, id, req.organizationId],
+          );
+        }
+        await dbClient.query(
+          `INSERT INTO accounts.transaction_edits (transaction_id, organization_id, edited_by, reason, kind)
+             VALUES ($1, $2, $3, $4, 'counter_edit')`,
+          [id, req.organizationId, req.user?.id ?? "", String(reason).trim()],
+        );
+        await dbClient.query("COMMIT");
+        res.json({ ok: true });
+      } catch (err) {
+        if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
+        console.error("[transactions] customer-group-started-at patch error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      } finally {
+        if (dbClient) dbClient.release();
+      }
+    },
+  );
+
+  // ── Customer-group client patch (counter: replace primary client) ──────
+  router.patch(
+    "/:id/customer-group-client",
+    requireAuth,
+    requireOrg,
+    requirePermission("transactions.edit"),
+    async (req: Request, res: Response) => {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id)) {
+        res.status(400).json({ error: "Invalid id" });
+        return;
+      }
+      const { customer_group_id, client_id, display_name, reason } = req.body ?? {};
+      if (typeof customer_group_id !== "number" || !Number.isFinite(customer_group_id) || customer_group_id <= 0) {
+        res.status(400).json({ error: "customer_group_id must be a positive integer" });
+        return;
+      }
+      if (client_id != null && (typeof client_id !== "number" || !Number.isFinite(client_id) || client_id <= 0)) {
+        res.status(400).json({ error: "client_id must be a positive integer or null" });
+        return;
+      }
+      if (display_name != null && typeof display_name !== "string") {
+        res.status(400).json({ error: "display_name must be a string or null" });
+        return;
+      }
+      if (!reason || !String(reason).trim()) {
+        res.status(400).json({ error: "reason is required" });
+        return;
+      }
+      let dbClient: import("pg").PoolClient | null = null;
+      try {
+        const exists = await pool.query(
+          `SELECT id FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
+          [id, req.organizationId],
+        );
+        if (exists.rows.length === 0) {
+          res.status(404).json({ error: "Not found" });
+          return;
+        }
+        const cgExists = await pool.query(
+          `SELECT id FROM accounts.transaction_customer_groups WHERE id = $1 AND transaction_id = $2 AND organization_id = $3`,
+          [customer_group_id, id, req.organizationId],
+        );
+        if (cgExists.rows.length === 0) {
+          res.status(404).json({ error: "Customer group not found" });
+          return;
+        }
+        dbClient = await pool.connect();
+        await dbClient.query("BEGIN");
+        // Update the customer group's own client_id. display_name is
+        // accepted as an optional best-effort update from the frontend
+        // (it sends the new client's name_raw), but the column is
+        // only the display source for walk-ins — client-linked groups
+        // resolve their name dynamically from the clients table at read
+        // time, so omitting display_name here is harmless for them.
+        const newDisplayName = display_name !== undefined && display_name !== null ? String(display_name) : undefined;
+        await dbClient.query(
+          `UPDATE accounts.transaction_customer_groups
+              SET client_id = $1${newDisplayName !== undefined ? ", display_name = $5" : ""}
+            WHERE id = $2 AND transaction_id = $3 AND organization_id = $4`,
+          newDisplayName !== undefined
+            ? [client_id ?? null, customer_group_id, id, req.organizationId, newDisplayName]
+            : [client_id ?? null, customer_group_id, id, req.organizationId],
+        );
+        await dbClient.query(
+          `UPDATE accounts.transaction_line_items SET client_id = $1 WHERE customer_group_id = $2 AND transaction_id = $3 AND organization_id = $4`,
+          [client_id ?? null, customer_group_id, id, req.organizationId],
+        );
+        // When the payer's customer group changes clients, sync the
+        // top-level transaction.client_id so the counter listing card
+        // header (which reads t.client_id, not cg.client_id) reflects
+        // the new billed-to name without a page refresh. The EXISTS
+        // guard means only payer-group changes trigger this.
+        await dbClient.query(
+          `UPDATE accounts.transactions
+              SET client_id = $1
+            WHERE id = $2 AND organization_id = $3
+              AND EXISTS (SELECT 1 FROM accounts.transaction_customer_groups
+                           WHERE id = $4 AND is_payer = TRUE)`,
+          [client_id ?? null, id, req.organizationId, customer_group_id],
+        );
+        await dbClient.query(
+          `INSERT INTO accounts.transaction_edits (transaction_id, organization_id, edited_by, reason, kind)
+             VALUES ($1, $2, $3, $4, 'counter_edit')`,
+          [id, req.organizationId, req.user?.id ?? "", String(reason).trim()],
+        );
+        await dbClient.query("COMMIT");
+        res.json({ ok: true });
+      } catch (err) {
+        if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
+        console.error("[transactions] customer-group-client patch error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      } finally {
+        if (dbClient) dbClient.release();
       }
     },
   );
