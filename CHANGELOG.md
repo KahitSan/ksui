@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.4.8
+
+### Patch Changes
+
+- 9d2f743: Fixed a regression where the transaction detail endpoint returned 500 errors after the display_name dynamic resolution was shipped without its client-name lookup variables.
+
 ## 0.4.7
 
 ### Patch Changes
