@@ -55,3 +55,42 @@ test("record, view, and void a manual expense", async ({ page }) => {
   // The detail modal closes and the transaction leaves the (default active) list.
   await expect(page.getByTestId("transactions-detail-modal")).toHaveCount(0);
 });
+
+// Regression guard: the transaction detail endpoint must return 200 with
+// properly populated customer_group display_name fields. A prior deployment
+// shipped the dynamic client-name resolution but accidentally dropped the
+// cgClientName lookup variables, causing 500s on every detail request
+// (ReferenceError: cgClientName is not defined).
+test("transaction detail resolves customer group display names without crashing", async ({ page }) => {
+  await login(page);
+
+  // Use the page's API to fetch the detail endpoint. We pick a real
+  // transaction by first listing, then fetching its detail.
+  const listRes = await page.evaluate(async () => {
+    const res = await fetch("/api/transactions?limit=1", {
+      headers: { "X-Organization-Id": "3" },
+    });
+    return { status: res.status, body: await res.json() };
+  });
+  expect(listRes.status).toBe(200);
+  const data = listRes.body.data || listRes.body;
+  const txn = Array.isArray(data) ? data[0] : data;
+  if (!txn) {
+    test.skip(true, "No transactions in seed data");
+    return;
+  }
+
+  const detailRes = await page.evaluate(async (id: number) => {
+    const res = await fetch(`/api/transactions/${id}`, {
+      headers: { "X-Organization-Id": "3" },
+    });
+    return { status: res.status, body: await res.json() };
+  }, txn.id);
+  expect(detailRes.status).toBe(200);
+  expect(detailRes.body).toHaveProperty("id");
+  expect(detailRes.body).toHaveProperty("customer_groups");
+  for (const cg of detailRes.body.customer_groups) {
+    expect(cg).toHaveProperty("display_name");
+    expect(cg).toHaveProperty("client_name");
+  }
+});

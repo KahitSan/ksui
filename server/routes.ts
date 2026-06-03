@@ -1360,6 +1360,15 @@ export function buildRouter(deps: RouterDeps): Router {
           )
         ).rows;
 
+        // Resolve client names for customer groups from the clients
+        // plugin via RPC. This is the dynamic resolution for the
+        // display_name field below.
+        const cgClientIds = [
+          ...new Set(customerGroups.map((g) => g.client_id as number | null).filter((v): v is number => v != null)),
+        ];
+        const cgClients =
+          cgClientIds.length > 0 ? await findClientsByIds(cgClientIds, idh) : [];
+        const cgClientName = new Map<number, string>((cgClients ?? []).map((c) => [c.id, c.name]));
         // display_name on transaction_customer_groups is a denormalized
         // snapshot written at charge time. It is the sole name source for
         // walk-in customers (client_id = NULL), but for client-linked
