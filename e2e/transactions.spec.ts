@@ -63,33 +63,38 @@ test("record, view, and void a manual expense", async ({ page }) => {
 // (ReferenceError: cgClientName is not defined).
 test("transaction detail resolves customer group display names without crashing", async ({ page }) => {
   await login(page);
+  await page.goto("/transactions");
+  // Confirm the page UI loaded (proves the list endpoint works).
+  await expect(page.getByTestId("page-shell-header").getByRole("heading", { name: "Transactions" })).toBeVisible();
+  await expect(page.getByTestId("transactions-add-btn")).toBeVisible();
 
-  // Use the page's API to fetch the detail endpoint. We pick a real
-  // transaction by first listing, then fetching its detail.
-  const listRes = await page.evaluate(async () => {
+  // Now verify the detail endpoint via the page's own fetch (shares cookies).
+  const detailRes = await page.evaluate(async () => {
+    const orgId = localStorage.getItem("ks_active_org_id") || "1";
     const res = await fetch("/api/transactions?limit=1", {
-      headers: { "X-Organization-Id": "3" },
+      headers: { "X-Organization-Id": orgId },
     });
-    return { status: res.status, body: await res.json() };
+    if (!res.ok) return { status: res.status, body: null };
+    const body = await res.json();
+    const data = body.data || body;
+    const txn = Array.isArray(data) ? data[0] : data;
+    if (!txn) return { status: res.status, body: null, noTxn: true };
+    const detail = await fetch(`/api/transactions/${txn.id}`, {
+      headers: { "X-Organization-Id": orgId },
+    });
+    return { status: detail.status, body: await detail.json() };
   });
-  expect(listRes.status).toBe(200);
-  const data = listRes.body.data || listRes.body;
-  const txn = Array.isArray(data) ? data[0] : data;
-  if (!txn) {
+  // If there are no transactions in the seed data, the test is vacuously
+  // green (the regression only triggers with customer_groups present,
+  // which requires a transaction to exist).
+  if (detailRes.noTxn) {
     test.skip(true, "No transactions in seed data");
     return;
   }
-
-  const detailRes = await page.evaluate(async (id: number) => {
-    const res = await fetch(`/api/transactions/${id}`, {
-      headers: { "X-Organization-Id": "3" },
-    });
-    return { status: res.status, body: await res.json() };
-  }, txn.id);
   expect(detailRes.status).toBe(200);
   expect(detailRes.body).toHaveProperty("id");
   expect(detailRes.body).toHaveProperty("customer_groups");
-  for (const cg of detailRes.body.customer_groups) {
+  for (const cg of detailRes.body.customer_groups || []) {
     expect(cg).toHaveProperty("display_name");
     expect(cg).toHaveProperty("client_name");
   }
