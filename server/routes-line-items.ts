@@ -805,9 +805,10 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
   // ── POST /api/transaction-line-items/:id/extend ──────────────────────────
   //
   // Appends a new 'active' line to the same parent transaction extending the
-  // rental by quantity units of the picked variant. started_at chains off the
-  // source's end (or NOW if it already passed). Bumps the parent transaction
-  // (and cg subtotal) by the extension cost.
+  // rental by quantity units of the picked variant. started_at always chains
+  // off the source's ends_at so the counter UI can link the lines into a
+  // single entry. Bumps the parent transaction (and cg subtotal) by the
+  // extension cost.
   // Body: { package_variant_id: number, quantity: number }
   router.post(
     "/api/transaction-line-items/:id/extend",
@@ -884,9 +885,6 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         const totalUnits = durationValue * quantity;
         const extensionCost = unitPrice * quantity;
 
-        const startFromPrevious =
-          src.ends_at != null && new Date(src.ends_at).getTime() > Date.now();
-
         const intervalExpr =
           variant.duration_unit === "hour"
             ? "make_interval(hours => $7)"
@@ -894,9 +892,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
               ? "make_interval(days => $7)"
               : "make_interval(months => $7)";
 
-        // $8 must appear (with an explicit cast) on both paths or Postgres
-        // rejects the parse with 42P18. COALESCE keeps the NOW() fallback when
-        // the source already elapsed.
+        // Chain the extension off the source's ends_at so the counter UI can
+        // link the lines into a single entry. When ends_at is null (shouldn't
+        // happen for rentals) fall back to NOW().
         const startedAtExpr = "COALESCE($8::timestamptz, NOW())";
 
         const insertResult = await client.query(
@@ -917,7 +915,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
             variant.name,
             quantity,
             totalUnits,
-            startFromPrevious ? src.ends_at : null,
+            src.ends_at ?? null,
             unitPrice,
             durationValue,
             variant.duration_unit,
