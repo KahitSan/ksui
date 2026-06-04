@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.4.9
+
+### Patch Changes
+
+- 24d696b: Extensions on overdue counter rentals now chain correctly instead of appearing as duplicate entries on the board.
+
 ## 0.4.8
 
 ### Patch Changes
