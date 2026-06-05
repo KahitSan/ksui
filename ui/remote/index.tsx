@@ -51,6 +51,7 @@ import {
 import Plus from "lucide-solid/icons/plus";
 import Download from "lucide-solid/icons/download";
 import X from "lucide-solid/icons/x";
+import Loader2 from "lucide-solid/icons/loader-2";
 import Pencil from "lucide-solid/icons/pencil";
 import Ban from "lucide-solid/icons/ban";
 import Lock from "lucide-solid/icons/lock";
@@ -1188,6 +1189,11 @@ export function Component() {
   }
 
   const [uploading, setUploading] = createSignal(false);
+  // In-flight attachment uploads, shown as optimistic tiles (preview + spinner)
+  // in the detail modal the moment the user picks files. Each resolves into a
+  // real attachment merged into detailTxn on success, so the gallery updates
+  // without a full refetch or a modal reopen.
+  const [pendingUploads, setPendingUploads] = createSignal<PendingFile[]>([]);
 
   async function handleUploadAttachment(files: FileList) {
     const t = detailTxn();
@@ -1195,15 +1201,46 @@ export function Component() {
     setUploading(true);
     setFormError("");
     const pending = Array.from(files).map(createPendingFile);
-    const failed = await uploadPendingFiles(t.id, pending);
-    pending.forEach(revokePendingFile);
-    try {
-      await openDetail(t.id);
-    } catch {
-      /* non-fatal */
-    } finally {
-      setUploading(false);
+    setPendingUploads((prev) => [...prev, ...pending]);
+    const failed: string[] = [];
+    for (const pf of pending) {
+      let created: Attachment | null = null;
+      try {
+        const fd = new FormData();
+        fd.append("file", pf.file);
+        const res = await fetch(`/api/transactions/${t.id}/attachments`, {
+          method: "POST",
+          credentials: "include",
+          body: fd,
+        });
+        if (res.ok) {
+          created = (await res.json()) as Attachment;
+        } else {
+          failed.push(pf.file.name);
+        }
+      } catch {
+        failed.push(pf.file.name);
+      }
+      // Merge the saved attachment into the open detail so the gallery reflects
+      // it immediately, then drop the optimistic tile. Guard against the user
+      // having navigated to a different transaction mid-upload.
+      if (created) {
+        const cur = detailTxn();
+        if (cur && cur.id === t.id) {
+          const attachments = [...(cur.attachments ?? []), created];
+          setDetailTxn({
+            ...cur,
+            attachments,
+            attachment_count: String(attachments.length),
+          });
+        }
+      }
+      setPendingUploads((prev) => prev.filter((p) => p.id !== pf.id));
+      revokePendingFile(pf);
     }
+    setUploading(false);
+    // Keep the table's attachment count in sync without reopening the modal.
+    resetAndRefetchFn?.();
     if (failed.length > 0) {
       setFormError(`Some files didn't upload: ${failed.join(", ")}.`);
     }
@@ -1970,6 +2007,7 @@ export function Component() {
                   canEdit={canEdit()}
                   isAdmin={isAdmin()}
                   uploading={uploading()}
+                  pendingUploads={pendingUploads()}
                   onUpload={handleUploadAttachment}
                   onDeleteAttachment={handleDeleteAttachment}
                   onDeletePayment={handleDeletePayment}
@@ -2181,6 +2219,7 @@ function TransactionDetail(props: {
   canEdit: boolean;
   isAdmin: boolean;
   uploading: boolean;
+  pendingUploads: PendingFile[];
   onUpload: (files: FileList) => void;
   onDeleteAttachment: (txnId: number, attachmentId: number) => void;
   onDeletePayment?: (txnId: number, paymentId: number) => void;
@@ -2588,13 +2627,13 @@ function TransactionDetail(props: {
       <div class="border-t border-zinc-800/50 pt-4 mt-2">
         <div class="flex items-center gap-1 mb-2 text-xs text-zinc-500">
           <Paperclip size={12} /> Attachments
-          <Show when={t.attachments && t.attachments.length > 0}>
-            <span class="text-zinc-600">({t.attachments!.length})</span>
+          <Show when={props.txn.attachments && props.txn.attachments.length > 0}>
+            <span class="text-zinc-600">({props.txn.attachments!.length})</span>
           </Show>
         </div>
 
         <div class="flex gap-2 overflow-x-auto pt-3 pr-3 pb-2 items-start">
-          <For each={t.attachments}>
+          <For each={props.txn.attachments}>
             {(att) => (
               <div class="relative group shrink-0">
                 <Show
@@ -2657,6 +2696,30 @@ function TransactionDetail(props: {
               </div>
             )}
           </For>
+          <For each={props.pendingUploads}>
+            {(pf) => (
+              <div class="relative shrink-0">
+                <div class="w-24 h-24 rounded-lg border border-zinc-700 bg-zinc-800/50 overflow-hidden flex items-center justify-center">
+                  <Show
+                    when={pf.previewUrl}
+                    fallback={<Paperclip size={20} class="text-zinc-500" />}
+                  >
+                    <img
+                      src={pf.previewUrl!}
+                      alt={pf.file.name}
+                      class="w-24 h-24 object-cover opacity-40"
+                    />
+                  </Show>
+                </div>
+                <div
+                  class="absolute inset-0 flex items-center justify-center"
+                  aria-label="Uploading attachment"
+                >
+                  <Loader2 size={22} class="animate-spin text-amber-400" />
+                </div>
+              </div>
+            )}
+          </For>
           <Show when={props.canEdit && t.status !== "voided"}>
             <AddAttachmentTile
               uploading={props.uploading}
@@ -2664,7 +2727,13 @@ function TransactionDetail(props: {
               onPickCamera={() => cameraInput?.click()}
             />
           </Show>
-          <Show when={(!t.attachments || t.attachments.length === 0) && !props.canEdit}>
+          <Show
+            when={
+              (!props.txn.attachments || props.txn.attachments.length === 0) &&
+              props.pendingUploads.length === 0 &&
+              !props.canEdit
+            }
+          >
             <p class="text-xs text-zinc-600 self-center">No attachments</p>
           </Show>
         </div>
