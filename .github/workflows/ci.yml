@@ -13,6 +13,14 @@ name: CI
 # kernel with no image republish and no prod deploy. Co-mounted siblings (the
 # plugin's manifest `ciCoMounts`) are cloned too so cross-plugin schemas/routes
 # exist. Runs on the KahitSan self-hosted runner (label `kserp-plugin`).
+#
+# CONCURRENCY MODEL (multiple runners on one box): each runner's systemd unit
+# exports KSERP_CI_PORT_BASE (4000 / 4100 / 4200 / ...). This workflow derives
+# every port from that base — UI = base, API = base+1, plugin manifest ports
+# shifted by (base - 4000) — exactly the way the local /worktree slots work.
+# Postgres is the host's native cluster on :5432 with a per-slot database name,
+# so concurrent runs never share a port OR a database. Adding a 4th runner is
+# a server-side systemd unit with a new base; no repo change needed.
 
 on:
   # CI is a PR gate only (kernel model). The release / bump / deploy chain runs
@@ -29,10 +37,28 @@ concurrency:
 jobs:
   e2e:
     runs-on: [self-hosted, kserp-plugin]
-    timeout-minutes: 5
+    timeout-minutes: 14
     steps:
       - name: Checkout plugin
         uses: actions/checkout@v4
+
+      - name: Compute port slot + per-slot database
+        # KSERP_CI_PORT_BASE comes from the runner's systemd unit. Runs on the
+        # SAME runner are serialized by GitHub (one job per runner), so a slot's
+        # ports/database are never contended; runs on DIFFERENT runners get
+        # disjoint bases. The DB name embeds the base (slot), so setup can
+        # safely drop only ITS OWN slot's leftovers from a crashed prior run.
+        run: |
+          BASE="${KSERP_CI_PORT_BASE:-4000}"
+          {
+            echo "UI_PORT=$BASE"
+            echo "API_PORT=$((BASE + 1))"
+            echo "PORT_OFFSET=$((BASE - 4000))"
+            echo "PORT_LO=$BASE"
+            echo "PORT_HI=$((BASE + 29))"
+            echo "DB_NAME=ks_erp_ci_${BASE}_${{ github.run_id }}"
+          } >> "$GITHUB_ENV"
+          echo "slot base=$BASE ports=$BASE-$((BASE + 29)) db=ks_erp_ci_${BASE}_${{ github.run_id }}"
 
       - name: Clone the kernel + co-mounted sibling plugins (siblings of ../kserp)
         env:
@@ -80,24 +106,47 @@ jobs:
           done
           echo "KSERP_PLUGINS=$MOUNTS" >> "$GITHUB_ENV"
 
-      - name: Start Postgres
+      - name: Shift plugin manifest ports into this slot
+        # Same mechanism as worktree-create.sh: the kernel both spawns and
+        # proxies plugins at the port in each plugin.manifest.json (4011-4023
+        # range). Plugin ports are internal — the browser only talks to the UI
+        # port — so shifting them by the slot offset lets concurrent stacks
+        # coexist. Targeted regex keeps the change to the single port number.
         run: |
-          # Unique name + RANDOM host port: the self-hosted runner is shared, so
-          # a fixed 5432 collides with a persistent pg or a concurrent plugin run.
-          NAME="kserp-ci-pg-${{ github.run_id }}"
-          docker rm -f "$NAME" >/dev/null 2>&1 || true
-          docker run -d --name "$NAME" -p 127.0.0.1::5432 \
-            -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=ks_erp \
-            postgres:16
-          PORT=$(docker port "$NAME" 5432/tcp | head -1 | sed 's/.*://')
-          echo "PG_CONTAINER=$NAME" >> "$GITHUB_ENV"
-          echo "DB_PORT=$PORT" >> "$GITHUB_ENV"
-          for i in $(seq 1 30); do
-            docker exec "$NAME" pg_isready -U postgres >/dev/null 2>&1 && break
-            sleep 1
-          done
-          docker exec "$NAME" pg_isready -U postgres >/dev/null 2>&1 \
-            || { echo "::error::Postgres did not become ready in 30s"; exit 1; }
+          if [ "$PORT_OFFSET" -ne 0 ]; then
+            IFS=',' read -ra MS <<< "$KSERP_PLUGINS"
+            for d in "${MS[@]}"; do
+              node -e '
+                const fs = require("fs"), p = process.argv[1], off = +process.argv[2];
+                let s = fs.readFileSync(p, "utf8"), done = false;
+                s = s.replace(/("port":\s*)(\d+)/, (m, k, v) => { done = true; return k + (+v + off); });
+                if (!done) { console.error("no port field in " + p); process.exit(1); }
+                fs.writeFileSync(p, s);
+                console.log(p + " -> " + JSON.parse(s).port);
+              ' "$d/plugin.manifest.json" "$PORT_OFFSET"
+            done
+          fi
+
+      - name: Create per-run database (native Postgres)
+        # The host runs one native postgres:16 cluster on :5432. Each run gets
+        # its own database; the name embeds the slot base, so dropping
+        # leftovers here can only ever touch THIS runner's previous (crashed)
+        # run — never a live sibling run on another slot.
+        env:
+          PGPASSWORD: postgres
+        run: |
+          pg_isready -h 127.0.0.1 -U postgres \
+            || { echo "::error::host postgres is not up"; exit 1; }
+          psql -h 127.0.0.1 -U postgres -tAc \
+            "SELECT datname FROM pg_database WHERE datname LIKE 'ks_erp_ci_${UI_PORT}_%'" \
+          | while read -r leftover; do
+              [ -z "$leftover" ] && continue
+              [ "$leftover" = "$DB_NAME" ] && continue
+              echo "dropping leftover slot db: $leftover"
+              psql -h 127.0.0.1 -U postgres -c "DROP DATABASE IF EXISTS \"$leftover\" WITH (FORCE)"
+            done
+          psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE \"$DB_NAME\""
+          echo "DB_PORT=5432" >> "$GITHUB_ENV"
 
       - name: Install kernel deps + build the @ks-erp packages
         working-directory: ${{ github.workspace }}/../kserp
@@ -122,36 +171,37 @@ jobs:
         working-directory: ${{ github.workspace }}/../kserp
         env:
           DB_HOST: 127.0.0.1
-          # DB_PORT + KSERP_PLUGINS come from earlier steps via $GITHUB_ENV.
+          # DB_PORT / DB_NAME / *_PORT / KSERP_PLUGINS come from earlier steps
+          # via $GITHUB_ENV.
           DB_USER: postgres
           DB_PASSWORD: postgres
-          DB_NAME: ks_erp
           BETTER_AUTH_SECRET: ci-dev-better-auth-secret-needs-32bytes
-          BETTER_AUTH_URL: http://localhost:4001
           KSERP_INTERNAL_SECRET: ci-dev-internal-secret-needs-32-bytesxx
-          API_PORT: "4001"
-          ALLOWED_ORIGINS: http://localhost:4000
           KSERP_PLUGIN_SPAWN: "1"
         run: |
-          # Defensive: free the dev ports in case a prior run on this shared
-          # self-hosted runner leaked a server (otherwise wait-on could bind to a
-          # STALE server from another run and report phantom-green).
-          for p in 4000 4001 $(seq 4011 4029); do fuser -k "$p/tcp" 2>/dev/null || true; done
+          export BETTER_AUTH_URL="http://localhost:$API_PORT"
+          export ALLOWED_ORIGINS="http://localhost:$UI_PORT"
+          # Defensive: free THIS SLOT's ports in case a prior run on this runner
+          # leaked a server (otherwise wait-on could bind to a STALE server and
+          # report phantom-green). Only our own slot — other runners' ports are
+          # live sibling runs.
+          for p in $(seq "$PORT_LO" "$PORT_HI"); do fuser -k "$p/tcp" 2>/dev/null || true; done
           npm run db:migrate
           npm run db:seed
           # setsid so the whole dev tree (concurrently + vinxi + tsx + spawned
           # plugins) becomes one process group we can kill in teardown.
-          setsid npm run dev > "/tmp/kserp-dev-${{ github.run_id }}.log" 2>&1 &
+          # dev:wt is the kernel's parameterized dev script (vinxi --port $PORT).
+          setsid env PORT="$UI_PORT" npm run dev:wt > "/tmp/kserp-dev-${{ github.run_id }}.log" 2>&1 &
           echo "DEV_PGID=$!" >> "$GITHUB_ENV"
           ROUTE=$(node -p "require('$GITHUB_WORKSPACE/plugin.manifest.json').uiRouteBase")
           # vinxi dev cold-compiles the host shell + the plugin remote on first
           # hit, so allow a generous window.
-          npx wait-on -t 240000 http://localhost:4000/api/health "http://localhost:4000/$ROUTE"
+          npx wait-on -t 240000 "http://localhost:$UI_PORT/api/health" "http://localhost:$UI_PORT/$ROUTE"
 
       - name: Run plugin e2e
-        env:
-          PLAYWRIGHT_BASE_URL: http://localhost:4000
-        run: npx playwright test --reporter=list
+        run: |
+          export PLAYWRIGHT_BASE_URL="http://localhost:$UI_PORT"
+          npx playwright test --reporter=list
 
       - name: Kernel dev log on failure
         if: failure()
@@ -169,9 +219,13 @@ jobs:
 
       - name: Teardown
         if: always()
+        env:
+          PGPASSWORD: postgres
         run: |
           # Kill the dev process group (self-hosted runners don't reap
-          # backgrounded procs), then free the ports as belt-and-suspenders.
+          # backgrounded procs), then free THIS SLOT's ports as
+          # belt-and-suspenders, then drop this run's database.
           kill -- -"${DEV_PGID:-0}" 2>/dev/null || true
-          for p in 4000 4001 $(seq 4011 4029); do fuser -k "$p/tcp" 2>/dev/null || true; done
-          docker rm -f "${PG_CONTAINER:-kserp-ci-pg-${{ github.run_id }}}" >/dev/null 2>&1 || true
+          for p in $(seq "${PORT_LO:-4000}" "${PORT_HI:-4029}"); do fuser -k "$p/tcp" 2>/dev/null || true; done
+          [ -n "$DB_NAME" ] && psql -h 127.0.0.1 -U postgres \
+            -c "DROP DATABASE IF EXISTS \"$DB_NAME\" WITH (FORCE)" || true
