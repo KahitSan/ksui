@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.5.0
+
+### Minor Changes
+
+- 7c3b4ba: Add S3 storage link column to transaction attachments for cloud-based file storage
+
 ## 0.4.9
 
 ### Patch Changes
