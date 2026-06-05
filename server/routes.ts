@@ -56,38 +56,30 @@ import { runCharge, ChargeValidationError, type ChargePayload } from "./helpers-
 import { isBackdated } from "./lib/backdate.js";
 import multer from "multer";
 import crypto from "crypto";
-import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { s3Enabled, s3PublicUrl, s3PutObject, s3DeleteObject } from "./lib/s3.js";
 
 // ── Attachment upload config ─────────────────────────────────────────────
-// Resolve UPLOAD_DIR relative to the plugin root (two levels up from server/),
-// matching the kernel's uploads/ directory. In production this lands at
-// /opt/kserp/uploads/; in a worktree at <worktree>/kserp/uploads/.
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = process.env.UPLOAD_DIR
-  ? path.resolve(process.env.UPLOAD_DIR)
-  : path.resolve(__dirname, "..", "..", "uploads");
+// Attachments are stored in S3-compatible object storage ONLY (DO Spaces in
+// prod, MinIO in dev/CI) — never on this server's disk. multer buffers the
+// upload in memory (≤10MB) and the handler puts it to S3, storing the public
+// link in s3_link. file_path keeps the same relative shape
+// (`transactions/<orgId>/<uuid>.<ext>`) but is now a key reference: the S3
+// object key is `uploads/<file_path>`. Pre-S3 rows still resolve through the
+// kernel's /assets mount via the same file_path (the UI prefers s3_link).
 const ALLOWED_ATTACHMENT_MIMES = [
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
   "application/pdf",
 ];
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB
 
-function createAttachmentUpload(orgId: number) {
-  const dir = path.join(UPLOAD_DIR, "transactions", String(orgId));
-  fs.mkdirSync(dir, { recursive: true });
-  return multer({
-    storage: multer.diskStorage({
-      destination: (_req, _file, cb) => cb(null, dir),
-      filename: (_req, _file, cb) => cb(null, crypto.randomUUID() + path.extname(_file.originalname).toLowerCase()),
-    }),
-    limits: { fileSize: MAX_ATTACHMENT_SIZE },
-    fileFilter: (_req, file, cb) => {
-      cb(null, ALLOWED_ATTACHMENT_MIMES.includes(file.mimetype));
-    },
-  });
-}
+const attachmentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_ATTACHMENT_SIZE },
+  fileFilter: (_req, file, cb) => {
+    cb(null, ALLOWED_ATTACHMENT_MIMES.includes(file.mimetype));
+  },
+});
 
 export type RouterDeps = {
   db: PluginDb;
@@ -2059,7 +2051,7 @@ export function buildRouter(deps: RouterDeps): Router {
     requirePermission("transactions.edit"),
     (req: Request, res: Response, next) => {
       const orgId = req.organizationId!;
-      const upload = createAttachmentUpload(orgId).single("file");
+      const upload = attachmentUpload.single("file");
       upload(req, res, (err) => {
         if (err) {
           if (err instanceof multer.MulterError) {
@@ -2074,11 +2066,15 @@ export function buildRouter(deps: RouterDeps): Router {
           return;
         }
         // Normalize: if a file was uploaded via multipart, populate req.body
-        // with the metadata the handler expects.
+        // with the metadata the handler expects. The filename keeps the
+        // pre-S3 shape (UUID + original extension) and doubles as the S3 key
+        // suffix — no bytes ever touch the local disk.
         if (req.file) {
+          const filename =
+            crypto.randomUUID() + path.extname(req.file.originalname).toLowerCase();
           req.body = {
             file_name: req.file.originalname,
-            file_url: `transactions/${orgId}/${req.file.filename}`,
+            file_url: `transactions/${orgId}/${filename}`,
             file_size: req.file.size,
             mime_type: req.file.mimetype,
           };
@@ -2088,6 +2084,17 @@ export function buildRouter(deps: RouterDeps): Router {
     },
     async (req: Request, res: Response) => {
       const { file_name, file_url, file_size, mime_type } = req.body ?? {};
+      // Object storage is the only write target for attachment bytes — a
+      // metadata-only (JSON) POST would create a row whose link can never
+      // resolve, so multipart with an actual file is required.
+      if (!req.file) {
+        res.status(400).json({ error: "file is required (multipart/form-data)" });
+        return;
+      }
+      if (!s3Enabled()) {
+        res.status(503).json({ error: "Attachment storage is not configured" });
+        return;
+      }
       if (!file_name || typeof file_name !== "string") {
         res.status(400).json({ error: "file_name is required" });
         return;
@@ -2105,18 +2112,30 @@ export function buildRouter(deps: RouterDeps): Router {
           res.status(404).json({ error: "Not found" });
           return;
         }
-        const result = await pool.query(
-          `INSERT INTO accounts.transaction_attachments (transaction_id, file_name, file_path, file_size, mime_type, uploaded_by)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-          [
-            req.params.id,
-            file_name,
-            file_url,
-            Number.isFinite(file_size) ? file_size : 0,
-            mime_type || "application/octet-stream",
-            req.user?.id ?? "",
-          ],
-        );
+        const key = `uploads/${file_url}`;
+        await s3PutObject(key, req.file.buffer, mime_type || "application/octet-stream");
+        const s3Link = s3PublicUrl(key);
+        let result;
+        try {
+          result = await pool.query(
+            `INSERT INTO accounts.transaction_attachments (transaction_id, file_name, file_path, file_size, mime_type, uploaded_by, s3_link)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               RETURNING id, transaction_id, file_name, file_path, file_size, mime_type, uploaded_by, s3_link, created_at`,
+            [
+              req.params.id,
+              file_name,
+              file_url,
+              Number.isFinite(file_size) ? file_size : 0,
+              mime_type || "application/octet-stream",
+              req.user?.id ?? "",
+              s3Link,
+            ],
+          );
+        } catch (insertErr) {
+          // Don't leave an unreferenced object behind when the row failed.
+          await s3DeleteObject(key).catch(() => {});
+          throw insertErr;
+        }
         res.status(201).json(result.rows[0]);
       } catch (err) {
         console.error("[transactions] attachment create error:", err);
@@ -2137,12 +2156,34 @@ export function buildRouter(deps: RouterDeps): Router {
              USING accounts.transactions t
             WHERE a.transaction_id = t.id
               AND a.id = $1 AND a.transaction_id = $2 AND t.organization_id = $3
-            RETURNING a.id`,
+            RETURNING a.id, a.file_path, a.s3_link`,
           [req.params.attachmentId, req.params.id, req.organizationId],
         );
         if (result.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
           return;
+        }
+        // Remove the stored object too — best-effort (the row is already
+        // gone; a failed cleanup must not turn the delete into a 500). Some
+        // legacy rows share one file_path across several attachments, so the
+        // object is only removed when no other row still references it.
+        const { file_path, s3_link } = result.rows[0] as {
+          file_path: string;
+          s3_link: string | null;
+        };
+        if (s3_link) {
+          const stillReferenced = await pool.query(
+            `SELECT 1 FROM accounts.transaction_attachments WHERE file_path = $1 LIMIT 1`,
+            [file_path],
+          );
+          if (stillReferenced.rows.length === 0) {
+            await s3DeleteObject(`uploads/${file_path}`).catch((cleanupErr) => {
+              console.warn(
+                `[transactions] s3 cleanup failed for uploads/${file_path}:`,
+                cleanupErr,
+              );
+            });
+          }
         }
         res.status(204).send();
       } catch (err) {

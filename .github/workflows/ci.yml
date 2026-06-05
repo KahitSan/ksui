@@ -148,6 +148,38 @@ jobs:
           psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE \"$DB_NAME\""
           echo "DB_PORT=5432" >> "$GITHUB_ENV"
 
+      - name: Create per-run object-storage bucket (MinIO)
+        # One native MinIO serves all lanes on 127.0.0.1:9000 (CI_MINIO_* come
+        # from the runner's systemd unit, same mechanism as KSERP_CI_PORT_BASE).
+        # Isolation mirrors the per-run database: a bucket per run, name
+        # embedding the slot base, leftovers swept for THIS slot only. The
+        # S3_* vars land in $GITHUB_ENV so the dev stack (and the plugins it
+        # spawns) inherit them — uploads in e2e go to MinIO, never to disk.
+        run: |
+          if [ -z "${CI_MINIO_ENDPOINT:-}" ]; then
+            echo "::error::CI_MINIO_ENDPOINT is not set on this runner (MinIO not installed?)"; exit 1
+          fi
+          echo "::add-mask::$CI_MINIO_ROOT_PASSWORD"
+          export MC_HOST_ci="http://${CI_MINIO_ROOT_USER}:${CI_MINIO_ROOT_PASSWORD}@127.0.0.1:9000"
+          BUCKET="ci-${KSERP_CI_PORT_BASE:-4000}-${{ github.run_id }}"
+          mc ls ci/ 2>/dev/null | awk '{print $NF}' | tr -d '/' \
+            | grep "^ci-${KSERP_CI_PORT_BASE:-4000}-" | while read -r leftover; do
+              [ -z "$leftover" ] && continue
+              [ "$leftover" = "$BUCKET" ] && continue
+              echo "removing leftover slot bucket: $leftover"
+              mc rb --force "ci/$leftover" || true
+            done
+          mc mb "ci/$BUCKET"
+          mc anonymous set download "ci/$BUCKET"
+          {
+            echo "S3_ENDPOINT=$CI_MINIO_ENDPOINT"
+            echo "S3_REGION=us-east-1"
+            echo "S3_BUCKET=$BUCKET"
+            echo "S3_ACCESS_KEY=$CI_MINIO_ROOT_USER"
+            echo "S3_SECRET_KEY=$CI_MINIO_ROOT_PASSWORD"
+            echo "S3_CDN_URL=$CI_MINIO_ENDPOINT/$BUCKET"
+          } >> "$GITHUB_ENV"
+
       - name: Install kernel deps + build the @ks-erp packages
         working-directory: ${{ github.workspace }}/../kserp
         run: |
@@ -229,3 +261,9 @@ jobs:
           for p in $(seq "${PORT_LO:-4000}" "${PORT_HI:-4029}"); do fuser -k "$p/tcp" 2>/dev/null || true; done
           [ -n "$DB_NAME" ] && psql -h 127.0.0.1 -U postgres \
             -c "DROP DATABASE IF EXISTS \"$DB_NAME\" WITH (FORCE)" || true
+          # Drop this run's MinIO bucket (leftovers from crashed runs are also
+          # swept at the start of the next run on this slot).
+          if [ -n "${S3_BUCKET:-}" ] && [ -n "${CI_MINIO_ROOT_USER:-}" ]; then
+            MC_HOST_ci="http://${CI_MINIO_ROOT_USER}:${CI_MINIO_ROOT_PASSWORD}@127.0.0.1:9000" \
+              mc rb --force "ci/$S3_BUCKET" || true
+          fi
