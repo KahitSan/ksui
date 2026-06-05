@@ -194,6 +194,7 @@ interface Attachment {
   file_path: string;
   file_size: number;
   mime_type: string;
+  s3_link: string | null;
   created_at: string;
 }
 
@@ -2597,7 +2598,7 @@ function TransactionDetail(props: {
             {(att) => (
               <div class="relative group shrink-0">
                 <Show
-                  when={isResolvableAttachment(att.file_path)}
+                  when={isResolvableAttachment(att.file_path, att.s3_link)}
                   fallback={
                     <div
                       class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/40 px-2 text-center text-zinc-500"
@@ -2613,7 +2614,7 @@ function TransactionDetail(props: {
                     when={att.mime_type.startsWith("image/")}
                     fallback={
                       <a
-                        href={attachmentUrl(att.file_path)}
+                        href={attachmentUrl(att.file_path, att.s3_link)}
                         target="_blank"
                         rel="noopener"
                         class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300 hover:border-amber-500/30"
@@ -2624,12 +2625,12 @@ function TransactionDetail(props: {
                     }
                   >
                     <a
-                      href={attachmentUrl(att.file_path)}
+                      href={attachmentUrl(att.file_path, att.s3_link)}
                       target="_blank"
                       rel="noopener"
                       class="block rounded-lg border border-zinc-700 overflow-hidden hover:border-amber-500/30"
                     >
-                      <img src={attachmentUrl(att.file_path)} alt={att.file_name} class="w-24 h-24 object-cover" />
+                      <img src={attachmentUrl(att.file_path, att.s3_link)} alt={att.file_name} class="w-24 h-24 object-cover" />
                     </a>
                   </Show>
                 </Show>

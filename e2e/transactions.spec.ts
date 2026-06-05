@@ -15,7 +15,9 @@ const PASSWORD = process.env.E2E_PASSWORD || "password";
 
 async function login(page: import("@playwright/test").Page) {
   await page.goto("/login");
-  await page.getByRole("textbox", { name: /email/i }).fill(EMAIL);
+  const emailInput = page.getByRole("textbox", { name: /email/i });
+  await expect(emailInput).toBeVisible({ timeout: 15_000 });
+  await emailInput.fill(EMAIL);
   await page.getByRole("textbox", { name: /password/i }).fill(PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 15_000 });

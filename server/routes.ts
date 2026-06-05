@@ -1276,7 +1276,8 @@ export function buildRouter(deps: RouterDeps): Router {
         }
 
         const attachments = await pool.query(
-          `SELECT * FROM accounts.transaction_attachments WHERE transaction_id = $1 ORDER BY created_at`,
+          `SELECT id, transaction_id, file_name, file_path, file_size, mime_type, uploaded_by, s3_link, created_at
+             FROM accounts.transaction_attachments WHERE transaction_id = $1 ORDER BY created_at`,
           [txn.id],
         );
 
@@ -2037,7 +2038,8 @@ export function buildRouter(deps: RouterDeps): Router {
     async (req: Request, res: Response) => {
       try {
         const rows = await pool.query(
-          `SELECT a.* FROM accounts.transaction_attachments a
+          `SELECT a.id, a.transaction_id, a.file_name, a.file_path, a.file_size, a.mime_type, a.uploaded_by, a.s3_link, a.created_at
+             FROM accounts.transaction_attachments a
              JOIN accounts.transactions t ON t.id = a.transaction_id
             WHERE a.transaction_id = $1 AND t.organization_id = $2 ORDER BY a.created_at`,
           [req.params.id, req.organizationId],
