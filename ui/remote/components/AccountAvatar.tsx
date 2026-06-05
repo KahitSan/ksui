@@ -9,7 +9,7 @@ import { buildLogoSrc } from "../lib/account-logo-url";
 
 export interface AvatarAccount {
   id: number;
-  logo_path?: string | null;
+  s3_link?: string | null;
   icon?: string | null;
   color?: string | null;
   type: string;
@@ -34,7 +34,7 @@ export default function AccountAvatar(props: AccountAvatarProps) {
       style={{ width: `${size()}px`, height: `${size()}px` }}
     >
       <Show
-        when={props.account.logo_path}
+        when={props.account.s3_link}
         fallback={
           <Dynamic
             component={getAccountIcon(props.account)}
@@ -45,7 +45,7 @@ export default function AccountAvatar(props: AccountAvatarProps) {
         }
       >
         <img
-          src={buildLogoSrc(props.account.logo_path)}
+          src={buildLogoSrc(props.account.s3_link)}
           alt={props.alt ?? ""}
           class="w-full h-full rounded-md object-cover"
         />

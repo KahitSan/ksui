@@ -2,7 +2,7 @@
 //
 // Session-scoped index of financial accounts keyed by id. The list rows, the
 // detail payments list, etc. surface accounts by name only (server denormalises
-// source/destination names and drops icon/color/logo_path). This index lets any
+// source/destination names and drops icon/color/s3_link). This index lets any
 // render site resolve an id → AvatarAccount synchronously so AccountAvatar can
 // show the right glyph/logo.
 //
@@ -40,7 +40,7 @@ async function fetchAccountsIndex(orgId: number | null): Promise<IndexShape> {
       type: a.type,
       icon: a.icon ?? null,
       color: a.color ?? null,
-      logo_path: a.logo_path ?? null,
+      s3_link: a.s3_link ?? null,
     });
   }
   for (const a of archivedResult) {
@@ -50,7 +50,7 @@ async function fetchAccountsIndex(orgId: number | null): Promise<IndexShape> {
         type: a.type,
         icon: a.icon ?? null,
         color: a.color ?? null,
-        logo_path: a.logo_path ?? null,
+        s3_link: a.s3_link ?? null,
       });
     }
   }
@@ -80,5 +80,5 @@ export function resolveAccount(
   if (id == null) return null;
   const hit = index?.byId.get(id);
   if (hit) return hit;
-  return { id, type: "external", icon: null, color: null, logo_path: null };
+  return { id, type: "external", icon: null, color: null, s3_link: null };
 }

@@ -57,16 +57,15 @@ import { isBackdated } from "./lib/backdate.js";
 import multer from "multer";
 import crypto from "crypto";
 import path from "node:path";
-import { s3Enabled, s3PublicUrl, s3PutObject, s3DeleteObject } from "./lib/s3.js";
+import { s3Enabled, s3PublicUrl, s3PutObject, s3DeleteObject, s3KeyFromUrl } from "./lib/s3.js";
 
 // ── Attachment upload config ─────────────────────────────────────────────
 // Attachments are stored in S3-compatible object storage ONLY (DO Spaces in
 // prod, MinIO in dev/CI) — never on this server's disk. multer buffers the
 // upload in memory (≤10MB) and the handler puts it to S3, storing the public
-// link in s3_link. file_path keeps the same relative shape
-// (`transactions/<orgId>/<uuid>.<ext>`) but is now a key reference: the S3
-// object key is `uploads/<file_path>`. Pre-S3 rows still resolve through the
-// kernel's /assets mount via the same file_path (the UI prefers s3_link).
+// link in s3_link (the sole reference). The object key is generated per upload
+// (`uploads/transactions/<orgId>/<uuid>.<ext>`) and recovered from s3_link via
+// s3KeyFromUrl on delete — the legacy file_path column has been dropped.
 const ALLOWED_ATTACHMENT_MIMES = [
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
   "application/pdf",
@@ -1268,7 +1267,7 @@ export function buildRouter(deps: RouterDeps): Router {
         }
 
         const attachments = await pool.query(
-          `SELECT id, transaction_id, file_name, file_path, file_size, mime_type, uploaded_by, s3_link, created_at
+          `SELECT id, transaction_id, file_name, file_size, mime_type, uploaded_by, s3_link, created_at
              FROM accounts.transaction_attachments WHERE transaction_id = $1 ORDER BY created_at`,
           [txn.id],
         );
@@ -2030,7 +2029,7 @@ export function buildRouter(deps: RouterDeps): Router {
     async (req: Request, res: Response) => {
       try {
         const rows = await pool.query(
-          `SELECT a.id, a.transaction_id, a.file_name, a.file_path, a.file_size, a.mime_type, a.uploaded_by, a.s3_link, a.created_at
+          `SELECT a.id, a.transaction_id, a.file_name, a.file_size, a.mime_type, a.uploaded_by, a.s3_link, a.created_at
              FROM accounts.transaction_attachments a
              JOIN accounts.transactions t ON t.id = a.transaction_id
             WHERE a.transaction_id = $1 AND t.organization_id = $2 ORDER BY a.created_at`,
@@ -2112,19 +2111,20 @@ export function buildRouter(deps: RouterDeps): Router {
           res.status(404).json({ error: "Not found" });
           return;
         }
+        // file_url is the generated object path; it builds the S3 key and the
+        // public link. It is NOT stored — s3_link is the sole reference now.
         const key = `uploads/${file_url}`;
         await s3PutObject(key, req.file.buffer, mime_type || "application/octet-stream");
         const s3Link = s3PublicUrl(key);
         let result;
         try {
           result = await pool.query(
-            `INSERT INTO accounts.transaction_attachments (transaction_id, file_name, file_path, file_size, mime_type, uploaded_by, s3_link)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
-               RETURNING id, transaction_id, file_name, file_path, file_size, mime_type, uploaded_by, s3_link, created_at`,
+            `INSERT INTO accounts.transaction_attachments (transaction_id, file_name, file_size, mime_type, uploaded_by, s3_link)
+               VALUES ($1, $2, $3, $4, $5, $6)
+               RETURNING id, transaction_id, file_name, file_size, mime_type, uploaded_by, s3_link, created_at`,
             [
               req.params.id,
               file_name,
-              file_url,
               Number.isFinite(file_size) ? file_size : 0,
               mime_type || "application/octet-stream",
               req.user?.id ?? "",
@@ -2156,32 +2156,27 @@ export function buildRouter(deps: RouterDeps): Router {
              USING accounts.transactions t
             WHERE a.transaction_id = t.id
               AND a.id = $1 AND a.transaction_id = $2 AND t.organization_id = $3
-            RETURNING a.id, a.file_path, a.s3_link`,
+            RETURNING a.id, a.s3_link`,
           [req.params.attachmentId, req.params.id, req.organizationId],
         );
         if (result.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
           return;
         }
-        // Remove the stored object too — best-effort (the row is already
-        // gone; a failed cleanup must not turn the delete into a 500). Some
-        // legacy rows share one file_path across several attachments, so the
+        // Remove the stored object too — best-effort (the row is already gone;
+        // a failed cleanup must not turn the delete into a 500). The object key
+        // is derived from s3_link; a legacy row could share an s3_link, so the
         // object is only removed when no other row still references it.
-        const { file_path, s3_link } = result.rows[0] as {
-          file_path: string;
-          s3_link: string | null;
-        };
-        if (s3_link) {
+        const { s3_link } = result.rows[0] as { s3_link: string | null };
+        const key = s3KeyFromUrl(s3_link);
+        if (key) {
           const stillReferenced = await pool.query(
-            `SELECT 1 FROM accounts.transaction_attachments WHERE file_path = $1 LIMIT 1`,
-            [file_path],
+            `SELECT 1 FROM accounts.transaction_attachments WHERE s3_link = $1 LIMIT 1`,
+            [s3_link],
           );
           if (stillReferenced.rows.length === 0) {
-            await s3DeleteObject(`uploads/${file_path}`).catch((cleanupErr) => {
-              console.warn(
-                `[transactions] s3 cleanup failed for uploads/${file_path}:`,
-                cleanupErr,
-              );
+            await s3DeleteObject(key).catch((cleanupErr) => {
+              console.warn(`[transactions] s3 cleanup failed for ${key}:`, cleanupErr);
             });
           }
         }

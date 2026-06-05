@@ -180,7 +180,7 @@ export interface AccountRow {
   type: string | null;
   icon: string | null;
   color: string | null;
-  logo_path: string | null;
+  s3_link: string | null;
 }
 
 /** Resolve financial-account display rows by id via the financial-accounts

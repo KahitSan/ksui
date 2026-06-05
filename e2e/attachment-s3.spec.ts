@@ -88,10 +88,11 @@ test("attachment upload stores bytes in object storage, records s3_link, and del
   expect(upload.status(), await upload.text()).toBe(201);
   const attachment = await upload.json();
 
-  // The row records both the key reference and the public link.
-  expect(attachment.file_path).toMatch(new RegExp(`^transactions/${orgId}/[0-9a-f-]+\\.png$`));
-  expect(attachment.s3_link).toMatch(/^https?:\/\//);
-  expect(attachment.s3_link).toContain(`/uploads/${attachment.file_path}`);
+  // The row records the public link only — file_path is decommissioned.
+  expect(attachment.file_path).toBeUndefined();
+  expect(attachment.s3_link).toMatch(
+    new RegExp(`^https?://.+/uploads/transactions/${orgId}/[0-9a-f-]+\\.png$`),
+  );
 
   // The bytes are publicly fetchable at s3_link — fresh context, no session,
   // like a browser resolving <img src>.

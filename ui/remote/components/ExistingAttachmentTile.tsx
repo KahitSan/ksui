@@ -1,7 +1,7 @@
 // Source: KahitSan/kserp src/components/ExistingAttachmentTile.tsx (vendored + adapted).
-// Adapted for the URL-based plugin attachment model: the tile's href is the
-// stored file_path directly (see lib/attachments.ts). confirm comes from the
-// host UI kit.
+// Adapted for the object-storage attachment model: the tile's href is the
+// attachment's s3_link public URL (see lib/attachments.ts). confirm comes from
+// the host UI kit.
 
 import { Show, type Component } from "solid-js";
 import Paperclip from "lucide-solid/icons/paperclip";
@@ -13,9 +13,8 @@ import { attachmentUrl, isResolvableAttachment } from "../lib/attachments";
 export interface ExistingAttachment {
   id: number;
   file_name: string;
-  file_path: string;
   mime_type: string;
-  s3_link?: string | null;
+  s3_link: string | null;
 }
 
 interface Props {
@@ -26,7 +25,7 @@ interface Props {
 }
 
 export default function ExistingAttachmentTile(props: Props) {
-  const url = () => attachmentUrl(props.attachment.file_path, props.attachment.s3_link);
+  const url = () => attachmentUrl(props.attachment.s3_link);
   const FallbackIcon = () => {
     const Icon = props.fallbackIcon ?? Paperclip;
     return <Icon size={20} />;
@@ -35,7 +34,7 @@ export default function ExistingAttachmentTile(props: Props) {
   return (
     <div class="relative group shrink-0" data-testid={props.testId}>
       <Show
-        when={isResolvableAttachment(props.attachment.file_path, props.attachment.s3_link)}
+        when={isResolvableAttachment(props.attachment.s3_link)}
         fallback={
           <div
             class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/40 px-2 text-center text-zinc-500"

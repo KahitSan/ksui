@@ -57,6 +57,27 @@ export function s3PublicUrl(key: string): string {
   return `${cfg.cdnUrl}/${key}`;
 }
 
+/** Derive the S3 object key from a stored public URL (s3_link) — the inverse of
+ * s3PublicUrl, which builds `${cdnUrl}/${key}`. Strips the configured cdnUrl
+ * prefix so the bucket segment in a path-style URL (MinIO:
+ * `http://host:9000/<bucket>/uploads/x`) is NOT mistaken for part of the key,
+ * while a CDN-domain URL (prod: `https://cdn.hilinga.com/uploads/x`) yields the
+ * same `uploads/x`. Falls back to the URL pathname for a value that predates the
+ * current cdnUrl. Returns null when no key can be recovered. */
+export function s3KeyFromUrl(s3Link: string | null | undefined): string | null {
+  if (!s3Link) return null;
+  const cfg = config();
+  if (cfg) {
+    const prefix = `${cfg.cdnUrl.replace(/\/+$/, "")}/`;
+    if (s3Link.startsWith(prefix)) return s3Link.slice(prefix.length) || null;
+  }
+  try {
+    return new URL(s3Link).pathname.replace(/^\/+/, "") || null;
+  } catch {
+    return null;
+  }
+}
+
 const sha256hex = (data: Buffer | string): string =>
   createHash("sha256").update(data).digest("hex");
 const hmac = (key: Buffer | string, data: string): Buffer =>
