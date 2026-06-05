@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.1
+
+### Patch Changes
+
+- 92150b8: Internal cleanup of how transaction attachments are tracked now that they live entirely in cloud storage. No change to uploading, viewing, or deleting attachments.
+
 ## 0.6.0
 
 ### Minor Changes
