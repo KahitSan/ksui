@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.0
+
+### Minor Changes
+
+- 87c18ae: Receipt and document attachments are now saved to secure cloud storage instead of the application server, so they load faster and stay safe even during server maintenance.
+
 ## 0.5.0
 
 ### Minor Changes
