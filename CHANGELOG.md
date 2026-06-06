@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.2
+
+### Patch Changes
+
+- 5f7244d: Replace the in-repo CI/Release/Deploy workflow logic with thin caller stubs of the reusable workflows in KahitSan/kplugin-workflows. No runtime behavior change; the patch bump exercises the new release + deploy path end to end.
+
 ## 0.6.1
 
 ### Patch Changes
