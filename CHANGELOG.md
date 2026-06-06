@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.3
+
+### Patch Changes
+
+- 06dc2b2: Limit how many database connections each feature opens, preventing the system from exhausting the database under heavy load.
+
 ## 0.6.2
 
 ### Patch Changes
