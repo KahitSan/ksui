@@ -1,24 +1,8 @@
 name: Release
 
-# Versioning, GATED ON CI. Runs only after the CI workflow (the plugin's e2e
-# against a real host) succeeds on main — so a red e2e can never cut a
-# release or deploy.
-#
-# Two modes for the version step:
-#   1. Pending changesets in .changeset/ → npx changeset version (bump
-#      package.json + write CHANGELOG.md), commit + tag + push back to main,
-#      create a GitHub release.
-#   2. No changesets but the current package.json version isn't tagged yet →
-#      tag the existing version (back-compat with the previous manual-bump
-#      flow) + create release.
-#
-# Then, regardless of which version path ran, force-sync the `staging` branch
-# to match main so feature branches always start from the released state.
-#
-# Chain: push to main -> CI (e2e) -> [success] -> Release (this) -> Deploy.
-# A version bump with no green CI produces no tag and no deploy. The release
-# commit's message starts with `chore(release):` so the next CI run skips
-# itself (job-level if-guard below).
+# Thin caller stub — the actual Release logic (changeset bump / back-compat
+# tag / staging force-sync) is the reusable workflow in
+# KahitSan/kplugin-workflows (plugin-release.yml). Update logic THERE.
 
 on:
   push:
@@ -33,104 +17,5 @@ permissions:
 
 jobs:
   release:
-    runs-on: [self-hosted, kserp-plugin]
-    if: "!startsWith(github.event.head_commit.message, 'chore(release):')"
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      # --legacy-peer-deps: @ks-erp/kernel is a peerDependency provided by the
-      # host image at runtime, not by the npm registry. Same convention CI uses.
-      - run: npm ci --legacy-peer-deps
-
-      - name: Identify the bot
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Count pending changesets
-        id: check
-        run: |
-          COUNT=$(find .changeset -maxdepth 1 -name '*.md' \
-                   ! -name 'README.md' 2>/dev/null | wc -l)
-          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
-
-      # ─── Mode 1: pending changesets — bump + tag + release ─────────────
-      - name: Bump version + write changelog
-        if: steps.check.outputs.count != '0'
-        run: npx changeset version
-
-      - name: Commit + tag the bump
-        if: steps.check.outputs.count != '0'
-        id: bump
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          TAG="v${VERSION}"
-          git add -A
-          git commit -m "chore(release): ${TAG}"
-          git tag -a "$TAG" -m "$TAG"
-          echo "tag=$TAG"     >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "made_release=true" >> "$GITHUB_OUTPUT"
-
-      - name: Push commit + tag back to main
-        if: steps.check.outputs.count != '0'
-        run: |
-          git push origin main
-          git push origin "${{ steps.bump.outputs.tag }}"
-
-      - name: Create GitHub release (changeset path)
-        if: steps.check.outputs.count != '0'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          TAG: ${{ steps.bump.outputs.tag }}
-        run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${REPO}/releases" \
-            -d "{\"tag_name\":\"${TAG}\",\"name\":\"${TAG}\",\"generate_release_notes\":true}"
-
-      # ─── Mode 2: no changesets — tag the existing version if untagged ──
-      - name: Tag the existing version (back-compat)
-        if: steps.check.outputs.count == '0'
-        id: backcompat
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          TAG="v${VERSION}"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists — nothing to release."
-            echo "made_release=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "Releasing $TAG (no pending changesets — using existing version)"
-          git tag "$TAG"
-          git push origin "$TAG"
-          curl -sf -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${REPO}/releases" \
-            -d "{\"tag_name\":\"${TAG}\",\"name\":\"${TAG}\",\"generate_release_notes\":true}"
-          echo "made_release=true" >> "$GITHUB_OUTPUT"
-
-      # ─── Always: keep staging in lock-step with main ───────────────────
-      # Runs on every green-CI Release invocation, not only when a version
-      # bumped. A feature branch off staging should always start at the
-      # latest released SHA; this is what keeps that promise honest.
-      - name: Sync staging to main
-        run: |
-          git fetch origin staging || true
-          git push origin --force-with-lease=staging "main:staging" || \
-            git push origin "main:refs/heads/staging"
+    uses: KahitSan/kplugin-workflows/.github/workflows/plugin-release.yml@main
+    secrets: inherit
