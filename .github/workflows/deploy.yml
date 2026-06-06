@@ -111,7 +111,7 @@ jobs:
             pm2 reload "$APP" --update-env
           else
             echo "[deploy] first run — starting plugin process '$APP' (port from manifest)"
-            pm2 start /opt/kserp/node_modules/.bin/tsx --name "$APP" --cwd /opt/kserp \
+            pm2 start /usr/local/bin/bun --interpreter none --name "$APP" --cwd /opt/kserp \
               -- "$PLUGIN_DIR/server/main.ts"
           fi
 

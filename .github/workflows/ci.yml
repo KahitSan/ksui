@@ -210,6 +210,7 @@ jobs:
           BETTER_AUTH_SECRET: ci-dev-better-auth-secret-needs-32bytes
           KSERP_INTERNAL_SECRET: ci-dev-internal-secret-needs-32-bytesxx
           KSERP_PLUGIN_SPAWN: "1"
+          KSERP_PLUGIN_RUNTIME: "bun"
         run: |
           export BETTER_AUTH_URL="http://localhost:$API_PORT"
           export ALLOWED_ORIGINS="http://localhost:$UI_PORT"
