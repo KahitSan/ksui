@@ -49,6 +49,13 @@ const pool = new Pool({
   database: process.env.DB_NAME || "ks_erp",
   user: process.env.DB_USER || "postgres",
   password: process.env.DB_PASSWORD || "postgres",
+  // Cap the pool: N plugins x M autoscale instances must not exhaust Postgres.
+  // node-postgres defaults to 10 per pool; 11 pools x 10 = 110 > 97 usable
+  // backends. Fail fast on saturation instead of hanging. Tunable via env;
+  // the default of 3 is plenty for one plugin behind the kernel proxy.
+  max: parseInt(process.env.KSERP_PLUGIN_POOL_MAX || "3", 10),
+  connectionTimeoutMillis: parseInt(process.env.KSERP_PLUGIN_POOL_CONNECT_TIMEOUT_MS || "5000", 10),
+  idleTimeoutMillis: 30000,
 });
 pool.on("error", (err) =>
   console.error("[transactions] pg idle client error (swallowed, pool reconnects):", err),
