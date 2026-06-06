@@ -105,6 +105,15 @@ jobs:
           . /opt/kserp/.env
           set +a
 
+          # tsx -> bun migration: `pm2 reload` keeps the existing interpreter, so a
+          # process still running tsx would never switch to bun on deploy. Delete it
+          # first so the `pm2 start ... bun` below relaunches it under bun (a no-op
+          # when the process is already bun, or on a first run).
+          if pm2 describe "$APP" >/dev/null 2>&1 && pm2 describe "$APP" 2>/dev/null | grep -q "/tsx"; then
+            echo "[deploy] migrating '$APP' tsx -> bun (deleting old process)"
+            pm2 delete "$APP"
+          fi
+
           # cicd's pm2 owns the apps, so this needs no sudo.
           if pm2 describe "$APP" >/dev/null 2>&1; then
             echo "[deploy] reloading plugin process '$APP' (kernel untouched)"
