@@ -27,7 +27,7 @@ import pg from "pg";
 import { makeDatabaseService, runMigrations } from "@ks-erp/kernel-composite";
 import type { PluginManifest } from "@ks-erp/kernel-composite";
 import { mountPluginServices } from "@ks-erp/kernel/service-rpc";
-import { parseIdentity, requireAuth, requireOrg, requirePermission } from "./identity.js";
+import { parseIdentity, requireAuth, requireOrg, requirePermission } from "@ks-erp/kernel-base";
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
 
