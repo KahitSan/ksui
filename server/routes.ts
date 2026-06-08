@@ -36,7 +36,7 @@
 // transactions never reaches into another plugin's schema with raw SQL.
 
 import { Router, type Request, type Response, type RequestHandler } from "express";
-import { tenant, readIdentity } from "@ks-erp/kernel-base";
+import { tenant, readIdentity, applyTenantContext } from "@ks-erp/kernel-base";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
 import {
@@ -1145,6 +1145,7 @@ export function buildRouter(deps: RouterDeps): Router {
       try {
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
+        await applyTenantContext(dbClient);
         const result = await dbClient.query(
           `INSERT INTO accounts.transactions
              (organization_id, category, subcategory, source_account_id, destination_account_id,
@@ -1685,6 +1686,7 @@ export function buildRouter(deps: RouterDeps): Router {
         try {
           dbClient = await pool.connect();
           await dbClient.query("BEGIN");
+          await applyTenantContext(dbClient);
           const result = await dbClient.query(
             `UPDATE accounts.transactions SET ${sets.join(", ")} WHERE id = $${idx++} AND organization_id = $${idx} RETURNING *`,
             params,
@@ -1766,6 +1768,7 @@ export function buildRouter(deps: RouterDeps): Router {
       try {
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
+        await applyTenantContext(dbClient);
         const result = await dbClient.query(
           `UPDATE accounts.transactions SET status = 'voided', updated_at = NOW(), updated_by = $3
              WHERE id = $1 AND organization_id = $2 AND status != 'voided' RETURNING *`,
@@ -1808,6 +1811,7 @@ export function buildRouter(deps: RouterDeps): Router {
       try {
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
+        await applyTenantContext(dbClient);
         const result = await dbClient.query(
           `UPDATE accounts.transactions SET status = 'completed', updated_at = NOW(), updated_by = $3
              WHERE id = $1 AND organization_id = $2 AND status = 'voided' RETURNING *`,
@@ -1860,6 +1864,7 @@ export function buildRouter(deps: RouterDeps): Router {
         }
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
+        await applyTenantContext(dbClient);
         await dbClient.query(
           `UPDATE accounts.transactions SET is_private = $3, updated_at = NOW() WHERE id = $1 AND organization_id = $2`,
           [req.params.id, req.organizationId, Boolean(is_private)],
@@ -2237,6 +2242,7 @@ export function buildRouter(deps: RouterDeps): Router {
         }
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
+        await applyTenantContext(dbClient);
         await dbClient.query(
           `DELETE FROM accounts.transaction_customers WHERE transaction_id = $1 AND organization_id = $2`,
           [id, req.organizationId],
@@ -2316,6 +2322,7 @@ export function buildRouter(deps: RouterDeps): Router {
         }
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
+        await applyTenantContext(dbClient);
         for (const u of updates) {
           // Moving started_at must drag ends_at with it for time-bound lines.
           // ends_at = started_at + (duration_value * quantity) of the line's unit,
@@ -2408,6 +2415,7 @@ export function buildRouter(deps: RouterDeps): Router {
         }
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
+        await applyTenantContext(dbClient);
         // Update the customer group's own client_id. display_name is
         // accepted as an optional best-effort update from the frontend
         // (it sends the new client's name_raw), but the column is

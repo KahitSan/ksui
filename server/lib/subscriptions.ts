@@ -13,6 +13,7 @@
 // it INSERTs accounts.transactions + accounts.transaction_line_items.
 
 import type { Request } from "express";
+import { applyTenantContext } from "@ks-erp/kernel-base";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
 import { findPackagesByIds, findClientsByIds, findVariantsByIds } from "./peers.js";
@@ -313,6 +314,7 @@ export async function renewSubscription(
   const client = await db.connect();
   try {
     await client.query("BEGIN");
+    await applyTenantContext(client);
 
     // Source must itself be a subscription line item in this org (so a direct
     // API call can't renew an hourly rental or a scrubbed row).

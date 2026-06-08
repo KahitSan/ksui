@@ -26,6 +26,7 @@
 //     joined in SQL; the charge just stores client_id.
 
 import type { Pool, PoolClient } from "pg";
+import { applyTenantContext } from "@ks-erp/kernel-base";
 import { computeVoucherDiscount, type VoucherForDiscount } from "./lib/voucher-discount.js";
 import {
   findVariantsByIds,
@@ -664,6 +665,7 @@ export async function runCharge(opts: {
   try {
     client = await opts.pool.connect();
     await client.query("BEGIN");
+    await applyTenantContext(client);
 
     // destination_account_id is a SOFT ref to financial-accounts' table — we
     // can't org-check it here (other plugin's schema), so we trust the FK-less

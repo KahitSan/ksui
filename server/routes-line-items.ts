@@ -29,6 +29,7 @@
 //     degradation, consistent with the rest of the plugin.
 
 import { Router, type Request, type Response } from "express";
+import { applyTenantContext } from "@ks-erp/kernel-base";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
 import {
@@ -685,6 +686,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
       try {
         client = await pool.connect();
         await client.query("BEGIN");
+        await applyTenantContext(client);
 
         const srcRes = await client.query(
           `SELECT id, transaction_id, ends_at, client_id, status, customer_group_id
@@ -843,6 +845,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
       try {
         client = await pool.connect();
         await client.query("BEGIN");
+        await applyTenantContext(client);
 
         const srcRes = await client.query(
           `SELECT id, transaction_id, package_id, ends_at, client_id, customer_group_id

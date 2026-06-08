@@ -27,7 +27,7 @@ import pg from "pg";
 import { makeDatabaseService, runMigrations } from "@ks-erp/kernel-composite";
 import type { PluginManifest } from "@ks-erp/kernel-composite";
 import { mountPluginServices } from "@ks-erp/kernel/service-rpc";
-import { parseIdentity, requireAuth, requireOrg, requirePermission } from "@ks-erp/kernel-base";
+import { parseIdentity, requireAuth, requireOrg, requirePermission, withTenantContext } from "@ks-erp/kernel-base";
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
 
@@ -248,6 +248,8 @@ async function start(): Promise<void> {
   // request; the per-route gates enforce it. The kernel proxies basePath/* here
   // with the prefix stripped, so the router mounts at "/".
   app.use(parseIdentity);
+  // RLS activation (plugin-SDK Step 2): scope every db.query under app_authenticated so the org-isolation policies engage behind the explicit organization_id filter.
+  app.use(withTenantContext);
   // Sibling basePath: the kernel proxies /api/transaction-line-items/* here
   // (declared in plugin.manifest.json additionalBasePaths) WITHOUT stripping
   // the prefix, so this router's routes are written at the full prefix and
