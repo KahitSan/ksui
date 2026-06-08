@@ -1,5 +1,12 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.5
+
+### Patch Changes
+
+- d1c5dcb: Adopt the kernel plugin SDK for identity and auth, and harden the share-visibility update: clearing a transaction's per-user and per-role visibility now deletes those rows filtered by organization through the kernel's org-scoped database handle.
+- cc27df9: Harden the cross-day edit-time e2e test against a Manila-midnight flake: when CI runs near 00:00 PHT, the test's `now - 28h` session straddles a day boundary and buckets ambiguously, so it now skips that assertion (matching the existing boundary-skip discipline) instead of failing. No runtime change.
+
 ## 0.6.4
 
 ### Patch Changes
