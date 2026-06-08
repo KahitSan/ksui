@@ -2301,9 +2301,27 @@ export function buildRouter(deps: RouterDeps): Router {
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
         for (const u of updates) {
+          // Moving started_at must drag ends_at with it for time-bound lines.
+          // ends_at = started_at + (duration_value * quantity) of the line's unit,
+          // mirroring the insert in helpers-charge.ts (and the availment_groups
+          // combined-end idiom in routes-line-items.ts). Leaving ends_at stale on
+          // a start-time edit inverts the window (ends_at < started_at), and the
+          // natural-day CASE then buckets the already-"ended" line by its old
+          // ends_at date — dropping a today session onto the wrong day board.
+          // Non-duration lines (ends_at NULL) are left untouched.
           await dbClient.query(
             `UPDATE accounts.transaction_line_items
-                SET started_at = $1, updated_at = NOW()
+                SET started_at = $1::timestamptz,
+                    ends_at = CASE
+                      WHEN duration_value IS NOT NULL AND duration_unit = 'hour'
+                        THEN $1::timestamptz + (duration_value * COALESCE(quantity, 1)) * INTERVAL '1 hour'
+                      WHEN duration_value IS NOT NULL AND duration_unit = 'day'
+                        THEN $1::timestamptz + (duration_value * COALESCE(quantity, 1)) * INTERVAL '1 day'
+                      WHEN duration_value IS NOT NULL AND duration_unit = 'month'
+                        THEN $1::timestamptz + (duration_value * COALESCE(quantity, 1)) * INTERVAL '1 month'
+                      ELSE ends_at
+                    END,
+                    updated_at = NOW()
               WHERE customer_group_id = $2 AND transaction_id = $3 AND organization_id = $4`,
             [u.started_at, u.customer_group_id, id, req.organizationId],
           );
