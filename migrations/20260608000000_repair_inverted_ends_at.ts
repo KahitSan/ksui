@@ -30,6 +30,7 @@ const migration = {
                             THEN started_at + (duration_value * COALESCE(quantity, 1)) * INTERVAL '1 day'
                           WHEN 'month'
                             THEN started_at + (duration_value * COALESCE(quantity, 1)) * INTERVAL '1 month'
+                          ELSE ends_at
                         END,
               updated_at = NOW()
         WHERE status <> 'voided'
