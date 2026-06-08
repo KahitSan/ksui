@@ -170,6 +170,17 @@ test("editing a customer-group started_at drags ends_at with it (no inverted win
   // Guard against the rare run where 28h-ago and now-8h straddle differently:
   // only assert the board move when the two dates genuinely differ.
   test.skip(yDate === today, "28h window did not cross a Manila day boundary in this run");
+  // Near Manila midnight the 8h session itself straddles a day boundary (e.g.
+  // started 20:12 yesterday → ends 04:12 today), so it does NOT bucket wholly
+  // onto yDate's board — the bucketing is genuinely ambiguous and the assertion
+  // below flakes. Only assert when the elapsed session lands entirely within
+  // yDate. (This is the same "skip the ambiguous boundary case" discipline as the
+  // guard above; it closes the once-a-day midnight window the first guard misses.)
+  const yEndDate = manilaDate(Date.parse(yStart) + 8 * HOUR_MS);
+  test.skip(
+    yEndDate !== yDate,
+    "elapsed 8h session straddles a Manila day boundary (near-midnight run) — board bucketing is ambiguous",
+  );
 
   const patchB = await request.patch(`/api/transactions/${txnId}/customer-group-started-at`, {
     headers,

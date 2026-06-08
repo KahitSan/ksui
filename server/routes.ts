@@ -36,6 +36,7 @@
 // transactions never reaches into another plugin's schema with raw SQL.
 
 import { Router, type Request, type Response, type RequestHandler } from "express";
+import { tenant, readIdentity } from "@ks-erp/kernel-base";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
 import {
@@ -113,7 +114,7 @@ function escapeLike(s: string): string {
 
 /** Batch-resolve user ids to { id, name, image } from the kernel's user table. */
 async function resolveUserNames(
-  pool: import("pg").Pool,
+  pool: PluginDb,
   ids: Set<string>,
 ): Promise<Map<string, { name: string; image: string | null }>> {
   const arr = [...ids].filter(Boolean);
@@ -1852,14 +1853,29 @@ export function buildRouter(deps: RouterDeps): Router {
           res.status(404).json({ error: "Not found" });
           return;
         }
+        const identity = readIdentity(req);
+        if (!identity) {
+          res.status(401).json({ error: "Not authenticated" });
+          return;
+        }
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
         await dbClient.query(
           `UPDATE accounts.transactions SET is_private = $3, updated_at = NOW() WHERE id = $1 AND organization_id = $2`,
           [req.params.id, req.organizationId, Boolean(is_private)],
         );
-        await dbClient.query(`DELETE FROM accounts.transaction_visibility WHERE transaction_id = $1`, [req.params.id]);
-        await dbClient.query(`DELETE FROM accounts.transaction_visibility_role WHERE transaction_id = $1`, [req.params.id]);
+        // Child tables have no organization_id column; route both deletes
+        // through the org-scoped tenant handle (same pinned client, inside the
+        // BEGIN/COMMIT) so it compiles a both-sides subquery against the FK
+        // parent accounts.transactions and the delete can't cross tenants.
+        await tenant(dbClient, identity).delete("transaction_visibility", {
+          where: "transaction_id = $1",
+          params: [req.params.id],
+        });
+        await tenant(dbClient, identity).delete("transaction_visibility_role", {
+          where: "transaction_id = $1",
+          params: [req.params.id],
+        });
         if (is_private && Array.isArray(shared_with) && shared_with.length > 0) {
           const values = shared_with.map((_: string, i: number) => `($1, $${i + 2})`).join(", ");
           await dbClient.query(
