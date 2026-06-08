@@ -1,5 +1,17 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.4
+
+### Patch Changes
+
+- 55b0e25: fix: recompute ends_at when a customer-group started_at is edited
+
+  The counter "edit time-in" action (PATCH /:id/customer-group-started-at) moved
+  started_at without recomputing ends_at, leaving an inverted window
+  (ends_at < started_at) that bucketed today's session onto yesterday's board.
+  ends_at now tracks the edited start, and a data-repair migration heals rows
+  already corrupted by the old behavior.
+
 ## 0.6.3
 
 ### Patch Changes
