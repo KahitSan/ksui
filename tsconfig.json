@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "Preserve",
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -29,7 +28,9 @@
         "../kserp/kernel-theme/index.ts"
       ]
     },
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "6.0",
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js"
   },
   "include": [
     "server",
