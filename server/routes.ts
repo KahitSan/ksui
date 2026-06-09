@@ -58,7 +58,13 @@ import { isBackdated } from "./lib/backdate.js";
 import multer from "multer";
 import crypto from "crypto";
 import path from "node:path";
-import { s3Enabled, s3PublicUrl, s3PutObject, s3DeleteObject, s3KeyFromUrl } from "./lib/s3.js";
+import {
+  s3Enabled,
+  s3PublicUrl,
+  s3PutObject,
+  s3DeleteObject,
+  s3KeyFromUrl,
+} from "@kahitsan/plugin-server-utils";
 
 // ── Attachment upload config ─────────────────────────────────────────────
 // Attachments are stored in S3-compatible object storage ONLY (DO Spaces in
