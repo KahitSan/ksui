@@ -13,6 +13,9 @@
     ],
     "baseUrl": ".",
     "paths": {
+      "@kahitsan/plugin-ui": [
+        "../kserp/packages/plugin-ui/src/index.ts"
+      ],
       "@ks-erp/kernel-base": [
         "../kserp/kernel-base/index.ts"
       ],

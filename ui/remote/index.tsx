@@ -70,18 +70,16 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 
 import SalesBodyEditor, { type SalesLine } from "./components/SalesBodyEditor";
-import MarkdownNotes from "./components/MarkdownNotes";
-import CameraCapture from "./components/CameraCapture";
+import { MarkdownNotes, CameraCapture } from "@kahitsan/plugin-ui";
 import PaymentLegModal from "./components/PaymentLegModal";
-import AddAttachmentTile from "./components/AddAttachmentTile";
+import { AddAttachmentTile } from "@kahitsan/plugin-ui";
 import ExistingAttachmentTile from "./components/ExistingAttachmentTile";
 import ExportTransactionsModal from "./components/ExportTransactionsModal";
 import PayeePicker, { type PayeeOption } from "./components/PayeePicker";
-import MentionTextarea from "./components/MentionTextarea";
+import { MentionTextarea } from "@kahitsan/plugin-ui";
 import AccountAvatar from "./components/AccountAvatar";
 import TransactionFilters from "./components/TransactionFilters";
-import { type ClientOption } from "./components/ClientPicker";
-import { type VoucherOption } from "./components/VoucherPicker";
+import { type ClientOption, type VoucherOption } from "@kahitsan/plugin-ui";
 import { useAccountsIndex, resolveAccount } from "./lib/accounts-index";
 import { attachmentUrl, isResolvableAttachment } from "./lib/attachments";
 

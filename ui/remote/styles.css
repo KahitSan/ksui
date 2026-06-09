@@ -23,3 +23,11 @@
  * use, so a plugin that renders them carries the correctly-ordered base->responsive
  * pair too (belt-and-suspenders alongside the layer ordering above). */
 @source inline("md:block md:hidden lg:p-6 sm:items-center sm:max-w-sm sm:max-w-md sm:max-w-lg sm:max-w-xl sm:max-w-2xl sm:max-w-3xl sm:max-w-5xl sm:max-w-7xl sm:p-4 sm:p-6 sm:px-6 sm:rounded-xl sm:text-sm sm:text-xl sm:w-72 sm:w-auto");
+
+/* The shared UI components now live in @kahitsan/plugin-ui (resolved from the
+ * sibling ../kserp/packages/plugin-ui at build time — CI and the worktree both
+ * lay the kernel out as a sibling). @tailwindcss/vite auto-scans only THIS
+ * plugin's own tree, so without this a utility class used ONLY inside one of the
+ * relocated components would be silently dropped from remote.css and render
+ * unstyled. Scan the package source too. */
+@source "../../../kserp/packages/plugin-ui/src";

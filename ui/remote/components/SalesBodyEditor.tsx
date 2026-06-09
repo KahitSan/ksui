@@ -9,8 +9,13 @@
 // dates; this component owns items[] + client / voucher / manual-discount.
 
 import { createSignal, createMemo, createEffect, For, Show, onMount } from "solid-js";
-import ClientPicker, { type ClientOption } from "./ClientPicker";
-import VoucherPicker, { calculateDiscount, type VoucherOption } from "./VoucherPicker";
+import {
+  ClientPicker,
+  type ClientOption,
+  VoucherPicker,
+  calculateDiscount,
+  type VoucherOption,
+} from "@kahitsan/plugin-ui";
 import Plus from "lucide-solid/icons/plus";
 import Minus from "lucide-solid/icons/minus";
 import Trash2 from "lucide-solid/icons/trash-2";
