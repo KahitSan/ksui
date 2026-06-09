@@ -38,6 +38,7 @@
     "server",
     "migrations",
     "ui",
-    "../kserp/sdk/host-ui.d.ts"
+    "../kserp/sdk/host-ui.d.ts",
+    "../kserp/sdk/express.d.ts"
   ]
 }
