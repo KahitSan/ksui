@@ -1,6 +1,6 @@
 {
   "name": "@kahitsan/kplugin_transactions",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "private": true,
   "type": "module",
   "description": "ksERP plugin: transactions (income/expense/business entries + POS charge flow). Runs as its own process; the kserp kernel reverse-proxies to it and brokers cross-plugin RPC to packages/vouchers/clients.",

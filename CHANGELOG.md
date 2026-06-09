@@ -1,5 +1,12 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.7
+
+### Patch Changes
+
+- 23c3bd3: Consume the shared UI components (MentionTextarea, MarkdownNotes, ClientPicker, VoucherPicker, CameraCapture, AddAttachmentTile) from `@kahitsan/plugin-ui` instead of local byte-identical copies. No behavior change; the built UI bundle is equivalent, with the components' Tailwind classes preserved via an explicit `@source`.
+- 5777c50: Consume the shared s3 storage helper from `@kahitsan/plugin-server-utils` instead of a local byte-identical copy. No behavior change.
+
 ## 0.6.6
 
 ### Patch Changes
