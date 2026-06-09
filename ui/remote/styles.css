@@ -24,10 +24,10 @@
  * pair too (belt-and-suspenders alongside the layer ordering above). */
 @source inline("md:block md:hidden lg:p-6 sm:items-center sm:max-w-sm sm:max-w-md sm:max-w-lg sm:max-w-xl sm:max-w-2xl sm:max-w-3xl sm:max-w-5xl sm:max-w-7xl sm:p-4 sm:p-6 sm:px-6 sm:rounded-xl sm:text-sm sm:text-xl sm:w-72 sm:w-auto");
 
-/* The shared UI components now live in @kahitsan/plugin-ui (resolved from the
- * sibling ../kserp/packages/plugin-ui at build time — CI and the worktree both
- * lay the kernel out as a sibling). @tailwindcss/vite auto-scans only THIS
- * plugin's own tree, so without this a utility class used ONLY inside one of the
- * relocated components would be silently dropped from remote.css and render
- * unstyled. Scan the package source too. */
-@source "../../../kserp/packages/plugin-ui/src";
+/* The shared UI components live in the installed @kahitsan/plugin-ui package.
+ * @tailwindcss/vite auto-scans only THIS plugin's own tree, so without this a
+ * utility class used ONLY inside one of those components would be silently
+ * dropped from remote.css and render unstyled. Scan the installed package's
+ * source too (resolves through node_modules — the kernel workspace symlink for
+ * us, the npm-installed copy for a third-party plugin). */
+@source "../../node_modules/@kahitsan/plugin-ui/src";

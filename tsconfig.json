@@ -13,12 +13,6 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@kahitsan/plugin-ui": [
-        "../kserp/packages/plugin-ui/src/index.ts"
-      ],
-      "@kahitsan/plugin-server-utils": [
-        "../kserp/packages/plugin-server-utils/src/index.ts"
-      ],
       "@ks-erp/kernel-base": [
         "../kserp/kernel-base/index.ts"
       ],
@@ -40,8 +34,6 @@
   "include": [
     "server",
     "migrations",
-    "ui",
-    "../kserp/sdk/host-ui.d.ts",
-    "../kserp/sdk/express.d.ts"
+    "ui"
   ]
 }

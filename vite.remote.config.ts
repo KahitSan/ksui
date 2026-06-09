@@ -20,18 +20,6 @@ import { fileURLToPath } from "node:url";
 // + utilities layers (NO preflight — the host owns base/reset).
 export default defineConfig({
   plugins: [solid(), tailwindcss()],
-  resolve: {
-    alias: {
-      // Shared UI components resolved from SOURCE (like the @ks-erp/kernel-* tier
-      // packages) so vite-plugin-solid transforms them and they bundle into this
-      // IIFE exactly as a local copy would. solid-js + @kserp/host-ui stay
-      // externalized (see rollupOptions.external below) — single Solid runtime,
-      // host UI kit reused. Keep in lockstep with tsconfig.json paths.
-      "@kahitsan/plugin-ui": fileURLToPath(
-        new URL("../kserp/packages/plugin-ui/src/index.ts", import.meta.url),
-      ),
-    },
-  },
   build: {
     outDir: "dist-ui",
     emptyOutDir: true,
