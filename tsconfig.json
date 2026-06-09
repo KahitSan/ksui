@@ -37,6 +37,7 @@
   "include": [
     "server",
     "migrations",
-    "ui"
+    "ui",
+    "../kserp/sdk/host-ui.d.ts"
   ]
 }
