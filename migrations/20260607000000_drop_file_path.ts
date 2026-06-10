@@ -23,7 +23,10 @@ const migration = {
     );
     if (present.rows.length === 0) return; // already dropped — idempotent
 
-    const cdn = (process.env.S3_CDN_URL || "https://cdn.hilinga.com").replace(/\/+$/, "");
+    const rawCdn = process.env.S3_CDN_URL || "https://cdn.hilinga.com";
+    let cdnEnd = rawCdn.length;
+    while (cdnEnd > 0 && rawCdn[cdnEnd - 1] === "/") cdnEnd--;
+    const cdn = rawCdn.slice(0, cdnEnd);
     await client.query(
       `UPDATE accounts.transaction_attachments
           SET s3_link = $1 || '/uploads/' || file_path

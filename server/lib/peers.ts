@@ -29,6 +29,12 @@ import { tryCallPlugin, type PluginUnavailableError } from "@ks-erp/kernel-compo
 
 export type IdentityHeader = string | undefined;
 
+// Numeric columns arrive from pg as a string (numeric/decimal), a number, or
+// null. VoucherType is the voucher discount kind. Aliased so the repeated
+// unions read as one named shape.
+export type Numeric = string | number | null;
+export type VoucherType = "percentage" | "fixed_amount" | "free";
+
 // ── packages ───────────────────────────────────────────────────────────────
 
 export interface PackageVariantRow {
@@ -36,9 +42,9 @@ export interface PackageVariantRow {
   package_id: number;
   name: string;
   kind: string | null;
-  price: string | number | null;
+  price: Numeric;
   currency: string | null;
-  duration_value: string | number | null;
+  duration_value: Numeric;
   duration_unit: string | null;
   is_active: boolean;
 }
@@ -97,25 +103,25 @@ export interface VoucherValidateResult {
   valid: boolean;
   reason?: string;
   voucherId?: number;
-  type?: "percentage" | "fixed_amount" | "free";
-  value?: string | number | null;
+  type?: VoucherType;
+  value?: Numeric;
   voucher?: {
     id: number;
     code: string;
-    type: "percentage" | "fixed_amount" | "free";
-    value: string | number | null;
-    max_discount_amount?: string | number | null;
-    minimum_purchase?: string | number | null;
+    type: VoucherType;
+    value: Numeric;
+    max_discount_amount?: Numeric;
+    minimum_purchase?: Numeric;
   };
 }
 
 export interface VoucherRow {
   id: number;
   code: string;
-  type: "percentage" | "fixed_amount" | "free";
-  value: string | number | null;
-  max_discount_amount?: string | number | null;
-  minimum_purchase?: string | number | null;
+  type: VoucherType;
+  value: Numeric;
+  max_discount_amount?: Numeric;
+  minimum_purchase?: Numeric;
   is_active?: boolean;
 }
 

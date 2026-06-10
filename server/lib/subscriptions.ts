@@ -340,8 +340,9 @@ export async function renewSubscription(
     // two parallel POSTs can't both read the same MAX(ends_at) and overlap.
     // Released automatically at COMMIT. See the monolith note for why this is an
     // advisory lock rather than a row-level FOR UPDATE.
+    const chainKey = lineageSlug ?? `pkg:${src.package_id}`;
     await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [
-      `renew:${req.organizationId}:${src.client_id}:${lineageSlug ?? `pkg:${src.package_id}`}`,
+      `renew:${req.organizationId}:${src.client_id}:${chainKey}`,
     ]);
 
     // Latest ends_at across the (client, lineage) chain. lineage isn't in

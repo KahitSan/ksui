@@ -1051,6 +1051,7 @@ export function buildRouter(deps: RouterDeps): Router {
       }
 
       const parsedAmount = parseFloat(amount);
+      // eslint-disable-next-line sonarjs/no-inverted-boolean-check -- !(x>0) also rejects NaN (non-numeric amount); `<=0` would let NaN through, changing validation.
       if (!amount || !(parsedAmount > 0)) {
         res.status(400).json({ error: "amount must be greater than 0" });
         return;
@@ -1524,6 +1525,7 @@ export function buildRouter(deps: RouterDeps): Router {
         }
         if (amount !== undefined) {
           const parsed = parseFloat(amount);
+          // eslint-disable-next-line sonarjs/no-inverted-boolean-check -- !(x>0) also rejects NaN (non-numeric amount); `<=0` would let NaN through, changing validation.
           if (!(parsed > 0)) {
             res.status(400).json({ error: "amount must be greater than 0" });
             return;
@@ -1950,6 +1952,7 @@ export function buildRouter(deps: RouterDeps): Router {
         res.status(400).json({ error: "financial_account_id must be a number" });
         return;
       }
+      // eslint-disable-next-line sonarjs/no-inverted-boolean-check -- !(x>0) also rejects NaN (non-numeric amount); `<=0` would let NaN through, changing validation.
       if (!(parsed > 0)) {
         res.status(400).json({ error: "amount must be greater than 0" });
         return;

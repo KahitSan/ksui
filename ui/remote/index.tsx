@@ -430,10 +430,6 @@ export function Component() {
   }
   let resetAndRefetchFn: (() => void) | undefined;
 
-  function dateKeyOf(dateStr: string): string {
-    return dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
-  }
-
   interface LazyDayState {
     rows: Transaction[];
     page: number;
@@ -1295,7 +1291,6 @@ export function Component() {
       title: "Date",
       orderable: true,
       className: "w-[90px]",
-      /* eslint-disable solid/components-return-once */
       render: (_val, _type, row) => {
         if (row._grouped) {
           const isOpen = expandedGroups().has(row._groupKey || "");
@@ -1320,7 +1315,6 @@ export function Component() {
           </span>
         );
       },
-      /* eslint-enable solid/components-return-once */
     },
     {
       data: "id",
@@ -1336,7 +1330,6 @@ export function Component() {
       data: "description",
       title: "Description",
       orderable: true,
-      /* eslint-disable solid/components-return-once */
       render: (_val, _type, row) => {
         if (row._grouped) {
           const count = row._groupCount || 0;
@@ -1380,7 +1373,6 @@ export function Component() {
           </div>
         );
       },
-      /* eslint-enable solid/components-return-once */
     },
     {
       data: "subcategory",
@@ -1399,7 +1391,6 @@ export function Component() {
       data: "payee",
       title: "Payee",
       className: "hidden md:table-cell w-[160px]",
-      /* eslint-disable solid/components-return-once */
       render: (_val, _type, row) => {
         if (!row._grouped && row.payee) {
           return (
@@ -1415,13 +1406,11 @@ export function Component() {
         }
         return <span class="text-[11px] text-zinc-700">—</span>;
       },
-      /* eslint-enable solid/components-return-once */
     },
     {
       data: null,
       title: "Accounts",
       className: "hidden md:table-cell w-[220px]",
-      /* eslint-disable solid/components-return-once */
       render: (_val, _type, row) => {
         if (row._grouped) {
           return <span class="text-[11px] text-zinc-700">—</span>;
@@ -1489,13 +1478,11 @@ export function Component() {
           </span>
         );
       },
-      /* eslint-enable solid/components-return-once */
     },
     {
       data: null,
       title: "By",
       className: "hidden lg:table-cell w-[60px] text-center",
-      /* eslint-disable solid/components-return-once */
       render: (_val, _type, row) => {
         if (row._grouped) {
           return <span class="text-[11px] text-zinc-700">—</span>;
@@ -1510,7 +1497,6 @@ export function Component() {
           </div>
         );
       },
-      /* eslint-enable solid/components-return-once */
     },
     {
       data: "amount",
@@ -1563,7 +1549,6 @@ export function Component() {
       data: null,
       title: "",
       className: "w-[28px]",
-      /* eslint-disable solid/components-return-once */
       render: (_val, _type, row) => {
         if (row._grouped) {
           const isOpen = expandedGroups().has(row._groupKey || "");
@@ -1575,7 +1560,6 @@ export function Component() {
         }
         return <ChevronRight size={14} class="text-zinc-600 inline" />;
       },
-      /* eslint-enable solid/components-return-once */
     },
   ];
 

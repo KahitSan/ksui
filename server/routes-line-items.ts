@@ -30,7 +30,6 @@
 
 import { Router, type Request, type Response } from "express";
 import { applyTenantContext } from "@ks-erp/kernel-base";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
 import {
   findPackagesByIds,

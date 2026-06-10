@@ -529,7 +529,6 @@ export async function runCharge(opts: {
     const variants = await findVariantsByIds(variantIds, identityHeader);
     if (variants == null) {
       // packages plugin not loaded
-      packagesAvailable = false;
       throw new ChargeValidationError(
         503,
         "This cart references packages, but the packages plugin is not available. Remove package line items or enable the packages plugin.",
