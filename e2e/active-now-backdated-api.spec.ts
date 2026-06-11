@@ -56,16 +56,18 @@ async function signInAndProvision(api: APIRequestContext): Promise<Ctx> {
 // timeZone instead of toISOString to avoid the UTC-vs-PHT confusion the
 // monolith's KSERP.md flags as a banned shape in tests.
 function manilaTodayAndYesterday(): { today: string; yesterday: string } {
-  const fmt = new Intl.DateTimeFormat("en-CA", {
+  const today = manilaDate(Date.now());
+  const yesterday = manilaDate(Date.now() - 24 * 60 * 60 * 1000);
+  return { today, yesterday };
+}
+
+function manilaDate(ms: number): string {
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Manila",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  });
-  const today = fmt.format(new Date());
-  const yMs = Date.now() - 24 * 60 * 60 * 1000;
-  const yesterday = fmt.format(new Date(yMs));
-  return { today, yesterday };
+  }).format(new Date(ms));
 }
 
 test("backdated transaction with currently-running session surfaces under today's filter", async ({
@@ -78,7 +80,19 @@ test("backdated transaction with currently-running session surfaces under today'
   // started_at = a few minutes ago, ends_at = several hours from now → live session.
   // Anchor to ten minutes ago to give a comfortable buffer either side of the
   // NOW() comparisons.
-  const startedAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const startedAtMs = Date.now() - 10 * 60 * 1000;
+  // Within ~10 min after Manila midnight, started_at (now - 10min) is still
+  // YESTERDAY Manila while transaction_date is also yesterday — so the "today
+  // carryover" arm (which fires for sessions whose started_at is today) would
+  // not engage, and the today-filter assertion below would legitimately see 0.
+  // Skip that narrow once-a-day boundary window; the day-shifted scenario is
+  // ambiguous, not buggy. (Same midnight-boundary discipline as
+  // edit-time-in-recomputes-ends-at-api.spec.ts.)
+  test.skip(
+    manilaDate(startedAtMs) !== manilaDate(Date.now()),
+    "started_at and now straddle a Manila midnight boundary — today-carryover arm is ambiguous",
+  );
+  const startedAt = new Date(startedAtMs).toISOString();
 
   // transaction_date is YESTERDAY Manila — the backdated entry shape.
   const charge = await request.post("/api/transactions/charge", {

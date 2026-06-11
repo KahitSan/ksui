@@ -86,11 +86,22 @@ test.describe("GET /api/transactions/:id — cross-plugin peer resolution", () =
   });
 });
 
+// Manila local date (YYYY-MM-DD). Intl with timeZone instead of toISOString to
+// avoid the UTC-vs-PHT confusion KSERP.md flags as a banned shape in tests.
+function manilaDate(ms: number): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(ms));
+}
+
 // Regression coverage for the payee-not-persisted and updated_by-always-Unknown
 // bugs. Create and update a manual transaction through the full lifecycle, then
 // verify the enrichments on detail, list, and update response.
 test.describe("payee and updated_by enrichment", () => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = manilaDate(Date.now());
 
   test("saves payee_id on create and enriches detail with payee + updated_by_name", async ({ request }) => {
     const orgId = await signIn(request);
