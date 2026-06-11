@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.11
+
+### Patch Changes
+
+- fe1828b: fix: account names now display correctly in the transactions list, detail view, and payment legs instead of showing dashes or raw IDs
+
 ## 0.6.10
 
 ### Patch Changes
