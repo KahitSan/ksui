@@ -193,15 +193,18 @@ async function start(): Promise<void> {
         const packageIds = Array.isArray(a.packageIds)
           ? a.packageIds.map((v) => (typeof v === "number" ? v : parseInt(String(v), 10))).filter((n) => Number.isInteger(n))
           : [];
-        const out: Record<number, { concurrent: number; daily: number; monthly: number }> = {};
+        const out: Record<number, { concurrent: number; daily: number; monthly: number; incoming: number }> = {};
         if (orgId == null || packageIds.length === 0) return out;
-        for (const id of packageIds) out[id] = { concurrent: 0, daily: 0, monthly: 0 };
+        for (const id of packageIds) out[id] = { concurrent: 0, daily: 0, monthly: 0, incoming: 0 };
 
         const at = typeof a.at === "string" ? a.at : null;
         const useNow = at === null;
         const concurrentClause = useNow
-          ? `(li.status = 'active' AND (li.started_at IS NULL OR li.started_at <= NOW()))`
+          ? `(li.status IN ('active', 'expired') AND (li.started_at IS NULL OR li.started_at <= NOW()) AND (li.ends_at IS NULL OR li.ends_at > NOW()))`
           : `((li.started_at IS NULL OR li.started_at <= $3::timestamptz) AND (li.ends_at IS NULL OR li.ends_at > $3::timestamptz))`;
+        const incomingClause = useNow
+          ? `li.status = 'active' AND li.started_at IS NOT NULL AND li.started_at > NOW()`
+          : `FALSE`;
         const dailyClause = useNow
           ? `t.transaction_date = (NOW() AT TIME ZONE 'Asia/Manila')::date`
           : `t.transaction_date = ($3::timestamptz AT TIME ZONE 'Asia/Manila')::date`;
@@ -217,11 +220,13 @@ async function start(): Promise<void> {
           concurrent: string;
           daily: string;
           monthly: string;
+          incoming: string;
         }>(
           `SELECT li.package_id,
                   COUNT(*) FILTER (WHERE li.status <> 'voided' AND ${concurrentClause})::text AS concurrent,
                   COUNT(*) FILTER (WHERE li.status <> 'voided' AND ${dailyClause})::text AS daily,
-                  COUNT(*) FILTER (WHERE li.status <> 'voided' AND ${monthlyClause})::text AS monthly
+                  COUNT(*) FILTER (WHERE li.status <> 'voided' AND ${monthlyClause})::text AS monthly,
+                  COUNT(*) FILTER (WHERE li.status <> 'voided' AND ${incomingClause})::text AS incoming
              FROM accounts.transaction_line_items li
              JOIN accounts.transactions t
                ON t.id = li.transaction_id AND t.organization_id = li.organization_id
@@ -236,6 +241,7 @@ async function start(): Promise<void> {
             concurrent: parseInt(row.concurrent, 10) || 0,
             daily: parseInt(row.daily, 10) || 0,
             monthly: parseInt(row.monthly, 10) || 0,
+            incoming: parseInt(row.incoming, 10) || 0,
           };
         }
         return out;
