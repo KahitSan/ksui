@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.10
+
+### Patch Changes
+
+- 285afe5: Internal refactor: split the oversized transactions routes.ts/helpers-charge.ts into focused handler/helper modules. No behavior change.
+
 ## 0.6.9
 
 ### Patch Changes
