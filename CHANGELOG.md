@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.13
+
+### Patch Changes
+
+- cc1ff15: Make the four category buttons (Expense, Sale, Payable, Transfer) in the transaction form render in a single row on all viewports instead of a 2x2 grid below the `sm:` breakpoint.
+
 ## 0.6.12
 
 ### Patch Changes
