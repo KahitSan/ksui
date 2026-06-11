@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.9
+
+### Patch Changes
+
+- 1561d07: Stop shipping local copies of the shared account + attachment widgets; consume the centralized @kahitsan/plugin-ui (AccountAvatar, account-icons, account-logo-url, accounts-index, attachments, ExistingAttachmentTile). No behavior change — the SDK ships the superset versions.
+
 ## 0.6.8
 
 ### Patch Changes
