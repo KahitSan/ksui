@@ -55,6 +55,17 @@ import {
 import { listSubscriptions, renewSubscription, RenewError } from "./lib/subscriptions.js";
 import { runCharge, ChargeValidationError, type ChargePayload } from "./helpers-charge.js";
 import { isBackdated } from "./lib/backdate.js";
+import {
+  SORTABLE_COLUMNS,
+  VALID_CATEGORIES,
+  VALID_STATUSES,
+  VALID_TAX_TYPES,
+  ISO_DATE_RE,
+  isValidIsoDate,
+  escapeLike,
+  resolveUserNames,
+  privacyClause,
+} from "./routes/shared.js";
 import multer from "multer";
 import crypto from "crypto";
 import path from "node:path";
@@ -94,60 +105,9 @@ export type RouterDeps = {
   requirePermission: (...codes: string[]) => RequestHandler;
 };
 
-const SORTABLE_COLUMNS = [
-  "transaction_date",
-  "amount",
-  "category",
-  "status",
-  "description",
-  "created_at",
-];
-const VALID_CATEGORIES = ["expense", "sale", "business", "payable"];
-const VALID_STATUSES = ["pending", "completed", "voided"];
-const VALID_TAX_TYPES = ["vat_inclusive", "vat_exclusive", "vat_exempt", "non_vat"];
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-function isValidIsoDate(s: string): boolean {
-  if (!ISO_DATE_RE.test(s)) return false;
-  const d = new Date(s + "T00:00:00Z");
-  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
-}
-
-// Escape ILIKE wildcards so a search for "100%" doesn't match every row.
-function escapeLike(s: string): string {
-  return s.replace(/[\\%_]/g, "\\$&");
-}
-
-/** Batch-resolve user ids to { id, name, image } from the kernel's user table. */
-async function resolveUserNames(
-  pool: PluginDb,
-  ids: Set<string>,
-): Promise<Map<string, { name: string; image: string | null }>> {
-  const arr = [...ids].filter(Boolean);
-  if (arr.length === 0) return new Map();
-  const result = await pool.query(
-    `SELECT id, name, image FROM public."user" WHERE id = ANY($1::text[])`,
-    [arr],
-  );
-  return new Map(result.rows.map((r: { id: string; name: string; image: string | null }) => [r.id, { name: r.name, image: r.image }]));
-}
-
 export function buildRouter(deps: RouterDeps): Router {
   const router = Router();
   const { db: pool, requireAuth, requireOrg, requirePermission } = deps;
-
-  // Privacy WHERE fragment shared by every list-style read. A private row is
-  // visible to its creator, to a user explicitly shared on it, to a role
-  // shared on it, or to an admin/superuser (who bypass entirely). Returns the
-  // SQL fragment + the next param index.
-  function privacyClause(req: Request, params: unknown[], startIdx: number): string | null {
-    const isAdmin = req.orgRole === "admin" || req.user?.role === "superuser";
-    if (isAdmin) return null;
-    const userId = req.user?.id ?? "";
-    const frag = `(t.is_private = false OR t.created_by = $${startIdx} OR EXISTS (SELECT 1 FROM accounts.transaction_visibility tv WHERE tv.transaction_id = t.id AND tv.user_id = $${startIdx}) OR EXISTS (SELECT 1 FROM accounts.transaction_visibility_role tvr WHERE tvr.transaction_id = t.id AND tvr.role_code = $${startIdx + 1}))`;
-    params.push(userId, req.orgRole ?? "");
-    return frag;
-  }
 
   // ── Subcategory taxonomy (formerly /api/transaction-subcategories) ───────
 
