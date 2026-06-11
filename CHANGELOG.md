@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.12
+
+### Patch Changes
+
+- 6a2bbf3: Fix concurrent capacity counting to include expired (unsettled) sessions and exclude sessions whose ends_at has passed. Add incoming reservation count to capacity-usage RPC.
+
 ## 0.6.11
 
 ### Patch Changes
