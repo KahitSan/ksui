@@ -3167,7 +3167,7 @@ function TransactionForm(props: TransactionFormProps) {
 
           <div>
             <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-2">Type</div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div class="grid grid-cols-4 gap-2">
               <For each={["expense", "sale", "payable", "business"]}>
                 {(cat) => {
                   const cfg = CATEGORY_FORM[cat];
