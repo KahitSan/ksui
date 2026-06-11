@@ -23,6 +23,7 @@ import { tenant, readIdentity, applyTenantContext } from "@ks-erp/kernel-base";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
 import {
+  findAccountsByIds,
   findPackagesByIds,
   findVariantsByIds,
   findClientsByIds,
@@ -176,19 +177,44 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         );
         const total = parseInt(countResult.rows[0].count);
 
-        // Enrich with payee names and user names.
+        // Enrich with account, payee, and user names.
         const idh = identityHeaderOf(req);
+
+        const accountIds = [
+          ...new Set([
+            ...result.rows.map((r: { source_account_id: number | null }) => r.source_account_id).filter((v: number | null): v is number => v != null),
+            ...result.rows.map((r: { destination_account_id: number | null }) => r.destination_account_id).filter((v: number | null): v is number => v != null),
+          ]),
+        ];
+        const accountsResult = accountIds.length > 0 ? await findAccountsByIds(accountIds, idh) : [];
+        const accountMap = accountsResult
+          ? new Map(accountsResult.map((a) => [a.id, a]))
+          : null;
+
         const payeeIds = [...new Set(result.rows.map((r: { payee_id: number | null }) => r.payee_id).filter((v: number | null): v is number => v != null))];
         const payeeMap = payeeIds.length > 0
           ? new Map((await findPayeesByIds(payeeIds, idh))?.map((p: { id: number; name: string }) => [p.id, p.name]) ?? [])
           : new Map<number, string>();
+
         const userIds = new Set<string>();
         for (const row of result.rows) {
           if (row.created_by) userIds.add(row.created_by);
           if (row.updated_by) userIds.add(row.updated_by);
         }
         const userMap = await resolveUserNames(pool, userIds);
+
+        const accountsUnavailable = accountIds.length > 0 && accountMap === null;
+
         for (const row of result.rows) {
+          if (accountMap) {
+            const src = row.source_account_id != null ? accountMap.get(row.source_account_id) : undefined;
+            const dst = row.destination_account_id != null ? accountMap.get(row.destination_account_id) : undefined;
+            row.source_account_name = src?.name ?? null;
+            row.destination_account_name = dst?.name ?? null;
+          } else {
+            row.source_account_name = null;
+            row.destination_account_name = null;
+          }
           row.payee = row.payee_id != null ? (payeeMap.get(row.payee_id) ?? null) : null;
           const cUser = row.created_by ? userMap.get(row.created_by) : undefined;
           const uUser = row.updated_by ? userMap.get(row.updated_by) : undefined;
@@ -198,7 +224,11 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           row.updated_by_image = uUser?.image ?? null;
         }
 
-        res.json({ data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) });
+        const body: Record<string, unknown> = { data: result.rows, total, page, limit, totalPages: Math.ceil(total / limit) };
+        if (accountsUnavailable) {
+          body.peersUnavailable = { accounts: true, payees: false };
+        }
+        res.json(body);
       } catch (err) {
         console.error("[transactions] list error:", err);
         res.status(500).json({ error: "Internal server error" });
@@ -560,6 +590,31 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           )
         ).rows;
 
+        // Resolve account names for the transaction and its payment legs.
+        const detailAccountIds = [
+          ...new Set([
+            ...(txn.source_account_id != null ? [txn.source_account_id as number] : []),
+            ...(txn.destination_account_id != null ? [txn.destination_account_id as number] : []),
+            ...payments.map((p) => p.financial_account_id as number | null).filter((v): v is number => v != null),
+          ]),
+        ];
+        const detailAccounts =
+          detailAccountIds.length > 0 ? await findAccountsByIds(detailAccountIds, idh) : [];
+        const detailAcctById = new Map((detailAccounts ?? []).map((a) => [a.id, a]));
+        txn.source_account_name =
+          txn.source_account_id != null
+            ? (detailAcctById.get(txn.source_account_id as number)?.name ?? null)
+            : null;
+        txn.destination_account_name =
+          txn.destination_account_id != null
+            ? (detailAcctById.get(txn.destination_account_id as number)?.name ?? null)
+            : null;
+        const enrichedPayments = payments.map((p) => {
+          const acct =
+            p.financial_account_id != null ? detailAcctById.get(p.financial_account_id as number) : undefined;
+          return { ...p, financial_account_name: acct?.name ?? null };
+        });
+
         const customerGroups = (
           await pool.query(
             `SELECT id, position, client_id, display_name, note, voucher_id, subtotal, discount_amount, is_payer
@@ -639,7 +694,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           client_pool,
           customer_groups,
           edits,
-          payments,
+          payments: enrichedPayments,
         });
       } catch (err) {
         console.error("[transactions] get error:", err);

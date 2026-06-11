@@ -14,6 +14,8 @@
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
+import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import { findAccountsByIds } from "../lib/peers.js";
 
 export type PaymentRouteCtx = {
   pool: PluginDb;
@@ -55,7 +57,13 @@ export function registerPaymentUpdateRoute(router: Router, ctx: PaymentRouteCtx)
           res.status(404).json({ error: "Not found" });
           return;
         }
-        res.json(result.rows[0]);
+        const payment = result.rows[0];
+        if (payment.financial_account_id != null) {
+          const idh = identityHeaderOf(req);
+          const accounts = await findAccountsByIds([payment.financial_account_id], idh);
+          payment.financial_account_name = accounts?.[0]?.name ?? null;
+        }
+        res.json(payment);
       } catch (err) {
         console.error("[transactions] payment update error:", err);
         res.status(500).json({ error: "Internal server error" });
@@ -85,7 +93,20 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
             ORDER BY created_at ASC, id ASC`,
           [req.params.id, req.organizationId],
         );
-        res.json({ payments: rows.rows });
+        const payments = rows.rows;
+        const accountIds = [
+          ...new Set(payments.map((p: { financial_account_id: number | null }) => p.financial_account_id).filter((v: number | null): v is number => v != null)),
+        ];
+        if (accountIds.length > 0) {
+          const idh = identityHeaderOf(req);
+          const accounts = await findAccountsByIds(accountIds, idh);
+          const acctById = new Map((accounts ?? []).map((a) => [a.id, a]));
+          for (const p of payments) {
+            const acct = p.financial_account_id != null ? acctById.get(p.financial_account_id) : undefined;
+            p.financial_account_name = acct?.name ?? null;
+          }
+        }
+        res.json({ payments });
       } catch (err) {
         console.error("[transactions] payments list error:", err);
         res.status(500).json({ error: "Internal server error" });
@@ -124,7 +145,13 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
              VALUES ($1, $2, $3, $4, $5) RETURNING *`,
           [req.params.id, req.organizationId, financial_account_id, parsed, notes?.trim() || null],
         );
-        res.status(201).json(result.rows[0]);
+        const payment = result.rows[0];
+        if (payment.financial_account_id != null) {
+          const idh = identityHeaderOf(req);
+          const accounts = await findAccountsByIds([payment.financial_account_id], idh);
+          payment.financial_account_name = accounts?.[0]?.name ?? null;
+        }
+        res.status(201).json(payment);
       } catch (err) {
         console.error("[transactions] payment create error:", err);
         res.status(500).json({ error: "Internal server error" });
