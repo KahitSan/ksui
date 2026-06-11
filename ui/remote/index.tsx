@@ -73,15 +73,19 @@ import SalesBodyEditor, { type SalesLine } from "./components/SalesBodyEditor";
 import { MarkdownNotes, CameraCapture } from "@kahitsan/plugin-ui";
 import PaymentLegModal from "./components/PaymentLegModal";
 import { AddAttachmentTile } from "@kahitsan/plugin-ui";
-import ExistingAttachmentTile from "./components/ExistingAttachmentTile";
 import ExportTransactionsModal from "./components/ExportTransactionsModal";
 import PayeePicker, { type PayeeOption } from "./components/PayeePicker";
 import { MentionTextarea } from "@kahitsan/plugin-ui";
-import AccountAvatar from "./components/AccountAvatar";
 import TransactionFilters from "./components/TransactionFilters";
 import { type ClientOption, type VoucherOption } from "@kahitsan/plugin-ui";
-import { useAccountsIndex, resolveAccount } from "./lib/accounts-index";
-import { attachmentUrl, isResolvableAttachment } from "./lib/attachments";
+import {
+  AccountAvatar,
+  ExistingAttachmentTile,
+  useAccountsIndex,
+  resolveAccount,
+  attachmentUrl,
+  isResolvableAttachment,
+} from "@kahitsan/plugin-ui";
 
 /** A pending file with a stable id for keying and an optional preview URL */
 interface PendingFile {
