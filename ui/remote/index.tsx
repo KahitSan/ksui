@@ -69,6 +69,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 
 import AccountPicker from "./components/AccountPicker";
+import FormField from "./components/FormField";
 import SalesBodyEditor, { type SalesLine } from "./components/SalesBodyEditor";
 import { MarkdownNotes, CameraCapture } from "@kahitsan/plugin-ui";
 import PaymentLegModal from "./components/PaymentLegModal";
@@ -3535,11 +3536,3 @@ function TransactionForm(props: TransactionFormProps) {
   );
 }
 
-function FormField(props: { label: string; children: JSX.Element }) {
-  return (
-    <div>
-      <label class="block text-xs text-zinc-500 mb-1">{props.label}</label>
-      {props.children}
-    </div>
-  );
-}
