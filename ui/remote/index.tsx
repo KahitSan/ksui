@@ -86,6 +86,7 @@ import {
   attachmentUrl,
   isResolvableAttachment,
 } from "@kahitsan/plugin-ui";
+import { formatCurrency, formatDate, formatDateTime, todayManila } from "./lib/format";
 
 /** A pending file with a stable id for keying and an optional preview URL */
 interface PendingFile {
@@ -280,31 +281,6 @@ const TAX_TYPE_LABELS: Record<string, string> = {
   vat_exempt: "VAT Exempt",
   non_vat: "Non-VAT",
 };
-
-function formatCurrency(amount: string | number): string {
-  const num = typeof amount === "string" ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(num);
-}
-
-function formatDate(dateStr: string): string {
-  const datePart = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
-  return new Date(datePart + "T00:00:00").toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatDateTime(stamp: string): string {
-  const d = new Date(stamp);
-  const date = d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
-  const time = d.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true });
-  return `${date} · ${time}`;
-}
-
-function todayManila(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
-}
 
 export function Component() {
   const { activeOrg } = useActiveOrg();
