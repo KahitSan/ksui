@@ -182,6 +182,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
           <button
             type="button"
             disabled={!props.canShare}
+            aria-label="Toggle private transaction"
             onClick={() => {
               if (!props.canShare) return;
               props.setIsPrivate(!props.isPrivate);
