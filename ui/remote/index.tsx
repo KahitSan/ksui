@@ -87,133 +87,19 @@ import {
   isResolvableAttachment,
 } from "@kahitsan/plugin-ui";
 import { formatCurrency, formatDate, formatDateTime, todayManila } from "./lib/format";
-
-/** A pending file with a stable id for keying and an optional preview URL */
-interface PendingFile {
-  id: string;
-  file: File;
-  previewUrl: string | null;
-}
-
-let _pendingFileCounter = 0;
-function createPendingFile(file: File): PendingFile {
-  const isImage = file.type.startsWith("image/");
-  return {
-    id: `pf-${++_pendingFileCounter}-${Date.now()}`,
-    file,
-    previewUrl: isImage ? URL.createObjectURL(file) : null,
-  };
-}
-function revokePendingFile(pf: PendingFile) {
-  if (pf.previewUrl) URL.revokeObjectURL(pf.previewUrl);
-}
-
-interface Transaction {
-  id: number;
-  organization_id: number;
-  category: string;
-  subcategory: string | null;
-  source_account_id: number | null;
-  destination_account_id: number | null;
-  source_account_name: string | null;
-  destination_account_name: string | null;
-  amount: string;
-  currency: string;
-  description: string;
-  notes: string | null;
-  transaction_date: string;
-  is_private: boolean;
-  status: string;
-  is_backdated: boolean;
-  backdate_reason: string | null;
-  created_by: string;
-  created_by_name: string | null;
-  created_by_image: string | null;
-  updated_by: string | null;
-  updated_by_name: string | null;
-  updated_by_image: string | null;
-  attachment_count: string;
-  payee: string | null;
-  payee_id: number | null;
-  reference_number: string | null;
-  tax_type: string;
-  tax_rate: string;
-  tax_amount: string;
-  subtotal: string | null;
-  has_ewt: boolean;
-  ewt_rate: string | null;
-  ewt_amount: string | null;
-  payable_kind: string | null;
-  due_date: string | null;
-  cheque_number: string | null;
-  pdc_status: string | null;
-  created_at: string;
-  updated_at: string;
-  attachments?: Attachment[];
-  shared_with?: { user_id: string; name: string; image?: string | null }[];
-  shared_with_roles?: { role_code: string; label: string }[];
-  client_id?: number | null;
-  voucher_id?: number | null;
-  discount_amount?: string | null;
-  client_name?: string | null;
-  voucher?: { id: number; code: string; type: string; value: string } | null;
-  line_items?: TransactionLineItem[];
-  amount_collected?: string | null;
-  balance?: string | null;
-  payment_status?: "paid" | "partial" | "unpaid" | "voided" | null;
-  payments?: TransactionPayment[];
-}
-
-interface TransactionPayment {
-  id: number;
-  financial_account_id: number;
-  financial_account_name: string | null;
-  amount: string;
-  notes: string | null;
-  created_at: string;
-}
-
-interface TransactionLineItem {
-  id: number;
-  package_id: number | null;
-  package_variant_id: number | null;
-  description: string;
-  quantity: number;
-  unit_price: string;
-  duration_value: string;
-  duration_unit: "hour" | "day" | "month";
-  started_at: string | null;
-  ends_at: string | null;
-  status: string;
-  client_id: number | null;
-  package_name: string | null;
-  variant_name: string | null;
-  variant_kind: string | null;
-  client_name: string | null;
-}
-
-interface Attachment {
-  id: number;
-  file_name: string;
-  file_size: number;
-  mime_type: string;
-  s3_link: string;
-  created_at: string;
-}
-
-interface FinancialAccount {
-  id: number;
-  name: string;
-  type: string;
-  is_active: boolean;
-  balance?: number | string;
-}
-
-interface OrgMember {
-  user_id: string;
-  name: string;
-  role: string;
-}
+import {
+  type PendingFile,
+  createPendingFile,
+  revokePendingFile,
+  type Transaction,
+  type TransactionPayment,
+  type TransactionLineItem,
+  type Attachment,
+  type FinancialAccount,
+  type OrgMember,
+  type ShareableRole,
+  type IconComponent,
+} from "./lib/types";
 
 const CATEGORY_STYLES: Record<string, { label: string; class: string }> = {
   expense: { label: "Expense", class: "border-red-400/40 text-red-400 bg-red-500/20" },
@@ -221,8 +107,6 @@ const CATEGORY_STYLES: Record<string, { label: string; class: string }> = {
   business: { label: "Transfer", class: "border-blue-400/40 text-blue-400 bg-blue-500/20" },
   payable: { label: "Payable", class: "border-amber-400/40 text-amber-400 bg-amber-500/20" },
 };
-
-type IconComponent = (props: { size?: number; class?: string }) => JSX.Element;
 
 const CATEGORY_TONE: Record<
   string,
@@ -2864,11 +2748,6 @@ function DetailRow(props: {
       </div>
     </div>
   );
-}
-
-interface ShareableRole {
-  code: string;
-  label: string;
 }
 
 interface TransactionFormProps {
