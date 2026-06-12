@@ -61,7 +61,6 @@ import ArrowUpRight from "lucide-solid/icons/arrow-up-right";
 import ArrowRight from "lucide-solid/icons/arrow-right";
 import CalendarDays from "lucide-solid/icons/calendar-days";
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import TriangleAlert from "lucide-solid/icons/triangle-alert";
 
 import TransactionForm from "./components/TransactionForm";
 import {
@@ -103,21 +102,7 @@ import {
   TAX_TYPE_LABELS,
 } from "./lib/constants";
 import { type TransactionRow, makeAggregatedRow } from "./lib/rows";
-
-// Inline marker for a cell whose display name couldn't be resolved because the
-// owning plugin (financial-accounts / payees) was unavailable for the fetch.
-// Distinguishes "couldn't load" from a genuinely empty value ("—").
-function PeerUnavailable(props: { title: string }) {
-  return (
-    <span
-      class="inline-flex items-center text-amber-400/80"
-      title={props.title}
-      aria-label={props.title}
-    >
-      <TriangleAlert size={12} />
-    </span>
-  );
-}
+import { PeerUnavailable, SharedWithStack } from "./components/RowMarkers";
 
 export function Component() {
   const { activeOrg } = useActiveOrg();
@@ -1896,28 +1881,5 @@ export function Component() {
         }}
       </Show>
     </PermissionGate>
-  );
-}
-
-// --- Sub-components ---
-
-function SharedWithStack(props: {
-  people: { user_id: string; name: string; image?: string | null }[];
-}) {
-  const MAX = 3;
-  const visible = () => props.people.slice(0, MAX);
-  const extra = () => Math.max(0, props.people.length - MAX);
-  const fullList = () => props.people.map((p) => p.name).join(", ");
-  return (
-    <span class="hidden sm:flex items-center -space-x-1.5 shrink-0" title={`Shared with: ${fullList()}`}>
-      <For each={visible()}>
-        {(p) => <Avatar name={p.name} image={p.image} size="xs" class="ring-2 ring-zinc-950" />}
-      </For>
-      <Show when={extra() > 0}>
-        <span class="w-5 h-5 rounded-full ring-2 ring-zinc-950 bg-zinc-700 flex items-center justify-center text-[8px] font-semibold text-zinc-200 select-none">
-          +{extra()}
-        </span>
-      </Show>
-    </span>
   );
 }
