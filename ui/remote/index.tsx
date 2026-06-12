@@ -22,7 +22,6 @@ import "./styles.css"; // plugin Tailwind utilities (host injects /_ui/remote.cs
 import {
   createEffect,
   createSignal,
-  on,
   Show,
   createMemo,
   onMount,
@@ -88,6 +87,7 @@ import { type TransactionRow, makeAggregatedRow } from "./lib/rows";
 import { makeTransactionColumns } from "./components/transactionColumns";
 import { useLazyDayGroups } from "./hooks/useLazyDayGroups";
 import { useTransactionForm } from "./hooks/useTransactionForm";
+import { useTransactionFilters } from "./hooks/useTransactionFilters";
 
 export function Component() {
   const { activeOrg } = useActiveOrg();
@@ -100,16 +100,35 @@ export function Component() {
   const canBackdate = () => perms.has("transactions.backdate");
   const canShare = () => perms.hasAny("members.list_basic", "members.view");
 
-  const ALL_CATEGORIES = ["expense", "sale", "business", "payable"] as const;
+  const [groupSalesByDay, setGroupSalesByDay] = createSignal(false);
+  let resetAndRefetchFn: (() => void) | undefined;
 
-  const [activeCategories, setActiveCategories] = createSignal<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = createSignal("active");
-  const [accountFilter, setAccountFilter] = createSignal("");
-  const [subcategoryFilter, setSubcategoryFilter] = createSignal("");
-  const [createdByFilter, setCreatedByFilter] = createSignal("");
-  const [searchQuery, setSearchQuery] = createSignal("");
-  const [tableSearchTerm, setTableSearchTerm] = createSignal("");
-  const [pdcFilter, setPdcFilter] = createSignal<Set<string>>(new Set());
+  const filters = useTransactionFilters({
+    resetAndRefetch: () => resetAndRefetchFn?.(),
+    groupSalesByDay,
+    setGroupSalesByDay,
+  });
+  const {
+    activeCategories,
+    setActiveCategories,
+    statusFilter,
+    setStatusFilter,
+    accountFilter,
+    setAccountFilter,
+    subcategoryFilter,
+    setSubcategoryFilter,
+    createdByFilter,
+    setCreatedByFilter,
+    searchQuery,
+    setSearchQuery,
+    tableSearchTerm,
+    setTableSearchTerm,
+    pdcFilter,
+    setPdcFilter,
+    categoryFilterParam,
+    activeFilterCount,
+    clearAllFilters,
+  } = filters;
 
   const [incomeSubcategories, setIncomeSubcategories] = createSignal<string[]>([]);
   const [expenseSubcategories, setExpenseSubcategories] = createSignal<string[]>([]);
@@ -183,56 +202,6 @@ export function Component() {
     if (wantsExpense && !wantsIncome) return expenseSubcategories();
     return [...expenseSubcategories(), ...incomeSubcategories()];
   });
-
-  const categoryFilterParam = () => {
-    const cats = activeCategories();
-    if (cats.size === 0 || cats.size === ALL_CATEGORIES.length) return "";
-    return Array.from(cats).join(",");
-  };
-
-  const [groupSalesByDay, setGroupSalesByDay] = createSignal(false);
-
-  const activeFilterCount = createMemo(
-    () =>
-      (searchQuery() ? 1 : 0) +
-      activeCategories().size +
-      pdcFilter().size +
-      (accountFilter() ? 1 : 0) +
-      (subcategoryFilter() ? 1 : 0) +
-      (createdByFilter() ? 1 : 0) +
-      (statusFilter() !== "active" ? 1 : 0) +
-      (groupSalesByDay() ? 1 : 0),
-  );
-
-  function clearAllFilters() {
-    setActiveCategories(new Set<string>());
-    setPdcFilter(new Set<string>());
-    setAccountFilter("");
-    setSubcategoryFilter("");
-    setCreatedByFilter("");
-    setSearchQuery("");
-    setStatusFilter("active");
-    setGroupSalesByDay(false);
-  }
-  let resetAndRefetchFn: (() => void) | undefined;
-
-  createEffect(
-    on(
-      () => ({
-        type: activeCategories(),
-        pdc: pdcFilter(),
-        status: statusFilter(),
-        account: accountFilter(),
-        subcategory: subcategoryFilter(),
-        createdBy: createdByFilter(),
-        group: groupSalesByDay(),
-      }),
-      () => {
-        resetAndRefetchFn?.();
-      },
-      { defer: true },
-    ),
-  );
 
   // Accounts list (for filter dropdowns + the form's account picker).
   const [accounts, setAccounts] = createSignal<FinancialAccount[]>([]);
