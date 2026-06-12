@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.14
+
+### Patch Changes
+
+- d96cb61: Refactored the transactions plugin: decomposed server routes into focused modules (transactions-core, transactions-counter-patch, transactions-detail, transactions-status) and the UI into focused components, hooks, and library modules. No behavior change.
+
 ## 0.6.13
 
 ### Patch Changes
