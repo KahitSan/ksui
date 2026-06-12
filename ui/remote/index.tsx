@@ -102,6 +102,7 @@ import {
   PDC_OPTIONS,
   TAX_TYPE_LABELS,
 } from "./lib/constants";
+import { type TransactionRow, makeAggregatedRow } from "./lib/rows";
 
 // Inline marker for a cell whose display name couldn't be resolved because the
 // owning plugin (financial-accounts / payees) was unavailable for the fetch.
@@ -356,73 +357,6 @@ export function Component() {
       { defer: true },
     ),
   );
-
-  type TransactionRow = Transaction & {
-    _grouped?: boolean;
-    _groupKey?: string;
-    _groupDate?: string;
-    _groupCount?: number;
-    _groupTotal?: number;
-    _groupIds?: number[];
-    _isSubrow?: boolean;
-  };
-
-  function makeAggregatedRow(d: {
-    date: string;
-    count: number;
-    total: string | number;
-    currency: string;
-  }): TransactionRow {
-    const totalNum = typeof d.total === "string" ? parseFloat(d.total) : d.total;
-    const orgId = activeOrg()?.org_id ?? 0;
-    return {
-      id: -1,
-      organization_id: orgId,
-      category: "sale",
-      subcategory: null,
-      source_account_id: null,
-      destination_account_id: null,
-      source_account_name: null,
-      destination_account_name: null,
-      amount: String(Number.isFinite(totalNum) ? totalNum : 0),
-      currency: d.currency || "PHP",
-      description: "",
-      notes: null,
-      transaction_date: d.date,
-      is_private: false,
-      status: "active",
-      is_backdated: false,
-      backdate_reason: null,
-      created_by: "",
-      created_by_name: null,
-      created_by_image: null,
-      updated_by: null,
-      updated_by_name: null,
-      updated_by_image: null,
-      attachment_count: "0",
-      payee: null,
-      payee_id: null,
-      reference_number: null,
-      tax_type: "none",
-      tax_rate: "0",
-      tax_amount: "0",
-      subtotal: null,
-      has_ewt: false,
-      ewt_rate: null,
-      ewt_amount: null,
-      payable_kind: null,
-      due_date: null,
-      cheque_number: null,
-      pdc_status: null,
-      created_at: "",
-      updated_at: "",
-      _grouped: true,
-      _groupKey: d.date,
-      _groupDate: d.date,
-      _groupCount: d.count,
-      _groupTotal: Number.isFinite(totalNum) ? totalNum : 0,
-    };
-  }
 
   // Accounts list (for filter dropdowns + the form's account picker).
   const [accounts, setAccounts] = createSignal<FinancialAccount[]>([]);
@@ -1521,7 +1455,11 @@ export function Component() {
                 // Grouped view shows synthetic per-day rows (no account/payee
                 // columns to resolve) — clear any stale peer-unavailable flags.
                 setPeersUnavailable({ accounts: false, payees: false });
-                return { data: result.data.map(makeAggregatedRow), total: result.total };
+                const orgId = activeOrg()?.org_id ?? 0;
+                return {
+                  data: result.data.map((d) => makeAggregatedRow(d, orgId)),
+                  total: result.total,
+                };
               }
               const q = new URLSearchParams({
                 page: String(params.page),
