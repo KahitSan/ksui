@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "start": "tsx server/main.ts",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.ui.json",
     "version": "changeset version"
   },
   "dependencies": {
