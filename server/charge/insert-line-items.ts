@@ -33,11 +33,11 @@ export async function assertOrgOwnsRow(
   label: string,
 ): Promise<void> {
   const r = await client.query<{ exists: boolean }>(
-    `SELECT EXISTS (SELECT 1 FROM ${table} WHERE id = $1 AND organization_id = $2) AS exists`,
+    `SELECT EXISTS (SELECT 1 FROM ${table} WHERE id = $1 AND workspace_id = $2) AS exists`,
     [id, organizationId],
   );
   if (!r.rows[0]?.exists) {
-    throw new ChargeValidationError(404, `${label} not found in this organization`);
+    throw new ChargeValidationError(404, `${label} not found in this workspace`);
   }
 }
 
@@ -141,7 +141,7 @@ export async function insertLineItemsForTransaction(
 
     const liResult = await client.query(
       `INSERT INTO accounts.transaction_line_items
-         (transaction_id, organization_id, package_id, package_variant_id,
+         (transaction_id, workspace_id, package_id, package_variant_id,
           description, quantity, unit_price,
           duration_value, duration_unit, started_at, ends_at, status,
           client_id, customer_group_id)

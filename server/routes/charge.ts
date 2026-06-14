@@ -35,9 +35,9 @@ export function registerChargeRoutes(router: Router, ctx: ChargeRouteCtx): void 
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {
-        const params: unknown[] = [req.organizationId];
+        const params: unknown[] = [req.workspaceId];
         const conditions = [
-          "t.organization_id = $1",
+          "t.workspace_id = $1",
           "t.category = 'sale'",
           "t.status != 'voided'",
           "t.amount > 0",
@@ -119,14 +119,14 @@ export function registerChargeRoutes(router: Router, ctx: ChargeRouteCtx): void 
     requireOrg,
     requirePermission("transactions.create"),
     async (req: Request, res: Response) => {
-      if (!req.organizationId || !req.user?.id) {
+      if (!req.workspaceId || !req.user?.id) {
         res.status(400).json({ error: "Organization and user context required" });
         return;
       }
       try {
         const result = await runCharge({
           pool,
-          organizationId: req.organizationId,
+          organizationId: req.workspaceId,
           userId: req.user.id,
           identityHeader: identityHeaderOf(req),
           payload: req.body as ChargePayload,

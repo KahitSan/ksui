@@ -29,7 +29,7 @@
 //   POST   /:id/attachments        attach a file (multipart form: field "file")
 //   DELETE /:id/attachments/:aid   delete an attachment
 //
-// Every query carries WHERE organization_id = $N from req.organizationId
+// Every query carries WHERE workspace_id = $N from req.workspaceId
 // (forwarded by the kernel in the signed identity). Cross-plugin data
 // (package/variant/client names, voucher discount) is resolved over the kernel
 // RPC (lib/peers.ts) with graceful degradation when a peer plugin is absent —

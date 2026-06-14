@@ -70,7 +70,7 @@ function formatTimeAgo(iso: string): string {
 
 function activeOrgId(): string | null {
   try {
-    return localStorage.getItem("ks_active_org_id");
+    return localStorage.getItem("ks_active_workspace_id");
   } catch {
     return null;
   }

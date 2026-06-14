@@ -75,7 +75,7 @@ test("backdated transaction with currently-running session surfaces under today'
 }) => {
   const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
   const { today, yesterday } = manilaTodayAndYesterday();
-  const headers = { "x-organization-id": String(orgId), "content-type": "application/json" };
+  const headers = { "x-workspace-id": String(orgId), "content-type": "application/json" };
 
   // started_at = a few minutes ago, ends_at = several hours from now → live session.
   // Anchor to ten minutes ago to give a comfortable buffer either side of the
@@ -143,7 +143,7 @@ test("backdated transaction with currently-running session surfaces under today'
   // Today filter — must include the still-running lines.
   const todayRes = await request.get(
     `/api/transaction-line-items?active_on=${today}&include_voided=true&include_upcoming=true`,
-    { headers: { "x-organization-id": String(orgId) } },
+    { headers: { "x-workspace-id": String(orgId) } },
   );
   expect(todayRes.status()).toBe(200);
   const todayLines = (await todayRes.json()).data as Array<Record<string, unknown>>;
@@ -157,7 +157,7 @@ test("backdated transaction with currently-running session surfaces under today'
   // there (it belongs to yesterday's calendar date).
   const yestRes = await request.get(
     `/api/transaction-line-items?active_on=${yesterday}&include_voided=true&include_upcoming=true`,
-    { headers: { "x-organization-id": String(orgId) } },
+    { headers: { "x-workspace-id": String(orgId) } },
   );
   const yestLines = (await yestRes.json()).data as Array<Record<string, unknown>>;
   expect(yestLines.filter((li) => li.transaction_id === txnId).length).toBe(2);
@@ -173,7 +173,7 @@ test("backdated transaction with currently-running session surfaces under today'
   }).format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
   const farRes = await request.get(
     `/api/transaction-line-items?active_on=${farPast}&include_voided=true&include_upcoming=true`,
-    { headers: { "x-organization-id": String(orgId) } },
+    { headers: { "x-workspace-id": String(orgId) } },
   );
   const farLines = (await farRes.json()).data as Array<Record<string, unknown>>;
   expect(farLines.filter((li) => li.transaction_id === txnId).length).toBe(0);

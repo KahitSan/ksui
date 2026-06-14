@@ -44,7 +44,7 @@ async function firstId(
   path: string,
   orgId: number,
 ): Promise<number | null> {
-  const res = await api.get(path, { headers: { "x-organization-id": String(orgId) } });
+  const res = await api.get(path, { headers: { "x-workspace-id": String(orgId) } });
   if (!res.ok()) return null;
   const rows = ((await res.json()).data ?? []) as Array<{ id?: number }>;
   return rows[0]?.id ?? null;
@@ -90,7 +90,7 @@ async function lineFor(
 ): Promise<Record<string, unknown> | undefined> {
   const res = await api.get(
     `/api/transaction-line-items?active_on=${activeOn}&include_voided=true&include_upcoming=true`,
-    { headers: { "x-organization-id": String(orgId) } },
+    { headers: { "x-workspace-id": String(orgId) } },
   );
   expect(res.status()).toBe(200);
   const lines = (await res.json()).data as Array<Record<string, unknown>>;
@@ -101,7 +101,7 @@ test("editing a customer-group started_at drags ends_at with it (no inverted win
   request,
 }) => {
   const { orgId, accountId, clientId } = await signInAndProvision(request);
-  const headers = { "x-organization-id": String(orgId), "content-type": "application/json" };
+  const headers = { "x-workspace-id": String(orgId), "content-type": "application/json" };
 
   // Initial live session: started an hour ago, 8h block → ends ~7h from now.
   const initialStart = new Date(Date.now() - 1 * HOUR_MS).toISOString();

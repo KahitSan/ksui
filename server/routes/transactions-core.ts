@@ -12,7 +12,7 @@
 // AFTER the attachment routes — preserving the exact Express match order.
 //
 // Extracted verbatim from routes.ts. Every query keeps its
-// AND organization_id = $N org scoping, the ends_at recompute CASE (hour/day/
+// AND workspace_id = $N org scoping, the ends_at recompute CASE (hour/day/
 // month intervals), the both-sides tenant delete in visibility, the natural-day
 // posture, and all BEGIN/COMMIT/ROLLBACK unchanged. Cross-plugin data
 // (package/variant/client/payee names, voucher discount) is resolved over the
@@ -76,8 +76,8 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
       const offset = (page - 1) * limit;
 
       try {
-        const conditions: string[] = ["t.organization_id = $1"];
-        const params: unknown[] = [req.organizationId];
+        const conditions: string[] = ["t.workspace_id = $1"];
+        const params: unknown[] = [req.workspaceId];
         let idx = 2;
 
         const priv = privacyClause(req, params, idx);
@@ -305,7 +305,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         res.status(400).json({ error: "transaction_date must be YYYY-MM-DD" });
         return;
       }
-      if (!req.organizationId || !req.user?.id) {
+      if (!req.workspaceId || !req.user?.id) {
         res.status(400).json({ error: "Organization and user context required" });
         return;
       }
@@ -313,7 +313,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
       // Backdate gate (transactions.backdate). Admin/superuser bypass.
       const backdated = isBackdated(String(transaction_date));
       if (backdated) {
-        const isAdmin = req.user?.role === "superuser" || req.orgRole === "admin";
+        const isAdmin = req.user?.role === "superuser" || req.wsRole === "admin";
         const allowed = isAdmin || (req.permissions ?? []).includes("transactions.backdate");
         if (!allowed) {
           res.status(403).json({ error: "Missing permission: transactions.backdate" });
@@ -396,7 +396,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         await applyTenantContext(dbClient);
         const result = await dbClient.query(
           `INSERT INTO accounts.transactions
-             (organization_id, category, subcategory, source_account_id, destination_account_id,
+             (workspace_id, category, subcategory, source_account_id, destination_account_id,
               amount, description, notes, transaction_date, is_private, is_backdated, backdate_reason,
               created_by, updated_by, reference_number, tax_type, tax_rate, tax_amount, subtotal,
               payable_kind, due_date, cheque_number, pdc_status, has_ewt, ewt_rate, ewt_amount, client_id,
@@ -405,7 +405,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
                    $19, $20, $21, $22, $23, $24, $25, $26, $27)
            RETURNING *`,
           [
-            req.organizationId,
+            req.workspaceId,
             category,
             validatedSubcategory,
             source_account_id || null,
@@ -515,8 +515,8 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
 
       try {
         const existing = await pool.query(
-          `SELECT * FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
-          [id, req.organizationId],
+          `SELECT * FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
+          [id, req.workspaceId],
         );
         if (existing.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
@@ -588,7 +588,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           const backdated = isBackdated(String(transaction_date));
           const effectiveReason = backdate_reason?.trim() || reason?.trim();
           if (backdated) {
-            const isAdmin = req.user?.role === "superuser" || req.orgRole === "admin";
+            const isAdmin = req.user?.role === "superuser" || req.wsRole === "admin";
             const allowed = isAdmin || (req.permissions ?? []).includes("transactions.backdate");
             if (!allowed) {
               res.status(403).json({ error: "Missing permission: transactions.backdate" });
@@ -720,7 +720,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         sets.push(`updated_at = NOW()`);
         sets.push(`updated_by = $${idx++}`);
         params.push(req.user?.id ?? null);
-        params.push(id, req.organizationId);
+        params.push(id, req.workspaceId);
 
         let dbClient: import("pg").PoolClient | null = null;
         try {
@@ -728,15 +728,15 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           await dbClient.query("BEGIN");
           await applyTenantContext(dbClient);
           const result = await dbClient.query(
-            `UPDATE accounts.transactions SET ${sets.join(", ")} WHERE id = $${idx++} AND organization_id = $${idx} RETURNING *`,
+            `UPDATE accounts.transactions SET ${sets.join(", ")} WHERE id = $${idx++} AND workspace_id = $${idx} RETURNING *`,
             params,
           );
           // Append an audit row when a reason is supplied.
           if (reason && String(reason).trim()) {
             await dbClient.query(
-              `INSERT INTO accounts.transaction_edits (transaction_id, organization_id, edited_by, reason, kind)
+              `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
                  VALUES ($1, $2, $3, $4, 'edit')`,
-              [id, req.organizationId, req.user?.id ?? "", String(reason).trim()],
+              [id, req.workspaceId, req.user?.id ?? "", String(reason).trim()],
             );
           }
           await dbClient.query("COMMIT");

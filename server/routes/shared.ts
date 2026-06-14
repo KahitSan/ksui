@@ -51,10 +51,10 @@ export async function resolveUserNames(
 // shared on it, or to an admin/superuser (who bypass entirely). Returns the
 // SQL fragment + the next param index.
 export function privacyClause(req: Request, params: unknown[], startIdx: number): string | null {
-  const isAdmin = req.orgRole === "admin" || req.user?.role === "superuser";
+  const isAdmin = req.wsRole === "admin" || req.user?.role === "superuser";
   if (isAdmin) return null;
   const userId = req.user?.id ?? "";
   const frag = `(t.is_private = false OR t.created_by = $${startIdx} OR EXISTS (SELECT 1 FROM accounts.transaction_visibility tv WHERE tv.transaction_id = t.id AND tv.user_id = $${startIdx}) OR EXISTS (SELECT 1 FROM accounts.transaction_visibility_role tvr WHERE tvr.transaction_id = t.id AND tvr.role_code = $${startIdx + 1}))`;
-  params.push(userId, req.orgRole ?? "");
+  params.push(userId, req.wsRole ?? "");
   return frag;
 }

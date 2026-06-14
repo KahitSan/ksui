@@ -15,7 +15,7 @@
 //     the kernel RPC (lib/peers.ts) with graceful degradation, never raw
 //     cross-schema SQL.
 //   - The permission/privacy/backdate gates read the kernel-forwarded
-//     req.permissions / req.orgRole instead of the monolith's async
+//     req.permissions / req.wsRole instead of the monolith's async
 //     getPermissionsFor / canBypassTransactionPrivacy.
 //   - The monolith's `links.create` shadow-write is dropped (no cross-process
 //     links runner in the fork; the in-row package_variant_id FK is the source
@@ -45,7 +45,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
   // Admin/superuser bypass the per-row privacy gate. Mirrors the monolith's
   // canBypassTransactionPrivacy, resolved from the kernel-forwarded identity.
   const canBypassPrivacy = (req: Request): boolean =>
-    req.orgRole === "admin" || req.user?.role === "superuser";
+    req.wsRole === "admin" || req.user?.role === "superuser";
 
   // ── GET /api/transaction-line-items ──────────────────────────────────────
   //
@@ -64,8 +64,8 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
     requireOrg,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
-      if (!req.organizationId) {
-        res.status(403).json({ error: "No organization context" });
+      if (!req.workspaceId) {
+        res.status(403).json({ error: "No workspace context" });
         return;
       }
 
@@ -91,9 +91,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
       let idx = 1;
       const conditions: string[] = [];
 
-      // Org isolation (line items carry organization_id directly).
-      conditions.push(`li.organization_id = $${idx++}`);
-      params.push(req.organizationId);
+      // Org isolation (line items carry workspace_id directly).
+      conditions.push(`li.workspace_id = $${idx++}`);
+      params.push(req.workspaceId);
 
       // Privacy: parent transaction must be public, owned, or shared.
       if (userId && !canBypassPrivacy(req)) {
@@ -106,7 +106,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
              WHERE tvr.transaction_id = t.id AND tvr.role_code = $${idx + 1}
            ))`,
         );
-        params.push(userId, req.orgRole ?? "");
+        params.push(userId, req.wsRole ?? "");
         idx += 2;
       }
 
@@ -146,7 +146,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           `(li.started_at IS NOT NULL AND li.started_at < $${idx}::date AND EXISTS (
              SELECT 1 FROM accounts.transaction_line_items sib
               WHERE sib.transaction_id = li.transaction_id
-                AND sib.organization_id = li.organization_id
+                AND sib.workspace_id = li.workspace_id
                 AND COALESCE(sib.client_id, -1) = COALESCE(li.client_id, -1)
                 AND sib.status != 'voided'
                 AND sib.ends_at IS NOT NULL AND sib.ends_at > NOW()
@@ -213,7 +213,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           `WITH availment_groups AS (
              SELECT
                sib.transaction_id,
-               sib.organization_id,
+               sib.workspace_id,
                COALESCE(sib.client_id, -1) AS client_key,
                (
                  MIN(sib.started_at)
@@ -228,12 +228,12 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
                                      END), 0) * INTERVAL '1 month'
                ) AS combined_end
              FROM accounts.transaction_line_items sib
-             WHERE sib.organization_id = $1
+             WHERE sib.workspace_id = $1
                AND sib.status != 'voided'
                AND sib.started_at IS NOT NULL
                AND sib.duration_value IS NOT NULL
                AND sib.duration_unit IS NOT NULL
-             GROUP BY sib.transaction_id, sib.organization_id, COALESCE(sib.client_id, -1)
+             GROUP BY sib.transaction_id, sib.workspace_id, COALESCE(sib.client_id, -1)
              HAVING COUNT(*) >= 2
              -- NOTE: payment_count_by_txn and payment_methods_by_txn both scan
              -- accounts.transaction_payments. PostgreSQL may inline them into one
@@ -244,30 +244,30 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
 
            ), payment_count_by_txn AS (
              SELECT tp.transaction_id,
-                    tp.organization_id,
+                    tp.workspace_id,
                     COUNT(*)::int AS payment_count
                FROM accounts.transaction_payments tp
-              WHERE tp.organization_id = $1
-              GROUP BY tp.transaction_id, tp.organization_id
+              WHERE tp.workspace_id = $1
+              GROUP BY tp.transaction_id, tp.workspace_id
            ), payment_methods_by_txn AS (
               -- Distinct payment accounts per transaction, ordered by first use.
               -- Names + avatars resolve client-side from the accounts index so
               -- only the ids are carried. A split payment across two accounts
               -- (e.g. part GCash, part Cash) yields both, in pay order.
              SELECT transaction_id,
-                    organization_id,
+                    workspace_id,
                     array_agg(financial_account_id ORDER BY first_at) AS payment_account_ids
                FROM (
                  SELECT tp.transaction_id,
-                        tp.organization_id,
+                        tp.workspace_id,
                         tp.financial_account_id,
                         MIN(tp.created_at) AS first_at
                    FROM accounts.transaction_payments tp
-                  WHERE tp.organization_id = $1
+                  WHERE tp.workspace_id = $1
                     AND tp.financial_account_id IS NOT NULL
-                  GROUP BY tp.transaction_id, tp.organization_id, tp.financial_account_id
+                  GROUP BY tp.transaction_id, tp.workspace_id, tp.financial_account_id
                ) distinct_accts
-              GROUP BY transaction_id, organization_id
+              GROUP BY transaction_id, workspace_id
            )
            SELECT
              li.id,
@@ -309,14 +309,14 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
            LEFT JOIN accounts.transaction_customer_groups cg ON cg.id = li.customer_group_id
            LEFT JOIN availment_groups ag
              ON ag.transaction_id = li.transaction_id
-            AND ag.organization_id = li.organization_id
+            AND ag.workspace_id = li.workspace_id
             AND ag.client_key = COALESCE(li.client_id, -1)
            LEFT JOIN payment_count_by_txn pc
              ON pc.transaction_id = li.transaction_id
-            AND pc.organization_id = li.organization_id
+            AND pc.workspace_id = li.workspace_id
            LEFT JOIN payment_methods_by_txn pm
              ON pm.transaction_id = li.transaction_id
-            AND pm.organization_id = li.organization_id
+            AND pm.workspace_id = li.workspace_id
            ${where}
            ORDER BY
              CASE WHEN li.status = 'active' AND li.ends_at IS NOT NULL THEN 0 ELSE 1 END,
@@ -353,11 +353,11 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         }>(
           `SELECT transaction_id, client_id, "position"
              FROM accounts.transaction_customers
-            WHERE organization_id = $1
+            WHERE workspace_id = $1
               AND transaction_id = ANY($2::int[])
             ORDER BY transaction_id, "position" ASC, client_id ASC`,
           [
-            req.organizationId,
+            req.workspaceId,
             [...new Set(result.rows.map((r) => r.transaction_id as number))],
           ],
         );
@@ -441,8 +441,8 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
     requireOrg,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
-      if (!req.organizationId) {
-        res.status(403).json({ error: "No organization context" });
+      if (!req.workspaceId) {
+        res.status(403).json({ error: "No workspace context" });
         return;
       }
       const clientId = parseInt(String(req.query.client_id ?? ""), 10);
@@ -464,15 +464,15 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
              FROM accounts.transaction_line_items li
              JOIN accounts.transactions t
                ON t.id = li.transaction_id
-              AND t.organization_id = li.organization_id
-            WHERE li.organization_id = $1
+              AND t.workspace_id = li.workspace_id
+            WHERE li.workspace_id = $1
               AND COALESCE(li.client_id, t.client_id) = $2
               AND li.status IN ('active', 'completed')
               AND li.ends_at > NOW()
               AND li.package_id IS NOT NULL
               AND li.package_variant_id IS NOT NULL
             ORDER BY li.package_id, li.ends_at DESC`,
-          [req.organizationId, clientId],
+          [req.workspaceId, clientId],
         );
 
         if (result.rows.length === 0) {
@@ -526,8 +526,8 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
     requireOrg,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
-      if (!req.organizationId) {
-        res.status(403).json({ error: "No organization context" });
+      if (!req.workspaceId) {
+        res.status(403).json({ error: "No workspace context" });
         return;
       }
       const id = parseInt(req.params.id as string);
@@ -565,11 +565,11 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         const lineRes = await pool.query(
           `SELECT started_at, ends_at
              FROM accounts.transaction_line_items
-            WHERE id = $1 AND organization_id = $2 AND status IN ('active','expired')`,
-          [id, req.organizationId],
+            WHERE id = $1 AND workspace_id = $2 AND status IN ('active','expired')`,
+          [id, req.workspaceId],
         );
         if (lineRes.rows.length === 0) {
-          res.status(404).json({ error: "Settleable line item not found in this organization" });
+          res.status(404).json({ error: "Settleable line item not found in this workspace" });
           return;
         }
         const startedAt: Date | null = lineRes.rows[0].started_at
@@ -594,7 +594,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           bookedEndAlreadyPassed &&
           customEndsAt.getTime() < bookedEnd.getTime());
       if (requiresBackdate) {
-        const isAdmin = req.user?.role === "superuser" || req.orgRole === "admin";
+        const isAdmin = req.user?.role === "superuser" || req.wsRole === "admin";
         const allowed = isAdmin || (req.permissions ?? []).includes("transactions.backdate");
         if (!allowed) {
           res.status(403).json({ error: "Missing permission: transactions.backdate" });
@@ -604,7 +604,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
 
       try {
         let setClause: string;
-        const params: unknown[] = [id, req.organizationId];
+        const params: unknown[] = [id, req.workspaceId];
         if (mode === "as_is") {
           if (customEndsAt) {
             setClause = `status = 'completed', ends_at = $3, updated_at = NOW()`;
@@ -618,7 +618,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         const result = await pool.query(
           `UPDATE accounts.transaction_line_items
               SET ${setClause}
-            WHERE id = $1 AND organization_id = $2 AND status IN ('active','expired')
+            WHERE id = $1 AND workspace_id = $2 AND status IN ('active','expired')
             RETURNING *`,
           params,
         );
@@ -627,14 +627,14 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           // partial-failure retry from the counter Settle action doesn't error.
           const existing = await pool.query(
             `SELECT * FROM accounts.transaction_line_items
-              WHERE id = $1 AND organization_id = $2 AND status = 'completed'`,
-            [id, req.organizationId],
+              WHERE id = $1 AND workspace_id = $2 AND status = 'completed'`,
+            [id, req.workspaceId],
           );
           if (existing.rows.length > 0) {
             res.json(existing.rows[0]);
             return;
           }
-          res.status(404).json({ error: "Settleable line item not found in this organization" });
+          res.status(404).json({ error: "Settleable line item not found in this workspace" });
           return;
         }
         res.json(result.rows[0]);
@@ -658,8 +658,8 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
     requireOrg,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
-      if (!req.organizationId || !req.user?.id) {
-        res.status(403).json({ error: "No organization context" });
+      if (!req.workspaceId || !req.user?.id) {
+        res.status(403).json({ error: "No workspace context" });
         return;
       }
       const id = parseInt(req.params.id as string);
@@ -690,13 +690,13 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         const srcRes = await client.query(
           `SELECT id, transaction_id, ends_at, client_id, status, customer_group_id
              FROM accounts.transaction_line_items
-            WHERE id = $1 AND organization_id = $2
+            WHERE id = $1 AND workspace_id = $2
             FOR UPDATE`,
-          [id, req.organizationId],
+          [id, req.workspaceId],
         );
         if (srcRes.rows.length === 0) {
           await client.query("ROLLBACK");
-          res.status(404).json({ error: "Line item not found in this organization" });
+          res.status(404).json({ error: "Line item not found in this workspace" });
           return;
         }
         const src = srcRes.rows[0] as {
@@ -722,7 +722,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         const variant = variants?.[0];
         if (variant == null) {
           await client.query("ROLLBACK");
-          res.status(400).json({ error: "package_variant_id must belong to this organization" });
+          res.status(400).json({ error: "package_variant_id must belong to this workspace" });
           return;
         }
         if (variant.duration_value == null) {
@@ -745,7 +745,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
 
         const insertResult = await client.query(
           `INSERT INTO accounts.transaction_line_items
-             (transaction_id, organization_id, package_id, package_variant_id,
+             (transaction_id, workspace_id, package_id, package_variant_id,
               description, quantity, unit_price, duration_value, duration_unit,
               started_at, ends_at, status, client_id, customer_group_id)
            VALUES ($1, $2, $3, $4,
@@ -755,7 +755,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
            RETURNING *`,
           [
             src.transaction_id,
-            req.organizationId,
+            req.workspaceId,
             variant.package_id,
             package_variant_id,
             variant.name,
@@ -773,16 +773,16 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         await client.query(
           `UPDATE accounts.transactions
               SET amount = amount + $1, subtotal = COALESCE(subtotal, amount) + $1, updated_at = NOW(), updated_by = $2
-            WHERE id = $3 AND organization_id = $4`,
-          [extensionCost, req.user.id, src.transaction_id, req.organizationId],
+            WHERE id = $3 AND workspace_id = $4`,
+          [extensionCost, req.user.id, src.transaction_id, req.workspaceId],
         );
 
         if (src.customer_group_id != null) {
           await client.query(
             `UPDATE accounts.transaction_customer_groups
                 SET subtotal = subtotal + $1
-              WHERE id = $2 AND organization_id = $3`,
-            [extensionCost, src.customer_group_id, req.organizationId],
+              WHERE id = $2 AND workspace_id = $3`,
+            [extensionCost, src.customer_group_id, req.workspaceId],
           );
         }
 
@@ -817,8 +817,8 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
     requireOrg,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
-      if (!req.organizationId || !req.user?.id) {
-        res.status(403).json({ error: "No organization context" });
+      if (!req.workspaceId || !req.user?.id) {
+        res.status(403).json({ error: "No workspace context" });
         return;
       }
       const id = parseInt(req.params.id as string);
@@ -849,13 +849,13 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         const srcRes = await client.query(
           `SELECT id, transaction_id, package_id, ends_at, client_id, customer_group_id
              FROM accounts.transaction_line_items
-            WHERE id = $1 AND organization_id = $2
+            WHERE id = $1 AND workspace_id = $2
             FOR UPDATE`,
-          [id, req.organizationId],
+          [id, req.workspaceId],
         );
         if (srcRes.rows.length === 0) {
           await client.query("ROLLBACK");
-          res.status(404).json({ error: "Line item not found in this organization" });
+          res.status(404).json({ error: "Line item not found in this workspace" });
           return;
         }
         const src = srcRes.rows[0] as {
@@ -873,7 +873,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         const variant = variants?.[0];
         if (variant == null) {
           await client.query("ROLLBACK");
-          res.status(400).json({ error: "package_variant_id must belong to this organization" });
+          res.status(400).json({ error: "package_variant_id must belong to this workspace" });
           return;
         }
         if (variant.duration_value == null) {
@@ -901,7 +901,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
 
         const insertResult = await client.query(
           `INSERT INTO accounts.transaction_line_items
-             (transaction_id, organization_id, package_id, package_variant_id,
+             (transaction_id, workspace_id, package_id, package_variant_id,
               description, quantity, unit_price, duration_value, duration_unit,
               started_at, ends_at, status, client_id, customer_group_id)
            VALUES ($1, $2, $3, $4,
@@ -911,7 +911,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
            RETURNING *`,
           [
             src.transaction_id,
-            req.organizationId,
+            req.workspaceId,
             variant.package_id,
             package_variant_id,
             variant.name,
@@ -929,16 +929,16 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         await client.query(
           `UPDATE accounts.transactions
               SET amount = amount + $1, subtotal = COALESCE(subtotal, amount) + $1, updated_at = NOW(), updated_by = $2
-            WHERE id = $3 AND organization_id = $4`,
-          [extensionCost, req.user.id, src.transaction_id, req.organizationId],
+            WHERE id = $3 AND workspace_id = $4`,
+          [extensionCost, req.user.id, src.transaction_id, req.workspaceId],
         );
 
         if (src.customer_group_id != null) {
           await client.query(
             `UPDATE accounts.transaction_customer_groups
                 SET subtotal = subtotal + $1
-              WHERE id = $2 AND organization_id = $3`,
-            [extensionCost, src.customer_group_id, req.organizationId],
+              WHERE id = $2 AND workspace_id = $3`,
+            [extensionCost, src.customer_group_id, req.workspaceId],
           );
         }
 

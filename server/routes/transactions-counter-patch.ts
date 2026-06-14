@@ -4,7 +4,7 @@
 // and the payer-group EXISTS sync are unchanged.
 //
 // Extracted verbatim from transactions-core.ts. Every query keeps its
-// AND organization_id = $N org scoping, the ends_at recompute CASE, the
+// AND workspace_id = $N org scoping, the ends_at recompute CASE, the
 // COALESCE(quantity, 1) math, the conditional display_name SET, and all
 // BEGIN/COMMIT/ROLLBACK unchanged.
 
@@ -39,8 +39,8 @@ export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): v
       let dbClient: import("pg").PoolClient | null = null;
       try {
         const exists = await pool.query(
-          `SELECT id FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
-          [id, req.organizationId],
+          `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
+          [id, req.workspaceId],
         );
         if (exists.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
@@ -50,8 +50,8 @@ export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): v
         await dbClient.query("BEGIN");
         await applyTenantContext(dbClient);
         await dbClient.query(
-          `DELETE FROM accounts.transaction_customers WHERE transaction_id = $1 AND organization_id = $2`,
-          [id, req.organizationId],
+          `DELETE FROM accounts.transaction_customers WHERE transaction_id = $1 AND workspace_id = $2`,
+          [id, req.workspaceId],
         );
         if (client_ids.length > 0) {
           const values: string[] = [];
@@ -59,19 +59,19 @@ export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): v
           let idx = 1;
           for (let i = 0; i < client_ids.length; i++) {
             values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++})`);
-            params.push(id, client_ids[i], req.organizationId, i);
+            params.push(id, client_ids[i], req.workspaceId, i);
           }
           await dbClient.query(
-            `INSERT INTO accounts.transaction_customers (transaction_id, client_id, organization_id, position)
+            `INSERT INTO accounts.transaction_customers (transaction_id, client_id, workspace_id, position)
              VALUES ${values.join(", ")}
              ON CONFLICT (transaction_id, client_id) DO UPDATE SET position = EXCLUDED.position`,
             params,
           );
         }
         await dbClient.query(
-          `INSERT INTO accounts.transaction_edits (transaction_id, organization_id, edited_by, reason, kind)
+          `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
              VALUES ($1, $2, $3, $4, 'counter_edit')`,
-          [id, req.organizationId, req.user?.id ?? "", String(reason).trim()],
+          [id, req.workspaceId, req.user?.id ?? "", String(reason).trim()],
         );
         await dbClient.query("COMMIT");
         res.json({ ok: true });
@@ -119,8 +119,8 @@ export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): v
       let dbClient: import("pg").PoolClient | null = null;
       try {
         const exists = await pool.query(
-          `SELECT id FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
-          [id, req.organizationId],
+          `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
+          [id, req.workspaceId],
         );
         if (exists.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
@@ -151,14 +151,14 @@ export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): v
                       ELSE ends_at
                     END,
                     updated_at = NOW()
-              WHERE customer_group_id = $2 AND transaction_id = $3 AND organization_id = $4`,
-            [u.started_at, u.customer_group_id, id, req.organizationId],
+              WHERE customer_group_id = $2 AND transaction_id = $3 AND workspace_id = $4`,
+            [u.started_at, u.customer_group_id, id, req.workspaceId],
           );
         }
         await dbClient.query(
-          `INSERT INTO accounts.transaction_edits (transaction_id, organization_id, edited_by, reason, kind)
+          `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
              VALUES ($1, $2, $3, $4, 'counter_edit')`,
-          [id, req.organizationId, req.user?.id ?? "", String(reason).trim()],
+          [id, req.workspaceId, req.user?.id ?? "", String(reason).trim()],
         );
         await dbClient.query("COMMIT");
         res.json({ ok: true });
@@ -204,16 +204,16 @@ export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): v
       let dbClient: import("pg").PoolClient | null = null;
       try {
         const exists = await pool.query(
-          `SELECT id FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
-          [id, req.organizationId],
+          `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
+          [id, req.workspaceId],
         );
         if (exists.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
           return;
         }
         const cgExists = await pool.query(
-          `SELECT id FROM accounts.transaction_customer_groups WHERE id = $1 AND transaction_id = $2 AND organization_id = $3`,
-          [customer_group_id, id, req.organizationId],
+          `SELECT id FROM accounts.transaction_customer_groups WHERE id = $1 AND transaction_id = $2 AND workspace_id = $3`,
+          [customer_group_id, id, req.workspaceId],
         );
         if (cgExists.rows.length === 0) {
           res.status(404).json({ error: "Customer group not found" });
@@ -232,14 +232,14 @@ export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): v
         await dbClient.query(
           `UPDATE accounts.transaction_customer_groups
               SET client_id = $1${newDisplayName !== undefined ? ", display_name = $5" : ""}
-            WHERE id = $2 AND transaction_id = $3 AND organization_id = $4`,
+            WHERE id = $2 AND transaction_id = $3 AND workspace_id = $4`,
           newDisplayName !== undefined
-            ? [client_id ?? null, customer_group_id, id, req.organizationId, newDisplayName]
-            : [client_id ?? null, customer_group_id, id, req.organizationId],
+            ? [client_id ?? null, customer_group_id, id, req.workspaceId, newDisplayName]
+            : [client_id ?? null, customer_group_id, id, req.workspaceId],
         );
         await dbClient.query(
-          `UPDATE accounts.transaction_line_items SET client_id = $1 WHERE customer_group_id = $2 AND transaction_id = $3 AND organization_id = $4`,
-          [client_id ?? null, customer_group_id, id, req.organizationId],
+          `UPDATE accounts.transaction_line_items SET client_id = $1 WHERE customer_group_id = $2 AND transaction_id = $3 AND workspace_id = $4`,
+          [client_id ?? null, customer_group_id, id, req.workspaceId],
         );
         // When the payer's customer group changes clients, sync the
         // top-level transaction.client_id so the counter listing card
@@ -249,15 +249,15 @@ export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): v
         await dbClient.query(
           `UPDATE accounts.transactions
               SET client_id = $1
-            WHERE id = $2 AND organization_id = $3
+            WHERE id = $2 AND workspace_id = $3
               AND EXISTS (SELECT 1 FROM accounts.transaction_customer_groups
                            WHERE id = $4 AND is_payer = TRUE)`,
-          [client_id ?? null, id, req.organizationId, customer_group_id],
+          [client_id ?? null, id, req.workspaceId, customer_group_id],
         );
         await dbClient.query(
-          `INSERT INTO accounts.transaction_edits (transaction_id, organization_id, edited_by, reason, kind)
+          `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
              VALUES ($1, $2, $3, $4, 'counter_edit')`,
-          [id, req.organizationId, req.user?.id ?? "", String(reason).trim()],
+          [id, req.workspaceId, req.user?.id ?? "", String(reason).trim()],
         );
         await dbClient.query("COMMIT");
         res.json({ ok: true });

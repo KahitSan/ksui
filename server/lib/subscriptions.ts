@@ -103,9 +103,9 @@ export async function listSubscriptions(
   // Qualifying line items from accounts.* (privacy enforced here so a private
   // renewal can't leak through the aggregate). No packages/clients JOIN — those
   // schemas are off this plugin's search_path; we resolve them over RPC below.
-  const params: unknown[] = [req.organizationId];
+  const params: unknown[] = [req.workspaceId];
   const conditions = [
-    "li.organization_id = $1",
+    "li.workspace_id = $1",
     "li.client_id IS NOT NULL",
     "li.duration_unit IN ('day', 'month')",
     "li.ends_at IS NOT NULL",
@@ -303,7 +303,7 @@ export async function renewSubscription(
   // in their own schemas). Cross-package renewals are allowed (era upgrades).
   const variants = (await findVariantsByIds([package_variant_id], idh)) ?? [];
   const variant = variants.find((v) => v.id === package_variant_id);
-  if (!variant) throw new RenewError(400, "package_variant_id must belong to this organization");
+  if (!variant) throw new RenewError(400, "package_variant_id must belong to this workspace");
   const durationUnit = variant.duration_unit;
   if (durationUnit !== "day" && durationUnit !== "month") {
     throw new RenewError(400, "renewal variant must have day or month duration");
@@ -321,14 +321,14 @@ export async function renewSubscription(
     const srcRes = await client.query(
       `SELECT li.id, li.client_id, li.package_id
          FROM accounts.transaction_line_items li
-        WHERE li.id = $1 AND li.organization_id = $2
+        WHERE li.id = $1 AND li.workspace_id = $2
           AND li.duration_unit IN ('day', 'month')
           AND li.status <> 'voided'`,
-      [sourceId, req.organizationId],
+      [sourceId, req.workspaceId],
     );
     if (srcRes.rows.length === 0 || srcRes.rows[0].client_id == null) {
       await client.query("ROLLBACK");
-      throw new RenewError(404, "Source line item not found in this organization");
+      throw new RenewError(404, "Source line item not found in this workspace");
     }
     const src = srcRes.rows[0] as { client_id: number; package_id: number };
 
@@ -342,7 +342,7 @@ export async function renewSubscription(
     // advisory lock rather than a row-level FOR UPDATE.
     const chainKey = lineageSlug ?? `pkg:${src.package_id}`;
     await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [
-      `renew:${req.organizationId}:${src.client_id}:${chainKey}`,
+      `renew:${req.workspaceId}:${src.client_id}:${chainKey}`,
     ]);
 
     // Latest ends_at across the (client, lineage) chain. lineage isn't in
@@ -353,10 +353,10 @@ export async function renewSubscription(
       `SELECT li.id, li.package_id, li.ends_at
          FROM accounts.transaction_line_items li
          JOIN accounts.transactions t ON t.id = li.transaction_id
-        WHERE li.organization_id = $1 AND li.client_id = $2
+        WHERE li.workspace_id = $1 AND li.client_id = $2
           AND li.duration_unit IN ('day', 'month')
           AND li.status <> 'voided' AND t.status <> 'voided'`,
-      [req.organizationId, src.client_id],
+      [req.workspaceId, src.client_id],
     );
     const chainPkgIds = [...new Set(chainRes.rows.map((r) => r.package_id as number))];
     const chainPkgs = chainPkgIds.length > 0 ? ((await findPackagesByIds(chainPkgIds, idh)) ?? []) : [];
@@ -372,12 +372,12 @@ export async function renewSubscription(
 
     // Destination account must belong to this org (accounts.* — owned).
     const acctRes = await client.query(
-      `SELECT id FROM accounts.financial_accounts WHERE id = $1 AND organization_id = $2`,
-      [destination_account_id, req.organizationId],
+      `SELECT id FROM accounts.financial_accounts WHERE id = $1 AND workspace_id = $2`,
+      [destination_account_id, req.workspaceId],
     );
     if (acctRes.rows.length === 0) {
       await client.query("ROLLBACK");
-      throw new RenewError(400, "destination_account_id must belong to this organization");
+      throw new RenewError(400, "destination_account_id must belong to this workspace");
     }
 
     const totalUnits = durationValue * qty;
@@ -391,7 +391,7 @@ export async function renewSubscription(
 
     const txResult = await client.query(
       `INSERT INTO accounts.transactions
-         (organization_id, category, subcategory, destination_account_id, amount, description,
+         (workspace_id, category, subcategory, destination_account_id, amount, description,
           transaction_date, status, created_by,
           tax_type, tax_rate, tax_amount, subtotal,
           client_id, discount_amount)
@@ -399,14 +399,14 @@ export async function renewSubscription(
                CURRENT_DATE, 'completed', $5,
                'vat_inclusive', 0, 0, $3,
                $6, 0)
-       RETURNING id, organization_id, category, amount, description, transaction_date, status, client_id, destination_account_id`,
-      [req.organizationId, destination_account_id, total, `Renewal × ${variant.name}`, req.user!.id, src.client_id],
+       RETURNING id, workspace_id, category, amount, description, transaction_date, status, client_id, destination_account_id`,
+      [req.workspaceId, destination_account_id, total, `Renewal × ${variant.name}`, req.user!.id, src.client_id],
     );
     const txn = txResult.rows[0];
 
     const liResult = await client.query(
       `INSERT INTO accounts.transaction_line_items
-         (transaction_id, organization_id, package_id, package_variant_id,
+         (transaction_id, workspace_id, package_id, package_variant_id,
           description, quantity, unit_price, duration_value, duration_unit,
           started_at, ends_at, status, client_id)
        VALUES ($1, $2, $3, $4,
@@ -417,7 +417,7 @@ export async function renewSubscription(
                  quantity, unit_price, started_at, ends_at, status, client_id`,
       [
         txn.id,
-        req.organizationId,
+        req.workspaceId,
         variant.package_id,
         package_variant_id,
         variant.name,

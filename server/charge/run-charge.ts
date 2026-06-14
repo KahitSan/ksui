@@ -92,7 +92,7 @@ export async function runCharge(opts: {
       if (variant == null || variant.package_id !== line.package_id) {
         throw new ChargeValidationError(
           404,
-          "package_variant_id not found under package_id in this organization",
+          "package_variant_id not found under package_id in this workspace",
         );
       }
     }
@@ -271,7 +271,7 @@ export async function runCharge(opts: {
       // when absent; per-line started_at is set from each cg's anchor below.
       const txResult = await client.query(
         `INSERT INTO accounts.transactions
-           (organization_id, category, subcategory, destination_account_id, amount, description,
+           (workspace_id, category, subcategory, destination_account_id, amount, description,
             notes,
             transaction_date, status, created_by,
             tax_type, tax_rate, tax_amount, subtotal,
@@ -332,7 +332,7 @@ export async function runCharge(opts: {
       }
       const groupBatchRes = await client.query<{ id: number }>(
         `INSERT INTO accounts.transaction_customer_groups
-           (transaction_id, organization_id, position,
+           (transaction_id, workspace_id, position,
             client_id, display_name, note, voucher_id,
             subtotal, discount_amount, is_payer)
          VALUES ${groupValuesTuples.join(", ")}
@@ -378,7 +378,7 @@ export async function runCharge(opts: {
       // ── Legacy single-customer path ──────────────────────────────────────
       const txResult = await client.query(
         `INSERT INTO accounts.transactions
-           (organization_id, category, subcategory, destination_account_id, amount, description,
+           (workspace_id, category, subcategory, destination_account_id, amount, description,
             notes,
             transaction_date, status, created_by,
             tax_type, tax_rate, tax_amount, subtotal,
@@ -467,7 +467,7 @@ export async function runCharge(opts: {
       }
       await client.query(
         `INSERT INTO accounts.transaction_customers
-           (transaction_id, client_id, organization_id, position)
+           (transaction_id, client_id, workspace_id, position)
          VALUES ${values.join(", ")}
          ON CONFLICT (transaction_id, client_id) DO UPDATE SET position = EXCLUDED.position`,
         params,
@@ -482,7 +482,7 @@ export async function runCharge(opts: {
     if (cappedCollected > 0) {
       await client.query(
         `INSERT INTO accounts.transaction_payments
-           (transaction_id, organization_id, financial_account_id, amount, notes, created_at, updated_at)
+           (transaction_id, workspace_id, financial_account_id, amount, notes, created_at, updated_at)
          VALUES ($1, $2, $3, $4, NULL, NOW(), NOW())`,
         [txn.id, organizationId, payload.destination_account_id, cappedCollected],
       );

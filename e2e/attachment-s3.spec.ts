@@ -65,7 +65,7 @@ test("attachment upload stores bytes in object storage, records s3_link, and del
   playwright,
 }) => {
   const orgId = await signIn(request);
-  const headers = { "X-Organization-Id": String(orgId) };
+  const headers = { "X-Workspace-Id": String(orgId) };
 
   // A transaction to attach to.
   const charge = await request.post("/api/transactions/charge", {
@@ -116,7 +116,7 @@ test("attachment upload stores bytes in object storage, records s3_link, and del
 
 test("metadata-only POST without a file is rejected", async ({ request }) => {
   const orgId = await signIn(request);
-  const headers = { "X-Organization-Id": String(orgId) };
+  const headers = { "X-Workspace-Id": String(orgId) };
 
   const charge = await request.post("/api/transactions/charge", {
     headers,

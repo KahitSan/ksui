@@ -72,9 +72,9 @@ test("transaction detail resolves customer group display names without crashing"
 
   // Now verify the detail endpoint via the page's own fetch (shares cookies).
   const detailRes = await page.evaluate(async () => {
-    const orgId = localStorage.getItem("ks_active_org_id") || "1";
+    const orgId = localStorage.getItem("ks_active_workspace_id") || "1";
     const res = await fetch("/api/transactions?limit=1", {
-      headers: { "X-Organization-Id": orgId },
+      headers: { "X-Workspace-Id": orgId },
     });
     if (!res.ok) return { status: res.status, body: null };
     const body = await res.json();
@@ -82,7 +82,7 @@ test("transaction detail resolves customer group display names without crashing"
     const txn = Array.isArray(data) ? data[0] : data;
     if (!txn) return { status: res.status, body: null, noTxn: true };
     const detail = await fetch(`/api/transactions/${txn.id}`, {
-      headers: { "X-Organization-Id": orgId },
+      headers: { "X-Workspace-Id": orgId },
     });
     return { status: detail.status, body: await detail.json() };
   });

@@ -41,7 +41,7 @@ async function signIn(api: APIRequestContext): Promise<number> {
   });
   expect(res.status(), await res.text()).toBe(200);
 
-  // Discover an organization the seeded admin can act on. The CI host seeds
+  // Discover a workspace the seeded admin can act on. The CI host seeds
   // a superuser but no organization_members rows; the orgs endpoint still
   // returns the orgs the migration created.
   const orgsRes = await api.get("/api/organizations");
@@ -81,7 +81,7 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
     const startedAt = "2026-05-28T23:45:00.000Z";
 
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-organization-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         client_id: client1Id,
@@ -140,7 +140,7 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
   test("rejects top-level started_at when customer_groups is present", async ({ request }) => {
     const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-organization-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         client_id: client1Id,
@@ -174,7 +174,7 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
   test("rejects customer_groups with two payers", async ({ request }) => {
     const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-organization-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         items: [manualLine("a"), manualLine("b")],
@@ -194,7 +194,7 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
   }) => {
     const { orgId, accountId, client1Id } = await signInAndProvision(request);
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-organization-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         items: [manualLine("a"), manualLine("b")],
@@ -219,7 +219,7 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
     // top-level voucher_code path — full subtotal, no discount, 201.
     const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-organization-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         items: [manualLine("a"), manualLine("b")],
@@ -251,7 +251,7 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
     const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
 
     const voucherRes = await request.post("/api/vouchers", {
-      headers: { "x-organization-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
       // Omit `code` so the server mints a unique one (no cross-retry 23505).
       data: { type: "fixed_amount", value: 50 },
     });
@@ -260,7 +260,7 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
     expect(voucherId).toBeTruthy();
 
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-organization-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         client_id: client1Id,
