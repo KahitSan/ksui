@@ -2,7 +2,7 @@
 // Extracted verbatim from index.tsx. `TransactionRow` is the table's row
 // generic (a Transaction plus optional grouping markers); `makeAggregatedRow`
 // builds the synthetic per-day "grouped" row from a grouped-by-date entry.
-// The factory takes orgId as a parameter (the caller threads activeOrg()) so it
+// The factory takes wsId as a parameter (the caller threads activeOrg()) so it
 // stays pure — no closure over the host context.
 
 import { type Transaction } from "./types";
@@ -24,12 +24,12 @@ export function makeAggregatedRow(
     total: string | number;
     currency: string;
   },
-  orgId: number,
+  wsId: number,
 ): TransactionRow {
   const totalNum = typeof d.total === "string" ? parseFloat(d.total) : d.total;
   return {
     id: -1,
-    workspace_id: orgId,
+    workspace_id: wsId,
     category: "sale",
     subcategory: null,
     source_account_id: null,

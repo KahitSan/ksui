@@ -15,7 +15,7 @@ const EMAIL = process.env.E2E_EMAIL || "admin@kahitsan.com";
 const PASSWORD = process.env.E2E_PASSWORD || "password";
 
 interface Ctx {
-  orgId: number;
+  wsId: number;
   accountId: number;
   client1Id: number;
   client2Id: number;
@@ -54,9 +54,9 @@ async function signIn(api: APIRequestContext): Promise<number> {
 }
 
 async function signInAndProvision(api: APIRequestContext): Promise<Ctx> {
-  const orgId = await signIn(api);
+  const wsId = await signIn(api);
   return {
-    orgId,
+    wsId,
     accountId: FAKE_ACCOUNT_ID,
     client1Id: FAKE_CLIENT_1_ID,
     client2Id: FAKE_CLIENT_2_ID,
@@ -77,11 +77,11 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
   test("accepts customer_groups with per-cg started_at and persists the breakdown", async ({
     request,
   }) => {
-    const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
+    const { wsId, accountId, client1Id, client2Id } = await signInAndProvision(request);
     const startedAt = "2026-05-28T23:45:00.000Z";
 
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(wsId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         client_id: client1Id,
@@ -138,9 +138,9 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
   });
 
   test("rejects top-level started_at when customer_groups is present", async ({ request }) => {
-    const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
+    const { wsId, accountId, client1Id, client2Id } = await signInAndProvision(request);
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(wsId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         client_id: client1Id,
@@ -172,9 +172,9 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
   });
 
   test("rejects customer_groups with two payers", async ({ request }) => {
-    const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
+    const { wsId, accountId, client1Id, client2Id } = await signInAndProvision(request);
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(wsId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         items: [manualLine("a"), manualLine("b")],
@@ -192,9 +192,9 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
   test("rejects customer_groups whose item_indices do not partition items", async ({
     request,
   }) => {
-    const { orgId, accountId, client1Id } = await signInAndProvision(request);
+    const { wsId, accountId, client1Id } = await signInAndProvision(request);
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(wsId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         items: [manualLine("a"), manualLine("b")],
@@ -217,9 +217,9 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
     // findById now backs per-group vouchers, but an id with no matching voucher
     // row (here a bogus 99) must not block the charge: it degrades like the
     // top-level voucher_code path — full subtotal, no discount, 201.
-    const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
+    const { wsId, accountId, client1Id, client2Id } = await signInAndProvision(request);
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(wsId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         items: [manualLine("a"), manualLine("b")],
@@ -248,10 +248,10 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
     // ₱50 fixed-amount voucher, attach it to one customer group, and assert the
     // server resolved it via findById, computed the discount against that
     // group's subtotal, and folded it into the parent transaction's total.
-    const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
+    const { wsId, accountId, client1Id, client2Id } = await signInAndProvision(request);
 
     const voucherRes = await request.post("/api/vouchers", {
-      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(wsId), "content-type": "application/json" },
       // Omit `code` so the server mints a unique one (no cross-retry 23505).
       data: { type: "fixed_amount", value: 50 },
     });
@@ -260,7 +260,7 @@ test.describe("POST /api/transactions/charge — multi-customer breakdown", () =
     expect(voucherId).toBeTruthy();
 
     const res = await request.post("/api/transactions/charge", {
-      headers: { "x-workspace-id": String(orgId), "content-type": "application/json" },
+      headers: { "x-workspace-id": String(wsId), "content-type": "application/json" },
       data: {
         destination_account_id: accountId,
         client_id: client1Id,

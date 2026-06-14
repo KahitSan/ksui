@@ -444,7 +444,7 @@ export function Component() {
       >
         <div class="min-w-0 overflow-hidden">
           <DataTable<TransactionRow>
-            refetchKey={() => activeOrg()?.org_id}
+            refetchKey={() => activeOrg()?.ws_id}
             fetchFn={async (params: FetchParams): Promise<FetchResult<TransactionRow>> => {
               setTableSearchTerm(params.search);
               if (lazyDayData().size > 0) setLazyDayData(new Map());
@@ -475,9 +475,9 @@ export function Component() {
                 // Grouped view shows synthetic per-day rows (no account/payee
                 // columns to resolve) — clear any stale peer-unavailable flags.
                 setPeersUnavailable({ accounts: false, payees: false });
-                const orgId = activeOrg()?.org_id ?? 0;
+                const wsId = activeOrg()?.ws_id ?? 0;
                 return {
-                  data: result.data.map((d) => makeAggregatedRow(d, orgId)),
+                  data: result.data.map((d) => makeAggregatedRow(d, wsId)),
                   total: result.total,
                 };
               }

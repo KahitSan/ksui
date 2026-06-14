@@ -19,7 +19,7 @@ const EMAIL = process.env.E2E_EMAIL || "admin@kahitsan.com";
 const PASSWORD = process.env.E2E_PASSWORD || "password";
 
 interface Ctx {
-  orgId: number;
+  wsId: number;
   accountId: number;
   client1Id: number;
   client2Id: number;
@@ -42,10 +42,10 @@ async function signInAndProvision(api: APIRequestContext): Promise<Ctx> {
   const orgsRes = await api.get("/api/workspaces");
   const orgsBody = await orgsRes.json();
   const orgs = orgsBody.data ?? orgsBody;
-  const orgId = orgs[0].id as number;
+  const wsId = orgs[0].id as number;
 
   return {
-    orgId,
+    wsId,
     accountId: FAKE_ACCOUNT_ID,
     client1Id: FAKE_CLIENT_1_ID,
     client2Id: FAKE_CLIENT_2_ID,
@@ -73,9 +73,9 @@ function manilaDate(ms: number): string {
 test("backdated transaction with currently-running session surfaces under today's filter", async ({
   request,
 }) => {
-  const { orgId, accountId, client1Id, client2Id } = await signInAndProvision(request);
+  const { wsId, accountId, client1Id, client2Id } = await signInAndProvision(request);
   const { today, yesterday } = manilaTodayAndYesterday();
-  const headers = { "x-workspace-id": String(orgId), "content-type": "application/json" };
+  const headers = { "x-workspace-id": String(wsId), "content-type": "application/json" };
 
   // started_at = a few minutes ago, ends_at = several hours from now → live session.
   // Anchor to ten minutes ago to give a comfortable buffer either side of the
@@ -143,7 +143,7 @@ test("backdated transaction with currently-running session surfaces under today'
   // Today filter — must include the still-running lines.
   const todayRes = await request.get(
     `/api/transaction-line-items?active_on=${today}&include_voided=true&include_upcoming=true`,
-    { headers: { "x-workspace-id": String(orgId) } },
+    { headers: { "x-workspace-id": String(wsId) } },
   );
   expect(todayRes.status()).toBe(200);
   const todayLines = (await todayRes.json()).data as Array<Record<string, unknown>>;
@@ -157,7 +157,7 @@ test("backdated transaction with currently-running session surfaces under today'
   // there (it belongs to yesterday's calendar date).
   const yestRes = await request.get(
     `/api/transaction-line-items?active_on=${yesterday}&include_voided=true&include_upcoming=true`,
-    { headers: { "x-workspace-id": String(orgId) } },
+    { headers: { "x-workspace-id": String(wsId) } },
   );
   const yestLines = (await yestRes.json()).data as Array<Record<string, unknown>>;
   expect(yestLines.filter((li) => li.transaction_id === txnId).length).toBe(2);
@@ -173,7 +173,7 @@ test("backdated transaction with currently-running session surfaces under today'
   }).format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
   const farRes = await request.get(
     `/api/transaction-line-items?active_on=${farPast}&include_voided=true&include_upcoming=true`,
-    { headers: { "x-workspace-id": String(orgId) } },
+    { headers: { "x-workspace-id": String(wsId) } },
   );
   const farLines = (await farRes.json()).data as Array<Record<string, unknown>>;
   expect(farLines.filter((li) => li.transaction_id === txnId).length).toBe(0);

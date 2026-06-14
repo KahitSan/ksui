@@ -123,14 +123,14 @@ async function start(): Promise<void> {
       // object (JSON over the RPC can't carry a Map).
       getAccountBalances: async (args, { req }) => {
         const a = (args ?? {}) as { accountIds?: unknown };
-        const orgId = req.workspaceId;
+        const wsId = req.workspaceId;
         const accountIds = Array.isArray(a.accountIds)
           ? a.accountIds
               .map((v) => (typeof v === "number" ? v : parseInt(String(v), 10)))
               .filter((n) => Number.isInteger(n))
           : [];
         const out: Record<number, { balance: number }> = {};
-        if (orgId == null || accountIds.length === 0) return out;
+        if (wsId == null || accountIds.length === 0) return out;
         for (const id of accountIds) out[id] = { balance: 0 };
 
         const r = await db.query<{ account_id: number; balance: string }>(
@@ -170,7 +170,7 @@ async function start(): Promise<void> {
              FROM ids i
              LEFT JOIN leg_sums ls ON ls.account_id = i.account_id
              LEFT JOIN legacy_sums lg ON lg.account_id = i.account_id`,
-          [orgId, accountIds],
+          [wsId, accountIds],
         );
         for (const row of r.rows) {
           out[row.account_id] = { balance: parseFloat(row.balance) || 0 };
@@ -189,12 +189,12 @@ async function start(): Promise<void> {
       // the RPC can't carry a Map).
       getPackageCapacityUsage: async (args, { req }) => {
         const a = (args ?? {}) as { packageIds?: unknown; at?: unknown };
-        const orgId = req.workspaceId;
+        const wsId = req.workspaceId;
         const packageIds = Array.isArray(a.packageIds)
           ? a.packageIds.map((v) => (typeof v === "number" ? v : parseInt(String(v), 10))).filter((n) => Number.isInteger(n))
           : [];
         const out: Record<number, { concurrent: number; daily: number; monthly: number; incoming: number }> = {};
-        if (orgId == null || packageIds.length === 0) return out;
+        if (wsId == null || packageIds.length === 0) return out;
         for (const id of packageIds) out[id] = { concurrent: 0, daily: 0, monthly: 0, incoming: 0 };
 
         const at = typeof a.at === "string" ? a.at : null;
@@ -212,7 +212,7 @@ async function start(): Promise<void> {
           ? `date_trunc('month', t.transaction_date) = date_trunc('month', (NOW() AT TIME ZONE 'Asia/Manila')::date)`
           : `date_trunc('month', t.transaction_date) = date_trunc('month', ($3::timestamptz AT TIME ZONE 'Asia/Manila')::date)`;
 
-        const params: unknown[] = [orgId, packageIds];
+        const params: unknown[] = [wsId, packageIds];
         if (!useNow) params.push(at);
 
         const r = await db.query<{

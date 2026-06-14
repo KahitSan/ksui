@@ -29,7 +29,7 @@ import {
 // prod, MinIO in dev/CI) — never on this server's disk. multer buffers the
 // upload in memory (≤10MB) and the handler puts it to S3, storing the public
 // link in s3_link (the sole reference). The object key is generated per upload
-// (`uploads/transactions/<orgId>/<uuid>.<ext>`) and recovered from s3_link via
+// (`uploads/transactions/<wsId>/<uuid>.<ext>`) and recovered from s3_link via
 // s3KeyFromUrl on delete — the legacy file_path column has been dropped.
 const ALLOWED_ATTACHMENT_MIMES = [
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
@@ -84,7 +84,7 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
     requireOrg,
     requirePermission("transactions.edit"),
     (req: Request, res: Response, next) => {
-      const orgId = req.workspaceId!;
+      const wsId = req.workspaceId!;
       const upload = attachmentUpload.single("file");
       upload(req, res, (err) => {
         if (err) {
@@ -108,7 +108,7 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
             crypto.randomUUID() + path.extname(req.file.originalname).toLowerCase();
           req.body = {
             file_name: req.file.originalname,
-            file_url: `transactions/${orgId}/${filename}`,
+            file_url: `transactions/${wsId}/${filename}`,
             file_size: req.file.size,
             mime_type: req.file.mimetype,
           };

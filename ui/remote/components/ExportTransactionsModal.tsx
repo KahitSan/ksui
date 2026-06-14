@@ -77,10 +77,10 @@ function activeOrgId(): string | null {
 }
 
 function triggerDownload(url: string, filename: string) {
-  const orgId = activeOrgId();
+  const wsId = activeOrgId();
   const withOrg =
-    orgId && !url.includes("orgId=")
-      ? url + (url.includes("?") ? "&" : "?") + "orgId=" + encodeURIComponent(orgId)
+    wsId && !url.includes("orgId=")
+      ? url + (url.includes("?") ? "&" : "?") + "orgId=" + encodeURIComponent(wsId)
       : url;
   const a = document.createElement("a");
   a.href = withOrg;
@@ -151,10 +151,10 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
       }
       const { jobId } = (await res.json()) as { jobId: string };
 
-      const orgId = activeOrgId();
+      const wsId = activeOrgId();
       const progressUrl =
         `/api/transactions/export/${jobId}/progress` +
-        (orgId ? `?orgId=${encodeURIComponent(orgId)}` : "");
+        (wsId ? `?orgId=${encodeURIComponent(wsId)}` : "");
       const es = new EventSource(progressUrl);
       currentEventSource = es;
       let terminated = false;
