@@ -126,7 +126,7 @@ export function registerChargeRoutes(router: Router, ctx: ChargeRouteCtx): void 
       try {
         const result = await runCharge({
           pool,
-          organizationId: req.workspaceId,
+          workspaceId: req.workspaceId,
           userId: req.user.id,
           identityHeader: identityHeaderOf(req),
           payload: req.body as ChargePayload,

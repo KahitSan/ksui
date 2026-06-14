@@ -55,13 +55,13 @@ export type ChargeConnectHandle = { connect(): Promise<PoolClient> };
 
 export async function runCharge(opts: {
   pool: ChargeConnectHandle | Pool;
-  organizationId: number;
+  workspaceId: number;
   userId: string;
   identityHeader: IdentityHeader;
   payload: ChargePayload;
 }): Promise<ChargeResult> {
   validateChargePayload(opts.payload);
-  const { payload, organizationId, userId, identityHeader } = opts;
+  const { payload, workspaceId, userId, identityHeader } = opts;
 
   // ── Package validation via RPC (graceful degradation) ──────────────────
   // Collect the package refs the cart carries. If ANY line carries a package
@@ -111,7 +111,7 @@ export async function runCharge(opts: {
       // Could be EITHER vouchers plugin absent OR code not found. Probe with
       // validate to disambiguate: validate returns null only when the plugin
       // is absent; otherwise { valid:false, reason }.
-      const probe = await tryProbeVoucher(code, organizationId, payload, identityHeader);
+      const probe = await tryProbeVoucher(code, workspaceId, payload, identityHeader);
       if (probe === "unavailable") {
         vouchersAvailable = false;
         // Graceful degradation: proceed at full subtotal, no discount.
@@ -223,7 +223,7 @@ export async function runCharge(opts: {
         client,
         "accounts.transactions",
         payload.parent_transaction_id,
-        organizationId,
+        workspaceId,
         "parent_transaction_id",
       );
     }
@@ -288,7 +288,7 @@ export async function runCharge(opts: {
                  $11, $13)
          RETURNING *`,
         [
-          organizationId, // $1
+          workspaceId, // $1
           payload.destination_account_id, // $2
           total, // $3
           txDescription || "Counter availment", // $4
@@ -318,7 +318,7 @@ export async function runCharge(opts: {
         );
         groupParams.push(
           txn.id,
-          organizationId,
+          workspaceId,
           gi,
           g.client_id ?? null,
           g.display_name.trim(),
@@ -363,7 +363,7 @@ export async function runCharge(opts: {
       lineItems = await insertLineItemsForTransaction(
         client,
         txn.id as number,
-        organizationId,
+        workspaceId,
         payerClientId,
         payload.items,
         {
@@ -395,7 +395,7 @@ export async function runCharge(opts: {
                  $11)
          RETURNING *`,
         [
-          organizationId, // $1
+          workspaceId, // $1
           payload.destination_account_id, // $2
           total, // $3
           txDescription || "Counter availment", // $4
@@ -414,7 +414,7 @@ export async function runCharge(opts: {
         ? await insertLineItemsForTransaction(
             client,
             txn.id as number,
-            organizationId,
+            workspaceId,
             payload.client_id ?? null,
             payload.items,
             {
@@ -426,7 +426,7 @@ export async function runCharge(opts: {
         : await insertLineItemsForTransaction(
             client,
             txn.id as number,
-            organizationId,
+            workspaceId,
             payload.client_id ?? null,
             payload.items,
             { anchor: "now", initialStatus: "active" },
@@ -463,7 +463,7 @@ export async function runCharge(opts: {
       let idx = 1;
       for (let i = 0; i < poolIds.length; i++) {
         values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++})`);
-        params.push(txn.id, poolIds[i], organizationId, i);
+        params.push(txn.id, poolIds[i], workspaceId, i);
       }
       await client.query(
         `INSERT INTO accounts.transaction_customers
@@ -484,7 +484,7 @@ export async function runCharge(opts: {
         `INSERT INTO accounts.transaction_payments
            (transaction_id, workspace_id, financial_account_id, amount, notes, created_at, updated_at)
          VALUES ($1, $2, $3, $4, NULL, NOW(), NOW())`,
-        [txn.id, organizationId, payload.destination_account_id, cappedCollected],
+        [txn.id, workspaceId, payload.destination_account_id, cappedCollected],
       );
     }
 

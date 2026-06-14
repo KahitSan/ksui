@@ -11,7 +11,7 @@ import type { ChargePayload } from "./validate.js";
 // vouchers `validate` RPC, which returns null only when the plugin is absent.
 export async function tryProbeVoucher(
   code: string,
-  _organizationId: number,
+  _workspaceId: number,
   payload: ChargePayload,
   identityHeader: IdentityHeader,
 ): Promise<"unavailable" | "invalid"> {

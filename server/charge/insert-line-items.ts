@@ -29,12 +29,12 @@ export async function assertOrgOwnsRow(
   client: PoolClient,
   table: string,
   id: number,
-  organizationId: number,
+  workspaceId: number,
   label: string,
 ): Promise<void> {
   const r = await client.query<{ exists: boolean }>(
     `SELECT EXISTS (SELECT 1 FROM ${table} WHERE id = $1 AND workspace_id = $2) AS exists`,
-    [id, organizationId],
+    [id, workspaceId],
   );
   if (!r.rows[0]?.exists) {
     throw new ChargeValidationError(404, `${label} not found in this workspace`);
@@ -64,7 +64,7 @@ export interface InsertLineItemsOptions {
 export async function insertLineItemsForTransaction(
   client: PoolClient,
   transactionId: number,
-  organizationId: number,
+  workspaceId: number,
   parentClientId: number | null,
   items: ChargeLineInput[],
   options: InsertLineItemsOptions,
@@ -120,7 +120,7 @@ export async function insertLineItemsForTransaction(
 
     const params: Array<string | number | null> = [
       transactionId, // $1
-      organizationId, // $2
+      workspaceId, // $2
       line.package_id ?? null, // $3
       line.package_variant_id ?? null, // $4
       line.description, // $5
