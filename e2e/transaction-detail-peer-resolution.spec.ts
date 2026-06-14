@@ -18,7 +18,7 @@ async function signIn(api: APIRequestContext): Promise<number> {
   });
   expect(res.status(), await res.text()).toBe(200);
 
-  const orgsRes = await api.get("/api/organizations");
+  const orgsRes = await api.get("/api/workspaces");
   expect(orgsRes.status()).toBe(200);
   const orgsBody = await orgsRes.json();
   const orgs = orgsBody.data ?? orgsBody;

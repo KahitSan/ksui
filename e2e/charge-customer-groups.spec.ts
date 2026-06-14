@@ -42,9 +42,9 @@ async function signIn(api: APIRequestContext): Promise<number> {
   expect(res.status(), await res.text()).toBe(200);
 
   // Discover a workspace the seeded admin can act on. The CI host seeds
-  // a superuser but no organization_members rows; the orgs endpoint still
-  // returns the orgs the migration created.
-  const orgsRes = await api.get("/api/organizations");
+  // a superuser but no workspace_members rows; the workspaces endpoint still
+  // returns the workspaces the migration created.
+  const orgsRes = await api.get("/api/workspaces");
   expect(orgsRes.status()).toBe(200);
   const orgsBody = await orgsRes.json();
   const orgs = orgsBody.data ?? orgsBody;

@@ -1,8 +1,8 @@
 /**
  * Timezone-aware "today" helper for the backdate permission gate.
  *
- * The monolith read `organizations.timezone` (a kernel-owned tenant table) to
- * anchor "today" to the org's local frame. In the process-isolation model the
+ * The monolith read `workspaces.timezone` (a kernel-owned tenant table) to
+ * anchor "today" to the workspace's local frame. In the process-isolation model the
  * plugin MUST NOT read kernel tenant tables, so we anchor to the project
  * default (Asia/Manila) — the only timezone any KahitSan org uses today. If
  * the kernel later forwards the org timezone in the signed identity, swap the

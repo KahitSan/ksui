@@ -39,7 +39,7 @@ async function signInAndProvision(api: APIRequestContext): Promise<Ctx> {
   });
   expect(signIn.status(), await signIn.text()).toBe(200);
 
-  const orgsRes = await api.get("/api/organizations");
+  const orgsRes = await api.get("/api/workspaces");
   const orgsBody = await orgsRes.json();
   const orgs = orgsBody.data ?? orgsBody;
   const orgId = orgs[0].id as number;
