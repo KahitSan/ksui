@@ -29,7 +29,7 @@ export function makeAggregatedRow(
   const totalNum = typeof d.total === "string" ? parseFloat(d.total) : d.total;
   return {
     id: -1,
-    organization_id: orgId,
+    workspace_id: orgId,
     category: "sale",
     subcategory: null,
     source_account_id: null,

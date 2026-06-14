@@ -27,7 +27,7 @@ export function revokePendingFile(pf: PendingFile) {
 
 export interface Transaction {
   id: number;
-  organization_id: number;
+  workspace_id: number;
   category: string;
   subcategory: string | null;
   source_account_id: number | null;
