@@ -16,7 +16,7 @@
 //  1. The detailed per-command policies on `transactions` (txn_select / txn_update
 //     / txn_delete / txn_insert) are redundant: they are PERMISSIVE, so they
 //     OR-combine with `transactions_org_isolation` (PERMISSIVE, FOR ALL,
-//     `organization_id = auth.org_id()`), which already permits every org row for
+//     `workspace_id = auth.workspace_id()`), which already permits every org row for
 //     every command. A permissive policy can only widen, never narrow — so these
 //     four add nothing to access control (they even carry a self-compare bug,
 //     `tv.transaction_id = tv.id`). RLS therefore never actually hid a private
@@ -24,7 +24,7 @@
 //     cross-references the visibility tables.
 //
 //  2. The child tables (transaction_visibility / _role / attachments) have no
-//     organization_id column, so they scope through the parent. We replace their
+//     workspace_id column, so they scope through the parent. We replace their
 //     recursive parent-EXISTS policies with an org check via a SECURITY DEFINER
 //     helper, `accounts.txn_org(id)`, which reads the parent's org AS THE FUNCTION
 //     OWNER — bypassing RLS on `transactions`, so it cannot re-enter the policy
@@ -48,7 +48,7 @@ const migration = {
       STABLE
       SECURITY DEFINER
       SET search_path = accounts, public
-      AS $fn$ SELECT organization_id FROM accounts.transactions WHERE id = txn_id $fn$;
+      AS $fn$ SELECT workspace_id FROM accounts.transactions WHERE id = txn_id $fn$;
     `);
     await client.query(`REVOKE ALL ON FUNCTION accounts.txn_org(integer) FROM PUBLIC`);
     await client.query(`GRANT EXECUTE ON FUNCTION accounts.txn_org(integer) TO app_authenticated`);
@@ -77,8 +77,8 @@ const migration = {
       await client.query(`DROP POLICY IF EXISTS ${policy} ON accounts.${table}`);
       await client.query(`
         CREATE POLICY ${policy} ON accounts.${table}
-          USING (auth.is_superuser() OR accounts.txn_org(transaction_id) = auth.org_id())
-          WITH CHECK (auth.is_superuser() OR accounts.txn_org(transaction_id) = auth.org_id())
+          USING (auth.is_superuser() OR accounts.txn_org(transaction_id) = auth.workspace_id())
+          WITH CHECK (auth.is_superuser() OR accounts.txn_org(transaction_id) = auth.workspace_id())
       `);
     }
   },

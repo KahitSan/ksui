@@ -2,7 +2,7 @@
 //
 // With `withTenantContext` mounted (server/main.ts), every authenticated query
 // runs as the non-owner role `app_authenticated` so this plugin's dormant RLS
-// policies engage as a second wall behind the explicit organization_id filter.
+// policies engage as a second wall behind the explicit workspace_id filter.
 // That role holds no privileges by default, so it needs USAGE on the `accounts`
 // schema plus CRUD on its tables and USAGE on its sequences. The shared kernel
 // migration (20260609000000_grant_app_authenticated_shared) already granted it
