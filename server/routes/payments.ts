@@ -10,7 +10,7 @@
 // preserve the exact Express match order, the edit route is registered via
 // registerPaymentUpdateRoute (early slot) and the remaining three via
 // registerPaymentRoutes (later slot). Every query keeps its
-// AND organization_id = $N org scoping unchanged.
+// AND workspace_id = $N org scoping unchanged.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
@@ -49,9 +49,9 @@ export function registerPaymentUpdateRoute(router: Router, ctx: PaymentRouteCtx)
         const result = await pool.query(
           `UPDATE accounts.transaction_payments
              SET financial_account_id = $1, amount = $2
-             WHERE id = $3 AND transaction_id = $4 AND organization_id = $5
-             RETURNING id, transaction_id, organization_id, financial_account_id, amount, notes, created_at, updated_at, customer_group_id`,
-          [financial_account_id, parsed, req.params.paymentId, req.params.id, req.organizationId],
+             WHERE id = $3 AND transaction_id = $4 AND workspace_id = $5
+             RETURNING id, transaction_id, workspace_id, financial_account_id, amount, notes, created_at, updated_at, customer_group_id`,
+          [financial_account_id, parsed, req.params.paymentId, req.params.id, req.workspaceId],
         );
         if (result.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
@@ -89,9 +89,9 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
         const rows = await pool.query(
           `SELECT id, financial_account_id, amount, notes, created_at, customer_group_id
              FROM accounts.transaction_payments
-            WHERE transaction_id = $1 AND organization_id = $2
+            WHERE transaction_id = $1 AND workspace_id = $2
             ORDER BY created_at ASC, id ASC`,
-          [req.params.id, req.organizationId],
+          [req.params.id, req.workspaceId],
         );
         const payments = rows.rows;
         const accountIds = [
@@ -133,17 +133,17 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
       }
       try {
         const tx = await pool.query(
-          `SELECT id FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
-          [req.params.id, req.organizationId],
+          `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
+          [req.params.id, req.workspaceId],
         );
         if (tx.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
           return;
         }
         const result = await pool.query(
-          `INSERT INTO accounts.transaction_payments (transaction_id, organization_id, financial_account_id, amount, notes)
+          `INSERT INTO accounts.transaction_payments (transaction_id, workspace_id, financial_account_id, amount, notes)
              VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-          [req.params.id, req.organizationId, financial_account_id, parsed, notes?.trim() || null],
+          [req.params.id, req.workspaceId, financial_account_id, parsed, notes?.trim() || null],
         );
         const payment = result.rows[0];
         if (payment.financial_account_id != null) {
@@ -168,8 +168,8 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
       try {
         const result = await pool.query(
           `DELETE FROM accounts.transaction_payments
-             WHERE id = $1 AND transaction_id = $2 AND organization_id = $3 RETURNING id`,
-          [req.params.paymentId, req.params.id, req.organizationId],
+             WHERE id = $1 AND transaction_id = $2 AND workspace_id = $3 RETURNING id`,
+          [req.params.paymentId, req.params.id, req.workspaceId],
         );
         if (result.rows.length === 0) {
           res.status(404).json({ error: "Not found" });

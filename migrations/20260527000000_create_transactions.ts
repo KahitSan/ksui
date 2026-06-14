@@ -17,8 +17,8 @@
 //   - created_by / updated_by / uploaded_by / edited_by / user_id are plain
 //     TEXT columns with NO FK to the kernel-owned "user" table — the plugin
 //     never reaches into kernel tenant/identity tables.
-//   - organization_id is a plain integer (no FK to kernel `organizations`);
-//     RLS still scopes every row to its org via auth.org_id().
+//   - workspace_id is a plain integer (no FK to kernel `organizations`);
+//     RLS still scopes every row to its org via auth.workspace_id().
 //   - client_id / package_id / package_variant_id / voucher_id are plain
 //     integers (soft refs to clients/packages/vouchers plugins, resolved over
 //     the kernel RPC at read/write time, never via SQL FK).
@@ -41,7 +41,7 @@ const migration = {
     await client.query(`
       CREATE TABLE IF NOT EXISTS accounts.transactions (
         id SERIAL PRIMARY KEY,
-        organization_id INTEGER NOT NULL,
+        workspace_id INTEGER NOT NULL,
         category TEXT NOT NULL,
         source_account_id INTEGER,
         destination_account_id INTEGER,
@@ -116,11 +116,11 @@ const migration = {
 
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_transactions_org_date
-         ON accounts.transactions (organization_id, transaction_date DESC, id DESC)`,
+         ON accounts.transactions (workspace_id, transaction_date DESC, id DESC)`,
     );
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_transactions_org_status
-         ON accounts.transactions (organization_id, status)`,
+         ON accounts.transactions (workspace_id, status)`,
     );
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_transactions_parent
@@ -136,7 +136,7 @@ const migration = {
       CREATE TABLE IF NOT EXISTS accounts.transaction_line_items (
         id SERIAL PRIMARY KEY,
         transaction_id INTEGER NOT NULL REFERENCES accounts.transactions(id) ON DELETE CASCADE,
-        organization_id INTEGER NOT NULL,
+        workspace_id INTEGER NOT NULL,
         package_id INTEGER,
         package_variant_id INTEGER,
         description TEXT NOT NULL,
@@ -180,7 +180,7 @@ const migration = {
       `CREATE INDEX IF NOT EXISTS idx_tli_txn ON accounts.transaction_line_items (transaction_id)`,
     );
     await client.query(
-      `CREATE INDEX IF NOT EXISTS idx_tli_org_pkg ON accounts.transaction_line_items (organization_id, package_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_tli_org_pkg ON accounts.transaction_line_items (workspace_id, package_id)`,
     );
 
     // ── transaction_subcategories (the income/expense taxonomy) ──────────
@@ -277,7 +277,7 @@ const migration = {
       CREATE TABLE IF NOT EXISTS accounts.transaction_payments (
         id SERIAL PRIMARY KEY,
         transaction_id INTEGER NOT NULL REFERENCES accounts.transactions(id) ON DELETE CASCADE,
-        organization_id INTEGER NOT NULL,
+        workspace_id INTEGER NOT NULL,
         financial_account_id INTEGER NOT NULL,
         amount NUMERIC(12,2) NOT NULL,
         notes TEXT,
@@ -299,7 +299,7 @@ const migration = {
       `CREATE INDEX IF NOT EXISTS idx_txn_payments_txn ON accounts.transaction_payments (transaction_id)`,
     );
     await client.query(
-      `CREATE INDEX IF NOT EXISTS idx_txn_payments_fa_org ON accounts.transaction_payments (financial_account_id, organization_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_txn_payments_fa_org ON accounts.transaction_payments (financial_account_id, workspace_id)`,
     );
 
     // ── transaction_edits (append-only audit trail) ──────────────────────
@@ -307,7 +307,7 @@ const migration = {
       CREATE TABLE IF NOT EXISTS accounts.transaction_edits (
         id BIGSERIAL PRIMARY KEY,
         transaction_id INTEGER NOT NULL REFERENCES accounts.transactions(id) ON DELETE CASCADE,
-        organization_id INTEGER NOT NULL,
+        workspace_id INTEGER NOT NULL,
         edited_by TEXT NOT NULL,
         edited_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         reason TEXT NOT NULL,
@@ -341,7 +341,7 @@ const migration = {
       CREATE TABLE IF NOT EXISTS accounts.transaction_customer_groups (
         id SERIAL PRIMARY KEY,
         transaction_id INTEGER NOT NULL REFERENCES accounts.transactions(id) ON DELETE CASCADE,
-        organization_id INTEGER NOT NULL,
+        workspace_id INTEGER NOT NULL,
         "position" INTEGER NOT NULL DEFAULT 0,
         client_id INTEGER,
         display_name TEXT NOT NULL,
@@ -379,7 +379,7 @@ const migration = {
       CREATE TABLE IF NOT EXISTS accounts.transaction_customers (
         transaction_id INTEGER NOT NULL REFERENCES accounts.transactions(id) ON DELETE CASCADE,
         client_id INTEGER NOT NULL,
-        organization_id INTEGER NOT NULL,
+        workspace_id INTEGER NOT NULL,
         "position" INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (transaction_id, client_id)
@@ -390,8 +390,8 @@ const migration = {
     );
 
     // ── RLS safety net on every org-scoped table ─────────────────────────
-    // The explicit organization_id filter in every route is the gate; these
-    // policies are defense in depth. Tables without an organization_id column
+    // The explicit workspace_id filter in every route is the gate; these
+    // policies are defense in depth. Tables without an workspace_id column
     // (visibility, visibility_role, attachments) scope through the parent
     // transaction's policy via the FK + the app-level join, so they are left
     // without RLS here (matching the monolith, which gates them on the parent).
@@ -407,8 +407,8 @@ const migration = {
       await client.query(`ALTER TABLE accounts.${t} ENABLE ROW LEVEL SECURITY`);
       await client.query(`DROP POLICY IF EXISTS ${t}_org_isolation ON accounts.${t}`);
       await client.query(`CREATE POLICY ${t}_org_isolation ON accounts.${t}
-        USING (auth.is_superuser() OR organization_id = auth.org_id())
-        WITH CHECK (auth.is_superuser() OR organization_id = auth.org_id())`);
+        USING (auth.is_superuser() OR workspace_id = auth.workspace_id())
+        WITH CHECK (auth.is_superuser() OR workspace_id = auth.workspace_id())`);
     }
   },
   async down({ client }: MigrationContext) {

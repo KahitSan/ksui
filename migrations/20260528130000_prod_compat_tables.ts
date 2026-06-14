@@ -40,7 +40,7 @@ const migration = {
     // ─── 1a. Migrate accounts.transaction_clients → transaction_customers ─
     //
     // Column shape on prod and fork is identical: (transaction_id integer,
-    // client_id integer, organization_id integer, position integer DEFAULT 0,
+    // client_id integer, workspace_id integer, position integer DEFAULT 0,
     // created_at timestamptz DEFAULT now()). The previous migration's
     // CREATE made accounts.transaction_customers empty; this INSERT moves
     // prod's rows in.
@@ -52,8 +52,8 @@ const migration = {
           WHERE table_schema = 'accounts' AND table_name = 'transaction_clients'
         ) THEN
           INSERT INTO accounts.transaction_customers
-                 (transaction_id, client_id, organization_id, "position", created_at)
-          SELECT  transaction_id, client_id, organization_id, "position", created_at
+                 (transaction_id, client_id, workspace_id, "position", created_at)
+          SELECT  transaction_id, client_id, workspace_id, "position", created_at
             FROM accounts.transaction_clients
           ON CONFLICT DO NOTHING;
 
@@ -102,7 +102,7 @@ const migration = {
     await client.query(`
       CREATE TABLE IF NOT EXISTS accounts.export_jobs (
         id uuid DEFAULT gen_random_uuid() NOT NULL,
-        organization_id integer NOT NULL,
+        workspace_id integer NOT NULL,
         user_id text NOT NULL,
         kind text DEFAULT 'transactions'::text NOT NULL,
         date_from date NOT NULL,
@@ -139,14 +139,14 @@ const migration = {
     `);
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_export_jobs_org_user_created
-        ON accounts.export_jobs (organization_id, user_id, created_at DESC)
+        ON accounts.export_jobs (workspace_id, user_id, created_at DESC)
     `);
 
     // ─── 2d. accounts.transaction_amount_paid ────────────────────────────
     await client.query(`
       CREATE TABLE IF NOT EXISTS accounts.transaction_amount_paid (
         transaction_id integer NOT NULL,
-        organization_id integer NOT NULL,
+        workspace_id integer NOT NULL,
         amount_paid numeric(12,2) NOT NULL,
         captured_by text NOT NULL,
         captured_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -169,7 +169,7 @@ const migration = {
     );
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_transaction_amount_paid_org
-        ON accounts.transaction_amount_paid (organization_id)
+        ON accounts.transaction_amount_paid (workspace_id)
     `);
 
     console.log(

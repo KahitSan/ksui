@@ -54,7 +54,7 @@ async function signIn(api: APIRequestContext): Promise<number> {
     data: { email: EMAIL, password: PASSWORD },
   });
   expect(res.status(), await res.text()).toBe(200);
-  const orgsRes = await api.get("/api/organizations");
+  const orgsRes = await api.get("/api/workspaces");
   const orgsBody = await orgsRes.json();
   const orgs = orgsBody.data ?? orgsBody;
   return orgs[0].id as number;
@@ -64,8 +64,8 @@ test("attachment upload stores bytes in object storage, records s3_link, and del
   request,
   playwright,
 }) => {
-  const orgId = await signIn(request);
-  const headers = { "X-Organization-Id": String(orgId) };
+  const wsId = await signIn(request);
+  const headers = { "X-Workspace-Id": String(wsId) };
 
   // A transaction to attach to.
   const charge = await request.post("/api/transactions/charge", {
@@ -91,7 +91,7 @@ test("attachment upload stores bytes in object storage, records s3_link, and del
   // The row records the public link only — file_path is decommissioned.
   expect(attachment.file_path).toBeUndefined();
   expect(attachment.s3_link).toMatch(
-    new RegExp(`^https?://.+/uploads/transactions/${orgId}/[0-9a-f-]+\\.png$`),
+    new RegExp(`^https?://.+/uploads/transactions/${wsId}/[0-9a-f-]+\\.png$`),
   );
 
   // The bytes are publicly fetchable at s3_link — fresh context, no session,
@@ -115,8 +115,8 @@ test("attachment upload stores bytes in object storage, records s3_link, and del
 });
 
 test("metadata-only POST without a file is rejected", async ({ request }) => {
-  const orgId = await signIn(request);
-  const headers = { "X-Organization-Id": String(orgId) };
+  const wsId = await signIn(request);
+  const headers = { "X-Workspace-Id": String(wsId) };
 
   const charge = await request.post("/api/transactions/charge", {
     headers,
@@ -133,7 +133,7 @@ test("metadata-only POST without a file is rejected", async ({ request }) => {
   // link, so the route now requires real multipart bytes.
   const jsonPost = await request.post(`/api/transactions/${txId}/attachments`, {
     headers,
-    data: { file_name: "ghost.png", file_url: `transactions/${orgId}/ghost.png` },
+    data: { file_name: "ghost.png", file_url: `transactions/${wsId}/ghost.png` },
   });
   expect(jsonPost.status()).toBe(400);
 });

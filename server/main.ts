@@ -83,7 +83,7 @@ async function start(): Promise<void> {
 
   // ── Producer side: transactions.service ──────────────────────────────────
   // Mounts POST /_internal/services/:method, internal-secret gated, identity
-  // parsed so each handler is org-scoped via req.organizationId. These are the
+  // parsed so each handler is org-scoped via req.workspaceId. These are the
   // methods the monolith's transactionsExtensionPoint exposed; packages reads
   // getPackageCapacityUsage to enforce per-package capacity / daily / monthly
   // limits at the cart.
@@ -93,11 +93,11 @@ async function start(): Promise<void> {
       // findById({ id }) → an org-scoped transaction row, or null.
       findById: async (args, { req }) => {
         const id = (args as { id?: unknown })?.id;
-        if (req.organizationId == null || id == null) return null;
+        if (req.workspaceId == null || id == null) return null;
         const r = await db.query(
-          `SELECT id, organization_id, created_at, updated_at, amount, status, category
-             FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
-          [id, req.organizationId],
+          `SELECT id, workspace_id, created_at, updated_at, amount, status, category
+             FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
+          [id, req.workspaceId],
         );
         return r.rows[0] ?? null;
       },
@@ -123,14 +123,14 @@ async function start(): Promise<void> {
       // object (JSON over the RPC can't carry a Map).
       getAccountBalances: async (args, { req }) => {
         const a = (args ?? {}) as { accountIds?: unknown };
-        const orgId = req.organizationId;
+        const wsId = req.workspaceId;
         const accountIds = Array.isArray(a.accountIds)
           ? a.accountIds
               .map((v) => (typeof v === "number" ? v : parseInt(String(v), 10)))
               .filter((n) => Number.isInteger(n))
           : [];
         const out: Record<number, { balance: number }> = {};
-        if (orgId == null || accountIds.length === 0) return out;
+        if (wsId == null || accountIds.length === 0) return out;
         for (const id of accountIds) out[id] = { balance: 0 };
 
         const r = await db.query<{ account_id: number; balance: string }>(
@@ -140,8 +140,8 @@ async function start(): Promise<void> {
                          SUM(tp.amount) AS amt
                     FROM accounts.transaction_payments tp
                     JOIN accounts.transactions t ON t.id = tp.transaction_id
-                   WHERE tp.organization_id = $1
-                     AND t.organization_id = $1
+                   WHERE tp.workspace_id = $1
+                     AND t.workspace_id = $1
                      AND tp.financial_account_id = ANY($2::int[])
                      AND t.status <> 'voided'
                      AND t.category = 'sale'
@@ -154,7 +154,7 @@ async function start(): Promise<void> {
                     FROM ids i
                     JOIN accounts.transactions t
                       ON (t.source_account_id = i.account_id OR t.destination_account_id = i.account_id)
-                   WHERE t.organization_id = $1
+                   WHERE t.workspace_id = $1
                      AND t.status <> 'voided'
                      AND (
                        t.category <> 'sale'
@@ -170,7 +170,7 @@ async function start(): Promise<void> {
              FROM ids i
              LEFT JOIN leg_sums ls ON ls.account_id = i.account_id
              LEFT JOIN legacy_sums lg ON lg.account_id = i.account_id`,
-          [orgId, accountIds],
+          [wsId, accountIds],
         );
         for (const row of r.rows) {
           out[row.account_id] = { balance: parseFloat(row.balance) || 0 };
@@ -189,12 +189,12 @@ async function start(): Promise<void> {
       // the RPC can't carry a Map).
       getPackageCapacityUsage: async (args, { req }) => {
         const a = (args ?? {}) as { packageIds?: unknown; at?: unknown };
-        const orgId = req.organizationId;
+        const wsId = req.workspaceId;
         const packageIds = Array.isArray(a.packageIds)
           ? a.packageIds.map((v) => (typeof v === "number" ? v : parseInt(String(v), 10))).filter((n) => Number.isInteger(n))
           : [];
         const out: Record<number, { concurrent: number; daily: number; monthly: number; incoming: number }> = {};
-        if (orgId == null || packageIds.length === 0) return out;
+        if (wsId == null || packageIds.length === 0) return out;
         for (const id of packageIds) out[id] = { concurrent: 0, daily: 0, monthly: 0, incoming: 0 };
 
         const at = typeof a.at === "string" ? a.at : null;
@@ -212,7 +212,7 @@ async function start(): Promise<void> {
           ? `date_trunc('month', t.transaction_date) = date_trunc('month', (NOW() AT TIME ZONE 'Asia/Manila')::date)`
           : `date_trunc('month', t.transaction_date) = date_trunc('month', ($3::timestamptz AT TIME ZONE 'Asia/Manila')::date)`;
 
-        const params: unknown[] = [orgId, packageIds];
+        const params: unknown[] = [wsId, packageIds];
         if (!useNow) params.push(at);
 
         const r = await db.query<{
@@ -229,8 +229,8 @@ async function start(): Promise<void> {
                   COUNT(*) FILTER (WHERE li.status <> 'voided' AND ${incomingClause})::text AS incoming
              FROM accounts.transaction_line_items li
              JOIN accounts.transactions t
-               ON t.id = li.transaction_id AND t.organization_id = li.organization_id
-            WHERE li.organization_id = $1
+               ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id
+            WHERE li.workspace_id = $1
               AND li.package_id = ANY($2::int[])
               AND t.status <> 'voided'
             GROUP BY li.package_id`,
@@ -254,7 +254,7 @@ async function start(): Promise<void> {
   // request; the per-route gates enforce it. The kernel proxies basePath/* here
   // with the prefix stripped, so the router mounts at "/".
   app.use(parseIdentity);
-  // RLS activation (plugin-SDK Step 2): scope every db.query under app_authenticated so the org-isolation policies engage behind the explicit organization_id filter.
+  // RLS activation (plugin-SDK Step 2): scope every db.query under app_authenticated so the org-isolation policies engage behind the explicit workspace_id filter.
   app.use(withTenantContext);
   // Sibling basePath: the kernel proxies /api/transaction-line-items/* here
   // (declared in plugin.manifest.json additionalBasePaths) WITHOUT stripping

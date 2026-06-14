@@ -32,7 +32,7 @@ const FAKE_CLIENT_ID = 99_210;
 const HOUR_MS = 60 * 60 * 1000;
 
 interface Ctx {
-  orgId: number;
+  wsId: number;
   accountId: number;
   clientId: number;
 }
@@ -42,9 +42,9 @@ interface Ctx {
 async function firstId(
   api: APIRequestContext,
   path: string,
-  orgId: number,
+  wsId: number,
 ): Promise<number | null> {
-  const res = await api.get(path, { headers: { "x-organization-id": String(orgId) } });
+  const res = await api.get(path, { headers: { "x-workspace-id": String(wsId) } });
   if (!res.ok()) return null;
   const rows = ((await res.json()).data ?? []) as Array<{ id?: number }>;
   return rows[0]?.id ?? null;
@@ -56,7 +56,7 @@ async function signInAndProvision(api: APIRequestContext): Promise<Ctx> {
   });
   expect(signIn.status(), await signIn.text()).toBe(200);
 
-  const orgsRes = await api.get("/api/organizations");
+  const orgsRes = await api.get("/api/workspaces");
   const orgsBody = await orgsRes.json();
   const orgs = (orgsBody.data ?? orgsBody) as Array<{ id: number }>;
 
@@ -67,10 +67,10 @@ async function signInAndProvision(api: APIRequestContext): Promise<Ctx> {
     const accountId = await firstId(api, "/api/financial-accounts?limit=1", o.id);
     const clientId = await firstId(api, "/api/clients?limit=1", o.id);
     if (accountId != null && clientId != null) {
-      return { orgId: o.id, accountId, clientId };
+      return { wsId: o.id, accountId, clientId };
     }
   }
-  return { orgId: orgs[0].id, accountId: FAKE_ACCOUNT_ID, clientId: FAKE_CLIENT_ID };
+  return { wsId: orgs[0].id, accountId: FAKE_ACCOUNT_ID, clientId: FAKE_CLIENT_ID };
 }
 
 function manilaDate(ms: number): string {
@@ -84,13 +84,13 @@ function manilaDate(ms: number): string {
 
 async function lineFor(
   api: APIRequestContext,
-  orgId: number,
+  wsId: number,
   activeOn: string,
   txnId: number,
 ): Promise<Record<string, unknown> | undefined> {
   const res = await api.get(
     `/api/transaction-line-items?active_on=${activeOn}&include_voided=true&include_upcoming=true`,
-    { headers: { "x-organization-id": String(orgId) } },
+    { headers: { "x-workspace-id": String(wsId) } },
   );
   expect(res.status()).toBe(200);
   const lines = (await res.json()).data as Array<Record<string, unknown>>;
@@ -100,8 +100,8 @@ async function lineFor(
 test("editing a customer-group started_at drags ends_at with it (no inverted window)", async ({
   request,
 }) => {
-  const { orgId, accountId, clientId } = await signInAndProvision(request);
-  const headers = { "x-organization-id": String(orgId), "content-type": "application/json" };
+  const { wsId, accountId, clientId } = await signInAndProvision(request);
+  const headers = { "x-workspace-id": String(wsId), "content-type": "application/json" };
 
   // Initial live session: started an hour ago, 8h block → ends ~7h from now.
   const initialStart = new Date(Date.now() - 1 * HOUR_MS).toISOString();
@@ -128,7 +128,7 @@ test("editing a customer-group started_at drags ends_at with it (no inverted win
 
   // Grab the line on today's board and its customer_group_id. Sanity-check the
   // insert invariant: ends_at = started_at + 8h.
-  const before = await lineFor(request, orgId, today, txnId);
+  const before = await lineFor(request, wsId, today, txnId);
   expect(before, "charged line should appear on today's board").toBeTruthy();
   const cgId = before!.customer_group_id as number;
   expect(cgId).toBeGreaterThan(0);
@@ -147,7 +147,7 @@ test("editing a customer-group started_at drags ends_at with it (no inverted win
   });
   expect(patchA.status(), await patchA.text()).toBe(200);
 
-  const afterA = await lineFor(request, orgId, today, txnId);
+  const afterA = await lineFor(request, wsId, today, txnId);
   expect(afterA, "edited line should still be on today's board").toBeTruthy();
   expect(new Date(afterA!.started_at as string).getTime()).toBe(new Date(newStart).getTime());
   // The core contract: ends_at recomputed from the new start, never left stale.
@@ -188,12 +188,12 @@ test("editing a customer-group started_at drags ends_at with it (no inverted win
   });
   expect(patchB.status(), await patchB.text()).toBe(200);
 
-  const onYesterday = await lineFor(request, orgId, yDate, txnId);
+  const onYesterday = await lineFor(request, wsId, yDate, txnId);
   expect(onYesterday, "elapsed session should bucket onto yesterday's board").toBeTruthy();
   expect(
     new Date(onYesterday!.ends_at as string).getTime() - new Date(onYesterday!.started_at as string).getTime(),
   ).toBe(8 * HOUR_MS);
 
-  const stillToday = await lineFor(request, orgId, today, txnId);
+  const stillToday = await lineFor(request, wsId, today, txnId);
   expect(stillToday, "elapsed yesterday session must NOT linger on today's board").toBeFalsy();
 });

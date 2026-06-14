@@ -10,7 +10,7 @@
 // The effects/loaders close over nothing from Component(): the accessors they
 // read (activeOrg, canShare, activeCategories) are threaded in via the deps
 // object. Behavior is byte-for-byte identical to the inline version — same
-// endpoints, same org-generation staleness guards (activeOrg()?.org_id === gen),
+// endpoints, same org-generation staleness guards (activeOrg()?.ws_id === gen),
 // same graceful-degradation try/catch, same onMount sequencing.
 //
 // peersUnavailable/setPeersUnavailable are exposed because the DataTable fetchFn
@@ -20,7 +20,7 @@ import { createEffect, createMemo, createSignal, onMount } from "solid-js";
 import { type FinancialAccount, type OrgMember } from "../lib/types";
 
 export interface TransactionReferenceDataDeps {
-  activeOrg: () => { org_id?: string | number | null } | null | undefined;
+  activeOrg: () => { ws_id?: string | number | null } | null | undefined;
   canShare: () => boolean;
   activeCategories: () => Set<string>;
 }
@@ -141,14 +141,14 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
   );
 
   createEffect(() => {
-    const gen = activeOrg()?.org_id;
+    const gen = activeOrg()?.ws_id;
     setOrgMembers([]);
     (async () => {
       try {
         const res = await fetch("/api/financial-accounts?limit=200&status=active", {
           credentials: "include",
         });
-        if (res.ok && activeOrg()?.org_id === gen) {
+        if (res.ok && activeOrg()?.ws_id === gen) {
           const data = await res.json();
           setAccounts(data.data || []);
         }
@@ -158,11 +158,11 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
     })();
   });
   createEffect(() => {
-    const gen = activeOrg()?.org_id;
+    const gen = activeOrg()?.ws_id;
     (async () => {
       try {
         const res = await fetch("/api/roles?scope=org", { credentials: "include" });
-        if (!res.ok || activeOrg()?.org_id !== gen) return;
+        if (!res.ok || activeOrg()?.ws_id !== gen) return;
         const data = await res.json();
         const rows = (data.data || []) as { code: string; label: string }[];
         setShareableRoles(rows.filter((r) => r.code !== "admin"));
@@ -177,14 +177,14 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
   // list needs creator names, not just users who can share. Degrades to initials
   // / "Unknown" when the endpoint is unavailable or forbidden for the role.
   createEffect(() => {
-    const gen = activeOrg()?.org_id;
+    const gen = activeOrg()?.ws_id;
     if (!gen) return;
     (async () => {
       try {
-        const res = await fetch(`/api/organizations/${gen}/members/basic`, {
+        const res = await fetch(`/api/workspaces/${gen}/members/basic`, {
           credentials: "include",
         });
-        if (res.ok && activeOrg()?.org_id === gen) {
+        if (res.ok && activeOrg()?.ws_id === gen) {
           const data = await res.json();
           setOrgMembers(data.data || data.members || data || []);
         }
@@ -195,12 +195,12 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
   });
 
   function loadOrgMembers() {
-    const orgId = activeOrg()?.org_id;
-    if (!orgId || orgMembers().length > 0) return;
+    const wsId = activeOrg()?.ws_id;
+    if (!wsId || orgMembers().length > 0) return;
     if (!canShare()) return;
     (async () => {
       try {
-        const res = await fetch(`/api/organizations/${orgId}/members/basic`, {
+        const res = await fetch(`/api/workspaces/${wsId}/members/basic`, {
           credentials: "include",
         });
         if (res.ok) {

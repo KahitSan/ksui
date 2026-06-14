@@ -8,7 +8,7 @@
 // helpers — attachment bytes live in S3 only (DO Spaces in prod, MinIO in
 // dev/CI), never on this server's disk.
 //
-// Every query keeps its AND organization_id = $N / both-sides JOIN org scoping
+// Every query keeps its AND workspace_id = $N / both-sides JOIN org scoping
 // unchanged.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
@@ -29,7 +29,7 @@ import {
 // prod, MinIO in dev/CI) — never on this server's disk. multer buffers the
 // upload in memory (≤10MB) and the handler puts it to S3, storing the public
 // link in s3_link (the sole reference). The object key is generated per upload
-// (`uploads/transactions/<orgId>/<uuid>.<ext>`) and recovered from s3_link via
+// (`uploads/transactions/<wsId>/<uuid>.<ext>`) and recovered from s3_link via
 // s3KeyFromUrl on delete — the legacy file_path column has been dropped.
 const ALLOWED_ATTACHMENT_MIMES = [
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
@@ -67,8 +67,8 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
           `SELECT a.id, a.transaction_id, a.file_name, a.file_size, a.mime_type, a.uploaded_by, a.s3_link, a.created_at
              FROM accounts.transaction_attachments a
              JOIN accounts.transactions t ON t.id = a.transaction_id
-            WHERE a.transaction_id = $1 AND t.organization_id = $2 ORDER BY a.created_at`,
-          [req.params.id, req.organizationId],
+            WHERE a.transaction_id = $1 AND t.workspace_id = $2 ORDER BY a.created_at`,
+          [req.params.id, req.workspaceId],
         );
         res.json({ attachments: rows.rows });
       } catch (err) {
@@ -84,7 +84,7 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
     requireOrg,
     requirePermission("transactions.edit"),
     (req: Request, res: Response, next) => {
-      const orgId = req.organizationId!;
+      const wsId = req.workspaceId!;
       const upload = attachmentUpload.single("file");
       upload(req, res, (err) => {
         if (err) {
@@ -108,7 +108,7 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
             crypto.randomUUID() + path.extname(req.file.originalname).toLowerCase();
           req.body = {
             file_name: req.file.originalname,
-            file_url: `transactions/${orgId}/${filename}`,
+            file_url: `transactions/${wsId}/${filename}`,
             file_size: req.file.size,
             mime_type: req.file.mimetype,
           };
@@ -139,8 +139,8 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
       }
       try {
         const tx = await pool.query(
-          `SELECT id FROM accounts.transactions WHERE id = $1 AND organization_id = $2`,
-          [req.params.id, req.organizationId],
+          `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
+          [req.params.id, req.workspaceId],
         );
         if (tx.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
@@ -190,9 +190,9 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
           `DELETE FROM accounts.transaction_attachments a
              USING accounts.transactions t
             WHERE a.transaction_id = t.id
-              AND a.id = $1 AND a.transaction_id = $2 AND t.organization_id = $3
+              AND a.id = $1 AND a.transaction_id = $2 AND t.workspace_id = $3
             RETURNING a.id, a.s3_link`,
-          [req.params.attachmentId, req.params.id, req.organizationId],
+          [req.params.attachmentId, req.params.id, req.workspaceId],
         );
         if (result.rows.length === 0) {
           res.status(404).json({ error: "Not found" });

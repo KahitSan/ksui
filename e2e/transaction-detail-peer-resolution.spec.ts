@@ -18,7 +18,7 @@ async function signIn(api: APIRequestContext): Promise<number> {
   });
   expect(res.status(), await res.text()).toBe(200);
 
-  const orgsRes = await api.get("/api/organizations");
+  const orgsRes = await api.get("/api/workspaces");
   expect(orgsRes.status()).toBe(200);
   const orgsBody = await orgsRes.json();
   const orgs = orgsBody.data ?? orgsBody;
@@ -29,13 +29,13 @@ async function signIn(api: APIRequestContext): Promise<number> {
 
 test.describe("GET /api/transactions/:id — cross-plugin peer resolution", () => {
   test("returns 200 with enriched line items", async ({ request }) => {
-    const orgId = await signIn(request);
+    const wsId = await signIn(request);
 
     // Create a fixture transaction via POST /charge with manual line items.
     // destination_account_id is a soft reference (stored as-is, no FK), so
     // any positive integer works even if no financial-accounts rows exist.
     const chargeRes = await request.post("/api/transactions/charge", {
-      headers: { "X-Organization-Id": String(orgId) },
+      headers: { "X-Workspace-Id": String(wsId) },
       data: {
         destination_account_id: 1,
         items: [
@@ -52,7 +52,7 @@ test.describe("GET /api/transactions/:id — cross-plugin peer resolution", () =
     // called findPackagesByIds/findVariantsByIds/findClientsByIds without
     // importing them, crashing on any transaction with line items.
     const detailRes = await request.get(`/api/transactions/${txnId}`, {
-      headers: { "X-Organization-Id": String(orgId) },
+      headers: { "X-Workspace-Id": String(wsId) },
     });
     expect(detailRes.status(), `detail failed: ${await detailRes.text()}`).toBe(200);
     const detail = await detailRes.json();
@@ -74,10 +74,10 @@ test.describe("GET /api/transactions/:id — cross-plugin peer resolution", () =
   });
 
   test("returns 200 for outstanding route", async ({ request }) => {
-    const orgId = await signIn(request);
+    const wsId = await signIn(request);
 
     const res = await request.get("/api/transactions/outstanding", {
-      headers: { "X-Organization-Id": String(orgId) },
+      headers: { "X-Workspace-Id": String(wsId) },
     });
     expect(res.status(), `outstanding failed: ${await res.text()}`).toBe(200);
     const body = await res.json();
@@ -104,10 +104,10 @@ test.describe("payee and updated_by enrichment", () => {
   const today = manilaDate(Date.now());
 
   test("saves payee_id on create and enriches detail with payee + updated_by_name", async ({ request }) => {
-    const orgId = await signIn(request);
+    const wsId = await signIn(request);
 
     const createRes = await request.post("/api/transactions", {
-      headers: { "X-Organization-Id": String(orgId) },
+      headers: { "X-Workspace-Id": String(wsId) },
       data: {
         category: "expense",
         amount: 500,
@@ -123,7 +123,7 @@ test.describe("payee and updated_by enrichment", () => {
     expect(created.payee_id).toBe(99);
 
     const detailRes = await request.get(`/api/transactions/${created.id}`, {
-      headers: { "X-Organization-Id": String(orgId) },
+      headers: { "X-Workspace-Id": String(wsId) },
     });
     expect(detailRes.status(), await detailRes.text()).toBe(200);
     const detail = await detailRes.json();
@@ -142,10 +142,10 @@ test.describe("payee and updated_by enrichment", () => {
   });
 
   test("update resolves updated_by_name in PUT response and in subsequent detail", async ({ request }) => {
-    const orgId = await signIn(request);
+    const wsId = await signIn(request);
 
     const createRes = await request.post("/api/transactions", {
-      headers: { "X-Organization-Id": String(orgId) },
+      headers: { "X-Workspace-Id": String(wsId) },
       data: {
         category: "expense",
         amount: 250,
@@ -159,7 +159,7 @@ test.describe("payee and updated_by enrichment", () => {
     const created = await createRes.json();
 
     const putRes = await request.put(`/api/transactions/${created.id}`, {
-      headers: { "X-Organization-Id": String(orgId) },
+      headers: { "X-Workspace-Id": String(wsId) },
       data: { description: `${created.description} (edited)`, reason: "e2e test" },
     });
     expect(putRes.status(), await putRes.text()).toBe(200);
@@ -170,7 +170,7 @@ test.describe("payee and updated_by enrichment", () => {
     expect(updated.updated_by_name).not.toBe("Unknown");
 
     const detailRes = await request.get(`/api/transactions/${created.id}`, {
-      headers: { "X-Organization-Id": String(orgId) },
+      headers: { "X-Workspace-Id": String(wsId) },
     });
     expect(detailRes.status(), await detailRes.text()).toBe(200);
     const detail = await detailRes.json();
@@ -179,10 +179,10 @@ test.describe("payee and updated_by enrichment", () => {
   });
 
   test("list returns payee and updated_by_name per row", async ({ request }) => {
-    const orgId = await signIn(request);
+    const wsId = await signIn(request);
 
     const createRes = await request.post("/api/transactions", {
-      headers: { "X-Organization-Id": String(orgId) },
+      headers: { "X-Workspace-Id": String(wsId) },
       data: {
         category: "expense",
         amount: 100,
@@ -196,7 +196,7 @@ test.describe("payee and updated_by enrichment", () => {
     const created = await createRes.json();
 
     const listRes = await request.get("/api/transactions", {
-      headers: { "X-Organization-Id": String(orgId) },
+      headers: { "X-Workspace-Id": String(wsId) },
       params: { limit: "50", page: "1" },
     });
     expect(listRes.status(), await listRes.text()).toBe(200);

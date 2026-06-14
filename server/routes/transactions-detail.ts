@@ -9,7 +9,7 @@
 // variant/client RPC enrichment, billed-to client_name, edits, payments +
 // account-name enrichment, customer_groups with dynamic display_name
 // resolution, client_pool, payee resolution, and created_by/updated_by
-// user-name resolution. Every query keeps its AND organization_id = $N org
+// user-name resolution. Every query keeps its AND workspace_id = $N org
 // scoping. Cross-plugin data is resolved over the kernel RPC (lib/peers.ts)
 // with graceful degradation.
 
@@ -53,8 +53,8 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
             SELECT COALESCE(SUM(tp.amount), 0)::numeric(12,2) AS total_paid
               FROM accounts.transaction_payments tp WHERE tp.transaction_id = t.id
           ) paid ON true
-          WHERE t.id = $1 AND t.organization_id = $2`,
-          [req.params.id, req.organizationId],
+          WHERE t.id = $1 AND t.workspace_id = $2`,
+          [req.params.id, req.workspaceId],
         );
         if (result.rows.length === 0) {
           res.status(404).json({ error: "Not found" });
@@ -64,14 +64,14 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
         const idh = identityHeaderOf(req);
 
         // Privacy check.
-        const isAdmin = req.orgRole === "admin" || req.user?.role === "superuser";
+        const isAdmin = req.wsRole === "admin" || req.user?.role === "superuser";
         if (txn.is_private && txn.created_by !== req.user?.id && !isAdmin) {
           const vis = await pool.query(
             `SELECT 1 FROM accounts.transaction_visibility WHERE transaction_id = $1 AND user_id = $2
              UNION ALL
              SELECT 1 FROM accounts.transaction_visibility_role WHERE transaction_id = $1 AND role_code = $3
              LIMIT 1`,
-            [txn.id, req.user?.id, req.orgRole ?? ""],
+            [txn.id, req.user?.id, req.wsRole ?? ""],
           );
           if (vis.rows.length === 0) {
             res.status(404).json({ error: "Not found" });
@@ -100,9 +100,9 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
           `SELECT id, package_id, package_variant_id, description, quantity, unit_price,
                   duration_value, duration_unit, started_at, ends_at, status, client_id, customer_group_id
              FROM accounts.transaction_line_items
-            WHERE transaction_id = $1 AND organization_id = $2
+            WHERE transaction_id = $1 AND workspace_id = $2
             ORDER BY id ASC`,
-          [txn.id, req.organizationId],
+          [txn.id, req.workspaceId],
         );
 
         // Enrich line items with package/variant/client names over RPC.
@@ -139,9 +139,9 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
           await pool.query(
             `SELECT id, edited_at, reason, kind, edited_by
                FROM accounts.transaction_edits
-              WHERE transaction_id = $1 AND organization_id = $2
+              WHERE transaction_id = $1 AND workspace_id = $2
               ORDER BY edited_at DESC`,
-            [txn.id, req.organizationId],
+            [txn.id, req.workspaceId],
           )
         ).rows;
 
@@ -149,9 +149,9 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
           await pool.query(
             `SELECT id, financial_account_id, amount, notes, created_at, customer_group_id
                FROM accounts.transaction_payments
-              WHERE transaction_id = $1 AND organization_id = $2
+              WHERE transaction_id = $1 AND workspace_id = $2
               ORDER BY created_at ASC, id ASC`,
-            [txn.id, req.organizationId],
+            [txn.id, req.workspaceId],
           )
         ).rows;
 
@@ -184,9 +184,9 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
           await pool.query(
             `SELECT id, position, client_id, display_name, note, voucher_id, subtotal, discount_amount, is_payer
                FROM accounts.transaction_customer_groups
-              WHERE transaction_id = $1 AND organization_id = $2
+              WHERE transaction_id = $1 AND workspace_id = $2
               ORDER BY position ASC`,
-            [txn.id, req.organizationId],
+            [txn.id, req.workspaceId],
           )
         ).rows;
 
@@ -219,8 +219,8 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
         const clientPoolRows = (
           await pool.query(
             `SELECT client_id, position FROM accounts.transaction_customers
-              WHERE transaction_id = $1 AND organization_id = $2 ORDER BY position ASC, client_id ASC`,
-            [txn.id, req.organizationId],
+              WHERE transaction_id = $1 AND workspace_id = $2 ORDER BY position ASC, client_id ASC`,
+            [txn.id, req.workspaceId],
           )
         ).rows;
         const poolClients = clientPoolRows.length > 0

@@ -84,8 +84,8 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {
-        const params: unknown[] = [req.organizationId];
-        const conditions = ["t.organization_id = $1", "t.created_by IS NOT NULL"];
+        const params: unknown[] = [req.workspaceId];
+        const conditions = ["t.workspace_id = $1", "t.created_by IS NOT NULL"];
         const priv = privacyClause(req, params, 2);
         if (priv) conditions.push(priv);
         // created_by names come from the kernel "user" table, which the plugin
@@ -114,9 +114,9 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {
-        const params: unknown[] = [req.organizationId];
+        const params: unknown[] = [req.workspaceId];
         const conditions = [
-          "t.organization_id = $1",
+          "t.workspace_id = $1",
           "t.status != 'voided'",
           "t.subcategory IS NOT NULL",
         ];
@@ -158,8 +158,8 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
       const dateTo = req.query.dateTo as string | undefined;
 
       try {
-        const params: unknown[] = [req.organizationId];
-        const conditions = ["t.organization_id = $1", "t.status != 'voided'"];
+        const params: unknown[] = [req.workspaceId];
+        const conditions = ["t.workspace_id = $1", "t.status != 'voided'"];
         const priv = privacyClause(req, params, params.length + 1);
         if (priv) conditions.push(priv);
 
@@ -206,19 +206,19 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
         // Count private rows hidden from the current user. Skip entirely when
         // the caller bypasses privacy (admin/superuser) — the count is always 0.
         let privateHidden = 0;
-        const privParams: unknown[] = [req.organizationId];
+        const privParams: unknown[] = [req.workspaceId];
         const privFrag = privacyClause(req, [], 0); // probe: null => caller bypasses
         if (privFrag) {
           const userId = req.user?.id ?? "";
           const privConditions = [
-            "t.organization_id = $1",
+            "t.workspace_id = $1",
             "t.status != 'voided'",
             "t.is_private = true",
             `t.created_by != $2`,
             `NOT EXISTS (SELECT 1 FROM accounts.transaction_visibility tv WHERE tv.transaction_id = t.id AND tv.user_id = $2)`,
             `NOT EXISTS (SELECT 1 FROM accounts.transaction_visibility_role tvr WHERE tvr.transaction_id = t.id AND tvr.role_code = $3)`,
           ];
-          privParams.push(userId, req.orgRole ?? "");
+          privParams.push(userId, req.wsRole ?? "");
           if (dateFrom) {
             privParams.push(dateFrom);
             privConditions.push(`t.transaction_date >= $${privParams.length}`);
@@ -265,8 +265,8 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
       const dateTo = req.query.dateTo as string | undefined;
 
       try {
-        const params: unknown[] = [req.organizationId];
-        const conditions = ["t.organization_id = $1", "t.status != 'voided'"];
+        const params: unknown[] = [req.workspaceId];
+        const conditions = ["t.workspace_id = $1", "t.status != 'voided'"];
         const priv = privacyClause(req, params, params.length + 1);
         if (priv) conditions.push(priv);
 
@@ -342,12 +342,12 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
       const ORG_TZ = "Asia/Manila";
 
       try {
-        const params: unknown[] = [req.organizationId];
+        const params: unknown[] = [req.workspaceId];
         // Line items inherit the parent transaction's privacy posture, so we
         // join up to the transaction and apply the same visibility rules.
         const baseConds = [
-          "li.organization_id = $1",
-          "t.organization_id = $1",
+          "li.workspace_id = $1",
+          "t.workspace_id = $1",
           "li.status != 'voided'",
           "t.status != 'voided'",
         ];
