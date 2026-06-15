@@ -9,11 +9,9 @@ A set of UI components for SolidJS apps, built and used by the KahitSan team.
 reusable components, a bit like React but with its own way of working. These
 components are written for SolidJS only. They will not work in React or Vue.
 
-Inside you will find things like a notes box where you can tag a client with the
-`@` sign, picker buttons for clients, vouchers and payment accounts, a camera
-capture screen, small file attachment tiles, and a square avatar chip for a
-financial account or a person. There are also some tiny helper functions for
-icons, colors, and safe links.
+Inside you will find small building-block components, ready-made widgets built
+from them, and a few non-visual helpers. The full, always-current list lives in
+the docs (see below), so this README stays short on purpose.
 
 ## Where you can use it
 
@@ -35,38 +33,20 @@ that part, and each component page says what it needs.
 
 ## What is inside
 
-Components:
+The package is organized into three kinds of exports:
 
-- **MentionTextarea** is a notes box. Type `@` to tag a client from a dropdown.
-  The picked client shows as a colored chip.
-- **MarkdownNotes** shows notes text (with bold, italic, links, lists, and
-  client tags) as read-only formatted text.
-- **ClientPicker** is a button that opens a search popup to pick one client. You
-  can also create a new client right from the search box.
-- **VoucherPicker** is a button to pick a discount voucher for a sale. It also
-  exports a `calculateDiscount` helper.
-- **CameraCapture** is a full-screen view that opens the device camera, lets you
-  take a photo, review or retake it, and hands back a file.
-- **AddAttachmentTile** is a dashed "Add" tile. Tapping it lets you take a photo
-  or pick a file from the device.
-- **ExistingAttachmentTile** shows one already-uploaded file as a small tile,
-  with an image preview or a file link, plus an optional remove button.
-- **PaymentAccountPicker** is a button to choose which financial account a payment
-  goes into, grouped by type (cash, e-wallet, bank, external).
-- **AccountAvatar** is a small square or round chip picturing an account (logo or
-  icon) or a person (photo or initials).
+- **Base components** are the small building blocks, like form fields, status
+  pills, tooltips, progress bars, and avatars.
+- **Composite components** combine those building blocks into ready-made widgets,
+  like the search-and-pick selectors and the notes editor.
+- **Utils** are non-visual helpers, like the peso and date formatters and the
+  safe link builders.
 
-Helper functions:
+We do not list every component here on purpose, so this README does not fall out
+of date as the set grows. The complete, current catalog, with a live example and
+the props for each one, is in the docs:
 
-- **getAccountIcon / getAccountTone** pick the right icon and accent colors for
-  a financial account. Comes with `ACCOUNT_ICON_SLUGS` and `ACCOUNT_ICON_LABELS`
-  for building an icon picker.
-- **buildLogoSrc** returns a logo link only if it is a safe `http`/`https` URL,
-  else an empty string.
-- **attachmentUrl / isResolvableAttachment** are small safety helpers for
-  attachment links.
-- **useAccountsIndex / resolveAccount / resolveAccountName** load financial
-  accounts once and look them up by id.
+**https://kahitsan.github.io/ksui/**
 
 ## Install
 
