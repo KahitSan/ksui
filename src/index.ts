@@ -23,18 +23,6 @@
 // Base components
 // ---------------------------------------------------------------------------
 
-export { default as MentionTextarea } from "./components/base/MentionTextarea";
-export type { MentionTextareaProps } from "./components/base/MentionTextarea";
-
-export { default as MarkdownNotes } from "./components/base/MarkdownNotes";
-export type { MarkdownNotesProps } from "./components/base/MarkdownNotes";
-
-export { default as ClientPicker } from "./components/base/ClientPicker";
-export type { ClientOption } from "./components/base/ClientPicker";
-
-export { default as VoucherPicker, calculateDiscount } from "./components/base/VoucherPicker";
-export type { VoucherOption } from "./components/base/VoucherPicker";
-
 export { default as CameraCapture } from "./components/base/CameraCapture";
 
 export { default as AddAttachmentTile } from "./components/base/AddAttachmentTile";
@@ -90,6 +78,20 @@ export { default as LiveTimer, type LiveTimerProps } from "./components/composit
 // Plugin reusability backlog: composites migrated from per-plugin copies.
 export { default as SecretReveal, type SecretRevealProps } from "./components/composite/SecretReveal";
 export { default as FormActions, type FormActionsProps } from "./components/composite/FormActions";
+
+// Higher-level widgets: the search-and-create pickers and the mention-aware
+// editor that the team treats as composites.
+export { default as MentionTextarea } from "./components/composite/MentionTextarea";
+export type { MentionTextareaProps } from "./components/composite/MentionTextarea";
+
+export { default as MarkdownNotes } from "./components/composite/MarkdownNotes";
+export type { MarkdownNotesProps } from "./components/composite/MarkdownNotes";
+
+export { default as ClientPicker } from "./components/composite/ClientPicker";
+export type { ClientOption } from "./components/composite/ClientPicker";
+
+export { default as VoucherPicker, calculateDiscount } from "./components/composite/VoucherPicker";
+export type { VoucherOption } from "./components/composite/VoucherPicker";
 
 // ---------------------------------------------------------------------------
 // Utils (not components)

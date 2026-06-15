@@ -19,6 +19,25 @@ import AccountIconsPage from "./pages/AccountIconsPage";
 import BuildLogoSrcPage from "./pages/BuildLogoSrcPage";
 import AttachmentUrlPage from "./pages/AttachmentUrlPage";
 import UseAccountsIndexPage from "./pages/UseAccountsIndexPage";
+import FormFieldPage from "./pages/FormFieldPage";
+import DetailRowPage from "./pages/DetailRowPage";
+import TooltipPage from "./pages/TooltipPage";
+import ImageCropperPage from "./pages/ImageCropperPage";
+import ProgressBarPage from "./pages/ProgressBarPage";
+import ChartLegendPage from "./pages/ChartLegendPage";
+import StatusPillPage from "./pages/StatusPillPage";
+import SegmentedFilterPage from "./pages/SegmentedFilterPage";
+import CopyButtonPage from "./pages/CopyButtonPage";
+import KpiCardPage from "./pages/KpiCardPage";
+import RadioCardGroupPage from "./pages/RadioCardGroupPage";
+import FormErrorBannerPage from "./pages/FormErrorBannerPage";
+import TagPillPage from "./pages/TagPillPage";
+import LiveTimerPage from "./pages/LiveTimerPage";
+import SecretRevealPage from "./pages/SecretRevealPage";
+import FormActionsPage from "./pages/FormActionsPage";
+import FormatPHPPage from "./pages/formatPHPPage";
+import FormatShortDatePage from "./pages/formatShortDatePage";
+import FormatFullDatePage from "./pages/formatFullDatePage";
 import { installDocsFetchMock } from "./mocks/fetch";
 import "./tailwind.css";
 import "./styles.css";
@@ -54,6 +73,25 @@ render(
       <Route path="/components/build-logo-src" component={BuildLogoSrcPage} />
       <Route path="/components/attachment-url" component={AttachmentUrlPage} />
       <Route path="/components/use-accounts-index" component={UseAccountsIndexPage} />
+      <Route path="/components/form-field" component={FormFieldPage} />
+      <Route path="/components/detail-row" component={DetailRowPage} />
+      <Route path="/components/tooltip" component={TooltipPage} />
+      <Route path="/components/image-cropper" component={ImageCropperPage} />
+      <Route path="/components/progress-bar" component={ProgressBarPage} />
+      <Route path="/components/chart-legend" component={ChartLegendPage} />
+      <Route path="/components/status-pill" component={StatusPillPage} />
+      <Route path="/components/segmented-filter" component={SegmentedFilterPage} />
+      <Route path="/components/copy-button" component={CopyButtonPage} />
+      <Route path="/components/kpi-card" component={KpiCardPage} />
+      <Route path="/components/radio-card-group" component={RadioCardGroupPage} />
+      <Route path="/components/form-error-banner" component={FormErrorBannerPage} />
+      <Route path="/components/tag-pill" component={TagPillPage} />
+      <Route path="/components/live-timer" component={LiveTimerPage} />
+      <Route path="/components/secret-reveal" component={SecretRevealPage} />
+      <Route path="/components/form-actions" component={FormActionsPage} />
+      <Route path="/utils/format-php" component={FormatPHPPage} />
+      <Route path="/utils/format-short-date" component={FormatShortDatePage} />
+      <Route path="/utils/format-full-date" component={FormatFullDatePage} />
     </HashRouter>
   ),
   root!,
