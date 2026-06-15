@@ -1,0 +1,214 @@
+/* Button effects copied from kahitsan-web design system */
+
+/* Scan line */
+.ks-hud-scan-line {
+  position: relative;
+  overflow: hidden;
+}
+.ks-hud-scan-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.2s ease;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--ks-effect-color, rgba(201, 169, 97, 0.4)),
+    transparent
+  );
+}
+.ks-hud-scan-line:hover::before {
+  left: 100%;
+  opacity: 1;
+  transition: all 0.8s ease;
+}
+
+/* Clip paths */
+.ks-hud-clip-top-left-bottom-right {
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  border: none !important;
+  border-radius: 0 !important;
+}
+.ks-hud-clip-top-right-bottom-left {
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+  border: none !important;
+  border-radius: 0 !important;
+}
+.ks-hud-clip-minimal-top-left-bottom-right {
+  clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+  border: none !important;
+  border-radius: 0 !important;
+}
+.ks-hud-clip-minimal-top-right-bottom-left {
+  clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+/* Glow */
+.ks-hud-glow {
+  transition: box-shadow 0.2s ease;
+  box-shadow: 0 0 8px var(--ks-effect-glow, rgba(201, 169, 97, 0.3));
+}
+.ks-hud-glow:hover:not(:disabled) {
+  box-shadow: 0 0 15px var(--ks-effect-glow-hover, rgba(201, 169, 97, 0.5));
+}
+
+/* Pulse */
+.ks-hud-pulse {
+  animation: ksHudPulse 2s infinite ease-in-out;
+}
+@keyframes ksHudPulse {
+  0%,
+  100% {
+    background-color: var(--ks-effect-pulse-bg, rgba(201, 169, 97, 0.1));
+    box-shadow: 0 0 5px var(--ks-effect-pulse-glow, rgba(201, 169, 97, 0.2));
+  }
+  50% {
+    background-color: var(--ks-effect-pulse-bg-mid, rgba(201, 169, 97, 0.2));
+    box-shadow: 0 0 10px var(--ks-effect-pulse-glow-mid, rgba(201, 169, 97, 0.4));
+  }
+}
+
+/* Ripple */
+.ks-btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+.ks-btn-ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0.1);
+  opacity: 0.8;
+  animation: ksButtonRippleExpand 0.4s ease-out forwards;
+  pointer-events: none;
+  z-index: 0;
+  background-color: var(--ks-ripple-color, rgba(255, 255, 255, 0.3));
+}
+.ks-btn-ripple-fade {
+  animation: ksButtonRippleFadeOnly 0.3s ease-out forwards;
+}
+@keyframes ksButtonRippleExpand {
+  0% {
+    transform: scale(0.1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.25;
+  }
+}
+@keyframes ksButtonRippleFadeOnly {
+  0% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+.ks-btn-ripple > *:not(.ks-btn-ripple-effect) {
+  position: relative;
+  z-index: 2;
+}
+
+/* Interactive */
+.ks-interactive {
+  /* Transition only paint/compositor properties, never layout. `transition: all`
+     also animates width/height/padding/gap/flex, so any element that changes its
+     layout while interactive (e.g. a nav row that restructures from a horizontal
+     row to an icon-over-label stack) janks for the whole duration as the browser
+     relayouts every frame. List the visual props explicitly so layout snaps. */
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+}
+.ks-interactive:active:not(:disabled) {
+  transform: scale(0.97);
+  opacity: 0.8;
+}
+.ks-interactive:hover:not(:disabled) {
+  transform: scale(1.02);
+}
+
+/* Theme toggle switch */
+.ks-theme-toggle {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.ks-theme-toggle-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  background-color: #3f3f46;
+  padding: 0 2px;
+  transition: background-color 0.3s ease;
+}
+.ks-theme-toggle-track[data-active] {
+  background-color: #d3c5ac;
+}
+.ks-theme-toggle-icon {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  pointer-events: none;
+  transition: color 0.3s ease;
+}
+.ks-theme-toggle-track::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #52525b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition:
+    transform 0.3s ease,
+    background-color 0.3s ease;
+  z-index: 1;
+}
+.ks-theme-toggle-track[data-active]::after {
+  transform: translateX(24px);
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.ks-theme-toggle-icon-moon {
+  color: #fbbf24;
+}
+.ks-theme-toggle-icon-sun {
+  color: rgba(255, 255, 255, 0.3);
+}
+.ks-theme-toggle-track[data-active] .ks-theme-toggle-icon-moon {
+  color: rgba(120, 90, 0, 0.3);
+}
+.ks-theme-toggle-track[data-active] .ks-theme-toggle-icon-sun {
+  color: #785a00;
+}
+.ks-theme-toggle:hover .ks-theme-toggle-track {
+  background-color: #52525b;
+}
+.ks-theme-toggle:hover .ks-theme-toggle-track[data-active] {
+  background-color: #c9b99a;
+}

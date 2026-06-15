@@ -2,3 +2,7 @@ node_modules/
 *.tgz
 .tsbuildinfo
 dist/
+
+# Scratch verification screenshots from local docs checks
+.verify-*.png
+.theme-*.png

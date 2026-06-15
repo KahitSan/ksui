@@ -1,0 +1,458 @@
+:root {
+  /* Layout sizes are theme independent. */
+  --sidebar-w: 260px;
+  --topbar-h: 56px;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* The docs are dark first, just like the real app. The theme class lives on
+ * <html> ("dark" or "light"). We key the chrome colors on those classes so the
+ * topbar, sidebar, and content recolor with the toggle. Dark is also the
+ * default if no class is set yet.
+ *
+ * Dark palette tracks the app: near black page, zinc text and borders.
+ * Light palette is the near white set the docs shipped with. */
+:root,
+html.dark {
+  --bg: #0a0a0a;
+  --fg: #f4f4f5;
+  --muted: #a1a1aa;
+  --border: #27272a;
+  --accent: #fbbf24;
+  /* Surfaces used by the chrome and the live preview box. */
+  --surface: #18181b;
+  --surface-hover: #27272a;
+  --surface-active: rgba(217, 119, 6, 0.18);
+  --surface-text: #e4e4e7;
+}
+
+html.light {
+  --bg: #ffffff;
+  --fg: #1e293b;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  /* Brand amber, darkened so it stays readable on the light background. */
+  --accent: #b45309;
+  --surface: #f7f9fb;
+  --surface-hover: #f1f5f9;
+  --surface-active: rgba(217, 119, 6, 0.12);
+  --surface-text: #1e293b;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* layout */
+.layout {
+  min-height: 100vh;
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: var(--topbar-h);
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.topbar-menu {
+  display: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--fg);
+}
+.brand {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--fg);
+}
+.brand:hover {
+  text-decoration: none;
+}
+.brand-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.topbar-spacer {
+  flex: 1;
+}
+.topbar-link {
+  color: var(--muted);
+  display: inline-flex;
+}
+
+/* The "UI" half of the wordmark is the brand amber in both themes on purpose. */
+.brand-accent {
+  color: #fbbf24;
+}
+
+/* Version pill in the top bar. Uses the themed surface and border so it flips
+   cleanly between light and dark. */
+.version-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+.version-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--surface-text);
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.version-trigger:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+.version-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  min-width: 140px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 0.25rem;
+  z-index: 60;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+.version-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--surface-text);
+}
+.version-item:hover {
+  background: var(--surface-hover);
+  text-decoration: none;
+}
+.version-item.current {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+/* GitHub mark link + Star pill. The Star pill uses themed chrome so it reads
+   well in both modes. */
+.github-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.github-mark-link {
+  color: var(--muted);
+  align-items: center;
+}
+.github-mark-link:hover {
+  color: var(--fg);
+}
+.star-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--surface-text);
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.star-pill:hover {
+  background: var(--surface-hover);
+  border-color: #fbbf24;
+  color: #fbbf24;
+  text-decoration: none;
+}
+
+/* Sun/moon theme toggle button. Plain icon button that sits in the topbar. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.theme-toggle:hover {
+  color: var(--fg);
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+
+.body {
+  display: flex;
+  align-items: flex-start;
+}
+.sidebar-wrap {
+  position: sticky;
+  top: var(--topbar-h);
+  width: var(--sidebar-w);
+  flex: 0 0 var(--sidebar-w);
+  height: calc(100vh - var(--topbar-h));
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  padding: 1rem;
+}
+.sidebar-group {
+  margin-bottom: 1.25rem;
+}
+.sidebar-group-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+.sidebar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sidebar-link {
+  display: block;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  color: var(--fg);
+  font-size: 0.9rem;
+}
+.sidebar-link:hover {
+  background: var(--surface-hover);
+  text-decoration: none;
+}
+.sidebar-link.active {
+  background: var(--surface-active);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 2rem 2.5rem 4rem;
+  max-width: 920px;
+}
+.content h1 {
+  font-size: 2rem;
+  margin: 0 0 0.5rem;
+}
+.content h2 {
+  font-size: 1.4rem;
+  margin: 2rem 0 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+.lead {
+  font-size: 1.1rem;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+.scrim {
+  display: none;
+}
+
+/* example block */
+.example {
+  margin: 1.5rem 0;
+}
+.example-title {
+  font-size: 1rem;
+  margin: 0 0 0.25rem;
+}
+.example-desc {
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+  font-size: 0.92rem;
+}
+.bd-example {
+  border: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
+  padding: 1.5rem;
+  /* The preview follows the active theme, matching how the component looks in
+     the real app in that mode. In dark mode it is the dark host surface; in
+     light mode it goes light because the .light remaps recolor the components
+     too. The host surface classes (.page-bg/.card-bg) also flip by theme, so
+     anything inside that uses them stays in sync. */
+  background: var(--surface);
+  color: var(--surface-text);
+}
+.example-toggle {
+  border: 1px solid var(--border);
+  border-top: none;
+  background: var(--surface-hover);
+  width: 100%;
+  text-align: left;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+/* code */
+.code-block {
+  position: relative;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+}
+.code-block pre {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.code-pre-fallback {
+  background: #0d1117;
+  color: #e6edf3;
+}
+.code-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2;
+  border: 1px solid #30363d;
+  background: #161b22;
+  color: #c9d1d9;
+  border-radius: 6px;
+  padding: 0.3rem;
+  cursor: pointer;
+  display: inline-flex;
+}
+.code-copy:hover {
+  background: #21262d;
+}
+
+/* inline import snippet */
+.import-snippet {
+  margin: 1rem 0 0.5rem;
+}
+
+/* props table */
+.props-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin: 0.5rem 0 1rem;
+}
+.props-table th,
+.props-table td {
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 0.6rem;
+  vertical-align: top;
+}
+.props-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+.props-table code {
+  background: var(--surface-hover);
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.85em;
+}
+
+/* package manager tabs */
+.pm-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.75rem 0 0;
+}
+.pm-tab {
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: var(--surface-hover);
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  border-radius: 6px 6px 0 0;
+  color: var(--muted);
+}
+.pm-tab.active {
+  background: #0d1117;
+  color: #fff;
+  border-color: #0d1117;
+}
+
+/* footer */
+.page-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.page-footer-link {
+  font-weight: 600;
+}
+
+.feature-list {
+  line-height: 1.7;
+}
+
+@media (max-width: 860px) {
+  .topbar-menu {
+    display: inline-flex;
+  }
+  .sidebar-wrap {
+    position: fixed;
+    top: var(--topbar-h);
+    left: 0;
+    z-index: 50;
+    background: var(--bg);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+  .sidebar-wrap.open {
+    transform: translateX(0);
+  }
+  .scrim {
+    display: block;
+    position: fixed;
+    inset: var(--topbar-h) 0 0 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 45;
+  }
+  .content {
+    padding: 1.25rem 1.25rem 3rem;
+  }
+}

@@ -1,7 +1,7 @@
 // Source: KahitSan/kserp src/components/ClientPicker.tsx (vendored into the plugin remote).
 //
 // Cross-plugin picker: fetches the SIBLING clients plugin's public API at
-// /api/clients. Degrades gracefully — when the clients plugin isn't deployed
+// /api/clients. Degrades gracefully: when the clients plugin isn't deployed
 // the fetch 404s/fails, the popup shows an inline "couldn't load" notice, and
 // the rest of the transaction modal still works (the sale just has no
 // billed-to client). highlightMatch comes from the host UI kit.

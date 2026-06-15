@@ -1,4 +1,4 @@
-// @kahitsan/ksui — shared SolidJS UI components for KahitSan/Hilinga plugins.
+// @kahitsan/ksui: shared SolidJS UI components for KahitSan/Hilinga plugins.
 //
 // These were copied byte-for-byte across plugins (counter, transactions, ...);
 // this package is the single canonical copy, PUBLISHED to GitHub Packages and
@@ -7,7 +7,7 @@
 // The package ships its source under a `solid` export condition (see
 // package.json), so the consumer's vite-plugin-solid compiles these components
 // while solid-js and `@kserp/host-ui` stay EXTERNALIZED to the host runtime
-// globals — the plugin IIFE bundles them identically to a local copy: no runtime
+// globals. The plugin IIFE bundles them identically to a local copy: no runtime
 // change, single Solid instance, host UI kit reused. The `@kserp/host-ui` ambient
 // type contract ships alongside (host-ui.d.ts, the `./host-ui` export).
 

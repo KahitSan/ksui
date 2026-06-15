@@ -12,7 +12,7 @@
 // (read from the host's useActiveWorkspace()). Because plugin-ui ships as source
 // compiled into each plugin's IIFE, the module-level singleton stays per-plugin.
 // Degrades gracefully: when the financial-accounts plugin isn't deployed the
-// fetch 404s/fails and the index stays empty — resolveAccount() then falls back
+// fetch 404s/fails and the index stays empty, so resolveAccount() then falls back
 // to the type-default glyph.
 
 import { createResource, type Resource } from "solid-js";

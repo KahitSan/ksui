@@ -102,7 +102,7 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
     }
   };
 
-  // Single fetch at mount — list rarely changes within a cart session,
+  // Single fetch at mount. The list rarely changes within a cart session,
   // and Charge gating already depends on the count it reports up via
   // onCountChange. If the picker ever needs to refetch on org switch,
   // swap this for a createEffect tracking the active-org signal.

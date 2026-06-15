@@ -39,7 +39,7 @@ export default function ExistingAttachmentTile(props: Props) {
         fallback={
           <div
             class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/40 px-2 text-center text-zinc-500"
-            title={`${props.attachment.file_name} — file is no longer available`}
+            title={`${props.attachment.file_name} (file is no longer available)`}
           >
             <TriangleAlert size={18} class="text-amber-500/70" />
             <span class="truncate max-w-full text-[10px]">{props.attachment.file_name}</span>

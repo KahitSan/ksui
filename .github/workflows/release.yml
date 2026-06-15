@@ -2,7 +2,7 @@ name: Publish @kahitsan/ksui
 
 # Publishes the package to the PUBLIC npm registry (npmjs.com) on a version tag.
 # ksui ships SOURCE (no esbuild dist): it is a SolidJS component library consumed
-# via its `solid` export condition — the consumer's vite-plugin-solid compiles it.
+# via its `solid` export condition, so the consumer's vite-plugin-solid compiles it.
 # So there is no dist to build; we run a light sanity grep on the shipped source
 # (no kernel internal must leak in) and publish.
 #

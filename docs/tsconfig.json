@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "types": ["vite/client", "node"],
+    "paths": {
+      "@kserp/host-ui": ["./src/mocks/host-ui.tsx"],
+      "@kahitsan/ksui": ["../src/index.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts", "scripts"]
+}

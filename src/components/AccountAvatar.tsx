@@ -1,15 +1,15 @@
-// AccountAvatar — renders a small visual chip for an account or a user.
+// AccountAvatar renders a small visual chip for an account or a user.
 //
 // Two distinct semantics share this chip, and the chip picks by intent:
 //
-//   • ACCOUNT (a financial account — the default). Shows the account's
+//   • ACCOUNT (a financial account, the default). Shows the account's
 //     uploaded logo, else its chosen icon glyph (the slug picked in the
 //     financial-accounts create/edit modal, or the type default). NEVER an
 //     initials circle, and the container is a ROUNDED SQUARE (rounded-md).
-//     This matches the /financial-accounts page exactly — a financial
+//     This matches the /financial-accounts page exactly. A financial
 //     account is not a person, so it must not render as an initials avatar.
 //
-//   • USER (a person badge — calendar entries, mention lists, timesheet
+//   • USER (a person badge for calendar entries, mention lists, timesheet
 //     attribution). Shows the profile photo, else an initial-on-color
 //     CIRCLE, in a circular (rounded-full) container. Callers opt in with
 //     `{ id: 0, type: 'user', name: 'Myra Abilay', image }` (the `type:
@@ -24,7 +24,7 @@ import { Dynamic } from "solid-js/web";
 import { getAccountIcon } from "../lib/account-icons";
 import { buildLogoSrc } from "../lib/account-logo-url";
 
-// Shared 16-color palette and initials algorithm — keep in lockstep with
+// Shared 16-color palette and initials algorithm. Keep in lockstep with
 // the kserp's ~/lib/avatar.ts so the host runtime and the plugin fleet
 // render the same chip for the same user.  Exported so any future widget
 // (or a caller's inline use) can derive a user's color/initials without
@@ -52,7 +52,7 @@ export function getAvatarColor(name: string): string {
 
 /** Build a base64 SVG data URL for the initial-on-color circle.  Because it
  *  renders as an `<img>`, the chip scales uniformly with every other source
- *  (photo, s3 logo) — no per-plugin/inline text-size drift.  The viewBox is
+ *  (photo, s3 logo), so there is no per-plugin/inline text-size drift.  The viewBox is
  *  100×100 and the font-size is calculated to keep 2-character initials
  *  comfortably inside the circle. */
 export function buildInitialsSvg(name: string): string {
@@ -81,7 +81,7 @@ export interface AvatarAccount {
    *  account variant, which never renders initials. */
   name?: string;
   /** User profile photo URL (e.g. Google identity provider). USER variant
-   *  only — higher priority than the initials fallback. */
+   *  only. Higher priority than the initials fallback. */
   image?: string | null;
 }
 
@@ -136,7 +136,7 @@ export default function AccountAvatar(props: AccountAvatarProps) {
         when={isUser()}
         fallback={
           // ACCOUNT: uploaded logo (rounded square), else the chosen icon
-          // glyph. No initials — a financial account is not a person.
+          // glyph. No initials, since a financial account is not a person.
           <Show when={props.account.s3_link} fallback={iconGlyph()}>
             <img
               src={buildLogoSrc(props.account.s3_link)}

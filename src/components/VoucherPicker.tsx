@@ -1,7 +1,7 @@
 // Source: KahitSan/kserp src/components/VoucherPicker.tsx (vendored into the plugin remote).
 //
 // Cross-plugin picker: fetches the SIBLING vouchers plugin's public API at
-// /api/vouchers and degrades gracefully — when the vouchers plugin isn't
+// /api/vouchers and degrades gracefully: when the vouchers plugin isn't
 // deployed the popup shows a "couldn't load" notice and the sale records with
 // no voucher (the manual-discount field stays available).
 

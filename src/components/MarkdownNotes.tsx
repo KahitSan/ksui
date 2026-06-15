@@ -334,7 +334,7 @@ function MentionChip(props: { name: string; clientId: number | null }): JSX.Elem
     const perms = usePermissions();
     canViewClients = () => perms.has("clients.view");
   } catch {
-    /* no provider in context — leave canViewClients() returning false */
+    /* no provider in context, leave canViewClients() returning false */
   }
 
   return (

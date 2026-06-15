@@ -1,0 +1,21 @@
+/* Tailwind utilities for the live component examples. Preflight is disabled in
+   tailwind.config.js so this does not reset the docs theme. We add back only the
+   one rule the components rely on: a border width with no border style draws
+   nothing, so default any element with a border to a solid style. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* The border reset Tailwind's preflight normally does. A `border` utility
+     sets only the width, so without this the default border style (none) hides
+     it. We reset width to 0 too, so ONLY elements that ask for a border get one
+     (this is what keeps the docs chrome from sprouting borders everywhere). */
+  *,
+  ::before,
+  ::after {
+    border-width: 0;
+    border-style: solid;
+    border-color: currentColor;
+  }
+}

@@ -6,7 +6,7 @@
 
 export function buildLogoSrc(s3Link: string | null | undefined): string {
   // The value flows straight into <img src>, so only an http(s) URL is allowed
-  // through — a stored javascript:/data:/vbscript: scheme would be stored XSS.
+  // through. A stored javascript:/data:/vbscript: scheme would be stored XSS.
   if (s3Link && /^https?:/i.test(s3Link)) return s3Link;
   return "";
 }

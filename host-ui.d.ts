@@ -1,12 +1,12 @@
 // CANONICAL SDK type defs for the host UI kit (window.__KSERP_UI__, externalized
-// as "@kserp/host-ui"). This ships in @kahitsan/plugin-ui and is the single
-// source of truth — every plugin (ours, and any third-party with no kernel
+// as "@kserp/host-ui"). This ships in @kahitsan/ksui and is the single
+// source of truth. Every plugin (ours, and any third-party with no kernel
 // source) gets it from the installed package via
-// `/// <reference types="@kahitsan/plugin-ui/host-ui" />`; there are no more
+// `/// <reference types="@kahitsan/ksui/host-ui" />`; there are no more
 // per-plugin copies to drift. The host owns the runtime: its remote loader
 // (kserp src/lib/remote-loader.ts) populates the global from the host's kit
 // barrel (kserp src/lib/host-ui.tsx) before loading any remote. Keep this in sync
-// with that barrel — every member here must be exported there, and vice-versa.
+// with that barrel. Every member here must be exported there, and vice versa.
 declare module "@kserp/host-ui" {
   import type { JSX, Accessor } from "solid-js";
 

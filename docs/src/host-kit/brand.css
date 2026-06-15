@@ -1,0 +1,302 @@
+/* KahitSan Design System -- ksERP
+ * Dark-first design. Light mode remaps via .light class on <html>.
+ * Synced with kahitsan-web's design-system.css palette.
+ *
+ * Color palette (light mode):
+ *   Page bg:        #f7f9fb (cool white)
+ *   Surface low:    #f2f4f6 (cards)
+ *   Surface:        #eceef0 (footer, tags)
+ *   Surface high:   #e6e8ea (chips, dividers)
+ *   On-surface:     #191c1e (text primary)
+ *   Secondary:      #5f5e5e (body copy)
+ *   Outline:        #817660 (warm gray)
+ *   Outline variant:#d3c5ac (warm light borders)
+ *   Primary:        #785a00 (dark gold accent)
+ */
+
+/* Page background */
+.page-bg {
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+}
+.light .page-bg {
+  background: #f7f9fb;
+}
+
+/* Card background */
+.card-bg {
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+}
+.light .card-bg {
+  background: #f2f4f6;
+  border: 1px solid #d3c5ac33;
+}
+
+/* Card background (solid, for text overlays on dividers) */
+.card-bg-solid {
+  background: #0f0f0f;
+}
+.light .card-bg-solid {
+  background: #f2f4f6;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #c9a961, #e5d4a1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.light .gradient-text {
+  background: linear-gradient(135deg, #785a00, #a07d2e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* =============================================
+   Light mode — text remapping
+   ============================================= */
+.light .text-white {
+  color: #191c1e;
+}
+.light .text-zinc-100 {
+  color: #191c1e;
+}
+.light .text-zinc-200 {
+  color: #2d3133;
+}
+.light .text-zinc-300 {
+  color: #3d4043;
+}
+.light .text-zinc-400 {
+  color: #5f5e5e;
+}
+.light .text-zinc-500 {
+  color: #817660;
+}
+.light .text-zinc-600 {
+  color: #5f5e5e;
+}
+.light .text-zinc-700 {
+  color: #817660;
+}
+.light .text-amber-400 {
+  color: #785a00;
+}
+.light .text-amber-300 {
+  color: #785a00;
+}
+.light .text-emerald-400 {
+  color: #059669;
+}
+.light .text-red-400 {
+  color: #dc2626;
+}
+.light .text-blue-400 {
+  color: #2563eb;
+}
+.light .text-slate-400 {
+  color: #64748b;
+}
+
+/* =============================================
+   Light mode — solid backgrounds
+   ============================================= */
+.light .bg-zinc-950 {
+  background-color: #ffffff;
+}
+.light .bg-zinc-900 {
+  background-color: #f2f4f6;
+}
+.light .bg-zinc-800 {
+  background-color: #e6e8ea;
+}
+
+/* =============================================
+   Light mode — semi-transparent backgrounds
+   ============================================= */
+.light .bg-zinc-900\/60 {
+  background-color: rgba(236, 238, 240, 0.85);
+}
+.light .bg-zinc-900\/70 {
+  background-color: rgba(247, 249, 251, 0.9);
+}
+.light .bg-zinc-900\/80 {
+  background-color: rgba(247, 249, 251, 0.92);
+}
+.light .bg-zinc-900\/95 {
+  background-color: rgba(255, 255, 255, 0.97);
+}
+.light .bg-zinc-800\/50 {
+  background-color: rgba(230, 232, 234, 0.5);
+}
+
+/* Amber tints */
+.light .bg-amber-500\/5 {
+  background-color: rgba(120, 90, 0, 0.03);
+}
+.light .bg-amber-500\/10 {
+  background-color: rgba(120, 90, 0, 0.06);
+}
+.light .bg-amber-500\/20 {
+  background-color: rgba(120, 90, 0, 0.08);
+}
+.light .bg-amber-600\/20 {
+  background-color: rgba(120, 90, 0, 0.08);
+}
+
+/* Other tints */
+.light .bg-blue-500\/20 {
+  background-color: rgba(37, 99, 235, 0.08);
+}
+.light .bg-emerald-500\/20 {
+  background-color: rgba(5, 150, 105, 0.08);
+}
+.light .bg-red-500\/10 {
+  background-color: rgba(220, 38, 38, 0.06);
+}
+.light .bg-red-500\/5 {
+  background-color: rgba(220, 38, 38, 0.03);
+}
+.light .bg-white\/\[0\.03\] {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+.light .bg-white\/\[0\.06\] {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* Slate (secondary button) */
+.light .bg-slate-600\/20 {
+  background-color: rgba(79, 70, 51, 0.08);
+}
+
+/* Emerald / red solid */
+.light .bg-emerald-400 {
+  background-color: #059669;
+}
+
+/* =============================================
+   Light mode — borders
+   ============================================= */
+.light .border-zinc-800\/50,
+.light .border-zinc-800\/30,
+.light .border-zinc-800\/20,
+.light .border-zinc-800\/40 {
+  border-color: #d3c5ac40;
+}
+.light .border-zinc-800 {
+  border-color: #e0e3e5;
+}
+.light .border-zinc-800\/60 {
+  border-color: #d3c5ac50;
+}
+.light .border-zinc-700\/40,
+.light .border-zinc-700\/50,
+.light .border-zinc-700 {
+  border-color: #d3c5ac60;
+}
+.light .border-amber-500\/20 {
+  border-color: rgba(120, 90, 0, 0.15);
+}
+.light .border-amber-500\/30 {
+  border-color: rgba(120, 90, 0, 0.2);
+}
+.light .border-amber-500\/40 {
+  border-color: rgba(120, 90, 0, 0.3);
+}
+.light .border-amber-600\/60 {
+  border-color: rgba(120, 90, 0, 0.4);
+}
+.light .border-red-500\/20 {
+  border-color: rgba(220, 38, 38, 0.15);
+}
+.light .border-blue-400\/40 {
+  border-color: rgba(37, 99, 235, 0.25);
+}
+.light .border-emerald-400\/40 {
+  border-color: rgba(5, 150, 105, 0.25);
+}
+.light .border-slate-600\/60 {
+  border-color: rgba(79, 70, 51, 0.3);
+}
+
+/* =============================================
+   Light mode — hover states
+   ============================================= */
+.light .hover\:text-white:hover {
+  color: #191c1e;
+}
+.light .hover\:text-amber-400:hover,
+.light .hover\:text-amber-300:hover {
+  color: #785a00;
+}
+.light .hover\:bg-zinc-800\/50:hover {
+  background-color: rgba(230, 232, 234, 0.6);
+}
+.light .hover\:bg-amber-600\/30:hover {
+  background-color: rgba(120, 90, 0, 0.15);
+}
+.light .hover\:border-amber-500:hover {
+  border-color: rgba(120, 90, 0, 0.6);
+}
+.light .hover\:bg-white\/\[0\.06\]:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+.light .hover\:bg-white\/10:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+.light .hover\:border-zinc-600:hover {
+  border-color: #d3c5ac80;
+}
+.light .hover\:bg-slate-600\/30:hover {
+  background-color: rgba(79, 70, 51, 0.12);
+}
+.light .hover\:border-slate-500:hover {
+  border-color: rgba(79, 70, 51, 0.45);
+}
+.light .hover\:bg-zinc-800:hover {
+  background-color: rgba(230, 232, 234, 0.7);
+}
+.light .hover\:text-zinc-300:hover {
+  color: #191c1e;
+}
+.light .hover\:text-zinc-200:hover {
+  color: #191c1e;
+}
+.light .hover\:text-red-400:hover {
+  color: #dc2626;
+}
+
+/* =============================================
+   Light mode — selection
+   ============================================= */
+.light ::selection {
+  background-color: rgba(234, 179, 8, 0.25);
+  color: #191c1e;
+}
+
+/* Theme toggle switch styles are in button.css */
+
+/* --- Active nav link (synced from ksc/css/design-system.css) ---
+ * Mirrors intent="primary" so the active sidebar/topnav item
+ * matches the brand's primary CTA in both dark and light modes.
+ */
+.ks-nav-active {
+  color: #fbbf24 !important;
+  background-color: rgba(217, 119, 6, 0.2) !important;
+  border-color: rgba(217, 119, 6, 0.6) !important;
+  --ks-effect-color: rgba(201, 169, 97, 0.4) !important;
+  --ks-effect-bg: rgba(201, 169, 97, 0.1) !important;
+  --ks-effect-border: rgba(201, 169, 97, 0.4) !important;
+  --ks-ripple-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.light .ks-nav-active {
+  color: #785a00 !important;
+  background-color: rgba(120, 90, 0, 0.1) !important;
+  border-color: rgba(120, 90, 0, 0.4) !important;
+  --ks-effect-color: rgba(120, 90, 0, 0.3) !important;
+  --ks-effect-bg: rgba(120, 90, 0, 0.05) !important;
+  --ks-effect-border: rgba(120, 90, 0, 0.3) !important;
+  --ks-ripple-color: rgba(0, 0, 0, 0.15) !important;
+}
