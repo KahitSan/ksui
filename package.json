@@ -1,6 +1,6 @@
 {
   "name": "@kahitsan/ksui",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "ksui is a set of shared SolidJS UI components plus the @kserp/host-ui type contract for KahitSan/Hilinga plugins. Published to the public npm registry and consumed as a normal dependency. Ships source under a `solid` export condition so the consumer's vite-plugin-solid compiles it with solid-js + @kserp/host-ui externalized to the host runtime.",
   "type": "module",
   "main": "./src/index.ts",
