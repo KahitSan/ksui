@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "types": []
+  },
+  // The components import "@kserp/host-ui" (externalized to the host global at
+  // runtime). The package now ships that ambient itself (host-ui.d.ts), so it
+  // type-checks standalone; the authoritative gate is still each consuming
+  // plugin's tsc (where lucide-solid + the consumer's solid are present).
+  "include": ["src", "host-ui.d.ts"]
+}
