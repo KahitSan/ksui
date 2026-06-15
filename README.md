@@ -1,6 +1,13 @@
 # @kahitsan/ksui
 
+[![npm version](https://img.shields.io/npm/v/@kahitsan/ksui.svg)](https://www.npmjs.com/package/@kahitsan/ksui)
+[![npm downloads](https://img.shields.io/npm/dm/@kahitsan/ksui.svg)](https://www.npmjs.com/package/@kahitsan/ksui)
+[![license](https://img.shields.io/npm/l/@kahitsan/ksui.svg)](./LICENSE)
+
 A set of UI components for SolidJS apps, built and used by the KahitSan team.
+
+On npm: [@kahitsan/ksui](https://www.npmjs.com/package/@kahitsan/ksui). Docs:
+[kahitsan.github.io/ksui](https://kahitsan.github.io/ksui/).
 
 ## What this is
 
