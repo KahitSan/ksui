@@ -68,7 +68,7 @@ function formatTimeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-function activeOrgId(): string | null {
+function activeWorkspaceId(): string | null {
   try {
     return localStorage.getItem("ks_active_workspace_id");
   } catch {
@@ -77,7 +77,7 @@ function activeOrgId(): string | null {
 }
 
 function triggerDownload(url: string, filename: string) {
-  const wsId = activeOrgId();
+  const wsId = activeWorkspaceId();
   const withOrg =
     wsId && !url.includes("orgId=")
       ? url + (url.includes("?") ? "&" : "?") + "orgId=" + encodeURIComponent(wsId)
@@ -151,7 +151,7 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
       }
       const { jobId } = (await res.json()) as { jobId: string };
 
-      const wsId = activeOrgId();
+      const wsId = activeWorkspaceId();
       const progressUrl =
         `/api/transactions/export/${jobId}/progress` +
         (wsId ? `?orgId=${encodeURIComponent(wsId)}` : "");
