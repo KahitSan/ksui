@@ -6,9 +6,11 @@ name: Release
 #  - when that pull request is merged (version already bumped, no changesets left),
 #    this publishes the new version to the public npm registry.
 #
-# Requires the repo secret NPM_TOKEN (an npm automation / 2fa-bypass token for the
-# kahitsan org), and the repo setting Actions -> "Allow GitHub Actions to create
-# and approve pull requests" so the version PR can be opened.
+# Requires two repo secrets:
+#  - NPM_TOKEN: an npm automation / 2fa-bypass token for the kahitsan org (publish).
+#  - GH_PAT: a GitHub personal access token with repo + workflow scope. The org
+#    blocks the default Actions token from opening pull requests, so the version
+#    PR is created with this PAT instead.
 on:
   workflow_dispatch:
   push:
@@ -24,6 +26,8 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -38,5 +42,5 @@ jobs:
           commit: "chore: version packages"
           title: "chore: version packages"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
