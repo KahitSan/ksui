@@ -11,7 +11,7 @@ import Play from "lucide-solid/icons/play";
 import AlertTriangle from "lucide-solid/icons/triangle-alert";
 import Check from "lucide-solid/icons/check";
 import Calendar from "lucide-solid/icons/calendar";
-import ProgressBar from "./ProgressBar";
+import ProgressBar from "../base/ProgressBar";
 
 export interface LiveTimerProps extends Omit<JSX.HTMLAttributes<HTMLDivElement>, "class"> {
   // Core timing

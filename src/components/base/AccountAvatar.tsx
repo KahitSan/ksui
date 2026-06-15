@@ -21,8 +21,8 @@
 
 import { Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { getAccountIcon } from "../lib/account-icons";
-import { buildLogoSrc } from "../lib/account-logo-url";
+import { getAccountIcon } from "../../utils/account-icons";
+import { buildLogoSrc } from "../../utils/account-logo-url";
 
 // Shared 16-color palette and initials algorithm. Keep in lockstep with
 // the kserp's ~/lib/avatar.ts so the host runtime and the plugin fleet

@@ -9,7 +9,7 @@ import Paperclip from "lucide-solid/icons/paperclip";
 import X from "lucide-solid/icons/x";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { confirm } from "@kserp/host-ui";
-import { attachmentUrl, isResolvableAttachment } from "../lib/attachments";
+import { attachmentUrl, isResolvableAttachment } from "../../utils/attachments";
 
 export interface ExistingAttachment {
   id: number;

@@ -10,7 +10,10 @@ interface NavGroup {
   items: NavItem[];
 }
 
-// Two tier nav: a Getting Started group, then an alphabetical Components group.
+// Nav groups: Getting Started, the host provided primitives (Host kit), then the
+// ksui package components split by category (Base vs Composite), then the
+// library helpers. Base is a standalone primitive; Composite wraps a base or
+// composes two or more components.
 export const NAV: NavGroup[] = [
   {
     title: "Getting Started",
@@ -27,24 +30,29 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
-    title: "General components",
+    title: "Base components",
     items: [
       { label: "Camera Capture", path: "/components/camera-capture" },
       { label: "Add Attachment Tile", path: "/components/add-attachment-tile" },
       { label: "Existing Attachment Tile", path: "/components/existing-attachment-tile" },
-      { label: "buildLogoSrc", path: "/components/build-logo-src" },
-      { label: "attachmentUrl", path: "/components/attachment-url" },
-    ],
-  },
-  {
-    title: "ERP components",
-    items: [
       { label: "Mention Textarea", path: "/components/mention-textarea" },
       { label: "Markdown Notes", path: "/components/markdown-notes" },
       { label: "Client Picker", path: "/components/client-picker" },
       { label: "Voucher Picker", path: "/components/voucher-picker" },
-      { label: "Payment Account Picker", path: "/components/payment-account-picker" },
       { label: "Account Avatar", path: "/components/account-avatar" },
+    ],
+  },
+  {
+    title: "Composite components",
+    items: [
+      { label: "Payment Account Picker", path: "/components/payment-account-picker" },
+    ],
+  },
+  {
+    title: "Helpers",
+    items: [
+      { label: "buildLogoSrc", path: "/components/build-logo-src" },
+      { label: "attachmentUrl", path: "/components/attachment-url" },
       { label: "Account Icon Helpers", path: "/components/account-icons" },
       { label: "Accounts Index", path: "/components/use-accounts-index" },
     ],

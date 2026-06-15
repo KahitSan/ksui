@@ -69,8 +69,8 @@ You can open issues here: https://github.com/KahitSan/ksui/issues
 
 Here is the simple map, so you know where things live:
 
-- `src/components/` holds the components, one file per component (for example `ClientPicker.tsx`, `MarkdownNotes.tsx`, `AccountAvatar.tsx`).
-- `src/lib/` holds small helper files the components use (for example icon and URL helpers).
+- `src/components/` holds the components, one file per component, split into two folders by category: `src/components/base/` and `src/components/composite/` (see the section below).
+- `src/utils/` holds small non-UI helper files the components use (for example icon and URL helpers). Helpers stay here, they are not components.
 - `src/index.ts` is the single entry point. It lists what the package gives to the outside world. When you add a new component, you export it from here.
 - `host-ui.d.ts` is the type contract for the host UI kit. It describes the shape of the `@kserp/host-ui` pieces (like `Button` and `Modal`) so the type-checker knows about them. You do not need to touch this unless you are working on that contract.
 - `package.json` lists the scripts, the version, and how the package ships.
@@ -82,6 +82,17 @@ There is no separate docs site in this repo yet. The `README.md` is the main ref
 All shared components live in this single package. Please do not copy a component into another repo and edit the copy there. If you need a change, change it here, in `ksui`. If you have a new reusable component, add it here too.
 
 Why? Because copies drift apart over time. One copy gets a bug fix, the other does not, and then nobody knows which is correct. Keeping one canonical copy means everyone gets the same fix at the same time.
+
+## Base and composite components
+
+Components are sorted into two folders by category:
+
+- `src/components/base/` is for a base component: a primitive that stands on its own. It uses only `solid-js`, `lucide-solid`, and the host kit via `@kserp/host-ui`. It does not import another ksui component.
+- `src/components/composite/` is for a composite component: one that wraps a base component, or composes two or more components (ksui components and host kit pieces) into a new higher level component.
+
+The rule when you add a component: place it in the correct folder for its category. A composite must reuse a base or an existing component rather than re-implementing it. If you find yourself rewriting the inside of a base component to build a composite, stop and import the base instead. This keeps one canonical copy of each primitive and stops the package from drifting into duplicated logic.
+
+Non-UI helpers (formatters, URL builders, hooks, style constants like `INPUT_CLASS`) are not components. They live in `src/utils/`, not in `src/components/base/` or `src/components/composite/`. A file under `components/` should render something or be a component; anything that is purely a helper a component calls belongs in `src/utils/`.
 
 ## Making your change
 

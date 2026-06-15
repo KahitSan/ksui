@@ -17,7 +17,7 @@
 
 import { createResource, type Resource } from "solid-js";
 import { useActiveWorkspace } from "@kserp/host-ui";
-import type { AvatarAccount } from "../components/AccountAvatar";
+import type { AvatarAccount } from "../components/base/AccountAvatar";
 
 interface IndexShape {
   byId: Map<number | string, AvatarAccount>;
