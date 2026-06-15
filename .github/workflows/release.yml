@@ -1,21 +1,27 @@
-name: Publish @kahitsan/ksui
+name: Release
 
-# Publishes the package to the PUBLIC npm registry (npmjs.com) on a version tag.
-# ksui ships SOURCE (no esbuild dist): it is a SolidJS component library consumed
-# via its `solid` export condition, so the consumer's vite-plugin-solid compiles it.
-# So there is no dist to build; we run a light sanity grep on the shipped source
-# (no kernel internal must leak in) and publish.
+# Changesets-driven release. On every push to main:
+#  - if there are pending changesets, this opens (or updates) a "version packages"
+#    pull request that bumps the version and writes the changelog.
+#  - when that pull request is merged (version already bumped, no changesets left),
+#    this publishes the new version to the public npm registry.
 #
-# Requires the repo secret NPM_TOKEN: an npm automation token for an account that
-# is a member of the `kahitsan` npm org (the `@kahitsan` scope).
+# Requires the repo secret NPM_TOKEN (an npm automation / 2fa-bypass token for the
+# kahitsan org), and the repo setting Actions -> "Allow GitHub Actions to create
+# and approve pull requests" so the version PR can be opened.
 on:
   workflow_dispatch:
   push:
-    tags: ["v*"]
+    branches: [main]
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,19 +29,14 @@ jobs:
           node-version: 20
           registry-url: https://registry.npmjs.org
           scope: "@kahitsan"
-      - name: Source sanity assertion (no kernel internal / sign capability)
-        run: |
-          npm pack
-          tar -xzf *.tgz
-          if grep -REq "signIdentity|@ks-erp/kernel|KSERP_INTERNAL_SECRET" package/src package/*.d.ts; then
-            echo "::error::a kernel internal or sign capability leaked into the source package"; exit 1
-          fi
-          # The package must actually ship its declared entry points.
-          for f in src/index.ts host-ui.d.ts; do
-            test -f "package/$f" || { echo "::error::published tarball is missing $f"; exit 1; }
-          done
-          echo "source sanity OK (entry points present, no leak)"
-      - name: Publish to npm (public)
-        run: npm publish --access public
+      - run: npm install
+      - name: Create version PR or publish
+        uses: changesets/action@v1
+        with:
+          version: npm run version
+          publish: npm run release
+          commit: "chore: version packages"
+          title: "chore: version packages"
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

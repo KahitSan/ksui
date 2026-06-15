@@ -149,9 +149,15 @@ We (the team) review pull requests as soon as we can. We may ask for small chang
 
 This part is mostly for maintainers, but it is good for everyone to know.
 
-When a new version is released, the web documentation must be updated too, so the version dropdown in the docs top bar stays accurate. Please do this in the same release, not as a later cleanup.
+Releases are driven by changesets and CI, so you do not bump the version or tag by hand. When your change affects the published package (anything under `src/`), add a changeset with your work:
 
-Concretely, in the same release you should:
+```
+npx changeset
+```
+
+Pick the bump type and write a short note. When your change lands on `main`, CI opens a "version packages" pull request that bumps the version and writes the changelog; merging that pull request publishes the new version. Docs-only changes do not need a changeset.
+
+When a new version is released, the web documentation must be updated too, so the version dropdown in the docs top bar stays accurate. In the same change that publishes the version:
 
 - Add the new version to `docs/src/versions.ts`. Put the new entry at the top of the `VERSIONS` array, with its GitHub release tag URL.
 - Bump `CURRENT_VERSION` in that same file to the new version.
