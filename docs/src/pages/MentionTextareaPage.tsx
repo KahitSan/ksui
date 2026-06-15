@@ -22,7 +22,7 @@ export default function MentionTextareaPage(): JSX.Element {
       <h2>Basic</h2>
       <Example
         title="Controlled notes with @ mentions"
-        description="Type freely; the box returns the raw token value. On this docs site the @ dropdown fetches /api/clients, which is not reachable, so the popup shows 'no results' and the box still works as a plain notes editor. That is the intended offline behavior."
+        description="Type freely and the box returns the raw token value. The @ dropdown fetches the clients plugin to list people to tag; when that endpoint is unreachable the popup shows 'no results' and the box still works as a plain notes editor."
         render={() => <MentionTextareaBasic />}
         code={src}
       />

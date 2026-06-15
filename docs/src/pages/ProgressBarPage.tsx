@@ -24,7 +24,7 @@ export default function ProgressBarPage(): JSX.Element {
         <CodeBlock code={`import { ProgressBar } from "@kahitsan/ksui";`} />
       </div>
 
-      <h2>Live example</h2>
+      <h2>Examples</h2>
       <Example
         title="Progress states"
         description="Colors set through the class prop, a status label and icon, a custom right label, an overflow band past 100, and a hidden percentage."

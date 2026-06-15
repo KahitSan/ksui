@@ -23,7 +23,7 @@ export default function FormatShortDatePage(): JSX.Element {
       <h2>Basic</h2>
       <Example
         title="A few inputs and their formatted results"
-        description="Pure function, fully live. Each row feeds an input through formatShortDate. Plain YYYY-MM-DD and full ISO strings both render the short date; null, undefined, and empty strings return the em-dash placeholder."
+        description="Plain YYYY-MM-DD and full ISO strings both render the en-PH short date; null, undefined, and empty strings return the em-dash placeholder."
         render={() => <FormatShortDateBasic />}
         code={src}
       />

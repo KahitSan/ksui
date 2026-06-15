@@ -23,7 +23,7 @@ export default function BuildLogoSrcPage(): JSX.Element {
       <h2>Basic</h2>
       <Example
         title="Safe links pass, unsafe links become empty"
-        description="Pure function, fully live. Each row feeds an input through buildLogoSrc and into an img src. Only the http(s) rows produce an image; the javascript: and relative rows return an empty string so the img shows nothing."
+        description="Only an http or https link produces an image. A javascript: link or a relative path returns an empty string, so the img shows nothing."
         render={() => <BuildLogoSrcBasic />}
         code={src}
       />

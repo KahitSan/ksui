@@ -23,7 +23,7 @@ export default function RadioCardGroupPage(): JSX.Element {
       <h2>Example</h2>
       <Example
         title="Plan picker"
-        description="Three plan options with a custom renderOption that shows a name and price line. The selection is controlled by a signal. Use the arrow keys, Home, and End to move between cards."
+        description="Plan options rendered with a custom renderOption that shows a name and price line. Selection is controlled, and arrow keys, Home, and End move between cards."
         render={() => <RadioCardGroupBasic />}
         code={radioCardGroupBasicSrc}
       />

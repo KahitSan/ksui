@@ -24,7 +24,7 @@ export default function CopyButtonPage(): JSX.Element {
       <h2>Basic usage</h2>
       <Example
         title="Basic usage"
-        description="Pass the text to copy. The first button uses the default labels; the others override the label, copied label, and icon size."
+        description="Pass the text to copy. With default labels it reads Copy and flips to Copied on click; the label, copied label, and icon size can each be overridden."
         render={() => <CopyButtonBasic />}
         code={copyButtonBasicSrc}
       />

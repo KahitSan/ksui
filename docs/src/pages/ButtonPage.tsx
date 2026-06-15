@@ -10,9 +10,10 @@ export default function ButtonPage(): JSX.Element {
     <article>
       <h1>Button</h1>
       <p class="lead">
-        The host owned button primitive. Color comes from <code>intent</code> (primary, danger, secondary); shape and
-        treatment come from <code>variant</code> (clip1, clip2, ghost, link). On hover it runs a scanline shimmer, the
-        clip variants carve HUD corners, and a click drops a ripple.
+        The host owned button primitive for every clickable action in a plugin. Color comes from <code>intent</code>{" "}
+        (primary, danger, secondary) and shape comes from <code>variant</code> (clip1, clip2, ghost, link), so the same
+        component covers a main call to action, a destructive action, and an inline link. Hover runs a scanline shimmer,
+        the clip variants carve HUD corners, and a click drops a ripple.
       </p>
 
       <h2>Import</h2>
@@ -23,7 +24,7 @@ export default function ButtonPage(): JSX.Element {
       <h2>Intents and variants</h2>
       <Example
         title="Intents and variants"
-        description="primary, danger, secondary intents; clip1, clip2, ghost, link variants; plus disabled. Hover for the shimmer, click for the ripple."
+        description="The primary, danger, and secondary intents across the clip1, clip2, ghost, and link variants, plus a disabled button. Hover shows the shimmer and a click drops the ripple."
         render={() => <ButtonBasic />}
         code={buttonBasicSrc}
       />

@@ -26,7 +26,7 @@ export default function AccountAvatarPage(): JSX.Element {
       <h2>Basic</h2>
       <Example
         title="User initials, account icon, and a named account"
-        description="Fully live, no backend needed. A user record renders initials on a color picked deterministically from the name; an account with an icon slug renders the lucide glyph; a named account with no logo or icon falls back to a type glyph. Pass an https s3_link or image to show a real logo or photo."
+        description="A user record renders initials on a color picked deterministically from the name. An account with an icon slug renders the lucide glyph. A named account with no logo or icon falls back to a type glyph. Pass an https s3_link or image to show a real logo or photo."
         render={() => <AccountAvatarBasic />}
         code={src}
       />

@@ -23,7 +23,7 @@ export default function FormatPHPPage(): JSX.Element {
       <h2>Basic</h2>
       <Example
         title="A few amounts and their formatted results"
-        description="Pure function, fully live. Each row feeds an input through formatPHP and shows what comes back. Numbers and numeric strings become peso amounts; null, undefined, and non-numbers return an em-dash."
+        description="Numbers and numeric strings become en-PH peso amounts; null, undefined, and non-numbers return an em-dash."
         render={() => <FormatPHPBasic />}
         code={src}
       />

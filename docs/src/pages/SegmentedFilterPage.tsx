@@ -24,7 +24,7 @@ export default function SegmentedFilterPage(): JSX.Element {
       <h2>Status and bucket filters</h2>
       <Example
         title="Status and bucket filters"
-        description="Top row uses bare strings (capitalized) for active, archived, all. Bottom row uses objects with explicit labels for time buckets. Click a segment to see the active value update."
+        description="Bare strings render capitalized, so active, archived, and all become Active, Archived, All. Object options carry an explicit label that renders as written, which suits time buckets and other non-status toggles."
         render={() => <SegmentedFilterBasic />}
         code={segmentedFilterBasicSrc}
       />

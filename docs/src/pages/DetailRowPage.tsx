@@ -23,7 +23,7 @@ export default function DetailRowPage(): JSX.Element {
       <h2>Labeled fields</h2>
       <Example
         title="Labeled fields"
-        description="Each field is a label above its value. The last row passes an empty value, so it shows the em-dash placeholder."
+        description="Each field is a label above its value. An empty value falls back to the em-dash placeholder."
         render={() => <DetailRowBasic />}
         code={detailRowBasicSrc}
       />

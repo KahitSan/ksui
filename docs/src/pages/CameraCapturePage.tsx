@@ -10,8 +10,9 @@ export default function CameraCapturePage(): JSX.Element {
     <article>
       <h1>Camera Capture</h1>
       <p class="lead">
-        A full screen modal that opens the device camera, lets you snap a photo, review or retake it, and hands the
-        final photo back as a <code>File</code>. Good for uploading a receipt or document photo.
+        Captures a photo from the device camera for uploads like a receipt or document photo. It opens a full screen
+        modal, lets the user snap a photo and review or retake it, then hands the final photo back as a{" "}
+        <code>File</code>.
       </p>
 
       <h2>Import</h2>
@@ -22,7 +23,7 @@ export default function CameraCapturePage(): JSX.Element {
       <h2>Basic</h2>
       <Example
         title="Open the capture modal"
-        description="Click 'Open camera' to mount the modal live. In this docs page there is no granted camera, so it lands in its error state and shows the 'Could not access camera' message plus a Close button. That graceful failure is itself the thing being demonstrated. On a real device with permission granted it shows the live viewfinder and capture button."
+        description="The modal opens on a granted camera with a live viewfinder and a capture button. When the camera cannot be accessed it falls back to a 'Could not access camera' message with a Close button instead of failing silently."
         render={() => <CameraCaptureBasic />}
         code={src}
       />

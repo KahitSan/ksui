@@ -24,7 +24,7 @@ export default function StatusPillPage(): JSX.Element {
       <h2>Tones, dot, and solid</h2>
       <Example
         title="Tones, dot, and solid"
-        description="The five tones (success, neutral, warning, danger, info), the optional leading dot, and the heavier solid background."
+        description="The five tones are success, neutral, warning, danger, and info. The dot prop adds a leading dot, and the solid prop swaps the tinted background for a heavier filled one."
         render={() => <StatusPillBasic />}
         code={statusPillBasicSrc}
       />

@@ -23,7 +23,7 @@ export default function PaymentAccountPickerPage(): JSX.Element {
       <h2>Basic</h2>
       <Example
         title="Account selection with a count callback"
-        description="On mount this fetches /api/financial-accounts, which is not reachable here, so it lands in its empty state and shows 'No accessible accounts', and the count reads 0. That offline state is what renders. With a backend it would group and auto select the first account."
+        description="On mount it fetches the accessible accounts from /api/financial-accounts, groups them by type, and auto selects the first one. When no accounts come back it shows 'No accessible accounts' and reports a count of 0 so the parent can disable charging."
         render={() => <PaymentAccountPickerBasic />}
         code={src}
       />

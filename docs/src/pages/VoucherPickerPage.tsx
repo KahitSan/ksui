@@ -24,7 +24,7 @@ export default function VoucherPickerPage(): JSX.Element {
       <h2>Basic</h2>
       <Example
         title="Controlled voucher selection"
-        description="Opening the popup fetches /api/vouchers, which is not reachable here, so it shows the graceful 'couldn't load' state. The calculateDiscount line below the box runs purely and needs no backend."
+        description="Opening the popup fetches /api/vouchers from the vouchers plugin; when that request fails the picker shows a graceful 'couldn't load' state. The calculateDiscount helper computes the peso discount from the chosen voucher and the subtotal."
         render={() => <VoucherPickerBasic />}
         code={src}
       />

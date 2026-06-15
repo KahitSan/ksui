@@ -21,10 +21,10 @@ export default function FormActionsPage(): JSX.Element {
         <CodeBlock code={`import { FormActions } from "@kahitsan/ksui";`} />
       </div>
 
-      <h2>Live example</h2>
+      <h2>Footer variants</h2>
       <Example
         title="Footer variants"
-        description="Default Save / Cancel, custom labels, a danger tone, and a disabled submit. The first row fakes a 1.2s save so you can watch the submit button disable while submitting is true."
+        description="Default Save / Cancel, custom labels, a danger tone, and a disabled submit. While submitting is true the submit button disables."
         render={() => <FormActionsBasic />}
         code={formActionsBasicSrc}
       />

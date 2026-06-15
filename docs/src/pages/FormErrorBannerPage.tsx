@@ -24,7 +24,7 @@ export default function FormErrorBannerPage(): JSX.Element {
       <h2>Basic usage</h2>
       <Example
         title="Basic usage"
-        description="A couple of real form messages, plus a falsy message that renders nothing. The banner ships no margin of its own, so use the class prop for spacing."
+        description="A couple of form messages, plus a falsy message that renders nothing. The banner ships no margin of its own, so use the class prop for spacing."
         render={() => <FormErrorBannerBasic />}
         code={formErrorBannerBasicSrc}
       />

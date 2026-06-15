@@ -47,8 +47,7 @@ export default function BilledTo() {
       <h2>Theme and styling</h2>
       <p>
         ksui does not ship its own theme. The components inherit colors and CSS from the app they run in, so they
-        match whatever styling you already have. There is no theme provider to mount. This docs site supplies a small
-        stand in theme so the widgets render standalone here.
+        match whatever styling you already have. There is no theme provider to mount.
       </p>
 
       <h2>Usage conventions</h2>

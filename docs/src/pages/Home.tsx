@@ -22,8 +22,7 @@ export default function Home(): JSX.Element {
 
       <h2>Live docs</h2>
       <p>
-        Every component on this site is the real source from <code>../src</code>, compiled by vite-plugin-solid and
-        rendered live. The host kit it depends on is mocked so the widgets render standalone. Each example shows the
+        Every component is the real source from <code>../src</code>, compiled by vite-plugin-solid. Each example shows the
         rendered result on top and its exact source directly below.
       </p>
       <p>

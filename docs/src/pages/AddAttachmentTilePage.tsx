@@ -22,7 +22,7 @@ export default function AddAttachmentTilePage(): JSX.Element {
       <h2>Basic</h2>
       <Example
         title="The Add tile and its menu"
-        description="Fully live. Click the tile to open its two choice menu; either choice flashes the Uploading state for a moment so you can see it. The tile uses the host's ks-hud-clip-top-left-bottom-right class for its angled corner, which is not loaded here, so the corner is square rather than clipped; everything else is faithful."
+        description="Clicking the tile opens its two choice menu, and either choice puts the tile into its Uploading state. The tile uses the host's ks-hud-clip-top-left-bottom-right class for its angled corner, so without that host class the corner stays square."
         render={() => <AddAttachmentTileBasic />}
         code={src}
       />

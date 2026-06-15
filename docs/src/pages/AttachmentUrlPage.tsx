@@ -22,8 +22,8 @@ export default function AttachmentUrlPage(): JSX.Element {
 
       <h2>Basic</h2>
       <Example
-        title="Truth table for a few links"
-        description="Pure functions, fully live. Only the https row resolves; ftp, javascript and null all yield an empty url and a false resolvable flag."
+        title="How the helpers treat different links"
+        description="Only an https link resolves. An ftp link, a javascript link, and null all yield an empty url and a false resolvable flag."
         render={() => <AttachmentUrlBasic />}
         code={src}
       />

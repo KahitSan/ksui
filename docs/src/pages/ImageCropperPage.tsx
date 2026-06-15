@@ -10,10 +10,10 @@ export default function ImageCropperPage(): JSX.Element {
     <article>
       <h1>ImageCropper</h1>
       <p class="lead">
-        A square (1:1) crop tool shown inside a host Modal. You hand it an uploaded image{" "}
-        <code>File</code>; the user drags inside the box to reposition the selection and drags a corner to resize it. On
-        Apply, the chosen region is drawn to a canvas at your requested output size and handed back as a WebP{" "}
-        <code>Blob</code>, ready to upload.
+        Lets a user crop an uploaded image to a square (1:1) selection before you save it, so logos and avatars come
+        out at a consistent size. You hand it an image <code>File</code> and it opens inside a host Modal; the user
+        drags inside the box to reposition the selection and drags a corner to resize it. On Apply, the chosen region is
+        drawn to a canvas at your requested output size and handed back as a WebP <code>Blob</code>, ready to upload.
       </p>
 
       <h2>Import</h2>
@@ -24,7 +24,7 @@ export default function ImageCropperPage(): JSX.Element {
       <h2>Pick and crop</h2>
       <Example
         title="Pick and crop a logo"
-        description="Live. The button fetches a sample photo, wraps it in a File, and opens the cropper in a Modal. Drag inside the box to move, drag a corner to resize, then Apply. The cropped 1:1 WebP shows up as a preview."
+        description="Drag inside the box to move the selection, drag a corner to resize it, then Apply to get back the cropped 1:1 WebP."
         render={() => <ImageCropperBasic />}
         code={src}
       />

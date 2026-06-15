@@ -25,7 +25,7 @@ export default function SecretRevealPage(): JSX.Element {
       <h2>Example</h2>
       <Example
         title="Reveal a one-time secret"
-        description="The first box uses the default warning and a caption. The second uses a custom warning and no caption. Click Copy to copy the value."
+        description="The warning line and footer caption are configurable, and the Copy button puts the secret on the clipboard."
         render={() => <SecretRevealBasic />}
         code={secretRevealBasicSrc}
       />

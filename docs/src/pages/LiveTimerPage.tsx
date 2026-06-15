@@ -24,7 +24,7 @@ export default function LiveTimerPage(): JSX.Element {
       <h2>Scenarios</h2>
       <Example
         title="Scenarios"
-        description="One component, six live states: open timer, running countdown, countdown to start, overdue, completed, and the counter-card total-label layout. These tick in real time."
+        description="The six states one LiveTimer can take: open timer, running countdown, countdown to start, overdue, completed, and the counter-card total-label layout."
         render={() => <LiveTimerBasic />}
         code={liveTimerBasicSrc}
       />

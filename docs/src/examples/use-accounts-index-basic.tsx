@@ -1,11 +1,10 @@
 // example-start
 import { AccountAvatar, resolveAccount, resolveAccountName, type AvatarAccount } from "@kahitsan/ksui";
 
-// A fake, already-loaded index shaped exactly like what useAccountsIndex()
+// An already-loaded index shaped exactly like what useAccountsIndex()
 // resolves to. The pure resolveAccount / resolveAccountName helpers read this
-// map directly, so there is no backend or host mock needed. In the real app a
-// page builds this once per org, then every row resolves an account id to its
-// avatar and name without another fetch.
+// map directly. In the real app a page builds this once per org, then every
+// row resolves an account id to its avatar and name without another fetch.
 const byId = new Map<number, AvatarAccount>([
   [10, { id: 10, type: "bank", icon: "landmark", color: "#0ea5e9" }],
   [11, { id: 11, type: "cash", icon: null, color: null }],

@@ -23,7 +23,7 @@ export default function TagPillPage(): JSX.Element {
       <h2>Tag lists</h2>
       <Example
         title="Tag lists"
-        description="A row of neutral chips for tags, plus a single chip on its own. The label is the only required prop."
+        description="Neutral zinc chips for a tag or category list. The label is the only required prop."
         render={() => <TagPillBasic />}
         code={tagPillBasicSrc}
       />

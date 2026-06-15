@@ -23,7 +23,7 @@ export default function FormFieldPage(): JSX.Element {
       <h2>Label, control, and hint</h2>
       <Example
         title="Label, control, and hint"
-        description="Three fields. The first has just a label, the next two add a hint line below the control."
+        description="A field with just a label, and two more that add a hint line below the control."
         render={() => <FormFieldBasic />}
         code={formFieldBasicSrc}
       />

@@ -10,9 +10,10 @@ export default function MarkdownNotesPage(): JSX.Element {
     <article>
       <h1>Markdown Notes</h1>
       <p class="lead">
-        Renders a restricted markdown subset (bold, italic, inline code, links, lists) with inline client mention
-        chips of the form <code>@[Name](client:N)</code>. The host owns routing, so mention chips link via a plain
-        anchor.
+        Displays a saved note as read-only formatted text, so notes typed in a MentionTextarea show up with their
+        formatting and tagged clients intact. It renders a restricted markdown subset (bold, italic, inline code,
+        links, lists) plus inline client mention chips of the form <code>@[Name](client:N)</code>. The host owns
+        routing, so mention chips link via a plain anchor.
       </p>
 
       <h2>Import</h2>

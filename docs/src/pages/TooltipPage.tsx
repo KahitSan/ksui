@@ -23,7 +23,7 @@ export default function TooltipPage(): JSX.Element {
       <h2>Placement and triggers</h2>
       <Example
         title="Placement and triggers"
-        description="Hover or keyboard-focus a trigger to reveal its bubble. Placement defaults to top; pass placement='bottom' to flip it. The trigger can be a button or any inline element."
+        description="The bubble appears on hover and on keyboard focus. Placement defaults to top; pass placement='bottom' to flip it below the trigger. The trigger can be a button or any inline element."
         render={() => <TooltipBasic />}
         code={tooltipBasicSrc}
       />

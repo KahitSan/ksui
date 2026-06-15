@@ -24,16 +24,16 @@ export default function UseAccountsIndexPage(): JSX.Element {
       <h2>Note</h2>
       <p>
         <code>useAccountsIndex</code> is a live data hook: it reads the active workspace from the host kit and fetches{" "}
-        <code>/api/financial-accounts</code> to build the index, so it cannot render on its own in a static docs page
-        without mocking both. The pure helpers <code>resolveAccount</code> and <code>resolveAccountName</code> are
-        render only and take a plain index object, so the demo below feeds them a hand built index that is shaped
-        exactly like what the hook resolves to. That is an honest stand in, not the real fetch.
+        <code>/api/financial-accounts</code> to build the index, so it needs both a host kit and a backend at run time.
+        The pure helpers <code>resolveAccount</code> and <code>resolveAccountName</code> take a plain index object and
+        do no fetching, so you can call them anywhere as long as you hand them an index of the same{" "}
+        <code>{"{ byId, nameById }"}</code> shape the hook resolves to.
       </p>
 
       <h2>Basic</h2>
       <Example
-        title="Resolving ids against a stubbed index"
-        description="The fakeIndex map mirrors the { byId, nameById } shape useAccountsIndex() resolves to. resolveAccount turns each id into an AvatarAccount (or a placeholder for the unknown id), resolveAccountName turns it into a label. No backend or host mock needed for the helpers."
+        title="Resolving ids against an index"
+        description="resolveAccount turns each id into an AvatarAccount, or a generic external-account placeholder when the id is missing, the same fallback a deleted or not-yet-loaded account takes. resolveAccountName turns an id into its display name."
         render={() => <UseAccountsIndexBasic />}
         code={src}
       />

@@ -23,7 +23,7 @@ export default function ExistingAttachmentTilePage(): JSX.Element {
       <h2>Basic</h2>
       <Example
         title="Image preview and an unavailable file"
-        description="Fully live. The left tile points at a real https image so it previews and shows a remove button (onDelete is passed); the confirm dialog uses the host's confirm helper. The right tile has a null s3_link, so it renders the Unavailable placeholder and has no remove button."
+        description="An https image link previews and shows a remove button when onDelete is passed, with the host's confirm helper guarding the delete. A null s3_link renders the Unavailable placeholder and has no remove button."
         render={() => <ExistingAttachmentTileBasic />}
         code={src}
       />
