@@ -60,3 +60,15 @@ export { default as ExistingAttachmentTile } from "./components/ExistingAttachme
 export type { ExistingAttachment } from "./components/ExistingAttachmentTile";
 
 export { useAccountsIndex, resolveAccount, resolveAccountName } from "./lib/accounts-index";
+
+// Plugin consolidation: widgets/helpers that were duplicated across plugins
+// (form fields, detail rows, tooltips, progress/timer/legend display, image
+// cropping) promoted into the single canonical package.
+export { default as FormField } from "./components/FormField";
+export { default as DetailRow } from "./components/DetailRow";
+export { INPUT_CLASS } from "./lib/INPUT_CLASS";
+export { default as Tooltip } from "./components/Tooltip";
+export { default as ImageCropper } from "./components/ImageCropper";
+export { default as ProgressBar, type ProgressBarProps } from "./components/ProgressBar";
+export { default as LiveTimer, type LiveTimerProps } from "./components/LiveTimer";
+export { default as ChartLegend } from "./components/ChartLegend";
