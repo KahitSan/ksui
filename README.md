@@ -7,7 +7,7 @@
 A set of UI components for SolidJS apps, built and used by the KahitSan team.
 
 On npm: [@kahitsan/ksui](https://www.npmjs.com/package/@kahitsan/ksui). Docs:
-[kahitsan.github.io/ksui](https://kahitsan.github.io/ksui/).
+[ksui.kahitsan.com](https://ksui.kahitsan.com/).
 
 ## What this is
 
@@ -53,7 +53,7 @@ We do not list every component here on purpose, so this README does not fall out
 of date as the set grows. The complete, current catalog, with a live example and
 the props for each one, is in the docs:
 
-**https://kahitsan.github.io/ksui/**
+**https://ksui.kahitsan.com/**
 
 ## Install
 
@@ -121,7 +121,7 @@ to mock the host kit and stub those calls so you can see every component render.
 The full documentation site, with a component-by-component guide and setup steps,
 will be at:
 
-https://kahitsan.github.io/ksui/
+https://ksui.kahitsan.com/
 
 ## Contributing
 
