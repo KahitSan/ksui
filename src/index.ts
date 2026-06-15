@@ -66,6 +66,16 @@ export { default as ImageCropper } from "./components/base/ImageCropper";
 export { default as ProgressBar, type ProgressBarProps } from "./components/base/ProgressBar";
 export { default as ChartLegend } from "./components/base/ChartLegend";
 
+// Plugin reusability backlog: atoms migrated from per-plugin copies into the
+// single canonical package.
+export { default as StatusPill, type StatusTone } from "./components/base/StatusPill";
+export { default as SegmentedFilter, type SegmentedFilterOption } from "./components/base/SegmentedFilter";
+export { default as CopyButton } from "./components/base/CopyButton";
+export { default as KpiCard, type KpiCardProps, type KpiTone } from "./components/base/KpiCard";
+export { default as RadioCardGroup } from "./components/base/RadioCardGroup";
+export { default as FormErrorBanner } from "./components/base/FormErrorBanner";
+export { default as TagPill } from "./components/base/TagPill";
+
 // ---------------------------------------------------------------------------
 // Composite components
 // ---------------------------------------------------------------------------
@@ -76,6 +86,10 @@ export type { PaymentAccountOption } from "./components/composite/PaymentAccount
 
 // LiveTimer wraps ProgressBar with timer state and elapsed-time display.
 export { default as LiveTimer, type LiveTimerProps } from "./components/composite/LiveTimer";
+
+// Plugin reusability backlog: composites migrated from per-plugin copies.
+export { default as SecretReveal, type SecretRevealProps } from "./components/composite/SecretReveal";
+export { default as FormActions, type FormActionsProps } from "./components/composite/FormActions";
 
 // ---------------------------------------------------------------------------
 // Utils (not components)
@@ -96,3 +110,8 @@ export { attachmentUrl, isResolvableAttachment } from "./utils/attachments";
 export { useAccountsIndex, resolveAccount, resolveAccountName } from "./utils/accounts-index";
 
 export { INPUT_CLASS } from "./utils/INPUT_CLASS";
+
+// Plugin reusability backlog: formatting helpers migrated from per-plugin copies.
+export { formatPHP } from "./utils/formatPHP";
+export { formatShortDate } from "./utils/formatShortDate";
+export { formatFullDate } from "./utils/formatFullDate";
