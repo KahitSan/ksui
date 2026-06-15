@@ -10,14 +10,8 @@ so the UI package versions and publishes independently of the kernel.
 
 ## Install
 
-The package is published to **GitHub Packages** under the `@kahitsan` scope. Add an
-`.npmrc` so the scope resolves there, then install:
-
-```
-# .npmrc
-@kahitsan:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
-```
+Published to the **public npm registry** (npmjs.com) as `@kahitsan/ksui` — no
+registry config or auth needed:
 
 ```
 npm install @kahitsan/ksui

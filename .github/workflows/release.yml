@@ -1,10 +1,13 @@
 name: Publish @kahitsan/ksui
 
-# Publishes the package to GitHub Packages (GHCR npm registry) on a version tag.
+# Publishes the package to the PUBLIC npm registry (npmjs.com) on a version tag.
 # ksui ships SOURCE (no esbuild dist): it is a SolidJS component library consumed
 # via its `solid` export condition — the consumer's vite-plugin-solid compiles it.
 # So there is no dist to build; we run a light sanity grep on the shipped source
 # (no kernel internal must leak in) and publish.
+#
+# Requires the repo secret NPM_TOKEN: an npm automation token for an account that
+# is a member of the `kahitsan` npm org (the `@kahitsan` scope).
 on:
   workflow_dispatch:
   push:
@@ -13,15 +16,12 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: https://npm.pkg.github.com
+          registry-url: https://registry.npmjs.org
           scope: "@kahitsan"
       - name: Source sanity assertion (no kernel internal / sign capability)
         run: |
@@ -35,11 +35,7 @@ jobs:
             test -f "package/$f" || { echo "::error::published tarball is missing $f"; exit 1; }
           done
           echo "source sanity OK (entry points present, no leak)"
-      - name: Publish to GitHub Packages
-        run: npm publish
+      - name: Publish to npm (public)
+        run: npm publish --access public
         env:
-          # setup-node's generated .npmrc keys on NODE_AUTH_TOKEN; the committed
-          # repo .npmrc keys on ${GITHUB_TOKEN}. Provide BOTH so whichever .npmrc
-          # npm reads resolves to the real token.
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
