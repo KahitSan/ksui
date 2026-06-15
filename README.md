@@ -22,7 +22,7 @@ the docs (see below), so this README stays short on purpose.
 
 ## Where you can use it
 
-There are two ways to use ksui.
+There are two ways to use KSUI.
 
 1. **In your own SolidJS project.** Install it from npm and use the components
    like any other dependency. It is MIT licensed, so you are free to use it in
@@ -130,6 +130,11 @@ up the repo, the code style we follow, and how to send a change.
 
 ## License
 
-MIT. See [LICENSE](./LICENSE). You are free to use ksui in your own personal or
+MIT. See [LICENSE](./LICENSE). You are free to use KSUI in your own personal or
 commercial SolidJS projects, as long as you keep the MIT license notice. Source
 lives at https://github.com/KahitSan/ksui.
+
+---
+
+Created with ♥ by [Luis Edward Miranda](https://github.com/llupRisinglll) for
+KahitSan Corp.

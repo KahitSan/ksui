@@ -4,7 +4,9 @@ import { A } from "@solidjs/router";
 export default function Home(): JSX.Element {
   return (
     <article>
-      <h1>ksui</h1>
+      <h1 class="brand-title">
+        KS<span class="brand-accent">UI</span>
+      </h1>
       <p class="lead">
         A set of SolidJS UI components you can use in your own project or when contributing to KahitSan plugins.
         Published to the public npm registry and MIT licensed.

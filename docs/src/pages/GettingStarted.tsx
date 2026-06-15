@@ -9,13 +9,13 @@ export default function GettingStarted(): JSX.Element {
     <article>
       <h1>Getting Started</h1>
       <p class="lead">
-        ksui is an open source SolidJS UI kit (MIT licensed). Install it in your own SolidJS project, or use it to
+        KSUI is an open source SolidJS UI kit (MIT licensed). Install it in your own SolidJS project, or use it to
         build KahitSan plugins. Import the widget you need by its bare specifier and drop it in.
       </p>
 
       <h2>Introduction</h2>
       <p>
-        ksui is a set of ready to use SolidJS components, published to the public npm registry. It gives you:
+        KSUI is a set of ready to use SolidJS components, published to the public npm registry. It gives you:
       </p>
       <ul class="feature-list">
         <li>Search aware pickers (client, voucher, payment account).</li>
@@ -46,7 +46,7 @@ export default function BilledTo() {
 
       <h2>Theme and styling</h2>
       <p>
-        ksui does not ship its own theme. The components inherit colors and CSS from the app they run in, so they
+        KSUI does not ship its own theme. The components inherit colors and CSS from the app they run in, so they
         match whatever styling you already have. There is no theme provider to mount.
       </p>
 

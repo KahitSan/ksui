@@ -37,7 +37,16 @@ export function App(props: { children?: JSX.Element }): JSX.Element {
         <Show when={navOpen()}>
           <div class="scrim" onClick={() => setNavOpen(false)} />
         </Show>
-        <main class="content">{props.children}</main>
+        <main class="content">
+          {props.children}
+          <footer class="site-footer">
+            Created with <span class="site-footer-heart">&#9829;</span> by{" "}
+            <a href="https://github.com/llupRisinglll" target="_blank" rel="noopener noreferrer">
+              Luis Edward Miranda
+            </a>{" "}
+            for KahitSan Corp.
+          </footer>
+        </main>
       </div>
     </div>
   );

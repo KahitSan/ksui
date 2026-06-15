@@ -456,3 +456,22 @@ a:hover {
     padding: 1.25rem 1.25rem 3rem;
   }
 }
+
+/* Site-wide credit footer */
+.site-footer {
+  margin-top: 3.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.site-footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.site-footer a:hover {
+  text-decoration: underline;
+}
+.site-footer-heart {
+  color: #ef4444;
+}
