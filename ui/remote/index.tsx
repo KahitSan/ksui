@@ -8,7 +8,7 @@
 //
 // Differences from the monolith, all forced by the fork's surface:
 //  - Shared UI (DataTable, PageShell, PageShareButton, Modal, DatePicker,
-//    SearchableSelect, Avatar, Button, confirm) + hooks (useActiveOrg,
+//    SearchableSelect, Avatar, Button, confirm) + hooks (useActiveWorkspace,
 //    permissions) + helpers (highlightMatch) come from "@kserp/host-ui".
 //  - No @solidjs/router in the remote, so URL filter-persistence is dropped;
 //    filters live in plain signals. No feature-flag Navigate gate.
@@ -28,7 +28,7 @@ import {
   Avatar,
   Button,
   confirm,
-  useActiveOrg,
+  useActiveWorkspace,
   usePermissions,
   PermissionGate,
   highlightMatch,
@@ -83,7 +83,7 @@ import { useTransactionFilters } from "./hooks/useTransactionFilters";
 import { useTransactionReferenceData } from "./hooks/useTransactionReferenceData";
 
 export function Component() {
-  const { activeOrg } = useActiveOrg();
+  const { activeWorkspace } = useActiveWorkspace();
   const perms = usePermissions();
   const canAccess = () => perms.has("transactions.view");
   const canEdit = () => perms.hasAny("transactions.create", "transactions.edit");
@@ -124,7 +124,7 @@ export function Component() {
   } = filters;
 
   const reference = useTransactionReferenceData({
-    activeOrg,
+    activeWorkspace,
     canShare,
     activeCategories,
   });
@@ -444,7 +444,7 @@ export function Component() {
       >
         <div class="min-w-0 overflow-hidden">
           <DataTable<TransactionRow>
-            refetchKey={() => activeOrg()?.ws_id}
+            refetchKey={() => activeWorkspace()?.ws_id}
             fetchFn={async (params: FetchParams): Promise<FetchResult<TransactionRow>> => {
               setTableSearchTerm(params.search);
               if (lazyDayData().size > 0) setLazyDayData(new Map());
@@ -475,7 +475,7 @@ export function Component() {
                 // Grouped view shows synthetic per-day rows (no account/payee
                 // columns to resolve) — clear any stale peer-unavailable flags.
                 setPeersUnavailable({ accounts: false, payees: false });
-                const wsId = activeOrg()?.ws_id ?? 0;
+                const wsId = activeWorkspace()?.ws_id ?? 0;
                 return {
                   data: result.data.map((d) => makeAggregatedRow(d, wsId)),
                   total: result.total,

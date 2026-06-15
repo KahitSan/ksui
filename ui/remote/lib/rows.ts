@@ -2,7 +2,7 @@
 // Extracted verbatim from index.tsx. `TransactionRow` is the table's row
 // generic (a Transaction plus optional grouping markers); `makeAggregatedRow`
 // builds the synthetic per-day "grouped" row from a grouped-by-date entry.
-// The factory takes wsId as a parameter (the caller threads activeOrg()) so it
+// The factory takes wsId as a parameter (the caller threads activeWorkspace()) so it
 // stays pure — no closure over the host context.
 
 import { type Transaction } from "./types";
