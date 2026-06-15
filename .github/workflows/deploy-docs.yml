@@ -20,10 +20,15 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Build docs
+      - name: Install deps
         run: |
+          # Root deps (lucide-solid, solid-js) are needed because the docs build
+          # compiles the ksui source under ../src, whose imports resolve from the
+          # root node_modules.
+          npm install
           npm --prefix docs install
-          npm --prefix docs run build
+      - name: Build docs
+        run: npm --prefix docs run build
       - name: Deploy to Cloudflare Pages
         run: npx --yes wrangler@latest pages deploy docs/dist --project-name ksui --branch main --commit-dirty=true
         env:
