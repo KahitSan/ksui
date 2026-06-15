@@ -6,11 +6,17 @@ name: Release
 #  - when that pull request is merged (version already bumped, no changesets left),
 #    this publishes the new version to the public npm registry.
 #
+# The package is published to TWO registries on each release:
+#  - public npmjs.com (the open-source install path), via changesets.
+#  - GitHub Packages, so internal @kahitsan consumers (kserp + the plugins, whose
+#    .npmrc routes the @kahitsan scope to npm.pkg.github.com) can install it.
+#
 # Requires two repo secrets:
-#  - NPM_TOKEN: an npm automation / 2fa-bypass token for the kahitsan org (publish).
+#  - NPM_TOKEN: an npm automation / 2fa-bypass token for the kahitsan org (npmjs).
 #  - GH_PAT: a GitHub personal access token with repo + workflow scope. The org
 #    blocks the default Actions token from opening pull requests, so the version
-#    PR is created with this PAT instead.
+#    PR is created with this PAT instead. The GitHub Packages mirror uses the
+#    built-in GITHUB_TOKEN with packages: write.
 on:
   workflow_dispatch:
   push:
@@ -24,6 +30,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      packages: write
     steps:
       - uses: actions/checkout@v5
         with:
@@ -34,7 +41,8 @@ jobs:
           registry-url: https://registry.npmjs.org
           scope: "@kahitsan"
       - run: npm install
-      - name: Create version PR or publish
+      - name: Create version PR or publish to npm
+        id: changesets
         uses: changesets/action@v1
         with:
           version: npm run version
@@ -44,3 +52,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Mirror published version to GitHub Packages
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          # Point the @kahitsan scope at GitHub Packages just for this publish.
+          printf '@kahitsan:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}\n' > .npmrc
+          npm publish --registry=https://npm.pkg.github.com
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
