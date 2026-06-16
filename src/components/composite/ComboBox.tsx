@@ -360,11 +360,13 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
 
   const addToPool = (item: T) => {
     if (props.value.some((x) => idOf(x) === idOf(item))) return;
-    props.onChange([...props.value, item]);
-    resetInput();
-    // resetInput re-focuses the input; closing after that keeps focus so the
+    // Close the popup BEFORE mutating the value when closeOnSelect: otherwise the
+    // about-to-be-hidden results list re-renders against the new value first,
+    // which the user sees as a flicker. resetInput re-focuses the input, so the
     // next keystroke reopens the popup (the input's onInput re-opens it).
     if (props.closeOnSelect) eng.setOpen(false);
+    props.onChange([...props.value, item]);
+    resetInput();
   };
 
   const removeFromPool = (item: T) => {
@@ -563,53 +565,64 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
                   {eng.trimmedQuery() ? `No matching ${props.noun}s.` : `Start typing to find a ${props.noun}…`}
                 </div>
               </Show>
-              <For each={displayOptions()}>
-                {(opt, i) => {
-                  const isFocused = () => focusedIdx() === i();
-                  const secondary = () => (opt.create ? null : props.secondaryOf?.(opt.item) ?? null);
+              {/* The create row (index 0 when shown) is rendered separately from
+                  the results so the results <For> iterates the STABLE search-result
+                  objects and reconciles by reference — selecting one removes just
+                  that node instead of tearing the whole list down (which flickered).
+                  Keyboard focus still indexes the combined list: 0 = create row,
+                  results start after it. */}
+              <Show when={showCreateOption()}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={focusedIdx() === 0}
+                  data-testid={tid("create")}
+                  onMouseEnter={() => setFocusedIdx(0)}
+                  onClick={() => void createAndAdd()}
+                  disabled={eng.creating()}
+                  class={`w-full flex items-start gap-2 px-3 py-2 text-left text-sm transition-colors border-b border-zinc-800 ${
+                    focusedIdx() === 0 ? "bg-amber-500/15 text-amber-200" : "text-zinc-100 hover:bg-zinc-800"
+                  }`}
+                >
+                  <Show
+                    when={!eng.creating()}
+                    fallback={<Loader2 size={14} class="animate-spin text-emerald-400 shrink-0 mt-0.5" />}
+                  >
+                    <UserPlus size={14} class="text-emerald-400 shrink-0 mt-0.5" />
+                  </Show>
+                  <span class="flex-1 text-emerald-300">
+                    New {props.noun} "<span class="font-medium">{eng.trimmedQuery()}</span>"
+                  </span>
+                </button>
+              </Show>
+              <For each={filteredResults()}>
+                {(item, i) => {
+                  const displayIdx = () => i() + (showCreateOption() ? 1 : 0);
+                  const isFocused = () => focusedIdx() === displayIdx();
+                  const secondary = () => props.secondaryOf?.(item) ?? null;
                   return (
                     <button
                       type="button"
                       role="option"
                       aria-selected={isFocused()}
-                      data-testid={opt.create ? tid("create") : `${tid("result")}-${idOf(opt.item)}`}
-                      onMouseEnter={() => setFocusedIdx(i())}
-                      onClick={() => selectOption(opt)}
-                      disabled={opt.create && eng.creating()}
+                      data-testid={`${tid("result")}-${idOf(item)}`}
+                      onMouseEnter={() => setFocusedIdx(displayIdx())}
+                      onClick={() => addToPool(item)}
                       class={`w-full flex items-start gap-2 px-3 py-2 text-left text-sm transition-colors ${
                         isFocused() ? "bg-amber-500/15 text-amber-200" : "text-zinc-100 hover:bg-zinc-800"
-                      } ${opt.create ? "border-t border-zinc-800" : ""}`}
+                      }`}
                     >
-                      <Show
-                        when={opt.create}
-                        fallback={<Icon size={14} class="text-zinc-500 shrink-0 mt-0.5" />}
-                      >
-                        <Show
-                          when={!eng.creating()}
-                          fallback={<Loader2 size={14} class="animate-spin text-emerald-400 shrink-0 mt-0.5" />}
-                        >
-                          <UserPlus size={14} class="text-emerald-400 shrink-0 mt-0.5" />
-                        </Show>
-                      </Show>
-                      <Show
-                        when={opt.create}
-                        fallback={
-                          <span class="flex-1 min-w-0">
-                            <span class="block truncate font-medium">
-                              {highlightMatch(props.labelOf((opt as { create: false; item: T }).item), eng.debouncedQuery().trim())}
-                            </span>
-                            <Show when={secondary()}>
-                              <span class="block truncate text-[11px] text-zinc-500">
-                                {highlightMatch(secondary()!, eng.debouncedQuery().trim())}
-                              </span>
-                            </Show>
-                          </span>
-                        }
-                      >
-                        <span class="flex-1 text-emerald-300">
-                          New {props.noun} "<span class="font-medium">{(opt as { create: true; name: string }).name}</span>"
+                      <Icon size={14} class="text-zinc-500 shrink-0 mt-0.5" />
+                      <span class="flex-1 min-w-0">
+                        <span class="block truncate font-medium">
+                          {highlightMatch(props.labelOf(item), eng.debouncedQuery().trim())}
                         </span>
-                      </Show>
+                        <Show when={secondary()}>
+                          <span class="block truncate text-[11px] text-zinc-500">
+                            {highlightMatch(secondary()!, eng.debouncedQuery().trim())}
+                          </span>
+                        </Show>
+                      </span>
                     </button>
                   );
                 }}
