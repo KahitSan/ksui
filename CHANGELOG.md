@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.6.17
+
+### Patch Changes
+
+- bf375da: Consume shared UI from @kahitsan/ksui (replaces @kahitsan/plugin-ui).
+
 ## 0.6.16
 
 ### Patch Changes
