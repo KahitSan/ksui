@@ -21,6 +21,7 @@ import AttachmentUrlPage from "./pages/AttachmentUrlPage";
 import UseAccountsIndexPage from "./pages/UseAccountsIndexPage";
 import FormFieldPage from "./pages/FormFieldPage";
 import DetailRowPage from "./pages/DetailRowPage";
+import DateTilePage from "./pages/DateTilePage";
 import TooltipPage from "./pages/TooltipPage";
 import ImageCropperPage from "./pages/ImageCropperPage";
 import ProgressBarPage from "./pages/ProgressBarPage";
@@ -75,6 +76,7 @@ render(
       <Route path="/components/use-accounts-index" component={UseAccountsIndexPage} />
       <Route path="/components/form-field" component={FormFieldPage} />
       <Route path="/components/detail-row" component={DetailRowPage} />
+      <Route path="/components/date-tile" component={DateTilePage} />
       <Route path="/components/tooltip" component={TooltipPage} />
       <Route path="/components/image-cropper" component={ImageCropperPage} />
       <Route path="/components/progress-bar" component={ProgressBarPage} />
