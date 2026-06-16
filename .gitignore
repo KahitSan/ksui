@@ -10,3 +10,4 @@ playwright-report/
 
 # Built plugin UI bundle (built in CI/deploy, served by the plugin process)
 dist-ui/
+.fallow/

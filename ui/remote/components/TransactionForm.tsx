@@ -28,13 +28,9 @@ async function searchPayees(query: string, kind: PayeeKind): Promise<PayeeOption
   if (query) params.set("search", query);
   const r = await fetch(`/api/payees?${params.toString()}`, { credentials: "include" });
   if (!r.ok) {
-    throw new Error(
-      r.status === 403
-        ? "Permission denied"
-        : r.status === 404
-          ? "Payees module isn't available — type a name instead"
-          : "Failed to load",
-    );
+    if (r.status === 403) throw new Error("Permission denied");
+    if (r.status === 404) throw new Error("Payees module isn't available — type a name instead");
+    throw new Error("Failed to load");
   }
   const json = (await r.json()) as { data?: PayeeOption[] };
   return json.data ?? [];

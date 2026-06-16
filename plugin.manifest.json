@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "basePath": "/api/transactions",
   "additionalBasePaths": ["/api/transaction-line-items"],
-  "port": 4820,
+  "port": 4020,
   "capabilityKey": "transactions",
   "label": "Transactions",
   "uiRouteBase": "transactions",
