@@ -18,7 +18,12 @@
     "service:findById@vouchers"
   ],
   "ciCoMounts": ["clients", "packages", "vouchers"],
-  "provides": ["service:findById", "service:getAccountBalances", "service:getPackageCapacityUsage"],
+  "provides": [
+    "service:findById",
+    "service:getAccountBalances",
+    "service:getPackageCapacityUsage",
+    "service:createSalaryTransaction"
+  ],
   "permissions": [
     "transactions.view",
     "transactions.create",

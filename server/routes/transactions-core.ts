@@ -20,6 +20,7 @@
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
 import { applyTenantContext } from "@ks-erp/kernel-base";
+import { insertTransactionRow, insertVisibilityShares } from "../lib/create-transaction.js";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
 import {
@@ -394,64 +395,41 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
         await applyTenantContext(dbClient);
-        const result = await dbClient.query(
-          `INSERT INTO accounts.transactions
-             (workspace_id, category, subcategory, source_account_id, destination_account_id,
-              amount, description, notes, transaction_date, is_private, is_backdated, backdate_reason,
-              created_by, updated_by, reference_number, tax_type, tax_rate, tax_amount, subtotal,
-              payable_kind, due_date, cheque_number, pdc_status, has_ewt, ewt_rate, ewt_amount, client_id,
-              payee_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, $18,
-                   $19, $20, $21, $22, $23, $24, $25, $26, $27)
-           RETURNING *`,
-          [
-            req.workspaceId,
-            category,
-            validatedSubcategory,
-            source_account_id || null,
-            destination_account_id || null,
-            storedAmount,
-            String(description).trim(),
-            notes || null,
-            transaction_date,
-            is_private || false,
-            backdated,
-            backdated ? backdate_reason?.trim() : null,
-            req.user.id,
-            reference_number?.trim() || null,
-            txTaxType,
-            taxRate,
-            taxAmount,
-            subtotal,
-            txPayableKind,
-            txDueDate,
-            txChequeNumber,
-            txPdcStatus,
-            txHasEwt,
-            txEwtRate,
-            txEwtAmount,
-            client_id ?? null,
-            payee_id ?? null,
-          ],
-        );
-        const txn = result.rows[0];
+        const txn = await insertTransactionRow(dbClient, {
+          workspaceId: req.workspaceId,
+          category,
+          subcategory: validatedSubcategory,
+          sourceAccountId: source_account_id || null,
+          destinationAccountId: destination_account_id || null,
+          amount: storedAmount,
+          description: String(description).trim(),
+          notes: notes || null,
+          transactionDate: transaction_date,
+          isPrivate: is_private || false,
+          isBackdated: backdated,
+          backdateReason: backdated ? backdate_reason?.trim() : null,
+          createdBy: req.user.id,
+          referenceNumber: reference_number?.trim() || null,
+          taxType: txTaxType,
+          taxRate,
+          taxAmount,
+          subtotal,
+          payableKind: txPayableKind,
+          dueDate: txDueDate,
+          chequeNumber: txChequeNumber,
+          pdcStatus: txPdcStatus,
+          hasEwt: txHasEwt,
+          ewtRate: txEwtRate,
+          ewtAmount: txEwtAmount,
+          clientId: client_id ?? null,
+          payeeId: payee_id ?? null,
+        });
 
-        if (is_private && Array.isArray(shared_with) && shared_with.length > 0) {
-          const values = shared_with.map((_: string, i: number) => `($1, $${i + 2})`).join(", ");
-          await dbClient.query(
-            `INSERT INTO accounts.transaction_visibility (transaction_id, user_id) VALUES ${values}
-               ON CONFLICT (transaction_id, user_id) DO NOTHING`,
-            [txn.id, ...shared_with],
-          );
-        }
-        if (is_private && Array.isArray(shared_with_roles) && shared_with_roles.length > 0) {
-          const values = shared_with_roles.map((_: string, i: number) => `($1, $${i + 2})`).join(", ");
-          await dbClient.query(
-            `INSERT INTO accounts.transaction_visibility_role (transaction_id, role_code) VALUES ${values}
-               ON CONFLICT (transaction_id, role_code) DO NOTHING`,
-            [txn.id, ...shared_with_roles],
-          );
-        }
+        await insertVisibilityShares(dbClient, txn.id as number, {
+          isPrivate: is_private,
+          sharedWith: shared_with,
+          sharedWithRoles: shared_with_roles,
+        });
 
         await dbClient.query("COMMIT");
         res.status(201).json(txn);

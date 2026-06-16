@@ -16,7 +16,46 @@ import Paperclip from "lucide-solid/icons/paperclip";
 import AccountPicker from "./AccountPicker";
 import FormAdvancedSection from "./FormAdvancedSection";
 import SalesBodyEditor, { type SalesLine } from "./SalesBodyEditor";
-import PayeePicker, { type PayeeOption } from "./PayeePicker";
+import Store from "lucide-solid/icons/store";
+import { ComboBox, type PayeeOption, type PayeeKind } from "@kahitsan/ksui";
+
+// Payee data-wiring for the generic ComboBox engine. Search/create hit the
+// sibling payees plugin's /api/payees endpoint directly; `kind` is "customer"
+// for sales and "vendor" otherwise. Degrades gracefully — a missing payees
+// plugin surfaces a notice and the free-text fallback (selectedName) still works.
+async function searchPayees(query: string, kind: PayeeKind): Promise<PayeeOption[]> {
+  const params = new URLSearchParams({ status: "active", limit: "20", kind });
+  if (query) params.set("search", query);
+  const r = await fetch(`/api/payees?${params.toString()}`, { credentials: "include" });
+  if (!r.ok) {
+    if (r.status === 403) throw new Error("Permission denied");
+    if (r.status === 404) throw new Error("Payees module isn't available — type a name instead");
+    throw new Error("Failed to load");
+  }
+  const json = (await r.json()) as { data?: PayeeOption[] };
+  return json.data ?? [];
+}
+
+async function createPayee(name: string, kind: PayeeKind): Promise<PayeeOption> {
+  const res = await fetch("/api/payees", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, kind }),
+  });
+  if (!res.ok && res.status !== 200) {
+    const body = (await res.json().catch(() => ({ error: "Failed to create payee" }))) as {
+      error?: string;
+    };
+    throw new Error(body.error || "Failed to create payee");
+  }
+  return (await res.json()) as PayeeOption;
+}
+
+function payeeSecondary(p: PayeeOption): string | null {
+  if (!p.default_subcategory && p.kind === "vendor") return null;
+  return [p.kind === "vendor" ? null : p.kind, p.default_subcategory].filter(Boolean).join(" · ") || null;
+}
 import {
   MentionTextarea,
   CameraCapture,
@@ -362,12 +401,17 @@ export default function TransactionForm(props: TransactionFormProps) {
           <Show when={catConfig().showPayee}>
             <div class="grid grid-cols-2 gap-4">
               <FormField label={catConfig().payeeLabel!}>
-                <PayeePicker
+                <ComboBox<PayeeOption>
                   testIdPrefix="form-payee-picker"
                   selected={selectedPayee()}
                   selectedName={props.payee}
-                  kind={props.category === "sale" ? "customer" : "vendor"}
-                  createAsKind={props.category === "sale" ? "customer" : "vendor"}
+                  search={(q) => searchPayees(q, props.category === "sale" ? "customer" : "vendor")}
+                  onCreate={(name) => createPayee(name, props.category === "sale" ? "customer" : "vendor")}
+                  idOf={(p) => p.id}
+                  labelOf={(p) => p.name}
+                  secondaryOf={payeeSecondary}
+                  icon={Store}
+                  noun="payee"
                   placeholder={catConfig().payeePlaceholder!}
                   onChange={(p) => {
                     setSelectedPayee(p);

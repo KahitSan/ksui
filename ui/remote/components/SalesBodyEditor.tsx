@@ -10,13 +10,50 @@
 
 import { createSignal, createMemo, createEffect, For, Show, onMount } from "solid-js";
 import {
-  ClientPicker,
+  ComboBox,
   type ClientOption,
   VoucherPicker,
   calculateDiscount,
   type VoucherOption,
 } from "@kahitsan/ksui";
+import UserRound from "lucide-solid/icons/user-round";
 import Plus from "lucide-solid/icons/plus";
+
+// Client data-wiring for the generic ComboBox engine. Search/create hit the
+// sibling clients plugin's /api/clients endpoint directly. Degrades gracefully
+// when the clients plugin isn't deployed.
+async function searchClients(query: string): Promise<ClientOption[]> {
+  const params = new URLSearchParams({ status: "active", limit: "10" });
+  if (query) params.set("search", query);
+  const r = await fetch(`/api/clients?${params.toString()}`, { credentials: "include" });
+  if (!r.ok) {
+    if (r.status === 403) throw new Error("Permission denied");
+    if (r.status === 404) throw new Error("Clients module isn't available — type a name instead");
+    throw new Error("Failed to load");
+  }
+  const json = (await r.json()) as { data?: ClientOption[] };
+  return json.data ?? [];
+}
+
+async function createClient(name: string): Promise<ClientOption> {
+  const res = await fetch("/api/clients", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name_raw: name }),
+  });
+  if (!res.ok && res.status !== 200) {
+    const body = (await res.json().catch(() => ({ error: "Failed to create client" }))) as {
+      error?: string;
+    };
+    throw new Error(body.error || "Failed to create client");
+  }
+  return (await res.json()) as ClientOption;
+}
+
+function clientSecondary(c: ClientOption): string | null {
+  return [c.email, c.phone].filter(Boolean).join(" · ") || null;
+}
 import Minus from "lucide-solid/icons/minus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import PackageIcon from "lucide-solid/icons/package";
@@ -268,7 +305,19 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
           <label class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
             Billed to
           </label>
-          <ClientPicker selected={props.client} onChange={(c) => props.setClient(c)} />
+          <ComboBox<ClientOption>
+            selected={props.client}
+            onChange={(c) => props.setClient(c)}
+            search={searchClients}
+            onCreate={createClient}
+            idOf={(c) => c.id}
+            labelOf={(c) => c.name_raw}
+            secondaryOf={clientSecondary}
+            icon={UserRound}
+            noun="client"
+            placeholder="Walk-in"
+            testIdPrefix="client-picker"
+          />
         </div>
         <div>
           <label class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
