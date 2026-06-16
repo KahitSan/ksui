@@ -95,6 +95,11 @@ export type { MentionTextareaProps } from "./components/composite/MentionTextare
 export { default as MarkdownNotes } from "./components/composite/MarkdownNotes";
 export type { MarkdownNotesProps } from "./components/composite/MarkdownNotes";
 
+// The generic searchable-combobox engine. ClientPicker / PayeePicker are thin
+// presets over it; new pickers can use EntityPicker directly.
+export { default as EntityPicker } from "./components/composite/EntityPicker";
+export type { EntityPickerProps } from "./components/composite/EntityPicker";
+
 export { default as ClientPicker } from "./components/composite/ClientPicker";
 export type { ClientOption } from "./components/composite/ClientPicker";
 
