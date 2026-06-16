@@ -2,13 +2,12 @@
 
 Live documentation site for `@kahitsan/ksui`. A self contained Vite + SolidJS SPA that renders each component live next to its source, the way the Bootstrap docs do.
 
-This site has its OWN `package.json` and `tsconfig.json`. It is not part of the published package (the package still ships only `src/` and `host-ui.d.ts`) and it is not in the root `tsconfig`, so it never affects the package typecheck or the consumer build.
+This site has its OWN `package.json` and `tsconfig.json`. It is not part of the published package (the package ships only `src/`) and it is not in the root `tsconfig`, so it never affects the package typecheck or the consumer build.
 
 ## How it works
 
 - The real components are imported from `../src` (source, not dist). `vite-plugin-solid` compiles their JSX with the rest of the app, aliased as `@kahitsan/ksui`.
-- The host kit specifier `@kserp/host-ui` is aliased to `src/mocks/host-ui.tsx`, a working SolidJS reimplementation of the canonical SDK contract (`../host-ui.d.ts`). So a component's `import { Button } from "@kserp/host-ui"` resolves to the mock with no component edits.
-- `solid-js` is deduped so the components and the mock share ONE reactive runtime. A duplicate Solid runtime is the classic cause of dead reactivity.
+- `solid-js` is deduped so the components share ONE reactive runtime. A duplicate Solid runtime is the classic cause of dead reactivity.
 - Each demo lives in one file under `src/examples/`. A page imports it twice: once as the real module for the live render, once with Vite's `?raw` query for the verbatim source string. The `Example` wrapper renders the live component on top and the same source below, so preview and code can never drift.
 - Hash routing (`@solidjs/router` `HashRouter`) sidesteps the GitHub Pages deep link 404; the build also writes a `404.html` fallback.
 
@@ -36,4 +35,4 @@ npm run preview
 
 ## Deploy
 
-`.github/workflows/docs.yml` builds and deploys to GitHub Pages on push to `main` (path filtered to `docs/**`, `src/**`, `host-ui.d.ts`, and the workflow). Set the Pages source to "GitHub Actions" in repo settings once.
+`.github/workflows/docs.yml` builds and deploys to GitHub Pages on push to `main` (path filtered to `docs/**`, `src/**`, and the workflow). Set the Pages source to "GitHub Actions" in repo settings once.

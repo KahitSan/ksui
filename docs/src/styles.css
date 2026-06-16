@@ -142,21 +142,91 @@ a:hover {
 }
 .version-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.35rem 0.5rem;
+  align-items: stretch;
+  gap: 0.25rem;
   border-radius: 6px;
   font-size: 0.85rem;
   color: var(--surface-text);
 }
-.version-item:hover {
+.version-item-pick {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.version-item-pick:hover {
   background: var(--surface-hover);
+}
+.version-item-notes {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.4rem;
+  border-radius: 6px;
+  color: var(--surface-text);
+  opacity: 0.6;
+}
+.version-item-notes:hover {
+  background: var(--surface-hover);
+  opacity: 1;
   text-decoration: none;
 }
-.version-item.current {
+.version-item.current .version-item-pick {
   color: #fbbf24;
   font-weight: 600;
+}
+
+/* Sidebar obsolete tag + the active link's flex row so the badge sits inline. */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+.sidebar-badge {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  flex: none;
+}
+
+/* Version notice banners above a component's docs. */
+.version-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+  line-height: 1.4;
+}
+.version-notice.obsolete {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--fg);
+}
+.version-notice.future {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: var(--fg);
+}
+.version-notice svg {
+  flex: none;
+  margin-top: 0.1rem;
 }
 
 /* GitHub mark link + Star pill. The Star pill uses themed chrome so it reads

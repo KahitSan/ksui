@@ -106,7 +106,7 @@ export default function ImageCropperPage(): JSX.Element {
       <p>
         The output is always a square WebP at <code>outputSize</code> by <code>outputSize</code> pixels, encoded at 0.9
         quality. Set <code>busy</code> while you upload the blob so the Cancel and Apply buttons disable and Apply reads{" "}
-        <code>Saving…</code>. The Modal and Button it uses come from the host kit, so colors follow the host brand theme.
+        <code>Saving…</code>. The Modal and Button it uses are ksui's own self-styled primitives, which inherit colors from the app they render in.
       </p>
 
       <PageFooter path="/components/image-cropper" />

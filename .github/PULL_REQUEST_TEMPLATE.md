@@ -21,6 +21,6 @@ A short note is fine. For example: "I built it and saw it render in a SolidJS ap
 - [ ] My change is focused on one thing.
 - [ ] I followed the existing code style.
 - [ ] I updated the docs if they needed it.
-- [ ] I kept solid-js and @kserp/host-ui external (I did not bundle them).
+- [ ] I kept solid-js external (I did not bundle it).
 
 Thank you for your work on this. We will review it soon, and we may suggest a few small changes.

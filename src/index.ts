@@ -1,20 +1,20 @@
-// @kahitsan/ksui: shared SolidJS UI components for KahitSan/Hilinga plugins.
+// @kahitsan/ksui: a standalone SolidJS UI component library.
 //
-// These were copied byte-for-byte across plugins (counter, transactions, ...);
-// this package is the single canonical copy, PUBLISHED to GitHub Packages and
-// consumed as a normal dependency from `node_modules`: a plugin `npm install`s
-// the published version.
-// The package ships its source under a `solid` export condition (see
-// package.json), so the consumer's vite-plugin-solid compiles these components
-// while solid-js and `@kserp/host-ui` stay EXTERNALIZED to the host runtime
-// globals. The plugin IIFE bundles them identically to a local copy: no runtime
-// change, single Solid instance, host UI kit reused. The `@kserp/host-ui` ambient
-// type contract ships alongside (host-ui.d.ts, the `./host-ui` export).
+// Published to the public npm registry and consumed as a normal dependency. The
+// package ships its source under a `solid` export condition (see package.json),
+// so the consumer's vite-plugin-solid compiles these components while solid-js
+// stays EXTERNALIZED to the app's runtime so there is a single Solid instance.
+// The library is self-contained: it depends only on solid-js + lucide-solid and
+// injects its own CSS at runtime — no host UI kit, no Tailwind, no app-provided
+// primitives are required. Components that can integrate with a surrounding app
+// (a permission check, the active workspace) do so through an OPTIONAL opt-in
+// registry (configurePermissions / configureActiveWorkspace) and degrade
+// gracefully when it is not configured.
 //
 // Components live under two folders by category:
-//   base/      a primitive that stands on its own. It uses only solid-js,
-//              lucide-solid, and/or the host kit via "@kserp/host-ui". It does
-//              not import another ksui component.
+//   base/      a primitive that stands on its own. It uses only solid-js and
+//              lucide-solid (plus ksui's own utils). It does not import another
+//              ksui component.
 //   composite/ a component that wraps a base or composes two or more components
 //              into a higher-level widget.
 // See CONTRIBUTING.md for the placement rule when adding a new component.
@@ -71,6 +71,10 @@ export { default as SocialLinksBar, type SocialLinksBarProps, type SocialLink, t
 export { default as StatusIndicator, type StatusIndicatorProps, type StatusIndicatorTone } from "./components/base/StatusIndicator";
 export { default as SectionHeading, type SectionHeadingProps, type SectionHeadingAlign, type SectionHeadingLevel } from "./components/base/SectionHeading";
 export { default as EyebrowBadge, type EyebrowBadgeProps, type EyebrowTone, type EyebrowTracking } from "./components/base/EyebrowBadge";
+
+// Self-contained modal dialog (promoted from the former host kit). Injects its
+// own CSS; no Tailwind / host-brand classes required.
+export { default as Modal, type ModalProps, type ModalSize, type ModalTone } from "./components/base/Modal";
 
 // ---------------------------------------------------------------------------
 // Composite components
@@ -139,3 +143,18 @@ export { INPUT_CLASS } from "./utils/INPUT_CLASS";
 export { formatPHP } from "./utils/formatPHP";
 export { formatShortDate } from "./utils/formatShortDate";
 export { formatFullDate } from "./utils/formatFullDate";
+
+// Self-contained helpers promoted from the former host kit so the library has no
+// "@kserp/host-ui" dependency.
+export { highlightMatch, HighlightedText, matchesQuery, matchesAny } from "./utils/highlight";
+export { confirm, type ConfirmOptions } from "./utils/confirm";
+export { useFocusTrap, autoFocusOnMount, lockPullToRefresh, unlockPullToRefresh } from "./utils/dom";
+
+// Optional host integrations. Components degrade gracefully when these are not
+// configured; a host app opts in once at startup.
+export {
+  configurePermissions,
+  configureActiveWorkspace,
+  canAccess,
+  getActiveWorkspaceId,
+} from "./utils/integration";

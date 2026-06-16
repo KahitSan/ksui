@@ -104,7 +104,7 @@ export default function ButtonHudPage(): JSX.Element {
         </tbody>
       </table>
 
-      <PageFooter path="/components/hud-button" />
+      <PageFooter path="/components/button" />
     </article>
   );
 }

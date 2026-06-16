@@ -18,7 +18,7 @@ export default function Home(): JSX.Element {
         <li>Rich content widgets: a mention aware textarea and a restricted markdown notes renderer.</li>
         <li>The attachment trio: camera capture, add attachment tile, and existing attachment tile.</li>
         <li>The data driven account avatar plus its icon, color, and logo URL helpers.</li>
-        <li>The canonical <code>@kserp/host-ui</code> ambient type contract, shipped alongside the source.</li>
+        <li>Its own self-styled Button, Modal, and <code>confirm</code> primitives — no host kit required.</li>
         <li>Source shipped under a <code>solid</code> export condition so the consumer compiles it with one shared solid-js runtime.</li>
       </ul>
 

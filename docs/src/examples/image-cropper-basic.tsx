@@ -1,6 +1,6 @@
 // example-start
 import { createSignal, Show } from "solid-js";
-import { Button } from "@kserp/host-ui";
+import { Button } from "@kahitsan/ksui";
 import { ImageCropper } from "@kahitsan/ksui";
 
 // ImageCropper works on a real File and is shown inside a Modal. This demo

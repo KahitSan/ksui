@@ -4,12 +4,12 @@
 // corner to resize it. On Apply, the selected region is rendered to a canvas
 // at the requested output size and handed back as a WebP Blob.
 //
-// The widget is dependency-free beyond the host kit: it uses the host's
-// Modal + Button (provided by the consumer via "@kserp/host-ui"), solid-js,
+// The widget is self-contained: it uses ksui's own Modal + Button, solid-js,
 // and a single lucide icon.
 
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { Modal, Button } from "@kserp/host-ui";
+import Modal from "./Modal";
+import Button from "./Button";
 import X from "lucide-solid/icons/x";
 
 interface ImageCropperProps {

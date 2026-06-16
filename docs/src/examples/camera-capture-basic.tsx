@@ -1,6 +1,6 @@
 // example-start
 import { createSignal, Show } from "solid-js";
-import { Button } from "@kserp/host-ui";
+import { Button } from "@kahitsan/ksui";
 import { CameraCapture } from "@kahitsan/ksui";
 
 export default function CameraCaptureBasic() {

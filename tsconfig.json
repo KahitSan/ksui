@@ -11,9 +11,8 @@
     "jsxImportSource": "solid-js",
     "types": []
   },
-  // The components import "@kserp/host-ui" (externalized to the host global at
-  // runtime). The package now ships that ambient itself (host-ui.d.ts), so it
-  // type-checks standalone; the authoritative gate is still each consuming
+  // The library is standalone — it imports only solid-js + lucide-solid, so it
+  // type-checks on its own. The authoritative gate is still each consuming
   // plugin's tsc (where lucide-solid + the consumer's solid are present).
-  "include": ["src", "host-ui.d.ts"]
+  "include": ["src"]
 }

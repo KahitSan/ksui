@@ -3,12 +3,15 @@
 // Renders transaction `notes` with a restricted markdown subset and inline
 // client-mention chips (@[Name](client:N)). Adapted for the remote: routing is
 // host-owned so mention chips link via a plain <a href> instead of @solidjs/
-// router's <A>; usePermissions + highlightMatch come from the host UI kit. The
-// hover card fetches the SIBLING clients plugin at /api/clients/:id and
-// degrades to a non-hovering chip when that 404s.
+// router's <A>; highlightMatch is ksui's own helper and the client-view
+// permission is read through ksui's opt-in integration registry (canAccess),
+// which degrades to false when the host hasn't configured one. The hover card
+// fetches the SIBLING clients plugin at /api/clients/:id and degrades to a
+// non-hovering chip when that 404s.
 
 import { For, Show, createMemo, createSignal, createUniqueId, onCleanup, type JSX } from "solid-js";
-import { usePermissions, highlightMatch } from "@kserp/host-ui";
+import { highlightMatch } from "../../utils/highlight";
+import { canAccess } from "../../utils/integration";
 
 const MENTION_RE = /@\[([^\]]+)\](?:\(client:(\d+)\))?/g;
 
@@ -329,13 +332,7 @@ function MentionHoverCard(props: { clientId: number; name: string }): JSX.Elemen
 }
 
 function MentionChip(props: { name: string; clientId: number | null }): JSX.Element {
-  let canViewClients = () => false;
-  try {
-    const perms = usePermissions();
-    canViewClients = () => perms.has("clients.view");
-  } catch {
-    /* no provider in context, leave canViewClients() returning false */
-  }
+  const canViewClients = () => canAccess("clients.view");
 
   return (
     <Show

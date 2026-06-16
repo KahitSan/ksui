@@ -1,8 +1,8 @@
 // Source: KahitSan/kserp src/components/CameraCapture.tsx (vendored into the plugin remote).
-// getUserMedia camera capture modal. Button comes from the host UI kit.
+// getUserMedia camera capture modal. Button is ksui's own base primitive.
 
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { Button } from "@kserp/host-ui";
+import Button from "./Button";
 import Camera from "lucide-solid/icons/camera";
 import X from "lucide-solid/icons/x";
 

@@ -12,7 +12,6 @@
     "jsxImportSource": "solid-js",
     "types": ["vite/client", "node"],
     "paths": {
-      "@kserp/host-ui": ["./src/mocks/host-ui.tsx"],
       "@kahitsan/ksui": ["../src/index.ts"]
     }
   },

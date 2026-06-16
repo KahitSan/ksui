@@ -23,8 +23,10 @@ export default function UseAccountsIndexPage(): JSX.Element {
 
       <h2>Note</h2>
       <p>
-        <code>useAccountsIndex</code> is a live data hook: it reads the active workspace from the host kit and fetches{" "}
-        <code>/api/financial-accounts</code> to build the index, so it needs both a host kit and a backend at run time.
+        <code>useAccountsIndex</code> is a live data hook: it reads the active workspace from ksui's optional{" "}
+        <code>configureActiveWorkspace</code> integration and fetches <code>/api/financial-accounts</code> to build the
+        index, so it needs a backend at run time. Without <code>configureActiveWorkspace</code> wired up it degrades to
+        an empty workspace.
         The pure helpers <code>resolveAccount</code> and <code>resolveAccountName</code> take a plain index object and
         do no fetching, so you can call them anywhere as long as you hand them an index of the same{" "}
         <code>{"{ byId, nameById }"}</code> shape the hook resolves to.

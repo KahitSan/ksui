@@ -1,5 +1,5 @@
 // example-start
-import { Button } from "@kserp/host-ui";
+import { Button } from "@kahitsan/ksui";
 import { Tooltip } from "@kahitsan/ksui";
 
 export default function TooltipBasic() {

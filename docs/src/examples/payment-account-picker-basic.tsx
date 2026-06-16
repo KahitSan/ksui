@@ -1,6 +1,6 @@
 // example-start
 import { createSignal } from "solid-js";
-import { Button } from "@kserp/host-ui";
+import { Button } from "@kahitsan/ksui";
 import { PaymentAccountPicker, type PaymentAccountOption } from "@kahitsan/ksui";
 
 export default function PaymentAccountPickerBasic() {

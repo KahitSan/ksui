@@ -11,15 +11,11 @@ export default defineConfig({
   plugins: [solid()],
   resolve: {
     alias: {
-      // Every component does `import { Button } from "@kserp/host-ui"`. The
-      // alias is keyed on the bare specifier so all of them resolve to the
-      // mock with zero component edits.
-      "@kserp/host-ui": resolve(__dirname, "src/mocks/host-ui.tsx"),
       // Import the real components from source (not dist) so vite-plugin-solid
       // compiles their JSX with the rest of the app.
       "@kahitsan/ksui": resolve(__dirname, "../src/index.ts"),
     },
-    // One reactive runtime shared by the components and the mock. A duplicate
+    // One reactive runtime shared by the components. A duplicate
     // solid-js is the classic cause of dead reactivity.
     dedupe: ["solid-js", "solid-js/web", "solid-js/store"],
   },
