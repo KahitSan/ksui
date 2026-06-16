@@ -91,6 +91,9 @@ export type { MarkdownNotesProps } from "./components/composite/MarkdownNotes";
 export { default as ClientPicker } from "./components/composite/ClientPicker";
 export type { ClientOption } from "./components/composite/ClientPicker";
 
+export { default as PayeePicker } from "./components/composite/PayeePicker";
+export type { PayeeOption, PayeeKind } from "./components/composite/PayeePicker";
+
 export { default as VoucherPicker, calculateDiscount } from "./components/composite/VoucherPicker";
 export type { VoucherOption } from "./components/composite/VoucherPicker";
 
