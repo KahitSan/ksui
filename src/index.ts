@@ -95,16 +95,16 @@ export type { MentionTextareaProps } from "./components/composite/MentionTextare
 export { default as MarkdownNotes } from "./components/composite/MarkdownNotes";
 export type { MarkdownNotesProps } from "./components/composite/MarkdownNotes";
 
-// The generic searchable-combobox engine. ClientPicker / PayeePicker are thin
-// presets over it; new pickers can use EntityPicker directly.
+// The generic searchable-combobox engine — the ONE picker the library ships.
+// Build a payee / client / anything picker by supplying search + onCreate +
+// idOf/labelOf/secondaryOf/icon/noun. (The former ClientPicker / PayeePicker
+// presets were removed; consumers wire the endpoint themselves.)
 export { default as EntityPicker } from "./components/composite/EntityPicker";
 export type { EntityPickerProps } from "./components/composite/EntityPicker";
 
-export { default as ClientPicker } from "./components/composite/ClientPicker";
-export type { ClientOption } from "./components/composite/ClientPicker";
-
-export { default as PayeePicker } from "./components/composite/PayeePicker";
-export type { PayeeOption, PayeeKind } from "./components/composite/PayeePicker";
+// Shared domain option shapes for the common pickers, decoupled from any
+// component (still imported across transactions / counter / payees).
+export type { ClientOption, PayeeOption, PayeeKind } from "./components/composite/picker-types";
 
 export { default as VoucherPicker, calculateDiscount } from "./components/composite/VoucherPicker";
 export type { VoucherOption } from "./components/composite/VoucherPicker";

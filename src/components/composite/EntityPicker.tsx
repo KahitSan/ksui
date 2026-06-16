@@ -6,8 +6,8 @@
 //
 // It is DOMAIN-FREE: it knows nothing about clients or payees. The caller wires
 // the data via `search` / `onCreate` and the display via `idOf` / `labelOf` /
-// `secondaryOf` / `icon` / `noun`. Thin presets (ClientPicker, PayeePicker) pass
-// those in, so there is exactly one copy of the popup mechanics.
+// `secondaryOf` / `icon` / `noun` at each call site (e.g. a payee or client
+// picker), so there is exactly one copy of the popup mechanics.
 //
 // `selectedName` is a free-text fallback shown in the trigger when nothing is
 // picked (e.g. a likely default) — handy when the backing API persists the name

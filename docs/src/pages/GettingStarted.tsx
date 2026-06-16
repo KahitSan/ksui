@@ -36,11 +36,22 @@ export default function GettingStarted(): JSX.Element {
       <p>Import a component by its bare specifier and drop it in.</p>
       <CodeBlock
         code={`import { createSignal } from "solid-js";
-import { ClientPicker, type ClientOption } from "@kahitsan/ksui";
+import UserRound from "lucide-solid/icons/user-round";
+import { EntityPicker, type ClientOption } from "@kahitsan/ksui";
 
 export default function BilledTo() {
   const [client, setClient] = createSignal<ClientOption | null>(null);
-  return <ClientPicker selected={client()} onChange={setClient} />;
+  return (
+    <EntityPicker<ClientOption>
+      selected={client()}
+      onChange={setClient}
+      search={async (q) => (await fetch(\`/api/clients?search=\${q}\`)).json().then((r) => r.data)}
+      idOf={(c) => c.id}
+      labelOf={(c) => c.name_raw}
+      icon={UserRound}
+      noun="client"
+    />
+  );
 }`}
       />
 
@@ -83,7 +94,7 @@ export default function BilledTo() {
       <h2>Components</h2>
       <p>
         Browse the kit: <A href="/components/button">Button</A>, <A href="/components/modal">Modal</A>,{" "}
-        <A href="/components/client-picker">Client Picker</A>,{" "}
+        <A href="/components/entity-picker">Entity Picker</A>,{" "}
         <A href="/components/markdown-notes">Markdown Notes</A>.
       </p>
 
