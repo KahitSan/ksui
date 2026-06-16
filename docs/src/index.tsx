@@ -39,6 +39,14 @@ import FormActionsPage from "./pages/FormActionsPage";
 import FormatPHPPage from "./pages/formatPHPPage";
 import FormatShortDatePage from "./pages/formatShortDatePage";
 import FormatFullDatePage from "./pages/formatFullDatePage";
+import ButtonHudPage from "./pages/ButtonHudPage";
+import ThemeTogglePage from "./pages/ThemeTogglePage";
+import DropdownPage from "./pages/DropdownPage";
+import SocialLinksBarPage from "./pages/SocialLinksBarPage";
+import StatusIndicatorPage from "./pages/StatusIndicatorPage";
+import SectionHeadingPage from "./pages/SectionHeadingPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import EyebrowBadgePage from "./pages/EyebrowBadgePage";
 import { installDocsFetchMock } from "./mocks/fetch";
 import "./tailwind.css";
 import "./styles.css";
@@ -94,6 +102,14 @@ render(
       <Route path="/utils/format-php" component={FormatPHPPage} />
       <Route path="/utils/format-short-date" component={FormatShortDatePage} />
       <Route path="/utils/format-full-date" component={FormatFullDatePage} />
+      <Route path="/components/hud-button" component={ButtonHudPage} />
+      <Route path="/components/theme-toggle" component={ThemeTogglePage} />
+      <Route path="/components/dropdown" component={DropdownPage} />
+      <Route path="/components/social-links-bar" component={SocialLinksBarPage} />
+      <Route path="/components/status-indicator" component={StatusIndicatorPage} />
+      <Route path="/components/section-heading" component={SectionHeadingPage} />
+      <Route path="/components/not-found" component={NotFoundPage} />
+      <Route path="/components/eyebrow-badge" component={EyebrowBadgePage} />
     </HashRouter>
   ),
   root!,

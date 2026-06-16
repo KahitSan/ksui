@@ -64,6 +64,13 @@ export { default as RadioCardGroup } from "./components/base/RadioCardGroup";
 export { default as FormErrorBanner } from "./components/base/FormErrorBanner";
 export { default as TagPill } from "./components/base/TagPill";
 export { default as DateTile, type DateTileProps } from "./components/base/DateTile";
+export { default as Button, type ButtonProps, type ButtonIntent, type ButtonVariant } from "./components/base/Button";
+export { default as ThemeToggle, type ThemeToggleProps, type ThemeToggleValue } from "./components/base/ThemeToggle";
+export { default as Dropdown, type DropdownProps, type DropdownItem, type DropdownItemStatus } from "./components/base/Dropdown";
+export { default as SocialLinksBar, type SocialLinksBarProps, type SocialLink, type SocialIcon, type SocialLinksShape } from "./components/base/SocialLinksBar";
+export { default as StatusIndicator, type StatusIndicatorProps, type StatusIndicatorTone } from "./components/base/StatusIndicator";
+export { default as SectionHeading, type SectionHeadingProps, type SectionHeadingAlign, type SectionHeadingLevel } from "./components/base/SectionHeading";
+export { default as EyebrowBadge, type EyebrowBadgeProps, type EyebrowTone, type EyebrowTracking } from "./components/base/EyebrowBadge";
 
 // ---------------------------------------------------------------------------
 // Composite components
@@ -93,6 +100,8 @@ export type { ClientOption } from "./components/composite/ClientPicker";
 
 export { default as VoucherPicker, calculateDiscount } from "./components/composite/VoucherPicker";
 export type { VoucherOption } from "./components/composite/VoucherPicker";
+
+export { default as NotFound, type NotFoundProps } from "./components/composite/NotFound";
 
 // ---------------------------------------------------------------------------
 // Utils (not components)
