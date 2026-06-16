@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.6.0
+
+### Minor Changes
+
+- 43a7651: Add `PayeePicker` — a searchable combobox for the "Paid to" / "Received from" / "Payable to" field, a composite ERP picker alongside `ClientPicker` / `VoucherPicker`. Fetches the payees plugin's `/api/payees` with graceful degradation and an optional create-new-payee flow. Lets plugins drop their vendored copies.
+
 ## 0.5.0
 
 ### Minor Changes
