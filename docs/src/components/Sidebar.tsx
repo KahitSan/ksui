@@ -62,7 +62,7 @@ export const NAV: NavGroup[] = [
   {
     title: "Composite components",
     items: [
-      { label: "Entity Picker", path: "/components/entity-picker" },
+      { label: "Combo Box", path: "/components/combo-box" },
       { label: "Form Actions", path: "/components/form-actions" },
       { label: "Live Timer", path: "/components/live-timer" },
       { label: "Markdown Notes", path: "/components/markdown-notes" },

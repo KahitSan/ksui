@@ -6,7 +6,7 @@ import Home from "./pages/Home";
 import GettingStarted from "./pages/GettingStarted";
 import ButtonPage from "./pages/ButtonPage";
 import ModalPage from "./pages/ModalPage";
-import EntityPickerPage from "./pages/EntityPickerPage";
+import ComboBoxPage from "./pages/ComboBoxPage";
 import MarkdownNotesPage from "./pages/MarkdownNotesPage";
 import MentionTextareaPage from "./pages/MentionTextareaPage";
 import VoucherPickerPage from "./pages/VoucherPickerPage";
@@ -69,7 +69,7 @@ render(
       <Route path="/getting-started" component={GettingStarted} />
       <Route path="/components/button" component={ButtonPage} />
       <Route path="/components/modal" component={ModalPage} />
-      <Route path="/components/entity-picker" component={EntityPickerPage} />
+      <Route path="/components/combo-box" component={ComboBoxPage} />
       <Route path="/components/markdown-notes" component={MarkdownNotesPage} />
       <Route path="/components/mention-textarea" component={MentionTextareaPage} />
       <Route path="/components/voucher-picker" component={VoucherPickerPage} />

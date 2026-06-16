@@ -99,8 +99,12 @@ export type { MarkdownNotesProps } from "./components/composite/MarkdownNotes";
 // Build a payee / client / anything picker by supplying search + onCreate +
 // idOf/labelOf/secondaryOf/icon/noun. (The former ClientPicker / PayeePicker
 // presets were removed; consumers wire the endpoint themselves.)
-export { default as EntityPicker } from "./components/composite/EntityPicker";
-export type { EntityPickerProps } from "./components/composite/EntityPicker";
+export { default as ComboBox } from "./components/composite/ComboBox";
+export type {
+  ComboBoxProps,
+  ComboBoxSingleProps,
+  ComboBoxMultiProps,
+} from "./components/composite/ComboBox";
 
 // Shared domain option shapes for the common pickers, decoupled from any
 // component (still imported across transactions / counter / payees).

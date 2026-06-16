@@ -37,12 +37,12 @@ export default function GettingStarted(): JSX.Element {
       <CodeBlock
         code={`import { createSignal } from "solid-js";
 import UserRound from "lucide-solid/icons/user-round";
-import { EntityPicker, type ClientOption } from "@kahitsan/ksui";
+import { ComboBox, type ClientOption } from "@kahitsan/ksui";
 
 export default function BilledTo() {
   const [client, setClient] = createSignal<ClientOption | null>(null);
   return (
-    <EntityPicker<ClientOption>
+    <ComboBox<ClientOption>
       selected={client()}
       onChange={setClient}
       search={async (q) => (await fetch(\`/api/clients?search=\${q}\`)).json().then((r) => r.data)}
@@ -94,7 +94,7 @@ export default function BilledTo() {
       <h2>Components</h2>
       <p>
         Browse the kit: <A href="/components/button">Button</A>, <A href="/components/modal">Modal</A>,{" "}
-        <A href="/components/entity-picker">Entity Picker</A>,{" "}
+        <A href="/components/combo-box">Combo Box</A>,{" "}
         <A href="/components/markdown-notes">Markdown Notes</A>.
       </p>
 
