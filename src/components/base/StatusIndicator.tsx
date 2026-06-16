@@ -32,7 +32,7 @@ const TONE_CLASS: Record<StatusIndicatorTone, ToneClass> = {
   },
   danger: {
     dot: "bg-red-400",
-    text: "text-zinc-500",
+    text: "text-red-300",
     glow: "shadow-[0_0_10px_rgba(248,113,113,0.6)]",
   },
   info: {

@@ -35,15 +35,20 @@ export interface SocialLinksBarProps {
 // Runtime-injected clip-path utility. ksui ships no sidecar CSS (the package
 // exports only ./src), so the one rule the `clip` shape needs is emitted once
 // as a <style> tag rather than imported from a sibling .css file.
+const CLIP_STYLE_ID = "ksui-social-clip-style";
 const CLIP_STYLE = `.ksui-social-clip{clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%);}`;
 
-let injected = false;
-function ClipStyle(): JSX.Element {
-  // Inject the keyframe/clip rule once per document, matching the
-  // ProgressBar/LiveTimer runtime-style pattern.
-  if (injected) return null;
-  injected = true;
-  return <style>{CLIP_STYLE}</style>;
+// Inject the clip-path rule once per document, matching the SSR-safe
+// getElementById-dedupe pattern used by Button/ThemeToggle. A module-level
+// boolean would be non-reentrant across SSR requests (the worker reuses the
+// module), so the style must be keyed off the document, not module state.
+function ensureSocialClipStyle(): void {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(CLIP_STYLE_ID)) return;
+  const el = document.createElement("style");
+  el.id = CLIP_STYLE_ID;
+  el.textContent = CLIP_STYLE;
+  document.head.appendChild(el);
 }
 
 /**
@@ -54,6 +59,7 @@ function ClipStyle(): JSX.Element {
  * Domain-free: the specific URLs, icons, and labels all come from `links`.
  */
 export default function SocialLinksBar(props: SocialLinksBarProps): JSX.Element {
+  ensureSocialClipStyle();
   const shape = () => props.shape ?? "round";
   const btn = () => props.buttonSize ?? (shape() === "clip" ? 48 : 40);
   const icon = () => props.iconSize ?? Math.round(btn() * 0.45);
@@ -66,7 +72,6 @@ export default function SocialLinksBar(props: SocialLinksBarProps): JSX.Element 
       class={`flex gap-4 ${props.class ?? ""}`}
       aria-label="Social links"
     >
-      <ClipStyle />
       <For each={props.links}>
         {(link) => (
           <a
