@@ -14,8 +14,8 @@ export default function EntityPickerPage(): JSX.Element {
         debounced search, viewport-aware positioning, an optional inline "create new" row, and graceful degradation when
         the backing source is unreachable. It is domain-free — you supply the data (<code>search</code> /{" "}
         <code>onCreate</code>) and the display (<code>idOf</code> / <code>labelOf</code> / <code>secondaryOf</code> /{" "}
-        <code>icon</code> / <code>noun</code>). <code>ClientPicker</code> and <code>PayeePicker</code> are thin presets
-        over it.
+        <code>icon</code> / <code>noun</code>). It is the single picker the library ships — build a payee, client,
+        or any other picker by wiring its endpoint at the call site.
       </p>
 
       <h2>Import</h2>

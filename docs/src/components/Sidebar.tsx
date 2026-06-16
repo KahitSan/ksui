@@ -62,14 +62,12 @@ export const NAV: NavGroup[] = [
   {
     title: "Composite components",
     items: [
-      { label: "Client Picker", path: "/components/client-picker" },
       { label: "Entity Picker", path: "/components/entity-picker" },
       { label: "Form Actions", path: "/components/form-actions" },
       { label: "Live Timer", path: "/components/live-timer" },
       { label: "Markdown Notes", path: "/components/markdown-notes" },
       { label: "Mention Textarea", path: "/components/mention-textarea" },
       { label: "Not Found", path: "/components/not-found" },
-      { label: "Payee Picker", path: "/components/payee-picker" },
       { label: "Payment Account Picker", path: "/components/payment-account-picker" },
       { label: "Secret Reveal", path: "/components/secret-reveal" },
       { label: "Voucher Picker", path: "/components/voucher-picker" },
