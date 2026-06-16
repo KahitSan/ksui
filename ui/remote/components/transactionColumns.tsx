@@ -9,7 +9,7 @@
 
 import { Show } from "solid-js";
 import { Avatar, highlightMatch, type DataTableColumn } from "@kserp/host-ui";
-import { MarkdownNotes, AccountAvatar, resolveAccount } from "@kahitsan/plugin-ui";
+import { MarkdownNotes, AccountAvatar, resolveAccount } from "@kahitsan/ksui";
 import { formatCurrency, formatDate } from "../lib/format";
 import { CATEGORY_TONE, TONE_CLASSES } from "../lib/constants";
 import { type TransactionRow } from "../lib/rows";

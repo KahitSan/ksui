@@ -14,7 +14,6 @@ import FileIcon from "lucide-solid/icons/file";
 import CalendarDays from "lucide-solid/icons/calendar-days";
 import Paperclip from "lucide-solid/icons/paperclip";
 import AccountPicker from "./AccountPicker";
-import FormField from "./FormField";
 import FormAdvancedSection from "./FormAdvancedSection";
 import SalesBodyEditor, { type SalesLine } from "./SalesBodyEditor";
 import PayeePicker, { type PayeeOption } from "./PayeePicker";
@@ -23,9 +22,10 @@ import {
   CameraCapture,
   AddAttachmentTile,
   ExistingAttachmentTile,
+  FormField,
   type ClientOption,
   type VoucherOption,
-} from "@kahitsan/plugin-ui";
+} from "@kahitsan/ksui";
 import {
   type PendingFile,
   createPendingFile,

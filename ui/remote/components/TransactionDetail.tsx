@@ -1,7 +1,7 @@
 // Detail-pane sub-components for the transactions /_ui screen.
 // Extracted verbatim from index.tsx — entirely props-driven, no closure
 // dependency on Component(). useAccountsIndex() is the host-runtime context,
-// preserved by reading it from the same @kahitsan/plugin-ui re-export.
+// preserved by reading it from the same @kahitsan/ksui re-export.
 
 import { createSignal, Show, For } from "solid-js";
 import { Avatar, confirm } from "@kserp/host-ui";
@@ -15,15 +15,15 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import CalendarDays from "lucide-solid/icons/calendar-days";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import { MarkdownNotes } from "@kahitsan/plugin-ui";
-import { AddAttachmentTile } from "@kahitsan/plugin-ui";
+import { MarkdownNotes } from "@kahitsan/ksui";
+import { AddAttachmentTile } from "@kahitsan/ksui";
 import {
   AccountAvatar,
   useAccountsIndex,
   resolveAccount,
   attachmentUrl,
   isResolvableAttachment,
-} from "@kahitsan/plugin-ui";
+} from "@kahitsan/ksui";
 import { formatCurrency, formatDate, formatDateTime } from "../lib/format";
 import { type PendingFile, type Transaction } from "../lib/types";
 import {

@@ -15,7 +15,7 @@ import {
   VoucherPicker,
   calculateDiscount,
   type VoucherOption,
-} from "@kahitsan/plugin-ui";
+} from "@kahitsan/ksui";
 import Plus from "lucide-solid/icons/plus";
 import Minus from "lucide-solid/icons/minus";
 import Trash2 from "lucide-solid/icons/trash-2";
