@@ -1,5 +1,14 @@
 # @kahitsan/ksui
 
+## 0.7.0
+
+### Minor Changes
+
+- 75ae430: Add the marketing-surface component set consolidated from `kahitsan-web`:
+  Button, ThemeToggle, Dropdown, SocialLinksBar, StatusIndicator, SectionHeading,
+  NotFound, and EyebrowBadge. Promotes these reusable widgets into the library so
+  callers can drop their per-app copies.
+
 ## 0.6.0
 
 ### Minor Changes
