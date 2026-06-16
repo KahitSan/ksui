@@ -16,7 +16,7 @@ import Paperclip from "lucide-solid/icons/paperclip";
 import AccountPicker from "./AccountPicker";
 import FormAdvancedSection from "./FormAdvancedSection";
 import SalesBodyEditor, { type SalesLine } from "./SalesBodyEditor";
-import PayeePicker, { type PayeeOption } from "./PayeePicker";
+import { PayeePicker, type PayeeOption } from "@kahitsan/ksui";
 import {
   MentionTextarea,
   CameraCapture,
