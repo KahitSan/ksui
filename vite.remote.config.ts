@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
+import { devSourceAttrVitePlugin } from "./dev-source-attr.js";
 
 // Builds the plugin's UI to a single IIFE the plugin process serves at /_ui.
 // solid-js and the host's shared UI kit (@kserp/host-ui) are EXTERNALIZED to
@@ -19,7 +20,7 @@ import { fileURLToPath } from "node:url";
 // host doesn't would otherwise be unstyled. `styles.css` imports only the theme
 // + utilities layers (NO preflight — the host owns base/reset).
 export default defineConfig({
-  plugins: [solid(), tailwindcss()],
+  plugins: [devSourceAttrVitePlugin(), solid(), tailwindcss()],
   build: {
     outDir: "dist-ui",
     emptyOutDir: true,
