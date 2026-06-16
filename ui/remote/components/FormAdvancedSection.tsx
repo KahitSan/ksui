@@ -7,7 +7,7 @@
 
 import { For, Show } from "solid-js";
 import Lock from "lucide-solid/icons/lock";
-import FormField from "./FormField";
+import { FormField } from "@kahitsan/ksui";
 import { formatCurrency } from "../lib/format";
 import { type OrgMember, type ShareableRole } from "../lib/types";
 

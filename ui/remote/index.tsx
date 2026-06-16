@@ -49,14 +49,14 @@ import {
   TransactionDetailSkeleton,
 } from "./components/TransactionDetail";
 import PaymentLegModal from "./components/PaymentLegModal";
-import { AddAttachmentTile } from "@kahitsan/plugin-ui";
+import { AddAttachmentTile } from "@kahitsan/ksui";
 import ExportTransactionsModal from "./components/ExportTransactionsModal";
 import TransactionFilters from "./components/TransactionFilters";
 import {
   useAccountsIndex,
   attachmentUrl,
   isResolvableAttachment,
-} from "@kahitsan/plugin-ui";
+} from "@kahitsan/ksui";
 import { formatDate, formatDateTime } from "./lib/format";
 import {
   type PendingFile,
