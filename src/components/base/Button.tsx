@@ -75,8 +75,12 @@ export type ButtonIntent = "primary" | "danger" | "secondary";
 export type ButtonVariant = "clip1" | "clip2" | "ghost" | "link";
 
 export interface ButtonProps {
-  /** Element / component to render as (defaults to "button"). */
-  as?: string | Component<Record<string, unknown>>;
+  /** Element / component to render as (defaults to "button"). Intentionally
+   *  permissive: a polymorphic `as` must accept anything from a tag string to a
+   *  router link component with its own required props (e.g. SolidJS Router's
+   *  `A`, which requires `href`), so it is typed `any` rather than a narrow
+   *  `Component<Record<string, unknown>>` that would reject those callers. */
+  as?: any;
   intent?: ButtonIntent;
   variant?: ButtonVariant;
   noRipple?: boolean;
