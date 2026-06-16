@@ -63,6 +63,7 @@ export { default as KpiCard, type KpiCardProps, type KpiTone } from "./component
 export { default as RadioCardGroup } from "./components/base/RadioCardGroup";
 export { default as FormErrorBanner } from "./components/base/FormErrorBanner";
 export { default as TagPill } from "./components/base/TagPill";
+export { default as DateTile, type DateTileProps } from "./components/base/DateTile";
 
 // ---------------------------------------------------------------------------
 // Composite components
