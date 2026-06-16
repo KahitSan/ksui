@@ -183,6 +183,11 @@ export default function ComboBoxPage(): JSX.Element {
             <td><code>boolean</code></td>
             <td><code>false</code></td>
           </tr>
+          <tr>
+            <td><code>closeOnSelect</code></td>
+            <td><code>boolean</code></td>
+            <td><code>false</code></td>
+          </tr>
         </tbody>
       </table>
 
