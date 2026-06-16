@@ -14,6 +14,12 @@
     },
     "./host-ui": {
       "types": "./host-ui.d.ts"
+    },
+    "./components/*": {
+      "solid": "./src/components/*.tsx",
+      "types": "./src/components/*.tsx",
+      "development": "./src/components/*.tsx",
+      "import": "./src/components/*.tsx"
     }
   },
   "files": [
