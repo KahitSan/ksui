@@ -10,7 +10,7 @@
 
 import { createSignal, createMemo, createEffect, For, Show, onMount } from "solid-js";
 import {
-  EntityPicker,
+  ComboBox,
   type ClientOption,
   VoucherPicker,
   calculateDiscount,
@@ -19,7 +19,7 @@ import {
 import UserRound from "lucide-solid/icons/user-round";
 import Plus from "lucide-solid/icons/plus";
 
-// Client data-wiring for the generic EntityPicker engine. Search/create hit the
+// Client data-wiring for the generic ComboBox engine. Search/create hit the
 // sibling clients plugin's /api/clients endpoint directly. Degrades gracefully
 // when the clients plugin isn't deployed.
 async function searchClients(query: string): Promise<ClientOption[]> {
@@ -305,7 +305,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
           <label class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
             Billed to
           </label>
-          <EntityPicker<ClientOption>
+          <ComboBox<ClientOption>
             selected={props.client}
             onChange={(c) => props.setClient(c)}
             search={searchClients}

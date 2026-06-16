@@ -17,9 +17,9 @@ import AccountPicker from "./AccountPicker";
 import FormAdvancedSection from "./FormAdvancedSection";
 import SalesBodyEditor, { type SalesLine } from "./SalesBodyEditor";
 import Store from "lucide-solid/icons/store";
-import { EntityPicker, type PayeeOption, type PayeeKind } from "@kahitsan/ksui";
+import { ComboBox, type PayeeOption, type PayeeKind } from "@kahitsan/ksui";
 
-// Payee data-wiring for the generic EntityPicker engine. Search/create hit the
+// Payee data-wiring for the generic ComboBox engine. Search/create hit the
 // sibling payees plugin's /api/payees endpoint directly; `kind` is "customer"
 // for sales and "vendor" otherwise. Degrades gracefully — a missing payees
 // plugin surfaces a notice and the free-text fallback (selectedName) still works.
@@ -401,7 +401,7 @@ export default function TransactionForm(props: TransactionFormProps) {
           <Show when={catConfig().showPayee}>
             <div class="grid grid-cols-2 gap-4">
               <FormField label={catConfig().payeeLabel!}>
-                <EntityPicker<PayeeOption>
+                <ComboBox<PayeeOption>
                   testIdPrefix="form-payee-picker"
                   selected={selectedPayee()}
                   selectedName={props.payee}
