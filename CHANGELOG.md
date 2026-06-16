@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.9.0
+
+### Minor Changes
+
+- dee01bb: Remove the ClientPicker and PayeePicker preset components. The library now ships a single picker — EntityPicker — and consumers wire the payee/client endpoint (search / onCreate / icon / noun) at the call site. The PayeeOption, PayeeKind, and ClientOption option types remain exported (decoupled into picker-types) so existing type imports keep working.
+
 ## 0.8.0
 
 ### Minor Changes
