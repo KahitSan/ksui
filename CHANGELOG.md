@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.8.0
+
+### Minor Changes
+
+- 1f7b78d: Add `EntityPicker<T>` — a generic searchable-combobox engine (trigger + portal popup, debounced search, viewport-aware positioning, inline create, graceful degradation). `ClientPicker` and `PayeePicker` are now thin presets over it, so there's one copy of the popup mechanics. Their public APIs are unchanged. New pickers can use `EntityPicker` directly by supplying `search` / `onCreate` / `idOf` / `labelOf` / `icon` / `noun`.
+
 ## 0.7.1
 
 ### Patch Changes
