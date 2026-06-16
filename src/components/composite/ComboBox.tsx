@@ -87,6 +87,11 @@ export interface ComboBoxMultiProps<T> extends ComboBoxCommonProps<T> {
   /** Focus the inline input on mount (marks the wrapper with `data-autofocus`
    *  for a host modal's focus helper). */
   autoFocusOnMount?: boolean;
+  /** Close the results popup after each add/create instead of keeping it open
+   *  for rapid multi-add. The input keeps focus and the popup reopens on the
+   *  next keystroke. Use when the popup overlays a click target below it (e.g.
+   *  the POS package grid) so a lingering popup would eat the next click. */
+  closeOnSelect?: boolean;
 }
 
 export type ComboBoxProps<T> = ComboBoxSingleProps<T> | ComboBoxMultiProps<T>;
@@ -357,6 +362,9 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
     if (props.value.some((x) => idOf(x) === idOf(item))) return;
     props.onChange([...props.value, item]);
     resetInput();
+    // resetInput re-focuses the input; closing after that keeps focus so the
+    // next keystroke reopens the popup (the input's onInput re-opens it).
+    if (props.closeOnSelect) eng.setOpen(false);
   };
 
   const removeFromPool = (item: T) => {
