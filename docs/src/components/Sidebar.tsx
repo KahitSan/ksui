@@ -37,6 +37,7 @@ export const NAV: NavGroup[] = [
       { label: "Camera Capture", path: "/components/camera-capture" },
       { label: "Chart Legend", path: "/components/chart-legend" },
       { label: "Copy Button", path: "/components/copy-button" },
+      { label: "Date Tile", path: "/components/date-tile" },
       { label: "Detail Row", path: "/components/detail-row" },
       { label: "Existing Attachment Tile", path: "/components/existing-attachment-tile" },
       { label: "Form Error Banner", path: "/components/form-error-banner" },
