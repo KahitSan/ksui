@@ -2,7 +2,7 @@
 //
 // These previously lived inside the ClientPicker / PayeePicker preset
 // components. Those presets were removed in favour of using the generic
-// EntityPicker directly (consumers wire their own search/onCreate), but the
+// ComboBox directly (consumers wire their own search/onCreate), but the
 // option TYPES are still imported widely (transactions, counter, payees), so
 // they keep a stable home here decoupled from any component.
 

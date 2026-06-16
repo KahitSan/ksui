@@ -30,7 +30,7 @@ export default function Home(): JSX.Element {
       <p>
         Start with <A href="/getting-started">Getting Started</A>, or jump to a component:{" "}
         <A href="/components/button">Button</A>, <A href="/components/modal">Modal</A>,{" "}
-        <A href="/components/entity-picker">Entity Picker</A>,{" "}
+        <A href="/components/combo-box">Combo Box</A>,{" "}
         <A href="/components/markdown-notes">Markdown Notes</A>.
       </p>
     </article>
