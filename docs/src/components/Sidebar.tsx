@@ -68,6 +68,7 @@ export const NAV: NavGroup[] = [
       { label: "Markdown Notes", path: "/components/markdown-notes" },
       { label: "Mention Textarea", path: "/components/mention-textarea" },
       { label: "Not Found", path: "/components/not-found" },
+      { label: "Payee Picker", path: "/components/payee-picker" },
       { label: "Payment Account Picker", path: "/components/payment-account-picker" },
       { label: "Secret Reveal", path: "/components/secret-reveal" },
       { label: "Voucher Picker", path: "/components/voucher-picker" },
