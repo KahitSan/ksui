@@ -22,7 +22,7 @@ export default function GettingStarted(): JSX.Element {
         <li>A mention textarea and a restricted markdown notes renderer.</li>
         <li>The camera capture, add attachment, and existing attachment tiles.</li>
         <li>A data driven account avatar plus its icon / color / logo helpers.</li>
-        <li>The <code>@kserp/host-ui</code> type contract for the host UI kit.</li>
+        <li>Its own self-styled primitives (Button, Modal, <code>confirm</code>, string match helpers) — no host kit needed.</li>
       </ul>
 
       <h2>Installation</h2>
@@ -71,17 +71,16 @@ export default function BilledTo() {
           <strong>Controlled.</strong> The pickers are controlled: pass the current value plus an <code>onChange</code>.
         </li>
         <li>
-          <strong>Host kit.</strong> Widgets import <code>@kserp/host-ui</code> for a few host owned primitives (Button,
-          Modal, permission hooks, string match helpers). That specifier is externalized to the runtime that provides
-          the host UI kit.
+          <strong>Self contained.</strong> Components ship their own primitives (Button, Modal, <code>confirm</code>,
+          string match helpers) and inject their own CSS. They depend only on <code>solid-js</code> — no host kit to wire up.
         </li>
       </ul>
 
       <h2>SSR and SolidStart notes</h2>
       <p>
         The package ships source under a <code>solid</code> export condition so your vite-plugin-solid compiles it.
-        Keep <code>solid-js</code> and <code>@kserp/host-ui</code> externalized in your build so the widgets render
-        with a single Solid instance. A duplicate Solid runtime is the classic cause of dead reactivity.
+        Keep <code>solid-js</code> externalized in your build so the widgets render with a single Solid instance.
+        A duplicate Solid runtime is the classic cause of dead reactivity.
       </p>
 
       <h2>Browser support and accessibility</h2>

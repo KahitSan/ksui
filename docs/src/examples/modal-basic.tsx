@@ -1,6 +1,6 @@
 // example-start
 import { createSignal, Show } from "solid-js";
-import { Button, Modal } from "@kserp/host-ui";
+import { Button, Modal } from "@kahitsan/ksui";
 
 export default function ModalBasic() {
   const [open, setOpen] = createSignal(false);

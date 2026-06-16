@@ -1,7 +1,7 @@
 // example-start
 import { createSignal } from "solid-js";
 import { MentionTextarea } from "@kahitsan/ksui";
-import { Button } from "@kserp/host-ui";
+import { Button } from "@kahitsan/ksui";
 
 export default function MentionTextareaBasic() {
   const [value, setValue] = createSignal("");

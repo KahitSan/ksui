@@ -4,8 +4,10 @@ import { HashRouter, Route } from "@solidjs/router";
 import { App } from "./App";
 import Home from "./pages/Home";
 import GettingStarted from "./pages/GettingStarted";
-import ButtonPage from "./pages/ButtonPage";
 import ModalPage from "./pages/ModalPage";
+import EntityPickerPage from "./pages/EntityPickerPage";
+import ClientPickerPage from "./pages/ClientPickerPage";
+import PayeePickerPage from "./pages/PayeePickerPage";
 import ComboBoxPage from "./pages/ComboBoxPage";
 import MarkdownNotesPage from "./pages/MarkdownNotesPage";
 import MentionTextareaPage from "./pages/MentionTextareaPage";
@@ -50,8 +52,8 @@ import EyebrowBadgePage from "./pages/EyebrowBadgePage";
 import { installDocsFetchMock } from "./mocks/fetch";
 import "./tailwind.css";
 import "./styles.css";
-// Real kserp brand CSS so the host kit (Button HUD effects, Modal surfaces)
-// renders exactly like the live app.
+// Brand CSS providing the docs theme tokens and utility classes (card-bg,
+// page-bg, theme-toggle, HUD effects) that the docs site styles itself with.
 import "./host-kit/button.css";
 import "./host-kit/brand.css";
 
@@ -67,8 +69,11 @@ render(
     <HashRouter root={App}>
       <Route path="/" component={Home} />
       <Route path="/getting-started" component={GettingStarted} />
-      <Route path="/components/button" component={ButtonPage} />
+      <Route path="/components/button" component={ButtonHudPage} />
       <Route path="/components/modal" component={ModalPage} />
+      <Route path="/components/entity-picker" component={EntityPickerPage} />
+      <Route path="/components/client-picker" component={ClientPickerPage} />
+      <Route path="/components/payee-picker" component={PayeePickerPage} />
       <Route path="/components/combo-box" component={ComboBoxPage} />
       <Route path="/components/markdown-notes" component={MarkdownNotesPage} />
       <Route path="/components/mention-textarea" component={MentionTextareaPage} />
@@ -102,7 +107,6 @@ render(
       <Route path="/utils/format-php" component={FormatPHPPage} />
       <Route path="/utils/format-short-date" component={FormatShortDatePage} />
       <Route path="/utils/format-full-date" component={FormatFullDatePage} />
-      <Route path="/components/hud-button" component={ButtonHudPage} />
       <Route path="/components/theme-toggle" component={ThemeTogglePage} />
       <Route path="/components/dropdown" component={DropdownPage} />
       <Route path="/components/social-links-bar" component={SocialLinksBarPage} />

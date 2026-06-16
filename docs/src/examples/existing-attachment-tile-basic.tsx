@@ -1,6 +1,6 @@
 // example-start
 import { createSignal, For } from "solid-js";
-import { Button } from "@kserp/host-ui";
+import { Button } from "@kahitsan/ksui";
 import { ExistingAttachmentTile, type ExistingAttachment } from "@kahitsan/ksui";
 
 const seed: ExistingAttachment[] = [

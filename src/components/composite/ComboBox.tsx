@@ -21,7 +21,7 @@
 
 import { Portal } from "solid-js/web";
 import { createEffect, createSignal, For, onMount, Show, type JSX } from "solid-js";
-import { highlightMatch } from "@kserp/host-ui";
+import { highlightMatch } from "../../utils/highlight";
 import UserPlus from "lucide-solid/icons/user-plus";
 import Search from "lucide-solid/icons/search";
 import Star from "lucide-solid/icons/star";
@@ -98,7 +98,7 @@ export type ComboBoxProps<T> = ComboBoxSingleProps<T> | ComboBoxMultiProps<T>;
 
 export default function ComboBox<T>(props: ComboBoxProps<T>): JSX.Element {
   // Mode is read once at setup — call sites pick single/multi statically (same
-  // convention as the host-ui Modal variant). Narrowing makes each branch see
+  // convention as the Modal variant). Narrowing makes each branch see
   // its concrete prop shape.
   if (props.multiple) return MultiComboBox(props);
   return SingleComboBox(props);

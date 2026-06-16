@@ -12,20 +12,20 @@ Every kind of help counts. You can write code, fix typos, improve the docs, repo
 
 We want to be clear about something up front, so you do not get surprised later.
 
-This library grew out of an internal ERP, so it is not a zero-setup, plug-and-play kit for every piece. Here is what that means in plain words:
+This library grew out of an internal ERP, so a couple of pieces assume an ERP-shaped backend. Here is what that means in plain words:
 
-- **A host UI kit.** Many components expect your app to provide a small set of building blocks (things like a `Button`, a `Modal`, and some hooks). Your app supplies these under the import name `@kserp/host-ui`. The library does not include them. It expects to find them in your app.
-- **External dependencies.** `solid-js` and `@kserp/host-ui` are kept "external" at build time. "External" means the library does not bundle them. Your app provides them instead. This keeps everything running on one shared SolidJS instance.
-- **Some components are ERP-specific.** A few components only make sense inside an ERP, for example the pickers for clients, vouchers, and payment accounts. If your app has no such data, those components are not useful to you, and that is fine. Other components (like the markdown notes editor or the attachment tiles) are more general.
+- **One external dependency: `solid-js`.** It is kept "external" at build time — the library does not bundle it; your app provides it. This keeps everything running on one shared SolidJS instance. There is no host UI kit and no Tailwind: every component depends only on `solid-js` + `lucide-solid` and injects its own CSS.
+- **Some components call a backend.** A few components fetch ERP data (for example the voucher and payment-account pickers, and the attachment tiles). If your app has no such data they degrade gracefully, but they shine inside an app built the KahitSan way. Other components (like the markdown notes editor) are fully general.
+- **Optional host integrations.** A component can do more when the app feeds it context — a permission check or the active workspace id — through the optional `configurePermissions` / `configureActiveWorkspace` helpers. Without them it falls back to a safe default.
 
-So this is not a one-line drop-in for every app. We just want you to know that before you spend time.
+So most of this is a one-line drop-in; only the ERP-data components need a backend.
 
 ## What you need before you start
 
 - A SolidJS app. Not React, not Vue. SolidJS is a different framework.
 - Your app should use `vite-plugin-solid` (the Vite plugin that compiles SolidJS).
 - Node.js and a package manager (`npm` works fine).
-- `solid-js` and `@kserp/host-ui` must be available in your app, because the library expects them as external pieces (see the heads-up above).
+- `solid-js` must be available in your app, because the library expects it as an external piece (see the heads-up above).
 
 ## Ways to help, from easiest to hardest
 
@@ -72,7 +72,6 @@ Here is the simple map, so you know where things live:
 - `src/components/` holds the components, one file per component, split into two folders by category: `src/components/base/` and `src/components/composite/` (see the section below).
 - `src/utils/` holds small non-UI helper files the components use (for example icon and URL helpers). Helpers stay here, they are not components.
 - `src/index.ts` is the single entry point. It lists what the package gives to the outside world. When you add a new component, you export it from here.
-- `host-ui.d.ts` is the type contract for the host UI kit. It describes the shape of the `@kserp/host-ui` pieces (like `Button` and `Modal`) so the type-checker knows about them. You do not need to touch this unless you are working on that contract.
 - `package.json` lists the scripts, the version, and how the package ships.
 
 There is no separate docs site in this repo yet. The `README.md` is the main reference. If we add a docs site later, this file will be updated with how to run it.
@@ -87,8 +86,8 @@ Why? Because copies drift apart over time. One copy gets a bug fix, the other do
 
 Components are sorted into two folders by category:
 
-- `src/components/base/` is for a base component: a primitive that stands on its own. It uses only `solid-js`, `lucide-solid`, and the host kit via `@kserp/host-ui`. It does not import another ksui component.
-- `src/components/composite/` is for a composite component: one that wraps a base component, or composes two or more components (ksui components and host kit pieces) into a new higher level component.
+- `src/components/base/` is for a base component: a primitive that stands on its own. It uses only `solid-js`, `lucide-solid`, and ksui's own utils. It does not import another ksui component.
+- `src/components/composite/` is for a composite component: one that wraps a base component, or composes two or more ksui components into a new higher level component.
 
 The rule when you add a component: place it in the correct folder for its category. A composite must reuse a base or an existing component rather than re-implementing it. If you find yourself rewriting the inside of a base component to build a composite, stop and import the base instead. This keeps one canonical copy of each primitive and stops the package from drifting into duplicated logic.
 
@@ -116,7 +115,7 @@ Before you open a pull request:
   npm run typecheck
   ```
 
-- Make sure the components still render in a real SolidJS app. Because `solid-js` and `@kserp/host-ui` are external, the truest test is to use your change inside an app that provides them. If you have such an app, try your component there.
+- Make sure the components still render in a real SolidJS app. Because `solid-js` is external, the truest test is to use your change inside an app that provides it. The docs site in `docs/` is the easiest such app — run it and check your component there.
 
 ## Commit messages
 

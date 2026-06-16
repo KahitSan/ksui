@@ -1,4 +1,4 @@
-// Cancel / Submit modal footer row, composing the host Button.
+// Cancel / Submit modal footer row, composing ksui's own Button.
 //
 // The same footer is repeated across plugin modals: a
 // `flex flex-col-reverse sm:flex-row gap-2 sm:justify-end` row with a
@@ -8,14 +8,14 @@
 // handlers, saving state, optional icon) as props. No fetch/API call lives
 // here — the caller owns the submit handler.
 //
-// ModalShell is deliberately NOT promoted: the host Modal already supplies the
+// ModalShell is deliberately NOT promoted: the ksui Modal already supplies the
 // backdrop, card, title/close-X path, aria-modal, focus trap, size and tone
-// tokens. Only the body chrome the host Modal does not cover (FormErrorBanner +
+// tokens. Only the body chrome the Modal does not cover (FormErrorBanner +
 // FormActions) is promoted.
 
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
-import { Button } from "@kserp/host-ui";
+import Button from "../base/Button";
 
 export interface FormActionsProps {
   /** Invoked when the Cancel button is clicked. */

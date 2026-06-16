@@ -1,14 +1,14 @@
 // Renders one already-uploaded attachment as a 24×24 tile: an image preview or
 // a paperclip/file fallback linking to the s3_link public URL, an "Unavailable"
 // placeholder when the link can't be resolved (see lib/attachments.ts), and an
-// optional remove button. confirm comes from the host UI kit. The third of the
-// attachment widget set alongside AddAttachmentTile + CameraCapture.
+// optional remove button. confirm is ksui's own self-contained dialog. The third
+// of the attachment widget set alongside AddAttachmentTile + CameraCapture.
 
 import { Show, type Component } from "solid-js";
 import Paperclip from "lucide-solid/icons/paperclip";
 import X from "lucide-solid/icons/x";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import { confirm } from "@kserp/host-ui";
+import { confirm } from "../../utils/confirm";
 import { attachmentUrl, isResolvableAttachment } from "../../utils/attachments";
 
 export interface ExistingAttachment {

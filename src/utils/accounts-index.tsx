@@ -9,14 +9,16 @@
 // The monolith mounts a Provider in the app shell and shares one resource via
 // context. The plugin remote has no such provider, so this version owns a
 // module-level resource created on first use and re-keyed on the active org id
-// (read from the host's useActiveWorkspace()). Because plugin-ui ships as source
-// compiled into each plugin's IIFE, the module-level singleton stays per-plugin.
+// (read from ksui's opt-in integration registry, getActiveWorkspaceId(); a host
+// wires it via configureActiveWorkspace, and it degrades to null — empty index —
+// when unconfigured). Because ksui ships as source compiled into each plugin's
+// IIFE, the module-level singleton stays per-plugin.
 // Degrades gracefully: when the financial-accounts plugin isn't deployed the
 // fetch 404s/fails and the index stays empty, so resolveAccount() then falls back
 // to the type-default glyph.
 
 import { createResource, type Resource } from "solid-js";
-import { useActiveWorkspace } from "@kserp/host-ui";
+import { getActiveWorkspaceId } from "./integration";
 import type { AvatarAccount } from "../components/base/AccountAvatar";
 
 interface IndexShape {
@@ -28,7 +30,7 @@ interface IndexShape {
   nameById: Map<number | string, string>;
 }
 
-async function fetchAccountsIndex(wsId: number | null): Promise<IndexShape> {
+async function fetchAccountsIndex(wsId: number | string | null): Promise<IndexShape> {
   const byId = new Map<number | string, AvatarAccount>();
   const nameById = new Map<number | string, string>();
   if (wsId == null) return { byId, nameById };
@@ -73,8 +75,7 @@ let sharedResource: Resource<IndexShape> | undefined;
 
 export function useAccountsIndex(): Resource<IndexShape> {
   if (!sharedResource) {
-    const { activeWorkspace } = useActiveWorkspace();
-    const [data] = createResource(() => activeWorkspace()?.ws_id ?? null, fetchAccountsIndex);
+    const [data] = createResource(() => getActiveWorkspaceId(), fetchAccountsIndex);
     sharedResource = data;
   }
   return sharedResource;

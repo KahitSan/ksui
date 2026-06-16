@@ -31,12 +31,12 @@ There are two ways to use KSUI.
    plugins, these are the shared components you reuse instead of writing your
    own copy.
 
-One honest note so nothing surprises you. Some components are self-contained and
-work right away. Others, like the client, voucher, and payment account pickers,
-expect a backend that answers certain requests, so they fit best inside an app
-built the KahitSan way. A few components also expect a small set of shared UI
-pieces from your app, like a button and a dialog. The setup note below explains
-that part, and each component page says what it needs.
+One honest note so nothing surprises you. Every component is self-contained: the
+library depends only on `solid-js` and `lucide-solid` and injects its own CSS, so
+there is no host UI kit and no Tailwind to wire up. A handful of components (the
+voucher and payment account pickers, the attachment tiles) call a backend that
+answers certain requests, so they shine inside an app built the KahitSan way, but
+they degrade gracefully without one. Each component page says what it needs.
 
 ## What is inside
 
@@ -97,24 +97,22 @@ import { AccountAvatar } from "@kahitsan/ksui";
 
 ## The honest setup note
 
-Two things this library expects from the app around it:
+One thing this library expects from the app around it:
 
-1. **`solid-js` stays external.** This library ships as source, and your own
-   `vite-plugin-solid` compiles it. Keep `solid-js` as a single shared copy in
-   your app (not bundled twice), so there is only one Solid instance running.
+- **`solid-js` stays external.** This library ships as source, and your own
+  `vite-plugin-solid` compiles it. Keep `solid-js` as a single shared copy in
+  your app (not bundled twice), so there is only one Solid instance running.
 
-2. **A host UI kit under the name `@kserp/host-ui`.** Some components import
-   shared pieces from your app, like a `Button`, a `confirm` dialog, and a few
-   hooks. Your app provides these under the import name `@kserp/host-ui`, and that
-   name is kept external at build time too. Components that need it are:
-   MarkdownNotes, ClientPicker, CameraCapture, ExistingAttachmentTile, and the
-   `useAccountsIndex` hook. The rest do not need it.
+That is the whole setup. There is no host UI kit, no Tailwind, and no app-provided
+primitives to wire up — every component injects its own CSS and depends only on
+`solid-js` + `lucide-solid`. A few components can do *more* when the surrounding
+app feeds them context (a permission check, the active workspace id) through the
+optional `configurePermissions` / `configureActiveWorkspace` helpers, but they
+degrade gracefully when those are not configured.
 
-So a few components work right away with no backend and no host kit
-(MentionTextarea as a plain notes box, AccountAvatar, AddAttachmentTile,
-VoucherPicker, and all the helper functions). Others assume the ERP host and a
-backend that answers calls like `/api/clients`. The docs site walks through how
-to mock the host kit and stub those calls so you can see every component render.
+Some components (the voucher and payment account pickers, the attachment tiles)
+call a backend at paths like `/api/financial-accounts`. The docs site stubs those
+calls so you can see every component render with no server.
 
 ## Docs
 

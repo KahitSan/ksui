@@ -2,7 +2,7 @@
 
 This is the per-component guide for `@kahitsan/ksui`. It is a set of UI components built with SolidJS. We (the KahitSan team) first built them for our own projects, including our ERP product called Hilinga. ("ERP" means a business system for things like sales, clients, and money.) We are sharing them so you can use them too.
 
-A quick honest note before you start: this library grew out of an internal ERP. Most of these components need SolidJS and the `solid-js` package. Some of them also expect a host UI kit that your app provides under the import name `@kserp/host-ui` (that kit gives things like a `Button`, a `confirm` dialog, and a few hooks). A few components are ERP-specific, which means they assume our ERP backend and ask it for data over the network. So this is not a "drop in and it just works with zero setup" library for every piece. We will tell you, component by component, what each one needs.
+A quick honest note before you start: this library grew out of an internal ERP. Every component depends only on the `solid-js` package (plus `lucide-solid` for icons) and injects its own CSS — there is no host UI kit to wire up; the library ships its own `Button`, `Modal`, `confirm`, and string match helpers. A few components are ERP-specific, which means they assume our ERP backend and ask it for data over the network. Those degrade gracefully to an empty or "could not load" state without a backend. We will tell you, component by component, what each one needs.
 
 To use any of these you need a SolidJS app with `vite-plugin-solid` set up. Install the package from npm:
 
@@ -12,7 +12,7 @@ npm install @kahitsan/ksui
 
 How to read the two groups below:
 
-- **General components** do not assume our ERP. They may still need the `@kserp/host-ui` kit for a `Button` or a `confirm`, but they are not tied to ERP data like clients or accounts.
+- **General components** do not assume our ERP. They depend only on `solid-js` and are not tied to ERP data like clients or accounts.
 - **ERP components** assume our ERP host. Many of them fetch data from ERP backend routes (like `/api/clients`). Outside our ERP they will show an empty or "could not load" state, which is safe but means you need our backend, or a stubbed one, to see real data.
 
 In every code example below, `createSignal` comes from `solid-js`. A "signal" is just SolidJS's way of holding a value that can change and update the screen.
@@ -21,7 +21,7 @@ In every code example below, `createSignal` comes from `solid-js`. A "signal" is
 
 ## General components
 
-These do not assume our ERP. Some still need the `@kserp/host-ui` kit, and we say so where that is true.
+These do not assume our ERP. They depend only on `solid-js`.
 
 ### CameraCapture
 
@@ -29,7 +29,7 @@ A full-screen pop-up (a "modal") that opens the device camera. You can take a ph
 
 **When to use it:** when you want the user to take a photo with their camera and give you the resulting file, for example to upload a receipt.
 
-**What it needs:** it imports `Button` from `@kserp/host-ui`, so your app must provide that kit. In a page with no camera permission it lands in an error state and shows a "Could not access camera" message plus a Close button, which still renders fine. It also uses a `card-bg` CSS class for styling.
+**What it needs:** nothing beyond `solid-js` — it uses ksui's own `Button` and injects its own CSS. In a page with no camera permission it lands in an error state and shows a "Could not access camera" message plus a Close button, which still renders fine. It also uses a `card-bg` CSS class for styling.
 
 | Prop | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -48,7 +48,7 @@ A dashed square "Add" tile. When you tap it, a small menu opens with two choices
 
 **When to use it:** as the "add a file" button in a row of attachment tiles, where the user can either snap a photo or browse for a file.
 
-**What it needs:** nothing from the host kit. Just pass the three props. It uses a custom CSS class called `ks-hud-clip-top-left-bottom-right` to give it angled, clipped corners. It still renders without that class, just with plain square corners.
+**What it needs:** nothing beyond `solid-js`. Just pass the three props. It uses a custom CSS class called `ks-hud-clip-top-left-bottom-right` to give it angled, clipped corners. It still renders without that class, just with plain square corners.
 
 | Prop | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -66,7 +66,7 @@ Shows one file that is already uploaded, as a small tile. If the file is an imag
 
 **When to use it:** to display files that are already saved, for example the attachments already on a record, with an optional way to remove one.
 
-**What it needs:** it imports `confirm` from `@kserp/host-ui`, so your app must provide that kit (a simple `confirm` that returns true works). The remove button only appears when you pass `onDelete`. To show an image preview, give it an attachment with an `https` link and an `image/*` mime type. With a missing or non-`http` link it shows the "Unavailable" placeholder.
+**What it needs:** nothing beyond `solid-js` — it uses ksui's built-in `confirm` dialog to ask before removing. The remove button only appears when you pass `onDelete`. To show an image preview, give it an attachment with an `https` link and an `image/*` mime type. With a missing or non-`http` link it shows the "Unavailable" placeholder.
 
 | Prop | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -129,7 +129,7 @@ A text box where you can type notes and tag a client by typing the `@` sign. ("C
 
 **When to use it:** when you want a notes field where the user can mention specific clients, and you want those mentions saved as tokens you can resolve later.
 
-**What it needs:** it does not import `@kserp/host-ui`, so no host kit is needed. To show the empty box you only need `value`, `setValue`, and a placeholder. The `@` dropdown calls `fetch('/api/clients')`. With no backend that fetch just fails and the popup shows "no results", so the box still works as a plain notes editor. To show real client results, your app must serve `/api/clients`.
+**What it needs:** nothing beyond `solid-js`. To show the empty box you only need `value`, `setValue`, and a placeholder. The `@` dropdown calls `fetch('/api/clients')`. With no backend that fetch just fails and the popup shows "no results", so the box still works as a plain notes editor. To show real client results, your app must serve `/api/clients`.
 
 | Prop | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -153,7 +153,7 @@ Takes a notes string written in a small subset of markdown (bold, italic, code, 
 
 **When to use it:** to display notes that were typed in `MentionTextarea`, so the mentions and the markdown formatting both render nicely and read-only.
 
-**What it needs:** it imports `usePermissions` and `highlightMatch` from `@kserp/host-ui`, so your app must provide that kit. `usePermissions` is wrapped in a safety net, so if the kit returns "no permission" the component still renders, with mention chips shown as plain links and no hover card. The hover card calls `fetch('/api/clients/:id')`. With no backend the chip just stays plain.
+**What it needs:** nothing beyond `solid-js` — `highlightMatch` is built in. Permission gating is optional: wire up ksui's `configurePermissions` integration to control the hover card, otherwise it degrades to mention chips shown as plain links and no hover card. The hover card calls `fetch('/api/clients/:id')`. With no backend the chip just stays plain.
 
 | Prop | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -171,7 +171,7 @@ A button that opens a search popup so you can pick one client. You type to searc
 
 **When to use it:** when a form needs the user to choose a client (or leave it as a walk-in with no client), with the option to create a new client on the spot.
 
-**What it needs:** it imports `highlightMatch` from `@kserp/host-ui`, so your app must provide that kit. The closed button renders fine with just `selected` and `onChange`. Search and create call `fetch('/api/clients')`. With no backend it shows the "could not load" state. To show live results, your app must serve `/api/clients`.
+**What it needs:** nothing beyond `solid-js` — `highlightMatch` is built in. The closed button renders fine with just `selected` and `onChange`. Search and create call `fetch('/api/clients')`. With no backend it shows the "could not load" state. To show live results, your app must serve `/api/clients`.
 
 | Prop | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -192,7 +192,7 @@ A button that opens a popup so you can pick a discount voucher for a sale. ("Vou
 
 **When to use it:** on a sale or checkout screen where the user can apply a discount voucher and you want to preview how much it takes off.
 
-**What it needs:** it does not import `@kserp/host-ui`, so no host kit is needed. The closed button renders with `selected`, `onChange`, `subtotal`, and `packageIds`. Opening it calls `fetch('/api/vouchers')`. With no backend it shows the "could not load" state. The `calculateDiscount` helper is a plain function and needs nothing.
+**What it needs:** nothing beyond `solid-js`. The closed button renders with `selected`, `onChange`, `subtotal`, and `packageIds`. Opening it calls `fetch('/api/vouchers')`. With no backend it shows the "could not load" state. The `calculateDiscount` helper is a plain function and needs nothing.
 
 | Prop | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -214,7 +214,7 @@ A button that opens a popup so you can choose which financial account a payment 
 
 **When to use it:** on a payment screen where the user must say which account receives the money, and you want to block charging when no account is available.
 
-**What it needs:** it does not import `@kserp/host-ui` directly, and the `AccountAvatar` it draws does not need the host kit either, so no host kit is required. It fetches `/api/financial-accounts` when it mounts. With no backend it shows "No accessible accounts", which renders fine. To show real accounts, your app must serve `/api/financial-accounts`.
+**What it needs:** nothing beyond `solid-js`; the `AccountAvatar` it draws is self-contained too. It fetches `/api/financial-accounts` when it mounts. With no backend it shows "No accessible accounts", which renders fine. To show real accounts, your app must serve `/api/financial-accounts`.
 
 | Prop | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -234,7 +234,7 @@ A small square or round chip that pictures an account or a person. For a financi
 
 **When to use it:** anywhere you want a consistent little picture for an account or a person, for example next to an account name or a payment row.
 
-**What it needs:** nothing from the host kit. Just pass an account object. Logo and photo URLs only render if they start with `http` or `https` (a safety filter), so use a real `https` image URL to show a logo.
+**What it needs:** nothing beyond `solid-js`. Just pass an account object. Logo and photo URLs only render if they start with `http` or `https` (a safety filter), so use a real `https` image URL to show a logo.
 
 | Prop | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -275,7 +275,7 @@ A data helper for looking up financial accounts by id, not a visual component. `
 
 **When to use it:** when you have account ids on records (like a payment's `financial_account_id`) and you want to show the account's avatar or name without fetching each one separately.
 
-**What it needs:** `useAccountsIndex` imports `useActiveWorkspace` from `@kserp/host-ui` and fetches `/api/financial-accounts`, so it needs the host kit and our backend. It is a live-data hook, not a render-only piece. The pure helpers `resolveAccount` and `resolveAccountName` are easy: just pass a plain `{ byId, nameById }` object (or `undefined`) and an id, with no setup.
+**What it needs:** `useAccountsIndex` reads the active workspace from ksui's optional `configureActiveWorkspace` integration and fetches `/api/financial-accounts`, so it needs our backend at run time (without `configureActiveWorkspace` wired up it degrades to an empty workspace). It is a live-data hook, not a render-only piece. The pure helpers `resolveAccount` and `resolveAccountName` are easy: just pass a plain `{ byId, nameById }` object (or `undefined`) and an id, with no setup.
 
 | Function | Type | Required | What it does |
 | --- | --- | --- | --- |

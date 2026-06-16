@@ -10,13 +10,14 @@ export default function ModalPage(): JSX.Element {
     <article>
       <h1>Modal</h1>
       <p class="lead">
-        A caller mounted dialog. There is no <code>open</code> prop: wrap the Modal in a <code>Show</code> and it is
-        mounted while visible. <code>onClose</code> fires on Escape, backdrop click, or dismissal.
+        A self-contained, caller mounted dialog. There is no <code>open</code> prop: wrap the Modal in a{" "}
+        <code>Show</code> and it is mounted while visible. <code>onClose</code> fires on Escape, backdrop click, or
+        dismissal. It injects its own CSS — no Tailwind or host kit required.
       </p>
 
       <h2>Import</h2>
       <div class="import-snippet">
-        <CodeBlock code={`import { Modal } from "@kserp/host-ui";`} />
+        <CodeBlock code={`import { Modal } from "@kahitsan/ksui";`} />
       </div>
 
       <h2>Basic</h2>

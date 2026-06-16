@@ -1,6 +1,6 @@
 // example-start
 import { createSignal } from "solid-js";
-import { Button } from "@kserp/host-ui";
+import { Button } from "@kahitsan/ksui";
 import { VoucherPicker, calculateDiscount, type VoucherOption } from "@kahitsan/ksui";
 
 export default function VoucherPickerBasic() {
