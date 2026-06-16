@@ -7,6 +7,7 @@ import GettingStarted from "./pages/GettingStarted";
 import ButtonPage from "./pages/ButtonPage";
 import ModalPage from "./pages/ModalPage";
 import ClientPickerPage from "./pages/ClientPickerPage";
+import EntityPickerPage from "./pages/EntityPickerPage";
 import PayeePickerPage from "./pages/PayeePickerPage";
 import MarkdownNotesPage from "./pages/MarkdownNotesPage";
 import MentionTextareaPage from "./pages/MentionTextareaPage";
@@ -71,6 +72,7 @@ render(
       <Route path="/components/button" component={ButtonPage} />
       <Route path="/components/modal" component={ModalPage} />
       <Route path="/components/client-picker" component={ClientPickerPage} />
+      <Route path="/components/entity-picker" component={EntityPickerPage} />
       <Route path="/components/payee-picker" component={PayeePickerPage} />
       <Route path="/components/markdown-notes" component={MarkdownNotesPage} />
       <Route path="/components/mention-textarea" component={MentionTextareaPage} />
