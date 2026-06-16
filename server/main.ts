@@ -27,7 +27,8 @@ import pg from "pg";
 import { makeDatabaseService, runMigrations } from "@ks-erp/kernel-composite";
 import type { PluginManifest } from "@ks-erp/kernel-composite";
 import { mountPluginServices } from "@ks-erp/kernel/service-rpc";
-import { parseIdentity, requireAuth, requireOrg, requirePermission, withTenantContext } from "@ks-erp/kernel-base";
+import { applyTenantContext, parseIdentity, requireAuth, requireOrg, requirePermission, withTenantContext } from "@ks-erp/kernel-base";
+import { insertTransactionRow, insertVisibilityShares } from "./lib/create-transaction.js";
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
 
@@ -245,6 +246,93 @@ async function start(): Promise<void> {
           };
         }
         return out;
+      },
+
+      // createSalaryTransaction({ amount, payee_id, source_account_id, notes,
+      //   transaction_date }) → { id, amount, transaction_date }
+      // Producer side of the payroll flow: the timesheets plugin calls this to
+      // record a private "Salary - Direct" expense when it marks shifts paid,
+      // so timesheets never writes the accounts.* schema it can't see. The shape
+      // is fixed to the salary use case — category/subcategory/description and
+      // the director+accountant visibility grants are baked in, NOT
+      // caller-controlled, so the cross-plugin surface stays minimal. Salary is
+      // not VATable, so tax is zeroed (non_vat). Org-scoped via req.workspaceId;
+      // created_by is the calling user relayed in the signed identity header.
+      createSalaryTransaction: async (args, { req }) => {
+        const a = (args ?? {}) as {
+          amount?: unknown;
+          payee_id?: unknown;
+          source_account_id?: unknown;
+          notes?: unknown;
+          transaction_date?: unknown;
+        };
+        const wsId = req.workspaceId;
+        const userId = req.user?.id;
+        if (wsId == null || !userId) throw new Error("Organization and user context required");
+
+        const amount = typeof a.amount === "number" ? a.amount : parseFloat(String(a.amount));
+        if (!Number.isFinite(amount) || amount <= 0) throw new Error("amount must be greater than 0");
+
+        const payeeId =
+          a.payee_id == null ? null : Number.isFinite(Number(a.payee_id)) ? parseInt(String(a.payee_id), 10) : null;
+        const sourceAccountId =
+          a.source_account_id == null
+            ? null
+            : Number.isFinite(Number(a.source_account_id))
+              ? parseInt(String(a.source_account_id), 10)
+              : null;
+        const transactionDate =
+          typeof a.transaction_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(a.transaction_date)
+            ? a.transaction_date
+            : null;
+        if (!transactionDate) throw new Error("transaction_date must be YYYY-MM-DD");
+        const notes = typeof a.notes === "string" ? a.notes : null;
+
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
+          await applyTenantContext(client);
+          const txn = await insertTransactionRow(client, {
+            workspaceId: wsId,
+            category: "expense",
+            subcategory: "Salary - Direct",
+            sourceAccountId,
+            destinationAccountId: null,
+            amount,
+            description: "Salary",
+            notes,
+            transactionDate,
+            isPrivate: true,
+            isBackdated: false,
+            backdateReason: null,
+            createdBy: userId,
+            referenceNumber: null,
+            taxType: "non_vat",
+            taxRate: 0,
+            taxAmount: 0,
+            subtotal: amount,
+            payableKind: null,
+            dueDate: null,
+            chequeNumber: null,
+            pdcStatus: null,
+            hasEwt: false,
+            ewtRate: null,
+            ewtAmount: null,
+            clientId: null,
+            payeeId,
+          });
+          await insertVisibilityShares(client, txn.id as number, {
+            isPrivate: true,
+            sharedWithRoles: ["director", "accountant"],
+          });
+          await client.query("COMMIT");
+          return { id: txn.id, amount, transaction_date: transactionDate };
+        } catch (e) {
+          await client.query("ROLLBACK").catch(() => {});
+          throw e;
+        } finally {
+          client.release();
+        }
       },
     },
     { parseIdentity },

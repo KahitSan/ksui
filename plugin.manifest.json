@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "basePath": "/api/transactions",
   "additionalBasePaths": ["/api/transaction-line-items"],
-  "port": 4020,
+  "port": 4820,
   "capabilityKey": "transactions",
   "label": "Transactions",
   "uiRouteBase": "transactions",
@@ -18,7 +18,12 @@
     "service:findById@vouchers"
   ],
   "ciCoMounts": ["clients", "packages", "vouchers"],
-  "provides": ["service:findById", "service:getAccountBalances", "service:getPackageCapacityUsage"],
+  "provides": [
+    "service:findById",
+    "service:getAccountBalances",
+    "service:getPackageCapacityUsage",
+    "service:createSalaryTransaction"
+  ],
   "permissions": [
     "transactions.view",
     "transactions.create",
