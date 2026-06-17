@@ -11,13 +11,20 @@
 // names. Surface / border / accent colors read from CSS custom properties
 // (`--ksui-dt-*`) with the host's dark zinc + amber values as fallbacks, so a
 // consumer can retint without forking. The component depends only on solid-js +
-// lucide-solid (plus ksui's own utils); the host's `~/components/ui/DatePicker`
-// dependency is replaced by a self-contained native `<input type="date">` so
-// the library carries no host primitive.
+// lucide-solid plus ksui's own DatePicker — the same self-contained calendar
+// popover the host DataTable used for its date filter (single + range), so the
+// library carries no host primitive and no native `<input type="date">`.
 //
 // The public type surface (DataTableRow / DataTableColumn / FetchResult /
 // FetchParams / DataTableProps) mirrors the kernel's `@kserp/host-ui` ambient
 // contract EXACTLY, so a caller written against host-ui works unchanged here.
+//
+// Composition note: the date filter renders ksui's own `DatePicker` (a sibling
+// base component) instead of a native `<input type="date">`, mirroring how the
+// host DataTable wired its DatePicker. Importing one base into another technically
+// makes this a composite under CONTRIBUTING's base/composite split; it stays in
+// `base/` (and is re-exported as base) to preserve its existing import path —
+// the only ksui dependency is DatePicker, itself a self-contained primitive.
 
 import {
   batch,
@@ -38,6 +45,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import ChevronsUpDown from "lucide-solid/icons/chevrons-up-down";
+import DatePicker from "./DatePicker";
 
 // ---------------------------------------------------------------------------
 // Injected CSS
@@ -61,10 +69,11 @@ const STYLE_ID = "ksui-datatable-style";
 //   --ksui-dt-radius       outer card / control corner radius   (0.5rem)
 //   --ksui-dt-border       card / header / footer / control border (zinc-800/50, rgba(39,39,42,0.5))
 //   --ksui-dt-row-border   row divider + expansion-row top border (zinc-800/30, rgba(39,39,42,0.3))
-//   --ksui-dt-control-bg   filter button / menu / date input / select / search / show-more bg (zinc-900, #18181b)
+//   --ksui-dt-control-bg   filter button / menu / select / search / show-more bg (zinc-900, #18181b)
+//                          (the date filter is the ksui DatePicker; it reads the same vars)
 //   --ksui-dt-fg           primary text: row/search text (zinc-200, #e4e4e7)
 //   --ksui-dt-fg-strong    hover-to-full-contrast text on controls/pager (white, #ffffff)
-//   --ksui-dt-text         secondary text: filter btn / select / date input / pager nums+arrows (zinc-400, #a1a1aa)
+//   --ksui-dt-text         secondary text: filter btn / select / pager nums+arrows (zinc-400, #a1a1aa)
 //   --ksui-dt-text-strong  show-more label + sortable-header hover (zinc-300, #d4d4d8)
 //   --ksui-dt-muted        header th / search icon+placeholder / empty / info text (zinc-500, #71717a)
 //   --ksui-dt-faint        sort caret / per-row date separator / pager ellipsis (zinc-600, #52525b)
@@ -88,8 +97,6 @@ const DATATABLE_CSS = `
 .ksui-datatable-filter-toggle{display:inline-flex;cursor:pointer;align-items:center;gap:0.5rem;border-radius:0.5rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);padding:0.5rem 0.75rem;font-size:0.75rem;line-height:1rem;color:var(--ksui-dt-text,#a1a1aa);transition:color 0.15s ease;}
 .ksui-datatable-filter-toggle:hover{color:var(--ksui-dt-fg-strong,#ffffff);}
 .ksui-datatable-filter-menu{position:absolute;left:0;top:100%;z-index:50;margin-top:0.5rem;border-radius:0.5rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);padding:0.75rem;box-shadow:0 20px 25px -5px rgba(0,0,0,0.4),0 8px 10px -6px rgba(0,0,0,0.4);}
-.ksui-datatable-date-input{border-radius:0.375rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);padding:0.5rem;font-size:0.75rem;line-height:1rem;color:var(--ksui-dt-text,#a1a1aa);color-scheme:dark;}
-.ksui-datatable-date-sep{font-size:0.75rem;color:var(--ksui-dt-faint,#52525b);}
 .ksui-datatable-select{border-radius:0.375rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);padding:0.5rem;font-size:0.75rem;line-height:1rem;color:var(--ksui-dt-text,#a1a1aa);}
 .ksui-datatable-search-wrap{position:relative;}
 .ksui-datatable-search-icon{position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);color:var(--ksui-dt-muted,#71717a);pointer-events:none;}
@@ -711,30 +718,13 @@ export function DataTable<T extends DataTableRow>(props: DataTableProps<T>): JSX
           {/* Right side: date filter + per-page + search */}
           <div class="ksui-datatable-controls">
             <Show when={props.dateField && !props.dateRangeMode}>
-              <input
-                type="date"
-                class="ksui-datatable-date-input"
-                value={dateFilter() ?? ""}
-                onChange={(e) => handleDateFilter(e.currentTarget.value || null)}
-              />
+              <DatePicker value={dateFilter()} onChange={handleDateFilter} />
             </Show>
             <Show when={props.dateField && props.dateRangeMode}>
-              <input
-                type="date"
-                class="ksui-datatable-date-input"
-                value={dateFrom() ?? ""}
-                onChange={(e) =>
-                  handleDateRangeFilter({ start: e.currentTarget.value || null, end: dateTo() })
-                }
-              />
-              <span class="ksui-datatable-date-sep">to</span>
-              <input
-                type="date"
-                class="ksui-datatable-date-input"
-                value={dateTo() ?? ""}
-                onChange={(e) =>
-                  handleDateRangeFilter({ start: dateFrom(), end: e.currentTarget.value || null })
-                }
+              <DatePicker
+                range={true}
+                value={{ start: dateFrom(), end: dateTo() }}
+                onChange={handleDateRangeFilter}
               />
             </Show>
             <Show when={paging() && lengthMenu().length > 1}>

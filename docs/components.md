@@ -117,6 +117,31 @@ const ok = isResolvableAttachment(att.s3_link);
 const href = attachmentUrl(att.s3_link);
 ```
 
+### DatePicker
+
+A calendar date picker. It shows a small trigger button labeled with the chosen date (or "Pick date" when empty); clicking it opens a calendar pop-up with month navigation, a natural-language text box (you can type "dec 3", "yesterday", or "last week"), quick shortcuts, and a day grid. It works in two shapes: a **single date** (the value is an ISO `YYYY-MM-DD` string, or `null`), or a **range** when you pass `range` (the value is a `DateRangeValue` `{ start, end }` pair). There is also an optional time field (`withTime`) for single-date mode. This is the same picker the `DataTable` date filter uses.
+
+**When to use it:** any time you want the user to pick a day (or a start/end range) without fighting the browser's native date input.
+
+**What it needs:** nothing beyond `solid-js` — it injects its own dark CSS (sharing the DataTable's `--ksui-dt-*` palette so a retint covers both) and uses `lucide-solid` icons.
+
+| Prop | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `value` | `string \| null` (single) or `DateRangeValue` (range) | Yes | The selected date, or the `{ start, end }` pair in range mode. |
+| `onChange` | `(date: string \| null) => void` (single) or `(range: DateRangeValue) => void` (range) | Yes | Called with the new value whenever the user picks. |
+| `range` | `true` | No | Switches the picker to range mode; `value` / `onChange` then use `DateRangeValue`. |
+| `placeholder` | `string` | No | Trigger label when no date is set (default "Pick date"). |
+| `withTime` | `boolean` | No | Show a time field (single-date mode only). |
+| `disabled` | `boolean` | No | Disable the trigger. |
+
+```tsx
+const [day, setDay] = createSignal<string | null>(null);
+<DatePicker value={day()} onChange={setDay} placeholder="Pick date" />
+
+const [range, setRange] = createSignal<DateRangeValue>({ start: null, end: null });
+<DatePicker range value={range()} onChange={setRange} />
+```
+
 ### DataTable
 
 A data table with search, column sorting, and pagination built in. It runs in two modes. In **client-side mode** you hand it a `data` array and it does the search, sort, and paging in the browser. In **server-side mode** you give it a `fetchFn` that returns `{ data, total }`, and the table calls it with the current page, search text, sort, and date filter — so the heavy lifting stays on your backend. It also has an optional `filters` slot for your own filter buttons, an optional date filter (`dateField`), a "Show more" load mode (`loadMore`), per-row expansion panels, and an `onRefetch` handle so a parent can refetch on demand.
