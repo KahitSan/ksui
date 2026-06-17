@@ -76,6 +76,14 @@ export { default as EyebrowBadge, type EyebrowBadgeProps, type EyebrowTone, type
 // own CSS; no Tailwind / host-brand classes required.
 export { default as Modal, type ModalProps, type ModalSize, type ModalTone } from "./components/base/Modal";
 
+// Calendar date picker (ported from the host kit). Trigger button labeled with
+// the selected date or "Pick date", a portaled calendar popover with prev/next
+// month nav, natural-language text entry + quick options, single-date AND range
+// mode (via a DateRangeValue {start,end}), and an optional time field. Injects
+// its own CSS sharing the DataTable's `--ksui-dt-*` palette; no Tailwind. The
+// DataTable's date filter renders this picker.
+export { default as DatePicker, type DatePickerProps, type DateRangeValue } from "./components/base/DatePicker";
+
 // Server-side / client-side data table with debounced search, column sort,
 // pagination + "Show more" load mode, a filters slot, optional date filter, and
 // an onRefetch handle. Ported from the host kit; injects its own CSS, no Tailwind.
