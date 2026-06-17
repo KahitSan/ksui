@@ -76,6 +76,20 @@ export { default as EyebrowBadge, type EyebrowBadgeProps, type EyebrowTone, type
 // own CSS; no Tailwind / host-brand classes required.
 export { default as Modal, type ModalProps, type ModalSize, type ModalTone } from "./components/base/Modal";
 
+// Server-side / client-side data table with debounced search, column sort,
+// pagination + "Show more" load mode, a filters slot, optional date filter, and
+// an onRefetch handle. Ported from the host kit; injects its own CSS, no Tailwind.
+// The type surface mirrors the kernel's @kserp/host-ui contract exactly, so a
+// caller written against host-ui works unchanged here.
+export {
+  default as DataTable,
+  type DataTableProps,
+  type DataTableColumn,
+  type DataTableRow,
+  type FetchParams,
+  type FetchResult,
+} from "./components/base/DataTable";
+
 // ---------------------------------------------------------------------------
 // Composite components
 // ---------------------------------------------------------------------------
