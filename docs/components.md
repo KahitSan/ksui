@@ -117,6 +117,33 @@ const ok = isResolvableAttachment(att.s3_link);
 const href = attachmentUrl(att.s3_link);
 ```
 
+### DataTable
+
+A data table with search, column sorting, and pagination built in. It runs in two modes. In **client-side mode** you hand it a `data` array and it does the search, sort, and paging in the browser. In **server-side mode** you give it a `fetchFn` that returns `{ data, total }`, and the table calls it with the current page, search text, sort, and date filter — so the heavy lifting stays on your backend. It also has an optional `filters` slot for your own filter buttons, an optional date filter (`dateField`), a "Show more" load mode (`loadMore`), per-row expansion panels, and an `onRefetch` handle so a parent can refetch on demand.
+
+**When to use it:** any list of records that needs search, sorting, and pages. Reach for client-side mode for a small in-memory list, and server-side mode when the data lives behind an API and you want the server to page and filter it.
+
+**What it needs:** nothing beyond `solid-js` for client-side mode — it injects its own dark CSS and uses `lucide-solid` icons. Server-side mode needs you to supply a `fetchFn`; the table itself is backend-agnostic.
+
+| Prop | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `columns` | `DataTableColumn<T>[]` | No | The columns to draw. Each has a `data` key (or `null` for an action column), an optional `title`, an optional `render`, and `orderable` / `className`. |
+| `data` | `T[]` | No | Static rows for client-side mode. Ignored when `fetchFn` is set. |
+| `fetchFn` | `(p: FetchParams) => Promise<FetchResult<T>>` | No | Server-side fetcher. When present, the table runs server-side and calls this with `{ page, limit, search, sortBy, sortDir, dateFilter, dateFrom, dateTo }`. |
+| `refetchKey` | `() => unknown` | No | Reactive key; when it changes the table resets to page 1 and refetches. |
+| `onRefetch` | `(api: { refetch; resetAndRefetch }) => void` | No | Hands the parent a refetch handle. |
+| `filters` | `JSX.Element` | No | Your own filter UI, rendered in the header bar (a dropdown on mobile). |
+| `searchPlaceholder` / `emptyMessage` / `noResultsMessage` | `string` | No | Copy for the search box and the empty / no-results states. |
+
+```tsx
+<DataTable<Person>
+  data={people}
+  columns={[{ data: "name", title: "Name" }, { data: "role", title: "Role" }]}
+  pageLength={10}
+  searchPlaceholder="Search people…"
+/>
+```
+
 ---
 
 ## ERP components
