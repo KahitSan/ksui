@@ -1,6 +1,6 @@
 {
   "name": "@kahitsan/ksui",
-  "version": "0.10.2",
+  "version": "0.11.0",
   "description": "ksui is a standalone set of SolidJS UI components for KahitSan/Hilinga and any SolidJS app. Published to the public npm registry and consumed as a normal dependency. Ships source under a `solid` export condition so the consumer's vite-plugin-solid compiles it with only solid-js externalized; it depends on nothing but solid-js + lucide-solid and injects its own CSS.",
   "type": "module",
   "main": "./src/index.ts",
