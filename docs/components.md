@@ -10,6 +10,29 @@ To use any of these you need a SolidJS app with `vite-plugin-solid` set up. Inst
 npm install @kahitsan/ksui
 ```
 
+### Tailwind CSS setup
+
+ksui components use Tailwind utility classes internally. To ensure these classes survive Tailwind's purge/scan, add the ksui Tailwind plugin:
+
+**Tailwind v3** — add to `tailwind.config.js`:
+```js
+module.exports = {
+  plugins: [require("@kahitsan/ksui/tailwind")],
+}
+```
+
+**Tailwind v4** — add to your CSS file:
+```css
+@plugin "@kahitsan/ksui/tailwind";
+```
+
+The plugin safelists every Tailwind utility class that ksui components reference. Without it, components like `Button`, `DataTable`, and `DatePicker` may render with missing backgrounds or borders because Tailwind cannot scan `node_modules` for class usage.
+
+If you prefer not to use the plugin, you can manually add a `@source` directive instead:
+```css
+@source "../node_modules/@kahitsan/ksui/src";
+```
+
 How to read the two groups below:
 
 - **General components** do not assume our ERP. They depend only on `solid-js` and are not tied to ERP data like clients or accounts.

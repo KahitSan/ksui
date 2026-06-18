@@ -165,6 +165,14 @@ export { INPUT_CLASS } from "./utils/INPUT_CLASS";
 export { formatPHP } from "./utils/formatPHP";
 export { formatShortDate } from "./utils/formatShortDate";
 export { formatFullDate } from "./utils/formatFullDate";
+export {
+  parseDateInput,
+  normalizeDate,
+  formatDateDisplay,
+  formatDateEditable,
+  formatTimeDisplay,
+} from "./utils/parse-date";
+export type { ParsedDate } from "./utils/parse-date";
 
 // Self-contained helpers promoted from the former host kit so the library has no
 // "@kserp/host-ui" dependency.
