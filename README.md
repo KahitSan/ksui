@@ -38,6 +38,25 @@ voucher and payment account pickers, the attachment tiles) call a backend that
 answers certain requests, so they shine inside an app built the KahitSan way, but
 they degrade gracefully without one. Each component page says what it needs.
 
+Some components (Button, DataTable, DatePicker, etc.) use Tailwind utility
+classes internally. To ensure these classes are included in your CSS output,
+add the ksui Tailwind plugin to your project:
+
+```js
+// tailwind.config.js (v3)
+module.exports = {
+  plugins: [require("@kahitsan/ksui/tailwind")],
+}
+```
+
+```css
+/* app.css (v4) */
+@plugin "@kahitsan/ksui/tailwind";
+```
+
+Without the plugin, Tailwind may purge the utility classes ksui components use,
+causing missing backgrounds or borders.
+
 ## What is inside
 
 The package is organized into three kinds of exports:

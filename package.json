@@ -17,10 +17,18 @@
       "types": "./src/components/*.tsx",
       "development": "./src/components/*.tsx",
       "import": "./src/components/*.tsx"
-    }
+    },
+    "./utils/*": {
+      "solid": "./src/utils/*.ts",
+      "types": "./src/utils/*.ts",
+      "development": "./src/utils/*.ts",
+      "import": "./src/utils/*.ts"
+    },
+    "./tailwind": "./tailwind.js"
   },
   "files": [
-    "src"
+    "src",
+    "tailwind.js"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -32,7 +40,13 @@
     "lucide-solid": "^1.7.0"
   },
   "peerDependencies": {
-    "solid-js": "^1.9.0"
+    "solid-js": "^1.9.0",
+    "tailwindcss": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "tailwindcss": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",

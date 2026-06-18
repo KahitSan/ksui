@@ -54,7 +54,7 @@ export function confirm(opts: ConfirmOptions): Promise<boolean> {
             tone={opts.danger ? "danger" : "default"}
             ariaLabel={opts.title ?? "Confirm"}
           >
-            <div style={{ display: "flex", "flex-direction": "column", gap: "0.75rem" }}>
+            <div data-testid="confirm-dialog" style={{ display: "flex", "flex-direction": "column", gap: "0.75rem" }}>
               <Show when={opts.title}>
                 <h2 style={{ margin: 0, "font-size": "1.125rem", "font-weight": 600 }}>{opts.title}</h2>
               </Show>
