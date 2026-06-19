@@ -40,7 +40,7 @@ import ExportTransactionsModal from "./components/ExportTransactionsModal";
 import TransactionFilters from "./components/TransactionFilters";
 import {
   useAccountsIndex,
-  attachmensui";
+} from "@kahitsan/ksui";
 import { formatDate, formatDateTime } from "./lib/format";
 import {
   type PendingFile,
