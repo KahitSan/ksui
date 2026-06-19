@@ -20,11 +20,18 @@ const sizeMap: Record<string, number> = {
  * people; use AccountAvatar directly for financial accounts.
  */
 export default function Avatar(props: AvatarProps) {
+  // Getter-backed so name/image stay reactive: a parent rebinding them on a live
+  // Avatar (e.g. an in-session profile update) re-renders, rather than snapshotting
+  // the values once at component init.
   const account: AvatarAccount = {
     id: 0,
     type: "user",
-    name: props.name,
-    image: props.image,
+    get name() {
+      return props.name;
+    },
+    get image() {
+      return props.image;
+    },
   };
 
   return <AccountAvatar account={account} size={sizeMap[props.size ?? "md"]} class={props.class} />;
