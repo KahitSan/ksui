@@ -17,7 +17,7 @@ import AccountPicker from "./AccountPicker";
 import FormAdvancedSection from "./FormAdvancedSection";
 import SalesBodyEditor, { type SalesLine } from "./SalesBodyEditor";
 import Store from "lucide-solid/icons/store";
-import { ComboBox, type PayeeOption, type PayeeKind } from "@kahitsan/ksui";
+import { ComboBox, SegmentedFilter, type PayeeOption, type PayeeKind } from "@kahitsan/ksui";
 
 // Payee data-wiring for the generic ComboBox engine. Search/create hit the
 // sibling payees plugin's /api/payees endpoint directly; `kind` is "customer"
@@ -526,24 +526,14 @@ export default function TransactionForm(props: TransactionFormProps) {
                 </FormField>
                 <Show when={props.chequeNumber.trim()}>
                   <FormField label="PDC status">
-                    <div class="flex rounded-lg border border-zinc-800/50 overflow-hidden">
-                      <For each={PDC_OPTIONS}>
-                        {(opt) => (
-                          <button
-                            type="button"
-                            onClick={() => props.setPdcStatus(opt.id)}
-                            class="flex-1 px-2 py-2.5 text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer min-h-[40px] active:opacity-80"
-                            classList={{
-                              "bg-amber-500/20 text-amber-400": props.pdcStatus === opt.id,
-                              "text-zinc-500 hover:text-zinc-300": props.pdcStatus !== opt.id,
-                            }}
-                          >
-                            <span class={`w-1.5 h-1.5 rounded-full ${opt.dot}`} />
-                            {opt.label.replace("PDC ", "")}
-                          </button>
-                        )}
-                      </For>
-                    </div>
+                    <SegmentedFilter
+                      options={PDC_OPTIONS.map((opt) => ({
+                        value: opt.id,
+                        label: opt.label.replace("PDC ", ""),
+                      }))}
+                      value={props.pdcStatus}
+                      onChange={props.setPdcStatus}
+                    />
                   </FormField>
                 </Show>
               </div>

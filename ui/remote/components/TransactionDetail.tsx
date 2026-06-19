@@ -18,6 +18,7 @@ import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { MarkdownNotes } from "@kahitsan/ksui";
 import { AddAttachmentTile } from "@kahitsan/ksui";
 import {
+  DetailRow,
   AccountAvatar,
   useAccountsIndex,
   resolveAccount,
@@ -136,7 +137,7 @@ export function TransactionDetail(props: {
         <Show
           when={t.category === "business"}
           fallback={
-            <DetailRow
+            <AccountDetailRow
               label={
                 t.category === "sale"
                   ? "Received in"
@@ -149,8 +150,8 @@ export function TransactionDetail(props: {
             />
           }
         >
-          <DetailRow label="From account" value={t.source_account_name} accountId={t.source_account_id} />
-          <DetailRow label="To account" value={t.destination_account_name} accountId={t.destination_account_id} />
+          <AccountDetailRow label="From account" value={t.source_account_name} accountId={t.source_account_id} />
+          <AccountDetailRow label="To account" value={t.destination_account_name} accountId={t.destination_account_id} />
         </Show>
         <DetailRow label="Date" value={formatDate(t.transaction_date)} />
         <Show when={t.reference_number}>
@@ -618,7 +619,8 @@ export function TransactionDetail(props: {
   );
 }
 
-function DetailRow(props: {
+/** Thin wrapper around ksui.DetailRow that adds optional account avatar resolution. */
+function AccountDetailRow(props: {
   label: string;
   value: string | null | undefined;
   accountId?: number | null;
@@ -626,7 +628,7 @@ function DetailRow(props: {
   const accountsIndex = useAccountsIndex();
   const acct = () => (props.accountId != null ? resolveAccount(accountsIndex(), props.accountId) : null);
   return (
-    <div class="bg-zinc-900/40 border border-zinc-800/60 px-4 py-3 ks-hud-clip-button">
+    <div>
       <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-1">
         {props.label}
       </div>
