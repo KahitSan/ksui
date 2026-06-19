@@ -465,6 +465,8 @@ export default function TransactionForm(props: TransactionFormProps) {
                 }
               >
                 <SearchableSelect
+                  triggerTestId="subcategory-select"
+                  wrapperClass="relative w-full"
                   value={props.subcategory}
                   options={(() => {
                     const list = (subcategoryOptions() || []).map((opt) => ({
@@ -481,6 +483,9 @@ export default function TransactionForm(props: TransactionFormProps) {
                     props.setSubcategory(opt ? String(opt.value) : "")
                   }
                   placeholder="— Uncategorised —"
+                  searchPlaceholder="Search categories…"
+                  triggerClass="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button cursor-pointer focus:outline-none focus:border-amber-500/50 flex items-center justify-between gap-2"
+                  triggerLabelClass="truncate text-left flex-1 min-w-0"
                 />
               </Show>
               <p class="text-[10px] text-zinc-600 mt-0.5">Optional. Used for tax-prep classification.</p>
