@@ -1,4 +1,4 @@
-// Source: KahitSan/kserp src/components/MentionTextarea.tsx (vendored into the plugin remote).
+// Vendored into plugin remotes.
 //
 // contenteditable rich-text input with an @-trigger client autocomplete that
 // renders selected mentions as chips. Canonical value is the @[Name](client:ID)

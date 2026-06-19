@@ -1,4 +1,4 @@
-// Source: KahitSan/kserp src/components/AddAttachmentTile.tsx (vendored into the plugin remote).
+// Vendored into plugin remotes.
 // Dashed "Add" tile with a small Camera / Image-or-file popover menu.
 
 import { createSignal, onCleanup, onMount, Show } from "solid-js";

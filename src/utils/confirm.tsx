@@ -1,6 +1,6 @@
 // Promise-based confirm dialog. Ported into ksui from the former host kit so the
 // library is self-contained: ExistingAttachmentTile used to import `confirm`
-// from "@kserp/host-ui"; it now imports it from here.
+// from the host UI kit; it now imports it from here.
 //
 // Renders a ksui Modal + Buttons imperatively (outside any component tree) into
 // a transient container appended to <body>, resolves the returned promise when

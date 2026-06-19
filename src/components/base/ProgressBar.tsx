@@ -1,7 +1,7 @@
 // Source: archive/pillar app/pillar-ui/base/ProgressBar/ProgressBar.tsx
-// Ported into kserp so the counter cards can reuse the same realtime
+// Ported into the library so the counter cards can reuse the same realtime
 // progress visualization the session manager uses on the home page.
-// Adapted to kserp's TS + lucide-solid conventions.
+// Adapted to the library's TS + lucide-solid conventions.
 
 import type { Component, JSX } from "solid-js";
 import { createMemo, splitProps, Show } from "solid-js";

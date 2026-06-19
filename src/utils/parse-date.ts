@@ -1,6 +1,6 @@
 // Natural-language date parser + date string formatters.
 //
-// Ported verbatim from the host kserp DatePicker's `parse-date.ts` so ksui's
+// Ported verbatim from the host DatePicker's `parse-date.ts` so ksui's
 // DatePicker carries no host dependency. Pure functions, no UI, no framework —
 // depends on nothing. Lives in utils/ (not components/) because it renders
 // nothing; the DatePicker component calls it.

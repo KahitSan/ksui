@@ -25,7 +25,7 @@ import { getAccountIcon } from "../../utils/account-icons";
 import { buildLogoSrc } from "../../utils/account-logo-url";
 
 // Shared 16-color palette and initials algorithm. Keep in lockstep with
-// the kserp's ~/lib/avatar.ts so the host runtime and the plugin fleet
+// the original ~/lib/avatar.ts so the host runtime and the plugin fleet
 // render the same chip for the same user.  Exported so any future widget
 // (or a caller's inline use) can derive a user's color/initials without
 // rendering the chip itself.

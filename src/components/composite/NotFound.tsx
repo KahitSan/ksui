@@ -5,7 +5,7 @@
 // is hard-coded.
 //
 // Unlike the host-owned Button, this is a standalone primitive: it imports only
-// solid-js and lucide-solid, never `@kserp/host-ui` or a router. The default
+// solid-js and lucide-solid, never the host UI kit or a router. The default
 // action renders a plain, self-styled button. Navigation is left to the caller
 // via `onButtonClick` (or `href`, which renders an anchor instead). Callers who
 // want the host Button can pass it through the `action` slot, which fully

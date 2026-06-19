@@ -1,6 +1,6 @@
 // Search-match highlighting + tiny string-match helpers. Ported into ksui from
 // the former host kit so the library is self-contained: ComboBox and
-// MarkdownNotes used to import `highlightMatch` from "@kserp/host-ui"; they now
+// MarkdownNotes used to import `highlightMatch` from the host UI kit; they now
 // import it from here. Pure functions plus a `<mark>` wrapper.
 //
 // The default highlight tint ships as injected CSS (a `.ksui-mark` class) so the

@@ -1,4 +1,4 @@
-// Source: kserp src/components/ui/DatePicker/DatePicker.tsx (the host's Tailwind-
+// Source: the host's Tailwind-
 // classed picker). Ported into ksui as a DOMAIN-FREE base primitive: a trigger
 // button labeled with the selected date (or "Pick date"), a calendar popover
 // (month grid, prev/next nav, day selection), single-date AND range mode, an
@@ -50,7 +50,7 @@ import {
 // Shares the DataTable's `--ksui-dt-*` palette (accent / control-bg / border /
 // fg / text / muted / faint), so wrapping a date filter and a table in the same
 // retint container restyles both. Picker-only tones use `--ksui-dp-*`. Fallback
-// after each `var(...)` = the host kserp DatePicker's exact Tailwind value.
+// after each `var(...)` = the host DatePicker's exact Tailwind value.
 //
 //   --ksui-dt-control-bg   popover + trigger + input bg (zinc-900, #18181b)
 //   --ksui-dt-border       borders / dividers (zinc-800/50, rgba(39,39,42,0.5))

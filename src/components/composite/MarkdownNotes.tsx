@@ -1,4 +1,4 @@
-// Source: KahitSan/kserp src/components/MarkdownNotes.tsx (vendored into the plugin remote).
+// Vendored into plugin remotes.
 //
 // Renders transaction `notes` with a restricted markdown subset and inline
 // client-mention chips (@[Name](client:N)). Adapted for the remote: routing is

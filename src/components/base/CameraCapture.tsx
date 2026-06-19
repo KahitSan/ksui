@@ -1,4 +1,4 @@
-// Source: KahitSan/kserp src/components/CameraCapture.tsx (vendored into the plugin remote).
+// Vendored into plugin remotes.
 // getUserMedia camera capture modal. Button is ksui's own base primitive.
 
 import { createSignal, onCleanup, onMount, Show } from "solid-js";

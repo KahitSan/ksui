@@ -1,4 +1,4 @@
-// Source: KahitSan/kserp src/components/VoucherPicker.tsx (vendored into the plugin remote).
+// Vendored into plugin remotes.
 //
 // Cross-plugin picker: fetches the SIBLING vouchers plugin's public API at
 // /api/vouchers and degrades gracefully: when the vouchers plugin isn't

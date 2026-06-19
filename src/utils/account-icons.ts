@@ -1,4 +1,4 @@
-// Source: KahitSan/kserp src/lib/account-icons.ts (vendored into the plugin remote).
+// Vendored into plugin remotes.
 // Maps an account-icon slug → lucide glyph, with a type-based fallback for
 // accounts that have no custom icon yet. Used by AccountAvatar.
 

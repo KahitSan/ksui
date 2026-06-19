@@ -1,4 +1,4 @@
-// Source: kserp src/components/ui/DataTable/DataTable.tsx (the host's Tailwind-
+// Source: the host's Tailwind-
 // classed table). Ported into ksui as a DOMAIN-FREE base primitive: a
 // server-side (fetchFn) OR client-side (data) table with debounced search,
 // column sort, pagination / "Show more" load mode, a filters JSX slot, an
@@ -16,7 +16,7 @@
 // library carries no host primitive and no native `<input type="date">`.
 //
 // The public type surface (DataTableRow / DataTableColumn / FetchResult /
-// FetchParams / DataTableProps) mirrors the kernel's `@kserp/host-ui` ambient
+// FetchParams / DataTableProps) mirrors the ambient host-ui type
 // contract EXACTLY, so a caller written against host-ui works unchanged here.
 //
 // Composition note: the date filter renders ksui's own `DatePicker` (a sibling
@@ -58,7 +58,7 @@ const STYLE_ID = "ksui-datatable-style";
 // ---------------------------------------------------------------------------
 //
 // Every color in the injected stylesheet is driven by a `--ksui-dt-*` CSS
-// custom property; the fallback after each `var(...)` is the host kserp
+// custom property; the fallback after each `var(...)` is the host
 // DataTable's exact value (resolved from its Tailwind classes — zinc/amber
 // dark theme). To retint, wrap the table in a container that sets the vars,
 // e.g. `<div style={{ "--ksui-dt-card-bg": "#000", "--ksui-dt-accent": "#0af" }}>`.
@@ -148,7 +148,7 @@ function ensureDataTableStyle(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Types (mirror the kernel's @kserp/host-ui contract exactly)
+// Types (mirror the host UI kit's type contract exactly)
 // ---------------------------------------------------------------------------
 
 export interface DataTableRow {
