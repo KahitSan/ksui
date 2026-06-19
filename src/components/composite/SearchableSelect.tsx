@@ -28,6 +28,10 @@ export interface SearchableSelectProps {
 
 const POPUP_MIN_WIDTH = 240;
 const POPUP_MAX_HEIGHT = 320; // keep in sync with max-h-80 below
+// Flip the popup above the trigger only when the space below can't fit a
+// usable list. Below this many px we'd rather open upward (if there's more room
+// there) than cramp the results.
+const POPUP_FLIP_THRESHOLD = 200;
 
 // Click-to-open combobox with inline search. The popup is rendered into a
 // Portal and positioned with `position: fixed`, so it can escape any ancestor
@@ -64,17 +68,22 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
     const width = Math.max(POPUP_MIN_WIDTH, rect.width);
     const spaceBelow = vpHeight - rect.bottom;
     const spaceAbove = rect.top;
-    const flipUp = spaceBelow < POPUP_MAX_HEIGHT && spaceAbove > spaceBelow;
-    const top = flipUp ? Math.max(8, rect.top - POPUP_MAX_HEIGHT - 4) : rect.bottom + 4;
+    // Only flip upward when there isn't enough usable room below AND there's
+    // genuinely more room above. Anchor the flipped popup by its BOTTOM (hugging
+    // the trigger) instead of computing a top from POPUP_MAX_HEIGHT, so a short
+    // result list stays adjacent to the trigger rather than floating far above it.
+    const flipUp = spaceBelow < POPUP_FLIP_THRESHOLD && spaceAbove > spaceBelow;
     const maxHeight = Math.max(
       160,
-      Math.min(POPUP_MAX_HEIGHT, flipUp ? spaceAbove - 12 : spaceBelow - 12),
+      Math.min(POPUP_MAX_HEIGHT, (flipUp ? spaceAbove : spaceBelow) - 12),
     );
     // Clamp horizontally so the popup doesn't overflow the viewport edges.
     const left = Math.min(Math.max(8, rect.left), vpWidth - width - 8);
     setPopupStyle({
       position: "fixed",
-      top: `${top}px`,
+      ...(flipUp
+        ? { bottom: `${Math.max(8, vpHeight - rect.top + 4)}px` }
+        : { top: `${rect.bottom + 4}px` }),
       left: `${left}px`,
       width: `${width}px`,
       "max-height": `${maxHeight}px`,
