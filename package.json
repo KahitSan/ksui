@@ -32,6 +32,8 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "changeset publish"
@@ -50,8 +52,12 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
+    "@solidjs/testing-library": "^0.8.0",
+    "jsdom": "^26.0.0",
     "solid-js": "^1.9.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vite-plugin-solid": "^2.11.0",
+    "vitest": "^4.0.0"
   },
   "publishConfig": {
     "access": "public"
