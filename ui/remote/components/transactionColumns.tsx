@@ -19,8 +19,7 @@ import ArrowDownLeft from "lucide-solid/icons/arrow-down-left";
 import ArrowUpRight from "lucide-solid/icons/arrow-up-right";
 import ArrowRight from "lucide-solid/icons/arrow-right";
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { MarkdownNotes, AccountAvatar, resolveAccount, highlightMatch, type DataTableColumn } from "@kahitsan/ksui";
-import { Avatar } from "@kserp/host-ui";
+import { Avatar, MarkdownNotes, AccountAvatar, resolveAccount, highlightMatch, type DataTableColumn } from "@kahitsan/ksui";
 
 export interface TransactionColumnDeps {
   expandedGroups: () => Set<string>;

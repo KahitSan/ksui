@@ -69,12 +69,12 @@ import { useTransactionReferenceData } from "./hooks/useTransactionReferenceData
 import {
   PageShell,
   PageShareButton,
-  Avatar,
   useActiveWorkspace,
   usePermissions,
   PermissionGate,
 } from "@kserp/host-ui";
 import {
+  Avatar,
   AddAttachmentTile,
   Modal,
   DataTable,

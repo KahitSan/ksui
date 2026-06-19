@@ -26,8 +26,8 @@ import {
   TAX_TYPE_LABELS,
 } from "../lib/constants";
 
-import { Avatar } from "@kserp/host-ui";
 import {
+  Avatar,
   AddAttachmentTile,
   DetailRow,
   AccountAvatar,
