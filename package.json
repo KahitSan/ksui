@@ -15,7 +15,7 @@
     "version": "changeset version"
   },
   "dependencies": {
-    "@kahitsan/ksui": "^0.15.0",
+    "@kahitsan/ksui": "^0.15.1",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "multer": "^2.1.1",
