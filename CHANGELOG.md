@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.7.1
+
+### Patch Changes
+
+- a47a6c3: Migrate UI component imports from @kahitsan/plugin-ui to @kahitsan/ksui.
+
 ## 0.7.0
 
 ### Minor Changes
