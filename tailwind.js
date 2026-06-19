@@ -2,21 +2,22 @@
  * @kahitsan/ksui Tailwind CSS plugin
  *
  * Registers all ksui component utility classes so consumers don't need
- * @source directives or manual safelisting. Add to your Tailwind config:
- *
- *   // tailwind.config.js (v3)
- *   plugins: [require("@kahitsan/ksui/tailwind")]
+ * manual safelisting. Load from CSS:
  *
  *   // app.css (v4)
  *   @plugin "@kahitsan/ksui/tailwind";
  *
- * The plugin safelists every Tailwind utility class that ksui components
- * reference in their source, ensuring they survive Tailwind's purge/scan
- * even though the class strings live in node_modules.
+ * This plugin registers .ks-* component classes via addComponents/addUtilities.
+ * Raw Tailwind utilities used by ksui components (bg-amber-600/20, etc.)
+ * require a separate @source directive pointing at the ksui src directory.
+ *
+ * IMPORTANT: This file uses ESM (export default) because the ksui package.json
+ * sets "type": "module". CommonJS (module.exports) will fail to load under
+ * Tailwind v4's @plugin directive, which uses dynamic import().
  */
 
 /** @type {import('tailwindcss').Plugin} */
-module.exports = function ksuiTailwindPlugin({ addUtilities, addComponents }) {
+export default function ksuiTailwindPlugin({ addUtilities, addComponents }) {
   // ─── Button intents ────────────────────────────────────────────────
   // Primary (amber)
   addUtilities({
@@ -272,6 +273,6 @@ module.exports = function ksuiTailwindPlugin({ addUtilities, addComponents }) {
   });
 };
 
-module.exports.meta = {
+export const meta = {
   name: "@kahitsan/ksui",
 };
