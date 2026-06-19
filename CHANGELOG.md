@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.15.2
+
+### Patch Changes
+
+- e4b32e2: Avatar: keep `name`/`image` reactive (getter-backed) so a live parent rebind re-renders instead of snapshotting at init.
+
 ## 0.15.1
 
 ### Patch Changes
