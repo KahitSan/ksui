@@ -18,7 +18,8 @@ concurrency:
 
 jobs:
   e2e:
-    uses: KahitSan/kplugin-workflows/.github/workflows/plugin-ci.yml@main
+    # TEMP: per-plugin-node_modules workflow branch (revert to @main once merged)
+    uses: KahitSan/kplugin-workflows/.github/workflows/plugin-ci.yml@feat/per-plugin-node-modules
     with:
       object-storage: true
     secrets: inherit
