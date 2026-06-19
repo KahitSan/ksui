@@ -1,4 +1,33 @@
-/// <reference types="@kahitsan/ksui/host-ui" />
-// The @kserp/host-ui ambient type contract lives in @kahitsan/ksui (a
-// normal dependency) — referenced, never copied, so it can't drift. A
-// third-party plugin gets the same types from the installed package.
+/// <reference types="@kahitsan/ksui" />
+declare module "@kserp/host-ui" {
+  // Kernel-specific components
+  export { default as PageShell } from "@kahitsan/ksui";
+  export { default as PageTitle } from "@kahitsan/ksui";
+  export { default as PageShareButton } from "@kahitsan/ksui";
+  export { default as SearchableSelect } from "@kahitsan/ksui";
+  export { default as Avatar } from "@kahitsan/ksui";
+  export { default as PluginPageLoader } from "@kahitsan/ksui";
+
+  // Kernel-specific hooks
+  export function useActiveWorkspace(): any;
+  export function useCan(permission: string): any;
+  export function usePermissions(): {
+    has: (code: string) => boolean;
+    hasAny: (...codes: string[]) => boolean;
+    hasAll: (...codes: string[]) => boolean;
+    bypass: () => boolean;
+    loading: () => boolean;
+    refetch: () => void;
+    [key: string]: any;
+  };
+  export const PermissionGate: (props: { when?: boolean; redirectTo?: string; fallback?: any; children: any; permission?: string }) => any;
+
+  // Local wrapper types
+  export interface SearchableOption {
+    value: string | number;
+    label: string;
+    description?: string;
+  }
+}
+
+declare module "*.css" {}

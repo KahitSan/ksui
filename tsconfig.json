@@ -27,6 +27,14 @@
       ],
       "@ks-erp/kernel-theme": [
         "../kserp/kernel-theme/index.ts"
+      ],
+      "@ks-erp/kernel": [
+        "../kserp/kernel/index.ts"
+      ],
+      "@ks-erp/kernel/*": [
+        "../kserp/kernel/*.ts",
+        "../kserp/kernel/*/index.ts",
+        "../kserp/kernel/*"
       ]
     },
     "ignoreDeprecations": "6.0"

@@ -7,7 +7,6 @@
 // call sites there keep their explicit prop lists unchanged.
 
 import { createEffect, createResource, createSignal, Show, For } from "solid-js";
-import { DatePicker, SearchableSelect, Button } from "@kserp/host-ui";
 import X from "lucide-solid/icons/x";
 import Upload from "lucide-solid/icons/upload";
 import FileIcon from "lucide-solid/icons/file";
@@ -17,7 +16,6 @@ import AccountPicker from "./AccountPicker";
 import FormAdvancedSection from "./FormAdvancedSection";
 import SalesBodyEditor, { type SalesLine } from "./SalesBodyEditor";
 import Store from "lucide-solid/icons/store";
-import { ComboBox, SegmentedFilter, type PayeeOption, type PayeeKind } from "@kahitsan/ksui";
 
 // Payee data-wiring for the generic ComboBox engine. Search/create hit the
 // sibling payees plugin's /api/payees endpoint directly; `kind` is "customer"
@@ -56,15 +54,7 @@ function payeeSecondary(p: PayeeOption): string | null {
   if (!p.default_subcategory && p.kind === "vendor") return null;
   return [p.kind === "vendor" ? null : p.kind, p.default_subcategory].filter(Boolean).join(" · ") || null;
 }
-import {
-  MentionTextarea,
-  CameraCapture,
-  AddAttachmentTile,
-  ExistingAttachmentTile,
-  FormField,
-  type ClientOption,
-  type VoucherOption,
-} from "@kahitsan/ksui";
+
 import {
   type PendingFile,
   createPendingFile,
@@ -81,6 +71,23 @@ import {
   PAYABLE_KIND_OPTIONS,
   PDC_OPTIONS,
 } from "../lib/constants";
+
+import { SearchableSelect } from "@kserp/host-ui";
+import {
+  MentionTextarea,
+  CameraCapture,
+  AddAttachmentTile,
+  ExistingAttachmentTile,
+  FormField,
+  type ClientOption,
+  type VoucherOption,
+  ComboBox,
+  SegmentedFilter,
+  type PayeeOption,
+  type PayeeKind,
+  DatePicker,
+  Button,
+} from "@kahitsan/ksui";
 
 export interface TransactionFormProps {
   error: string;

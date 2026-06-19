@@ -4,7 +4,6 @@
 // preserved by reading it from the same @kahitsan/ksui re-export.
 
 import { createSignal, Show, For } from "solid-js";
-import { Avatar, confirm } from "@kserp/host-ui";
 import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
 import Loader2 from "lucide-solid/icons/loader-2";
@@ -15,16 +14,8 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import CalendarDays from "lucide-solid/icons/calendar-days";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import { MarkdownNotes } from "@kahitsan/ksui";
-import { AddAttachmentTile } from "@kahitsan/ksui";
-import {
-  DetailRow,
-  AccountAvatar,
-  useAccountsIndex,
-  resolveAccount,
-  attachmentUrl,
-  isResolvableAttachment,
-} from "@kahitsan/ksui";
+
+
 import { formatCurrency, formatDate, formatDateTime } from "../lib/format";
 import { type PendingFile, type Transaction } from "../lib/types";
 import {
@@ -34,6 +25,19 @@ import {
   PDC_OPTIONS,
   TAX_TYPE_LABELS,
 } from "../lib/constants";
+
+import { Avatar } from "@kserp/host-ui";
+import {
+  AddAttachmentTile,
+  DetailRow,
+  AccountAvatar,
+  useAccountsIndex,
+  resolveAccount,
+  attachmentUrl,
+  isResolvableAttachment,
+  MarkdownNotes,
+  confirm,
+} from "@kahitsan/ksui";
 
 export function TransactionDetailSkeleton() {
   return (

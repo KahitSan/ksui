@@ -20,21 +20,7 @@
 
 import "./styles.css"; // plugin Tailwind utilities (host injects /_ui/remote.css)
 import { createSignal, Show } from "solid-js";
-import {
-  PageShell,
-  PageShareButton,
-  Modal,
-  DataTable,
-  Avatar,
-  Button,
-  confirm,
-  useActiveWorkspace,
-  usePermissions,
-  PermissionGate,
-  highlightMatch,
-  type FetchParams,
-  type FetchResult,
-} from "@kserp/host-ui";
+
 import Plus from "lucide-solid/icons/plus";
 import Download from "lucide-solid/icons/download";
 import X from "lucide-solid/icons/x";
@@ -49,14 +35,12 @@ import {
   TransactionDetailSkeleton,
 } from "./components/TransactionDetail";
 import PaymentLegModal from "./components/PaymentLegModal";
-import { AddAttachmentTile } from "@kahitsan/ksui";
+
 import ExportTransactionsModal from "./components/ExportTransactionsModal";
 import TransactionFilters from "./components/TransactionFilters";
 import {
   useAccountsIndex,
-  attachmentUrl,
-  isResolvableAttachment,
-} from "@kahitsan/ksui";
+  attachmensui";
 import { formatDate, formatDateTime } from "./lib/format";
 import {
   type PendingFile,
@@ -81,6 +65,25 @@ import { useLazyDayGroups } from "./hooks/useLazyDayGroups";
 import { useTransactionForm } from "./hooks/useTransactionForm";
 import { useTransactionFilters } from "./hooks/useTransactionFilters";
 import { useTransactionReferenceData } from "./hooks/useTransactionReferenceData";
+
+import {
+  PageShell,
+  PageShareButton,
+  Avatar,
+  useActiveWorkspace,
+  usePermissions,
+  PermissionGate,
+} from "@kserp/host-ui";
+import {
+  AddAttachmentTile,
+  Modal,
+  DataTable,
+  Button,
+  confirm,
+  highlightMatch,
+  type FetchParams,
+  type FetchResult,
+} from "@kahitsan/ksui";
 
 export function Component() {
   const { activeWorkspace } = useActiveWorkspace();
