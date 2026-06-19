@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.15.0
+
+### Minor Changes
+
+- 16f0ba9: SearchableSelect: full-featured standalone picker (triggerClass/compact trigger/allowClear/loading) — restores pre-migration look.
+
 ## 0.14.0
 
 ### Minor Changes
