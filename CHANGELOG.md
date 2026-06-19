@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.13.2
+
+### Patch Changes
+
+- ac98aed: Remove all "kserp" references from source comments so the library ships clean to downstream consumers. No code changes — comment-only cleanup across 19 files.
+
 ## 0.13.1
 
 ### Patch Changes
