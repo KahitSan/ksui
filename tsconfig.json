@@ -27,6 +27,20 @@
       ],
       "@ks-erp/kernel-theme": [
         "../kserp/kernel-theme/index.ts"
+      ],
+      "@ks-erp/kernel": [
+        "../kserp/kernel/index.ts"
+      ],
+      "@ks-erp/kernel/*": [
+        "../kserp/kernel/*.ts",
+        "../kserp/kernel/*/index.ts",
+        "../kserp/kernel/*"
+      ],
+      "@kahitsan/plugin-server-utils": [
+        "../kserp/packages/plugin-server-utils/src/index.ts"
+      ],
+      "@kahitsan/plugin-server-utils/express": [
+        "../kserp/packages/plugin-server-utils/express.d.ts"
       ]
     },
     "ignoreDeprecations": "6.0"

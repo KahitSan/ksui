@@ -9,7 +9,7 @@
 //  - SharedWithStack: overlapping avatar stack for a private row's share list.
 
 import { For, Show } from "solid-js";
-import { Avatar } from "@kserp/host-ui";
+import { Avatar } from "@kahitsan/ksui";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 
 export function PeerUnavailable(props: { title: string }) {

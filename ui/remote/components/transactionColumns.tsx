@@ -8,8 +8,6 @@
 // preserved because each accessor is still invoked inside the render body.
 
 import { Show } from "solid-js";
-import { Avatar, highlightMatch, type DataTableColumn } from "@kserp/host-ui";
-import { MarkdownNotes, AccountAvatar, resolveAccount } from "@kahitsan/ksui";
 import { formatCurrency, formatDate } from "../lib/format";
 import { CATEGORY_TONE, TONE_CLASSES } from "../lib/constants";
 import { type TransactionRow } from "../lib/rows";
@@ -21,6 +19,7 @@ import ArrowDownLeft from "lucide-solid/icons/arrow-down-left";
 import ArrowUpRight from "lucide-solid/icons/arrow-up-right";
 import ArrowRight from "lucide-solid/icons/arrow-right";
 import ChevronRight from "lucide-solid/icons/chevron-right";
+import { Avatar, MarkdownNotes, AccountAvatar, resolveAccount, highlightMatch, type DataTableColumn } from "@kahitsan/ksui";
 
 export interface TransactionColumnDeps {
   expandedGroups: () => Set<string>;

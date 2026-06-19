@@ -12,9 +12,9 @@
 // hook closes over nothing from Component().
 
 import { createEffect, createSignal, For, Show, type JSX } from "solid-js";
-import { type DataTableColumn, type FetchResult } from "@kserp/host-ui";
 import { type Transaction } from "../lib/types";
 import { type TransactionRow } from "../lib/rows";
+import { type DataTableColumn, type FetchResult } from "@kahitsan/ksui";
 
 interface LazyDayState {
   rows: Transaction[];

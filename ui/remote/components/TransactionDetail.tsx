@@ -4,7 +4,6 @@
 // preserved by reading it from the same @kahitsan/ksui re-export.
 
 import { createSignal, Show, For } from "solid-js";
-import { Avatar, confirm } from "@kserp/host-ui";
 import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
 import Loader2 from "lucide-solid/icons/loader-2";
@@ -15,15 +14,8 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import CalendarDays from "lucide-solid/icons/calendar-days";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import { MarkdownNotes } from "@kahitsan/ksui";
-import { AddAttachmentTile } from "@kahitsan/ksui";
-import {
-  AccountAvatar,
-  useAccountsIndex,
-  resolveAccount,
-  attachmentUrl,
-  isResolvableAttachment,
-} from "@kahitsan/ksui";
+
+
 import { formatCurrency, formatDate, formatDateTime } from "../lib/format";
 import { type PendingFile, type Transaction } from "../lib/types";
 import {
@@ -33,6 +25,19 @@ import {
   PDC_OPTIONS,
   TAX_TYPE_LABELS,
 } from "../lib/constants";
+
+import {
+  Avatar,
+  AddAttachmentTile,
+  DetailRow,
+  AccountAvatar,
+  useAccountsIndex,
+  resolveAccount,
+  attachmentUrl,
+  isResolvableAttachment,
+  MarkdownNotes,
+  confirm,
+} from "@kahitsan/ksui";
 
 export function TransactionDetailSkeleton() {
   return (
@@ -136,7 +141,7 @@ export function TransactionDetail(props: {
         <Show
           when={t.category === "business"}
           fallback={
-            <DetailRow
+            <AccountDetailRow
               label={
                 t.category === "sale"
                   ? "Received in"
@@ -149,8 +154,8 @@ export function TransactionDetail(props: {
             />
           }
         >
-          <DetailRow label="From account" value={t.source_account_name} accountId={t.source_account_id} />
-          <DetailRow label="To account" value={t.destination_account_name} accountId={t.destination_account_id} />
+          <AccountDetailRow label="From account" value={t.source_account_name} accountId={t.source_account_id} />
+          <AccountDetailRow label="To account" value={t.destination_account_name} accountId={t.destination_account_id} />
         </Show>
         <DetailRow label="Date" value={formatDate(t.transaction_date)} />
         <Show when={t.reference_number}>
@@ -618,7 +623,8 @@ export function TransactionDetail(props: {
   );
 }
 
-function DetailRow(props: {
+/** Thin wrapper around ksui.DetailRow that adds optional account avatar resolution. */
+function AccountDetailRow(props: {
   label: string;
   value: string | null | undefined;
   accountId?: number | null;
@@ -626,7 +632,7 @@ function DetailRow(props: {
   const accountsIndex = useAccountsIndex();
   const acct = () => (props.accountId != null ? resolveAccount(accountsIndex(), props.accountId) : null);
   return (
-    <div class="bg-zinc-900/40 border border-zinc-800/60 px-4 py-3 ks-hud-clip-button">
+    <div>
       <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-1">
         {props.label}
       </div>

@@ -7,7 +7,7 @@
 
 import { For, Show } from "solid-js";
 import Lock from "lucide-solid/icons/lock";
-import { FormField } from "@kahitsan/ksui";
+import { FormField, SegmentedFilter } from "@kahitsan/ksui";
 import { formatCurrency } from "../lib/format";
 import { type OrgMember, type ShareableRole } from "../lib/types";
 
@@ -43,32 +43,16 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
 
       <div class="rounded-lg border border-zinc-800/50 bg-zinc-950/40 p-3">
         <FormField label="Tax">
-          <div class="flex rounded-lg border border-zinc-800/50 overflow-hidden">
-            <For
-              each={
-                [
-                  ["vat_inclusive", "VAT Incl."],
-                  ["vat_exclusive", "VAT Excl."],
-                  ["vat_exempt", "Exempt"],
-                  ["non_vat", "Non-VAT"],
-                ] as [string, string][]
-              }
-            >
-              {([key, label]) => (
-                <button
-                  type="button"
-                  onClick={() => props.setTaxType(key)}
-                  class="flex-1 px-2 py-2.5 text-xs transition-colors cursor-pointer min-h-[40px] active:opacity-80"
-                  classList={{
-                    "bg-amber-500/20 text-amber-400": props.taxType === key,
-                    "text-zinc-600 hover:text-zinc-400": props.taxType !== key,
-                  }}
-                >
-                  {label}
-                </button>
-              )}
-            </For>
-          </div>
+          <SegmentedFilter
+            options={[
+              { value: "vat_inclusive", label: "VAT Incl." },
+              { value: "vat_exclusive", label: "VAT Excl." },
+              { value: "vat_exempt", label: "Exempt" },
+              { value: "non_vat", label: "Non-VAT" },
+            ]}
+            value={props.taxType}
+            onChange={props.setTaxType}
+          />
         </FormField>
         <Show
           when={
