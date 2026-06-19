@@ -40,6 +40,7 @@ export {
   buildInitialsSvg,
 } from "./components/base/AccountAvatar";
 export type { AvatarAccount } from "./components/base/AccountAvatar";
+export { default as Avatar, type AvatarProps } from "./components/base/Avatar";
 
 export { default as ExistingAttachmentTile } from "./components/base/ExistingAttachmentTile";
 export type { ExistingAttachment } from "./components/base/ExistingAttachmentTile";
@@ -131,6 +132,11 @@ export type {
   ComboBoxSingleProps,
   ComboBoxMultiProps,
 } from "./components/composite/ComboBox";
+export {
+  default as SearchableSelect,
+  type SearchableSelectProps,
+  type SearchableOption,
+} from "./components/composite/SearchableSelect";
 
 // Shared domain option shapes for the common pickers, decoupled from any
 // component (still imported across transactions / counter / payees).
