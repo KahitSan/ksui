@@ -1,4 +1,4 @@
-// Source: KahitSan/kserp src/lib/accounts-index.tsx (promoted into the SDK).
+// Promoted into the SDK.
 //
 // Session-scoped index of financial accounts keyed by id. The list rows, the
 // detail payments list, etc. surface accounts by name only (server denormalises

@@ -87,7 +87,7 @@ export { default as DatePicker, type DatePickerProps, type DateRangeValue } from
 // Server-side / client-side data table with debounced search, column sort,
 // pagination + "Show more" load mode, a filters slot, optional date filter, and
 // an onRefetch handle. Ported from the host kit; injects its own CSS, no Tailwind.
-// The type surface mirrors the kernel's @kserp/host-ui contract exactly, so a
+// The type surface mirrors the host UI kit's type contract exactly, so a
 // caller written against host-ui works unchanged here.
 export {
   default as DataTable,
@@ -175,7 +175,7 @@ export {
 export type { ParsedDate } from "./utils/parse-date";
 
 // Self-contained helpers promoted from the former host kit so the library has no
-// "@kserp/host-ui" dependency.
+// the host UI kit dependency.
 export { highlightMatch, HighlightedText, matchesQuery, matchesAny } from "./utils/highlight";
 export { confirm, type ConfirmOptions } from "./utils/confirm";
 export { useFocusTrap, autoFocusOnMount, lockPullToRefresh, unlockPullToRefresh } from "./utils/dom";

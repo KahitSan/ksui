@@ -1,4 +1,4 @@
-// Source: KahitSan/kserp src/lib/account-logo-url.ts (vendored into the plugin remote).
+// Vendored into plugin remotes.
 //
 // Build the <img src> for a financial account logo. Logos are object-storage
 // only now: s3_link is the public URL and the sole reference (the legacy

@@ -4,7 +4,7 @@
 // runtime context — a permission check (MarkdownNotes gates its client-mention
 // hover card on "clients.view") and the active workspace id (useAccountsIndex
 // re-keys its fetch per workspace). The library used to pull these from
-// "@kserp/host-ui"; it now owns a tiny opt-in registry instead, so it stays a
+// the host UI kit; it now owns a tiny opt-in registry instead, so it stays a
 // standalone dependency-free package.
 //
 // Default behavior with nothing configured (any plain SolidJS consumer):

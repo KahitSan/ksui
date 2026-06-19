@@ -1,5 +1,5 @@
 // Self-contained modal dialog. Promoted into ksui from the former host kit so
-// the library no longer depends on "@kserp/host-ui": ImageCropper (the only
+// the library no longer depends on the host UI kit: ImageCropper (the only
 // in-library consumer) now imports Modal from here.
 //
 // Like Button/ProgressBar, ksui publishes no sidecar .css — the styles are
