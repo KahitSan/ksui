@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.14.0
+
+### Minor Changes
+
+- 8d35717: Add generic `Avatar` (person/user avatar wrapping `AccountAvatar`) and `SearchableSelect` (single-select with client-side search wrapping `ComboBox`) components. Both are domain-free, letting plugins drop the kernel `@kserp/host-ui` Avatar/SearchableSelect wrappers.
+
 ## 0.13.2
 
 ### Patch Changes
