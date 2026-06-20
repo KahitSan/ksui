@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.8.1
+
+### Patch Changes
+
+- e0f9299: resolve sonarjs lint errors surfaced by the hardened plugin CI lint gate
+
 ## 0.8.0
 
 ### Minor Changes
