@@ -46,10 +46,49 @@ beforeAll(async () => {
     password: process.env.DB_PASSWORD || "postgres",
     max: 3,
   });
+
+  // CI runs against a freshly-created database with no kernel tables. Create
+  // the minimum kernel-level tables the test depends on (user + workspace) so
+  // the superuser lookup and FK references succeed.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS public."user" (
+      id         TEXT PRIMARY KEY,
+      email      TEXT,
+      role       TEXT,
+      name       TEXT,
+      image      TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS public.workspaces (
+      id   INTEGER PRIMARY KEY,
+      name TEXT
+    );
+  `);
+
+  // Seed a test superuser if the table is empty (CI), or reuse an existing one
+  // (local dev with prod snapshot). Use an upsert to avoid duplicates on
+  // repeated runs inside the same CI container.
+  const TEST_USER_ID = "00000000-0000-0000-0000-000000000001";
+  await pool.query(
+    `INSERT INTO public."user" (id, email, role, name)
+     VALUES ($1, 'test-ci@hilinga.local', 'superuser', 'CI Test User')
+     ON CONFLICT (id) DO NOTHING`,
+    [TEST_USER_ID],
+  );
+
+  // Seed the test workspace so FK references to workspaces succeed.
+  const TEST_WORKSPACE_ID = 3;
+  await pool.query(
+    `INSERT INTO public.workspaces (id, name)
+     VALUES ($1, 'CI Test Workspace')
+     ON CONFLICT (id) DO NOTHING`,
+    [TEST_WORKSPACE_ID],
+  );
+
   // created_by has an FK into public.user, so the test identity must reference a
-  // REAL user row. Resolve the snapshot's superuser once (snapshot-independent:
-  // we key off the role, not a hardcoded id). Done on the raw pool BEFORE
-  // withRollbackDb opens the outer transaction.
+  // REAL user row. Resolve the superuser (snapshot-independent: we key off the
+  // role, not a hardcoded id). Done on the raw pool BEFORE withRollbackDb
+  // opens the outer transaction.
   const userRow = await pool.query<{ id: string }>(
     `SELECT id FROM public."user" WHERE role = 'superuser' LIMIT 1`,
   );
