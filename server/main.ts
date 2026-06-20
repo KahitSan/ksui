@@ -27,7 +27,7 @@ import pg from "pg";
 import { makeDatabaseService, runMigrations } from "@ks-erp/kernel-composite";
 import type { PluginManifest } from "@ks-erp/kernel-composite";
 import { mountPluginServices } from "@ks-erp/kernel/service-rpc";
-import { applyTenantContext, parseIdentity, requireAuth, requireOrg, requirePermission, withTenantContext } from "@ks-erp/kernel-base";
+import { applyTenantContext, parseIdentity, requireAuth, requireWorkspace, requirePermission, withTenantContext } from "@ks-erp/kernel-base";
 import { insertTransactionRow, insertVisibilityShares } from "./lib/create-transaction.js";
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
@@ -349,8 +349,8 @@ async function start(): Promise<void> {
   // the prefix, so this router's routes are written at the full prefix and
   // mount on the app root. Registered before the primary "/" router so the
   // line-items paths match first.
-  app.use(buildLineItemsRouter({ db, requireAuth, requireOrg, requirePermission }));
-  app.use("/", buildRouter({ db, requireAuth, requireOrg, requirePermission }));
+  app.use(buildLineItemsRouter({ db, requireAuth, requireWorkspace, requirePermission }));
+  app.use("/", buildRouter({ db, requireAuth, requireWorkspace, requirePermission }));
 
   app.listen(PORT, process.env.KSERP_PLUGIN_BIND || "127.0.0.1", () => {
     console.log(

@@ -45,41 +45,49 @@ import { registerChargeRoutes } from "./routes/charge.js";
 import { registerCoreRoutes, registerCounterPatchRoutes } from "./routes/transactions-core.js";
 import { registerPaymentUpdateRoute, registerPaymentRoutes } from "./routes/payments.js";
 import { registerAttachmentRoutes } from "./routes/attachments.js";
+import { registerExportRoutes } from "./routes/export.js";
 
 export type RouterDeps = {
   db: PluginDb;
   requireAuth: RequestHandler;
-  requireOrg: RequestHandler;
+  requireWorkspace: RequestHandler;
   requirePermission: (...codes: string[]) => RequestHandler;
 };
 
 export function buildRouter(deps: RouterDeps): Router {
   const router = Router();
-  const { db: pool, requireAuth, requireOrg, requirePermission } = deps;
+  const { db: pool, requireAuth, requireWorkspace, requirePermission } = deps;
 
   // ── Subcategory taxonomy (formerly /api/transaction-subcategories) ───────
   // The four subcategory CRUD handlers live in ./routes/subcategories.ts;
   // registered here so they keep their original position ahead of "/:id".
-  registerSubcategoryRoutes(router, { pool, requireAuth, requireOrg, requirePermission });
+  registerSubcategoryRoutes(router, { pool, requireAuth, requireWorkspace, requirePermission });
 
   // ── Payment edit (PUT /:id/payments/:paymentId) ──────────────────────────
   // Registered here so it keeps its original early position (ahead of the
   // analytics/charge reads); the GET/POST/DELETE payment trio is registered
   // later via registerPaymentRoutes. Lives in ./routes/payments.ts.
-  registerPaymentUpdateRoute(router, { pool, requireAuth, requireOrg, requirePermission });
+  registerPaymentUpdateRoute(router, { pool, requireAuth, requireWorkspace, requirePermission });
 
   // ── Analytics + filter-support reads (formerly inline here) ──────────────
   // The literal-segment GET reads (/subscriptions + renew, /creators,
   // /subcategory-counts, /summary, /cashflow, /by-hour) live in
   // ./routes/analytics.ts; registered here so they keep their original position
   // ahead of "/:id" (literal segments must win over the :id capture).
-  registerAnalyticsRoutes(router, { pool, requireAuth, requireOrg, requirePermission });
+  registerAnalyticsRoutes(router, { pool, requireAuth, requireWorkspace, requirePermission });
 
   // ── Counter-board reads + the POS charge flow (formerly inline here) ─────
   // GET /outstanding (unpaid sales) + POST /charge (thin wrapper over runCharge)
   // live in ./routes/charge.ts; registered here so they keep their original
   // position ahead of "/:id" — the literal segments win.
-  registerChargeRoutes(router, { pool, requireAuth, requireOrg, requirePermission });
+  registerChargeRoutes(router, { pool, requireAuth, requireWorkspace, requirePermission });
+
+  // ── CSV export (job-based, S3-backed) ────────────────────────────────────
+  // GET/POST /export, GET /export/:jobId/progress (SSE), /export/:jobId/download.
+  // Registered here so the literal "/export" segment is matched before the
+  // "/:id" capture that registerCoreRoutes adds below — otherwise "export"
+  // would be swallowed as a transaction id. Lives in ./routes/export.ts.
+  registerExportRoutes(router, { pool, requireAuth, requireWorkspace, requirePermission });
 
   // ── Core CRUD reads + writes (formerly inline here) ──────────────────────
   // GET / (list), POST / (create), GET/PUT/DELETE /:id, POST /:id/void +
@@ -87,22 +95,22 @@ export function buildRouter(deps: RouterDeps): Router {
   // Live in ./routes/transactions-core.ts; registered here so the "/:id"
   // routes keep their original position — after the literal-segment reads
   // (subcategories/analytics/charge) so those win the Express match.
-  registerCoreRoutes(router, { pool, requireAuth, requireOrg, requirePermission });
+  registerCoreRoutes(router, { pool, requireAuth, requireWorkspace, requirePermission });
 
   // ── Payments (GET list, POST add, DELETE remove) ─────────────────────────
   // The PUT edit-leg route was registered earlier (registerPaymentUpdateRoute);
   // this trio keeps its original later position. Lives in ./routes/payments.ts.
-  registerPaymentRoutes(router, { pool, requireAuth, requireOrg, requirePermission });
+  registerPaymentRoutes(router, { pool, requireAuth, requireWorkspace, requirePermission });
 
   // ── Attachments (multipart file upload) ──────────────────────────────────
   // GET/POST/DELETE /:id/attachments. The multer/crypto/node:path imports and
   // the S3 client helpers live in ./routes/attachments.ts.
-  registerAttachmentRoutes(router, { pool, requireAuth, requireOrg, requirePermission });
+  registerAttachmentRoutes(router, { pool, requireAuth, requireWorkspace, requirePermission });
 
   // ── Counter PATCH routes (client-pool, customer-group started-at/client) ──
   // Registered LAST so they keep their original position after the attachment
   // routes. Live in ./routes/transactions-core.ts.
-  registerCounterPatchRoutes(router, { pool, requireAuth, requireOrg, requirePermission });
+  registerCounterPatchRoutes(router, { pool, requireAuth, requireWorkspace, requirePermission });
 
   return router;
 }

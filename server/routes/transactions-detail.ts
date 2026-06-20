@@ -26,13 +26,13 @@ import { resolveUserNames } from "./shared.js";
 import type { CoreRouteCtx } from "./transactions-core.js";
 
 export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx): void {
-  const { pool, requireAuth, requireOrg, requirePermission } = ctx;
+  const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Detail ────────────────────────────────────────────────────────────
   router.get(
     "/:id",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {

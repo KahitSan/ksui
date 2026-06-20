@@ -13,13 +13,13 @@ import { applyTenantContext } from "@ks-erp/kernel-base";
 import type { CoreRouteCtx } from "./transactions-core.js";
 
 export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): void {
-  const { pool, requireAuth, requireOrg, requirePermission } = ctx;
+  const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Client-pool patch (counter: replace transaction_customers) ──────────
   router.patch(
     "/:id/client-pool",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       const id = parseInt(String(req.params.id), 10);
@@ -89,7 +89,7 @@ export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): v
   router.patch(
     "/:id/customer-group-started-at",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       const id = parseInt(String(req.params.id), 10);
@@ -176,7 +176,7 @@ export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): v
   router.patch(
     "/:id/customer-group-client",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       const id = parseInt(String(req.params.id), 10);

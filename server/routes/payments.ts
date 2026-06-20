@@ -20,19 +20,19 @@ import { findAccountsByIds } from "../lib/peers.js";
 export type PaymentRouteCtx = {
   pool: PluginDb;
   requireAuth: RequestHandler;
-  requireOrg: RequestHandler;
+  requireWorkspace: RequestHandler;
   requirePermission: (...codes: string[]) => RequestHandler;
 };
 
 // The PUT edit-leg route. Kept separate so it registers in the same early
 // position it held in routes.ts (ahead of the analytics/charge reads).
 export function registerPaymentUpdateRoute(router: Router, ctx: PaymentRouteCtx): void {
-  const { pool, requireAuth, requireOrg, requirePermission } = ctx;
+  const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   router.put(
     "/:id/payments/:paymentId",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       const { financial_account_id, amount } = req.body ?? {};
@@ -76,13 +76,13 @@ export function registerPaymentUpdateRoute(router: Router, ctx: PaymentRouteCtx)
 // register in the same later position they held in routes.ts (after the
 // visibility route).
 export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): void {
-  const { pool, requireAuth, requireOrg, requirePermission } = ctx;
+  const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Payments (settlement legs) ────────────────────────────────────────────
   router.get(
     "/:id/payments",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {
@@ -117,7 +117,7 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
   router.post(
     "/:id/payments",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       const { financial_account_id, amount, notes } = req.body ?? {};
@@ -162,7 +162,7 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
   router.delete(
     "/:id/payments/:paymentId",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       try {

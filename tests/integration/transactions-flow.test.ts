@@ -70,7 +70,7 @@ beforeAll(async () => {
 
   const rdb = await withRollbackDb(pool, SCHEMAS);
   rollback = rdb.rollback;
-  const { requireAuth, requireOrg, requirePermission } = stubMiddleware({
+  const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId: TEST_ORG,
     userId,
     role: "superuser",
@@ -85,7 +85,7 @@ beforeAll(async () => {
   const router = buildRouter({
     db: rdb.db as unknown as PluginDb,
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission,
   });
   app = express();

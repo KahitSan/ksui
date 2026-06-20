@@ -76,14 +76,19 @@ function activeWorkspaceId(): string | null {
   }
 }
 
-function triggerDownload(url: string, filename: string) {
+// Append the active workspace as ?wsId so the kernel can resolve the tenant for
+// requests that don't carry the host's X-Workspace-Id header — native fetch from
+// the plugin bundle and EventSource (which can't set headers). Without it the
+// kernel forwards no workspace and the plugin's requireWorkspace gate 400s.
+function withWsId(url: string): string {
   const wsId = activeWorkspaceId();
-  const withOrg =
-    wsId && !url.includes("orgId=")
-      ? url + (url.includes("?") ? "&" : "?") + "orgId=" + encodeURIComponent(wsId)
-      : url;
+  if (!wsId || url.includes("wsId=")) return url;
+  return url + (url.includes("?") ? "&" : "?") + "wsId=" + encodeURIComponent(wsId);
+}
+
+function triggerDownload(url: string, filename: string) {
   const a = document.createElement("a");
-  a.href = withOrg;
+  a.href = withWsId(url);
   a.download = filename;
   a.style.display = "none";
   document.body.appendChild(a);
@@ -127,7 +132,9 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
 
   const [recentRefreshKey, setRecentRefreshKey] = createSignal(0);
   const [recent] = createResource(recentRefreshKey, async () => {
-    const res = await fetch("/api/transactions/export", { credentials: "include" }).catch(() => null);
+    const res = await fetch(withWsId("/api/transactions/export"), {
+      credentials: "include",
+    }).catch(() => null);
     if (!res || !res.ok) return [] as RecentJob[];
     const json = (await res.json()) as { jobs: RecentJob[] };
     return json.jobs;
@@ -139,7 +146,7 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
     setProgressTotal(0);
     setPhase("preparing");
     try {
-      const res = await fetch("/api/transactions/export", {
+      const res = await fetch(withWsId("/api/transactions/export"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -151,11 +158,7 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
       }
       const { jobId } = (await res.json()) as { jobId: string };
 
-      const wsId = activeWorkspaceId();
-      const progressUrl =
-        `/api/transactions/export/${jobId}/progress` +
-        (wsId ? `?orgId=${encodeURIComponent(wsId)}` : "");
-      const es = new EventSource(progressUrl);
+      const es = new EventSource(withWsId(`/api/transactions/export/${jobId}/progress`));
       currentEventSource = es;
       let terminated = false;
 

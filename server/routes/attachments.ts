@@ -48,18 +48,18 @@ const attachmentUpload = multer({
 export type AttachmentRouteCtx = {
   pool: PluginDb;
   requireAuth: RequestHandler;
-  requireOrg: RequestHandler;
+  requireWorkspace: RequestHandler;
   requirePermission: (...codes: string[]) => RequestHandler;
 };
 
 export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx): void {
-  const { pool, requireAuth, requireOrg, requirePermission } = ctx;
+  const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Attachments (multipart file upload) ──────────────────────────────────
   router.get(
     "/:id/attachments",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {
@@ -81,7 +81,7 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
   router.post(
     "/:id/attachments",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     (req: Request, res: Response, next) => {
       const wsId = req.workspaceId!;
@@ -182,7 +182,7 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
   router.delete(
     "/:id/attachments/:attachmentId",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       try {

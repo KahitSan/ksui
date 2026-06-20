@@ -40,7 +40,7 @@ import type { RouterDeps } from "./routes.js";
 
 export function buildLineItemsRouter(deps: RouterDeps): Router {
   const router = Router();
-  const { db: pool, requireAuth, requireOrg, requirePermission } = deps;
+  const { db: pool, requireAuth, requireWorkspace, requirePermission } = deps;
 
   // Admin/superuser bypass the per-row privacy gate. Mirrors the monolith's
   // canBypassTransactionPrivacy, resolved from the kernel-forwarded identity.
@@ -61,7 +61,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
   router.get(
     "/api/transaction-line-items",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       if (!req.workspaceId) {
@@ -438,7 +438,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
   router.get(
     "/api/transaction-line-items/active-subscriptions",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       if (!req.workspaceId) {
@@ -523,7 +523,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
   router.post(
     "/api/transaction-line-items/:id/settle",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       if (!req.workspaceId) {
@@ -655,7 +655,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
   router.post(
     "/api/transaction-line-items/:id/charge-overage",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       if (!req.workspaceId || !req.user?.id) {
@@ -814,7 +814,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
   router.post(
     "/api/transaction-line-items/:id/extend",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       if (!req.workspaceId || !req.user?.id) {

@@ -23,13 +23,7 @@ import { applyTenantContext } from "@ks-erp/kernel-base";
 import { insertTransactionRow, insertVisibilityShares } from "../lib/create-transaction.js";
 import type { PluginDb } from "@ks-erp/kernel/services/database";
 import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
-import {
-  findAccountsByIds,
-  findPackagesByIds,
-  findVariantsByIds,
-  findClientsByIds,
-  findPayeesByIds,
-} from "../lib/peers.js";
+import { findAccountsByIds, findPayeesByIds } from "../lib/peers.js";
 import { validateSubcategory } from "../lib/transaction-subcategories.js";
 import { isBackdated } from "../lib/backdate.js";
 import { registerTransactionDetailRoute } from "./transactions-detail.js";
@@ -48,18 +42,18 @@ import {
 export type CoreRouteCtx = {
   pool: PluginDb;
   requireAuth: RequestHandler;
-  requireOrg: RequestHandler;
+  requireWorkspace: RequestHandler;
   requirePermission: (...codes: string[]) => RequestHandler;
 };
 
 export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
-  const { pool, requireAuth, requireOrg, requirePermission } = ctx;
+  const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── List ────────────────────────────────────────────────────────────────
   router.get(
     "/",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       const search = (req.query.search as string | undefined)?.trim();
@@ -243,7 +237,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
   router.post(
     "/",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.create"),
     async (req: Request, res: Response) => {
       const {
@@ -453,7 +447,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
   router.put(
     "/:id",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       const id = parseInt(String(req.params.id), 10);

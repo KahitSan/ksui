@@ -18,13 +18,13 @@ import { tenant, readIdentity, applyTenantContext } from "@ks-erp/kernel-base";
 import type { CoreRouteCtx } from "./transactions-core.js";
 
 export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCtx): void {
-  const { pool, requireAuth, requireOrg, requirePermission } = ctx;
+  const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Soft-delete (void) ───────────────────────────────────────────────────
   router.delete(
     "/:id",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.delete"),
     async (req: Request, res: Response) => {
       try {
@@ -49,7 +49,7 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
   router.post(
     "/:id/void",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.delete"),
     async (req: Request, res: Response) => {
       const { reason } = req.body ?? {};
@@ -92,7 +92,7 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
   router.post(
     "/:id/unvoid",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.delete"),
     async (req: Request, res: Response) => {
       const { reason } = req.body ?? {};
@@ -136,7 +136,7 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
   router.put(
     "/:id/visibility",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       const { is_private, shared_with, shared_with_roles } = req.body ?? {};
@@ -206,7 +206,7 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
   router.get(
     "/:id/line-items",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {
@@ -228,7 +228,7 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
   router.post(
     "/:id/line-items/:lineItemId/void",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       try {

@@ -13,19 +13,19 @@ import { listSubcategories, type AppliesTo } from "../lib/transaction-subcategor
 export type SubcategoryRouteCtx = {
   pool: PluginDb;
   requireAuth: RequestHandler;
-  requireOrg: RequestHandler;
+  requireWorkspace: RequestHandler;
   requirePermission: (...codes: string[]) => RequestHandler;
 };
 
 export function registerSubcategoryRoutes(router: Router, ctx: SubcategoryRouteCtx): void {
-  const { pool, requireAuth, requireOrg, requirePermission } = ctx;
+  const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Subcategory taxonomy (formerly /api/transaction-subcategories) ───────
 
   router.get(
     "/subcategories",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       const appliesTo = req.query.applies_to as string | undefined;
@@ -46,7 +46,7 @@ export function registerSubcategoryRoutes(router: Router, ctx: SubcategoryRouteC
   router.post(
     "/subcategories",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       const { name, applies_to, sort_order } = req.body ?? {};
@@ -77,7 +77,7 @@ export function registerSubcategoryRoutes(router: Router, ctx: SubcategoryRouteC
   router.put(
     "/subcategories/:id",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       const { name, sort_order, is_active } = req.body ?? {};
@@ -126,7 +126,7 @@ export function registerSubcategoryRoutes(router: Router, ctx: SubcategoryRouteC
   router.delete(
     "/subcategories/:id",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       try {

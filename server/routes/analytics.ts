@@ -21,12 +21,12 @@ import { privacyClause } from "./shared.js";
 export type AnalyticsRouteCtx = {
   pool: PluginDb;
   requireAuth: RequestHandler;
-  requireOrg: RequestHandler;
+  requireWorkspace: RequestHandler;
   requirePermission: (...codes: string[]) => RequestHandler;
 };
 
 export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx): void {
-  const { pool, requireAuth, requireOrg, requirePermission } = ctx;
+  const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Subscriptions (recurring-revenue view over line items) ───────────────
   // Registered before "/:id" so the literal segment wins. The heavy grouping +
@@ -37,7 +37,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
   router.get(
     "/subscriptions",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {
@@ -53,7 +53,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
   router.post(
     "/subscriptions/:line_item_id/renew",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.create"),
     async (req: Request, res: Response) => {
       const sourceId = parseInt(String(req.params.line_item_id), 10);
@@ -80,7 +80,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
   router.get(
     "/creators",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {
@@ -110,7 +110,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
   router.get(
     "/subcategory-counts",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {
@@ -151,7 +151,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
   router.get(
     "/summary",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       const dateFrom = req.query.dateFrom as string | undefined;
@@ -258,7 +258,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
   router.get(
     "/cashflow",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       const dateFrom = req.query.dateFrom as string | undefined;
@@ -329,7 +329,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
   router.get(
     "/by-hour",
     requireAuth,
-    requireOrg,
+    requireWorkspace,
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       const dateFrom = req.query.dateFrom as string | undefined;
