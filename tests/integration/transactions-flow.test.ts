@@ -51,6 +51,8 @@ beforeAll(async () => {
   // the minimum kernel-level tables the test depends on (user + workspace) so
   // the superuser lookup and FK references succeed.
   await pool.query(`
+    CREATE SCHEMA IF NOT EXISTS accounts;
+
     CREATE TABLE IF NOT EXISTS public."user" (
       id         TEXT PRIMARY KEY,
       email      TEXT,
@@ -63,6 +65,146 @@ beforeAll(async () => {
       id   INTEGER PRIMARY KEY,
       name TEXT
     );
+
+    -- Plugin tables: every accounts.* table the route handlers reference.
+    -- Column lists derived verbatim from the INSERT/SELECT/UPDATE SQL in
+    -- transactions-core.ts, transactions-detail.ts, transactions-status.ts,
+    -- transactions-counter-patch.ts, payments.ts, attachments.ts, and
+    -- subcategories.ts.
+
+    CREATE TABLE IF NOT EXISTS accounts.transactions (
+      id                     SERIAL PRIMARY KEY,
+      workspace_id           INTEGER NOT NULL,
+      category               TEXT NOT NULL,
+      subcategory            TEXT,
+      status                 TEXT NOT NULL DEFAULT 'completed',
+      source_account_id      INTEGER,
+      destination_account_id INTEGER,
+      amount                 NUMERIC(12,2) NOT NULL DEFAULT 0,
+      description            TEXT NOT NULL DEFAULT '',
+      notes                  TEXT,
+      transaction_date       DATE NOT NULL,
+      is_private             BOOLEAN NOT NULL DEFAULT FALSE,
+      is_backdated           BOOLEAN NOT NULL DEFAULT FALSE,
+      backdate_reason        TEXT,
+      created_by             TEXT,
+      updated_by             TEXT,
+      reference_number       TEXT,
+      tax_type               TEXT NOT NULL DEFAULT 'vat_inclusive',
+      tax_rate               NUMERIC(5,2) NOT NULL DEFAULT 0,
+      tax_amount             NUMERIC(12,2) NOT NULL DEFAULT 0,
+      subtotal               NUMERIC(12,2) NOT NULL DEFAULT 0,
+      payable_kind           TEXT,
+      due_date               DATE,
+      cheque_number          TEXT,
+      pdc_status             TEXT,
+      has_ewt                BOOLEAN NOT NULL DEFAULT FALSE,
+      ewt_rate               NUMERIC(5,2),
+      ewt_amount             NUMERIC(12,2),
+      client_id              INTEGER,
+      payee_id               INTEGER,
+      created_at             TIMESTAMPTZ DEFAULT NOW(),
+      updated_at             TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS accounts.transaction_payments (
+      id                   SERIAL PRIMARY KEY,
+      transaction_id       INTEGER NOT NULL,
+      workspace_id         INTEGER NOT NULL,
+      financial_account_id INTEGER,
+      amount               NUMERIC(12,2) NOT NULL DEFAULT 0,
+      notes                TEXT,
+      customer_group_id    INTEGER,
+      created_at           TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS accounts.transaction_edits (
+      id             SERIAL PRIMARY KEY,
+      transaction_id INTEGER NOT NULL,
+      workspace_id   INTEGER NOT NULL,
+      edited_at      TIMESTAMPTZ DEFAULT NOW(),
+      edited_by      TEXT NOT NULL DEFAULT '',
+      reason         TEXT NOT NULL DEFAULT '',
+      kind           TEXT NOT NULL DEFAULT 'edit'
+    );
+
+    CREATE TABLE IF NOT EXISTS accounts.transaction_attachments (
+      id             SERIAL PRIMARY KEY,
+      transaction_id INTEGER NOT NULL,
+      file_name      TEXT NOT NULL,
+      file_size      INTEGER,
+      mime_type      TEXT,
+      uploaded_by    TEXT,
+      s3_link        TEXT,
+      created_at     TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS accounts.transaction_line_items (
+      id                   SERIAL PRIMARY KEY,
+      transaction_id       INTEGER NOT NULL,
+      workspace_id         INTEGER NOT NULL,
+      package_id           INTEGER,
+      package_variant_id   INTEGER,
+      description          TEXT,
+      quantity             NUMERIC,
+      unit_price           NUMERIC(12,2),
+      duration_value       INTEGER,
+      duration_unit        TEXT,
+      started_at           TIMESTAMPTZ,
+      ends_at              TIMESTAMPTZ,
+      status               TEXT NOT NULL DEFAULT 'active',
+      client_id            INTEGER,
+      customer_group_id    INTEGER,
+      updated_at           TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS accounts.transaction_customer_groups (
+      id               SERIAL PRIMARY KEY,
+      transaction_id   INTEGER NOT NULL,
+      workspace_id     INTEGER NOT NULL,
+      position         INTEGER NOT NULL DEFAULT 0,
+      client_id        INTEGER,
+      display_name     TEXT,
+      note             TEXT,
+      voucher_id       INTEGER,
+      subtotal         NUMERIC(12,2),
+      discount_amount  NUMERIC(12,2),
+      is_payer         BOOLEAN NOT NULL DEFAULT FALSE
+    );
+
+    CREATE TABLE IF NOT EXISTS accounts.transaction_customers (
+      id             SERIAL PRIMARY KEY,
+      transaction_id INTEGER NOT NULL,
+      client_id      INTEGER NOT NULL,
+      workspace_id   INTEGER NOT NULL,
+      position       INTEGER NOT NULL DEFAULT 0,
+      UNIQUE (transaction_id, client_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS accounts.transaction_visibility (
+      id             SERIAL PRIMARY KEY,
+      transaction_id INTEGER NOT NULL,
+      user_id        TEXT NOT NULL,
+      UNIQUE (transaction_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS accounts.transaction_visibility_role (
+      id             SERIAL PRIMARY KEY,
+      transaction_id INTEGER NOT NULL,
+      role_code      TEXT NOT NULL,
+      UNIQUE (transaction_id, role_code)
+    );
+
+    CREATE TABLE IF NOT EXISTS accounts.transaction_subcategories (
+      id          SERIAL PRIMARY KEY,
+      name        TEXT NOT NULL,
+      applies_to  TEXT NOT NULL,
+      sort_order  INTEGER NOT NULL DEFAULT 0,
+      is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+      updated_at  TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS transaction_subcategories_name_applies_to_uniq
+      ON accounts.transaction_subcategories (lower(name), applies_to);
   `);
 
   // Seed a test superuser if the table is empty (CI), or reuse an existing one
@@ -132,11 +274,12 @@ describe("transactions flow: list → create → list → detail → void (real 
   const desc = `integ-flow-${Date.now()}`;
   let newId: number;
 
-  it("lists existing transactions for the active org (real prod data)", async () => {
+  it("lists existing transactions for the active org", async () => {
     const res = await request(app).get("/");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
-    expect(res.body.total).toBeGreaterThan(0);
+    // CI starts with an empty database; local dev may have prod data.
+    expect(typeof res.body.total).toBe("number");
   });
 
   it("creates a manual expense scoped to the active org", async () => {
