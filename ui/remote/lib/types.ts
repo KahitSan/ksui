@@ -81,7 +81,7 @@ export interface Transaction {
   payments?: TransactionPayment[];
 }
 
-export interface TransactionPayment {
+interface TransactionPayment {
   id: number;
   financial_account_id: number;
   financial_account_name: string | null;
@@ -90,7 +90,7 @@ export interface TransactionPayment {
   created_at: string;
 }
 
-export interface TransactionLineItem {
+interface TransactionLineItem {
   id: number;
   package_id: number | null;
   package_variant_id: number | null;

@@ -24,10 +24,8 @@ import { createSignal, Show } from "solid-js";
 import Plus from "lucide-solid/icons/plus";
 import Download from "lucide-solid/icons/download";
 import X from "lucide-solid/icons/x";
-import Loader2 from "lucide-solid/icons/loader-2";
 import Pencil from "lucide-solid/icons/pencil";
 import Ban from "lucide-solid/icons/ban";
-import Trash2 from "lucide-solid/icons/trash-2";
 
 import TransactionForm from "./components/TransactionForm";
 import {
@@ -41,23 +39,18 @@ import TransactionFilters from "./components/TransactionFilters";
 import {
   useAccountsIndex,
 } from "@kahitsan/ksui";
-import { formatDate, formatDateTime } from "./lib/format";
+import { formatDate } from "./lib/format";
 import {
   type PendingFile,
   createPendingFile,
   revokePendingFile,
   type Transaction,
-  type TransactionPayment,
-  type TransactionLineItem,
   type Attachment,
 } from "./lib/types";
 import {
   CATEGORY_STYLES,
   CATEGORY_TONE,
   TONE_CLASSES,
-  PAYABLE_KIND_OPTIONS,
-  PDC_OPTIONS,
-  TAX_TYPE_LABELS,
 } from "./lib/constants";
 import { type TransactionRow, makeAggregatedRow } from "./lib/rows";
 import { makeTransactionColumns } from "./components/transactionColumns";
@@ -74,13 +67,10 @@ import {
   PermissionGate,
 } from "@kserp/host-ui";
 import {
-  Avatar,
-  AddAttachmentTile,
   Modal,
   DataTable,
   Button,
   confirm,
-  highlightMatch,
   type FetchParams,
   type FetchResult,
 } from "@kahitsan/ksui";
@@ -115,8 +105,6 @@ export function Component() {
     setSubcategoryFilter,
     createdByFilter,
     setCreatedByFilter,
-    searchQuery,
-    setSearchQuery,
     tableSearchTerm,
     setTableSearchTerm,
     pdcFilter,
