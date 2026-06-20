@@ -326,7 +326,6 @@ describe("transactions flow: list → create → list → detail → void (real 
 
   it("opens detail with 200 + customer_groups (the regression contract)", async () => {
     const res = await request(app).get(`/${newId}`);
-    if (res.status !== 200) require("fs").writeFileSync("/tmp/test-debug.txt", `DETAIL ${res.status} ${JSON.stringify(res.body)}\n`, { flag: "a" });
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(newId);
     // Mirrors the e2e guard: detail must not 500 on customer_group resolution.
@@ -335,7 +334,6 @@ describe("transactions flow: list → create → list → detail → void (real 
 
   it("voids (soft-deletes) the transaction", async () => {
     const res = await request(app).delete(`/${newId}`);
-    if (res.status !== 204) require("fs").writeFileSync("/tmp/test-debug.txt", `VOID ${res.status} ${JSON.stringify(res.body)}\n`, { flag: "a" });
     expect(res.status).toBe(204);
   });
 
