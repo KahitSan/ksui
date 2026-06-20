@@ -41,6 +41,9 @@
       ],
       "@kahitsan/plugin-server-utils/express": [
         "../kserp/packages/plugin-server-utils/express.d.ts"
+      ],
+      "@kahitsan/plugin-server-utils/test": [
+        "../kserp/packages/plugin-server-utils/src/test/index.ts"
       ]
     },
     "ignoreDeprecations": "6.0"
