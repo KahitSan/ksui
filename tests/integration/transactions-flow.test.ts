@@ -55,8 +55,8 @@ beforeAll(async () => {
      ON CONFLICT (id) DO NOTHING`,
   );
   await pool.query(
-    `INSERT INTO public.workspaces (id, name)
-     VALUES (3, 'CI Workspace')
+    `INSERT INTO public.workspaces (id, name, slug)
+     VALUES (3, 'CI Workspace', 'CI Workspace')
      ON CONFLICT (id) DO NOTHING`,
   );
 
