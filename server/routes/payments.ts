@@ -14,7 +14,7 @@
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { identityHeaderOf } from "@kahitsan/plugin-sdk-composite";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { findAccountsByIds } from "../lib/peers.js";
 
 export type PaymentRouteCtx = {

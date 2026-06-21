@@ -14,7 +14,7 @@
 // with graceful degradation.
 
 import { type Router, type Request, type Response } from "express";
-import { identityHeaderOf } from "@kahitsan/plugin-sdk-composite";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {
   findAccountsByIds,
   findPackagesByIds,

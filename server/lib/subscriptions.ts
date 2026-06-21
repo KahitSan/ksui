@@ -15,7 +15,7 @@
 import type { Request } from "express";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { identityHeaderOf } from "@kahitsan/plugin-sdk-composite";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { findPackagesByIds, findClientsByIds, findVariantsByIds } from "./peers.js";
 
 const DAY_MS = 86_400_000;

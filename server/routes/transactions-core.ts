@@ -22,7 +22,7 @@ import { type Router, type Request, type Response, type RequestHandler } from "e
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { insertTransactionRow, insertVisibilityShares } from "../lib/create-transaction.js";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { identityHeaderOf } from "@kahitsan/plugin-sdk-composite";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { findAccountsByIds, findPayeesByIds } from "../lib/peers.js";
 import { validateSubcategory } from "../lib/transaction-subcategories.js";
 import { isBackdated } from "../lib/backdate.js";

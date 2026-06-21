@@ -30,7 +30,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
-import { identityHeaderOf } from "@kahitsan/plugin-sdk-composite";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {
   findPackagesByIds,
   findVariantsByIds,
