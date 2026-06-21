@@ -7,7 +7,7 @@
 // the call site in buildRouter registers them in the same position as before.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { listSubcategories, type AppliesTo } from "../lib/transaction-subcategories.js";
 
 export type SubcategoryRouteCtx = {

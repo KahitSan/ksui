@@ -12,17 +12,17 @@
 // AFTER the attachment routes — preserving the exact Express match order.
 //
 // Extracted verbatim from routes.ts. Every query keeps its
-// AND workspace_id = $N org scoping, the ends_at recompute CASE (hour/day/
+// AND workspace_id = $N workspace scoping, the ends_at recompute CASE (hour/day/
 // month intervals), the both-sides tenant delete in visibility, the natural-day
 // posture, and all BEGIN/COMMIT/ROLLBACK unchanged. Cross-plugin data
 // (package/variant/client/payee names, voucher discount) is resolved over the
 // kernel RPC (lib/peers.ts) with graceful degradation.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
-import { applyTenantContext } from "@ks-erp/kernel-base";
+import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { insertTransactionRow, insertVisibilityShares } from "../lib/create-transaction.js";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
-import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { findAccountsByIds, findPayeesByIds } from "../lib/peers.js";
 import { validateSubcategory } from "../lib/transaction-subcategories.js";
 import { isBackdated } from "../lib/backdate.js";
@@ -301,7 +301,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         return;
       }
       if (!req.workspaceId || !req.user?.id) {
-        res.status(400).json({ error: "Organization and user context required" });
+        res.status(400).json({ error: "Workspace and user context required" });
         return;
       }
 

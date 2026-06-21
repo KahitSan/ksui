@@ -6,7 +6,7 @@
 // expects: (req, params, startIdx) => string | null.
 
 import type { Request } from "express";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
 
 export const SORTABLE_COLUMNS = [
   "transaction_date",

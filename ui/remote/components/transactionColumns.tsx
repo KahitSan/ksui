@@ -236,7 +236,7 @@ export function makeTransactionColumns(
           return <span class="text-[11px] text-zinc-700">—</span>;
         }
         // created_by is a kernel user id; the server can't join the kernel
-        // `user` table, so resolve the display name from the host's org member
+        // `user` table, so resolve the display name from the host's workspace member
         // list. Falls back to "Unknown" until members load / for ex-members.
         const name = creatorName(row.created_by) || row.created_by_name || "Unknown";
         return (

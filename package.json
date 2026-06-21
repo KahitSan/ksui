@@ -10,7 +10,6 @@
     "dev": "tsx watch server/main.ts",
     "lint": "eslint .",
     "start": "tsx server/main.ts",
-    "test:e2e": "playwright test",
     "test:unit": "vitest run --config vitest.config.ts tests/unit",
     "test:integration": "vitest run --config vitest.config.ts tests/integration",
     "test": "vitest run --config vitest.config.ts",
@@ -30,7 +29,6 @@
   "devDependencies": {
     "@babel/plugin-syntax-typescript": "^7.27.1",
     "@changesets/cli": "^2.27.0",
-    "@playwright/test": "^1.50.0",
     "@tailwindcss/vite": "^4.2.2",
     "@types/express": "^5.0.0",
     "@types/multer": "^2.1.0",

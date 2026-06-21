@@ -8,11 +8,11 @@
 // helpers — attachment bytes live in S3 only (DO Spaces in prod, MinIO in
 // dev/CI), never on this server's disk.
 //
-// Every query keeps its AND workspace_id = $N / both-sides JOIN org scoping
+// Every query keeps its AND workspace_id = $N / both-sides JOIN workspace scoping
 // unchanged.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
 import multer from "multer";
 import crypto from "crypto";
 import path from "node:path";

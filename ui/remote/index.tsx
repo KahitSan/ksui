@@ -402,7 +402,7 @@ export function Component() {
       <PageShell
         eyebrow="FINANCE · KSERP"
         title="Transactions"
-        subtitle="Every peso moving through your org -- sales, expenses, payables and transfers in one ledger."
+        subtitle="Every peso moving through your workspace -- sales, expenses, payables and transfers in one ledger."
         actions={
           <>
             <PageShareButton module="transactions" moduleLabel="Transactions" />

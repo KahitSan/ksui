@@ -9,12 +9,12 @@
 // variant/client RPC enrichment, billed-to client_name, edits, payments +
 // account-name enrichment, customer_groups with dynamic display_name
 // resolution, client_pool, payee resolution, and created_by/updated_by
-// user-name resolution. Every query keeps its AND workspace_id = $N org
+// user-name resolution. Every query keeps its AND workspace_id = $N workspace
 // scoping. Cross-plugin data is resolved over the kernel RPC (lib/peers.ts)
 // with graceful degradation.
 
 import { type Router, type Request, type Response } from "express";
-import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {
   findAccountsByIds,
   findPackagesByIds,

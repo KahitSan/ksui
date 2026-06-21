@@ -26,6 +26,7 @@ export default defineConfig({
       { find: /^@ks-erp\/kernel-theme$/, replacement: r("../kserp/kernel-theme/index.ts") },
       { find: /^@ks-erp\/kernel$/, replacement: r("../kserp/kernel/index.ts") },
       { find: /^@ks-erp\/kernel\/(.*)$/, replacement: r("../kserp/kernel/$1.ts") },
+      { find: /^@kahitsan\/plugin-sdk$/, replacement: r("../kserp/packages/plugin-sdk/src/index.ts") },
       {
         find: /^@kahitsan\/plugin-server-utils\/test$/,
         replacement: r("../kserp/packages/plugin-server-utils/src/test/index.ts"),

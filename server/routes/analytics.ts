@@ -14,7 +14,7 @@
 // calls are unchanged.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { listSubscriptions, renewSubscription, RenewError } from "../lib/subscriptions.js";
 import { privacyClause } from "./shared.js";
 
@@ -317,7 +317,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
   // GET /by-hour -- counter check-in/out counts by time of day.
   //
   // Aggregates counter activity from transaction_line_items into 24 hourly (or
-  // 48 half-hourly) buckets in the org's local timezone. Each bucket returns
+  // 48 half-hourly) buckets in the workspace's local timezone. Each bucket returns
   // separate counts for `in` (arrivals = started_at) and `out` (departures =
   // ends_at). Used by the operations dashboard to tune opening/closing hours.
   //
@@ -336,7 +336,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
       const dateTo = req.query.dateTo as string | undefined;
       const bucketMinutes = req.query.bucketMinutes === "30" ? 30 : 60;
 
-      // Bucketing + date filtering happen in the org's local timezone so the
+      // Bucketing + date filtering happen in the workspace's local timezone so the
       // chart's "hour of day" matches the operator's wall clock. Hardcoded
       // literal, never user input — safe to interpolate into SQL.
       const ORG_TZ = "Asia/Manila";
