@@ -11,8 +11,8 @@
 // graceful degradation. privacyClause + org-scoping are unchanged.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
-import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk-composite";
 import { findPackagesByIds, findClientsByIds } from "../lib/peers.js";
 import { runCharge, ChargeValidationError, type ChargePayload } from "../helpers-charge.js";
 import { privacyClause } from "./shared.js";

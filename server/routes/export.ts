@@ -21,8 +21,8 @@
 // requester can't already see in the list. Voided rows are excluded.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
-import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk-composite";
 import { s3Enabled, s3PutObject, s3GetObject, s3DeleteObject } from "@kahitsan/plugin-server-utils";
 import { privacyClause, isValidIsoDate, resolveUserNames } from "./shared.js";
 import { findAccountsByIds, findPayeesByIds, type IdentityHeader } from "../lib/peers.js";

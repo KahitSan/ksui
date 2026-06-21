@@ -29,8 +29,8 @@
 //     degradation, consistent with the rest of the plugin.
 
 import { Router, type Request, type Response } from "express";
-import { applyTenantContext } from "@ks-erp/kernel-base";
-import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import { applyTenantContext } from "@kahitsan/plugin-sdk";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk-composite";
 import {
   findPackagesByIds,
   findVariantsByIds,

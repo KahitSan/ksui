@@ -13,9 +13,9 @@
 // it INSERTs accounts.transactions + accounts.transaction_line_items.
 
 import type { Request } from "express";
-import { applyTenantContext } from "@ks-erp/kernel-base";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
-import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import { applyTenantContext } from "@kahitsan/plugin-sdk";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk-composite";
 import { findPackagesByIds, findClientsByIds, findVariantsByIds } from "./peers.js";
 
 const DAY_MS = 86_400_000;

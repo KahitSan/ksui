@@ -14,7 +14,7 @@
 // calls this last (after Edit), reproducing the original tail order.
 
 import { type Router, type Request, type Response } from "express";
-import { tenant, readIdentity, applyTenantContext } from "@ks-erp/kernel-base";
+import { tenant, readIdentity, applyTenantContext } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 
 export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCtx): void {

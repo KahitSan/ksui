@@ -36,7 +36,7 @@
 // transactions never reaches into another plugin's schema with raw SQL.
 
 import { Router, type RequestHandler } from "express";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { validateVoucher } from "./lib/peers.js";
 import { appliesToFor } from "./lib/transaction-subcategories.js";
 import { registerSubcategoryRoutes } from "./routes/subcategories.js";

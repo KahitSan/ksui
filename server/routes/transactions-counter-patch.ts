@@ -9,7 +9,7 @@
 // BEGIN/COMMIT/ROLLBACK unchanged.
 
 import { type Router, type Request, type Response } from "express";
-import { applyTenantContext } from "@ks-erp/kernel-base";
+import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 
 export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): void {

@@ -29,7 +29,7 @@
 //     joined in SQL; the charge just stores client_id.
 
 import type { Pool, PoolClient } from "pg";
-import { applyTenantContext } from "@ks-erp/kernel-base";
+import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { computeVoucherDiscount, type VoucherForDiscount } from "../lib/voucher-discount.js";
 import {
   findVariantsByIds,

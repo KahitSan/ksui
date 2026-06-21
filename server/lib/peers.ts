@@ -25,7 +25,7 @@
 // voucher over RPC and compute the discount, but we DO NOT increment usage as
 // part of the charge transaction — see chargeFlow's best-effort note.
 
-import { tryCallPlugin, type PluginUnavailableError } from "@ks-erp/kernel-composite";
+import { tryCallPlugin, type PluginUnavailableError } from "@kahitsan/plugin-sdk-composite";
 
 export type IdentityHeader = string | undefined;
 

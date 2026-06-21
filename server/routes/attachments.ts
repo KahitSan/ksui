@@ -12,7 +12,7 @@
 // unchanged.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
 import multer from "multer";
 import crypto from "crypto";
 import path from "node:path";
