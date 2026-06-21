@@ -84,14 +84,14 @@ async function start(): Promise<void> {
 
   // ── Producer side: transactions.service ──────────────────────────────────
   // Mounts POST /_internal/services/:method, internal-secret gated, identity
-  // parsed so each handler is org-scoped via req.workspaceId. These are the
+  // parsed so each handler is workspace-scoped via req.workspaceId. These are the
   // methods the monolith's transactionsExtensionPoint exposed; packages reads
   // getPackageCapacityUsage to enforce per-package capacity / daily / monthly
   // limits at the cart.
   mountPluginServices(
     app,
     {
-      // findById({ id }) → an org-scoped transaction row, or null.
+      // findById({ id }) → a workspace-scoped transaction row, or null.
       findById: async (args, { req }) => {
         const id = (args as { id?: unknown })?.id;
         if (req.workspaceId == null || id == null) return null;
@@ -105,7 +105,7 @@ async function start(): Promise<void> {
 
       // getAccountBalances({ accountIds }) →
       //   { [accountId]: { balance } }
-      // Per-account computed balance, org-scoped, mirroring the monolith's
+      // Per-account computed balance, workspace-scoped, mirroring the monolith's
       // financial-accounts ACCOUNT_BALANCE_SQL definition — but computed HERE,
       // inside the plugin that owns accounts.transactions / transaction_payments,
       // because the financial-accounts plugin's DB role can't read these tables.
@@ -181,7 +181,7 @@ async function start(): Promise<void> {
 
       // getPackageCapacityUsage({ packageIds, at? }) →
       //   { [packageId]: { concurrent, daily, monthly } }
-      // Computed from THIS plugin's transaction_line_items, org-scoped. Voided
+      // Computed from THIS plugin's transaction_line_items, workspace-scoped. Voided
       // lines and lines under a voided transaction are excluded. `concurrent`
       // in NOW mode follows the Counter board rule (status='active' and start
       // in the past); the forward-looking `at` path uses the strict time
@@ -256,7 +256,7 @@ async function start(): Promise<void> {
       // is fixed to the salary use case — category/subcategory/description and
       // the director+accountant visibility grants are baked in, NOT
       // caller-controlled, so the cross-plugin surface stays minimal. Salary is
-      // not VATable, so tax is zeroed (non_vat). Org-scoped via req.workspaceId;
+      // not VATable, so tax is zeroed (non_vat). Workspace-scoped via req.workspaceId;
       // created_by is the calling user relayed in the signed identity header.
       createSalaryTransaction: async (args, { req }) => {
         const a = (args ?? {}) as {
@@ -268,7 +268,7 @@ async function start(): Promise<void> {
         };
         const wsId = req.workspaceId;
         const userId = req.user?.id;
-        if (wsId == null || !userId) throw new Error("Organization and user context required");
+        if (wsId == null || !userId) throw new Error("Workspace and user context required");
 
         const amount = typeof a.amount === "number" ? a.amount : parseFloat(String(a.amount));
         if (!Number.isFinite(amount) || amount <= 0) throw new Error("amount must be greater than 0");
@@ -342,7 +342,7 @@ async function start(): Promise<void> {
   // request; the per-route gates enforce it. The kernel proxies basePath/* here
   // with the prefix stripped, so the router mounts at "/".
   app.use(parseIdentity);
-  // RLS activation (plugin-SDK Step 2): scope every db.query under app_authenticated so the org-isolation policies engage behind the explicit workspace_id filter.
+  // RLS activation (plugin-SDK Step 2): scope every db.query under app_authenticated so the workspace-isolation policies engage behind the explicit workspace_id filter.
   app.use(withTenantContext);
   // Sibling basePath: the kernel proxies /api/transaction-line-items/* here
   // (declared in plugin.manifest.json additionalBasePaths) WITHOUT stripping

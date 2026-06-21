@@ -20,7 +20,7 @@ function intervalSqlFor(unit: ValidUnit): string {
   return "make_interval(months => $8)";
 }
 
-// Confirms a financial account / client / transaction row exists in this org.
+// Confirms a financial account / client / transaction row exists in this workspace.
 // SOFT references (financial_account_id) and clients live in OTHER plugins'
 // schemas, so we can't check them here — those are validated by the producer
 // plugin at write time only insofar as the FK target exists. We only assert

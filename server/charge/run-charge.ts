@@ -83,7 +83,7 @@ export async function runCharge(opts: {
         "This cart references packages, but the packages plugin is not available. Remove package line items or enable the packages plugin.",
       );
     }
-    // Validate every referenced variant exists (org-scoped by the producer)
+    // Validate every referenced variant exists (workspace-scoped by the producer)
     // and that variant.package_id matches the line's package_id.
     const variantById = new Map<number, PackageVariantRow>(variants.map((v) => [v.id, v]));
     for (const line of payload.items) {
@@ -159,14 +159,14 @@ export async function runCharge(opts: {
       const vid = groups[gi].voucher_id ?? null;
       // Default to NOT persisting a voucher reference. transaction_customer_
       // groups.voucher_id carries an FK to vouchers(id), so a voucher_id that
-      // doesn't resolve in THIS org must be dropped (storing it would abort the
+      // doesn't resolve in THIS workspace must be dropped (storing it would abort the
       // charge on the FK). Only a confirmed-present voucher is persisted below.
       perGroupVoucherId[gi] = null;
       perGroupDiscount[gi] = 0;
       if (vid == null) continue;
       const voucher = await findVoucherById(vid, identityHeader);
       if (voucher === null) {
-        // vouchers plugin absent OR no such id in this org. Degrade like the
+        // vouchers plugin absent OR no such id in this workspace. Degrade like the
         // top-level voucher_code path: proceed at full subtotal, no discount,
         // and don't persist the dangling reference.
         vouchersAvailable = false;
@@ -216,7 +216,7 @@ export async function runCharge(opts: {
     await applyTenantContext(client);
 
     // destination_account_id is a SOFT ref to financial-accounts' table — we
-    // can't org-check it here (other plugin's schema), so we trust the FK-less
+    // can't workspace-check it here (other plugin's schema), so we trust the FK-less
     // soft ref. parent_transaction_id, by contrast, is OUR table.
     if (payload.parent_transaction_id != null) {
       await assertOrgOwnsRow(

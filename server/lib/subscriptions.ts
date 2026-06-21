@@ -243,7 +243,7 @@ export async function listSubscriptions(
     );
   }
 
-  // Sort, then page in app code (the data set is bounded — subscriptions per org).
+  // Sort, then page in app code (the data set is bounded — subscriptions per workspace).
   rows.sort((a, b) => {
     let cmp: number;
     switch (sortBy) {
@@ -299,7 +299,7 @@ export async function renewSubscription(
 
   const idh = identityHeaderOf(req);
 
-  // Variant must be an org-owned day/month variant (RPC; clients/packages live
+  // Variant must be a workspace-owned day/month variant (RPC; clients/packages live
   // in their own schemas). Cross-package renewals are allowed (era upgrades).
   const variants = (await findVariantsByIds([package_variant_id], idh)) ?? [];
   const variant = variants.find((v) => v.id === package_variant_id);
@@ -316,7 +316,7 @@ export async function renewSubscription(
     await client.query("BEGIN");
     await applyTenantContext(client);
 
-    // Source must itself be a subscription line item in this org (so a direct
+    // Source must itself be a subscription line item in this workspace (so a direct
     // API call can't renew an hourly rental or a scrubbed row).
     const srcRes = await client.query(
       `SELECT li.id, li.client_id, li.package_id
@@ -336,7 +336,7 @@ export async function renewSubscription(
     const srcPkgs = (await findPackagesByIds([src.package_id], idh)) ?? [];
     const lineageSlug = srcPkgs.find((p) => p.id === src.package_id)?.lineage_slug ?? null;
 
-    // Serialize concurrent renews for the same (org, client, lineage) chain so
+    // Serialize concurrent renews for the same (workspace, client, lineage) chain so
     // two parallel POSTs can't both read the same MAX(ends_at) and overlap.
     // Released automatically at COMMIT. See the monolith note for why this is an
     // advisory lock rather than a row-level FOR UPDATE.
@@ -370,7 +370,7 @@ export async function renewSubscription(
       if (latestEndsAt == null || d.getTime() > latestEndsAt.getTime()) latestEndsAt = d;
     }
 
-    // Destination account must belong to this org (accounts.* — owned).
+    // Destination account must belong to this workspace (accounts.* — owned).
     const acctRes = await client.query(
       `SELECT id FROM accounts.financial_accounts WHERE id = $1 AND workspace_id = $2`,
       [destination_account_id, req.workspaceId],

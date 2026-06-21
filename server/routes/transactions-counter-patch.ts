@@ -4,7 +4,7 @@
 // and the payer-group EXISTS sync are unchanged.
 //
 // Extracted verbatim from transactions-core.ts. Every query keeps its
-// AND workspace_id = $N org scoping, the ends_at recompute CASE, the
+// AND workspace_id = $N workspace scoping, the ends_at recompute CASE, the
 // COALESCE(quantity, 1) math, the conditional display_name SET, and all
 // BEGIN/COMMIT/ROLLBACK unchanged.
 

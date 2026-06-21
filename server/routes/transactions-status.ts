@@ -9,7 +9,7 @@
 // POST /:id/line-items/:lineItemId/void.
 //
 // Extracted verbatim from transactions-core.ts. Every query keeps its
-// AND workspace_id = $N org scoping, the both-sides tenant delete in
+// AND workspace_id = $N workspace scoping, the both-sides tenant delete in
 // visibility, and all BEGIN/COMMIT/ROLLBACK unchanged. registerCoreRoutes
 // calls this last (after Edit), reproducing the original tail order.
 
@@ -163,7 +163,7 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
           [req.params.id, req.workspaceId, Boolean(is_private)],
         );
         // Child tables have no workspace_id column; route both deletes
-        // through the org-scoped tenant handle (same pinned client, inside the
+        // through the workspace-scoped tenant handle (same pinned client, inside the
         // BEGIN/COMMIT) so it compiles a both-sides subquery against the FK
         // parent accounts.transactions and the delete can't cross tenants.
         await tenant(dbClient, identity).delete("transaction_visibility", {

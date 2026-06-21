@@ -10,7 +10,7 @@
 // preserve the exact Express match order, the edit route is registered via
 // registerPaymentUpdateRoute (early slot) and the remaining three via
 // registerPaymentRoutes (later slot). Every query keeps its
-// AND workspace_id = $N org scoping unchanged.
+// AND workspace_id = $N workspace scoping unchanged.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
