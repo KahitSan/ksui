@@ -14,6 +14,7 @@
 type MigrationContext = { client: import("pg").PoolClient };
 
 const migration = {
+  name: "transactions_0010_rename_txn_org_to_txn_workspace",
   async up({ client }: MigrationContext) {
     // 1. New workspace-named helper — identical to the old txn_org. A fixed
     // search_path is mandatory hardening for a SECURITY DEFINER function.
