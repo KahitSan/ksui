@@ -9,12 +9,14 @@
 // reads, while the GET/POST/DELETE trio sat after the visibility route. To
 // preserve the exact Express match order, the edit route is registered via
 // registerPaymentUpdateRoute (early slot) and the remaining three via
-// registerPaymentRoutes (later slot). Every query keeps its
-// AND workspace_id = $N workspace scoping unchanged.
+// registerPaymentRoutes (later slot). Workspace scoping is preserved either way:
+// the routes migrated onto makeDataSurface inject `AND workspace_id` from the
+// ambient tenant context, and the routes still on raw db.query / escapeHatch keep
+// their explicit `AND workspace_id = $N` filter.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { identityHeaderOf } from "@kahitsan/plugin-sdk";
+import { identityHeaderOf, makeDataSurface } from "@kahitsan/plugin-sdk";
 import { findAccountsByIds } from "../lib/peers.js";
 
 export type PaymentRouteCtx = {
@@ -24,10 +26,27 @@ export type PaymentRouteCtx = {
   requirePermission: (...codes: string[]) => RequestHandler;
 };
 
+// Explicit column list for a payment leg row — the data surface bans `SELECT *`/
+// `RETURNING *`, and these are the exact columns the create handler returned via
+// `RETURNING *` (the table has no secret columns). Kept byte-identical so the
+// add-leg response shape is preserved.
+const PAYMENT_COLS = [
+  "id",
+  "transaction_id",
+  "workspace_id",
+  "financial_account_id",
+  "amount",
+  "notes",
+  "created_at",
+  "updated_at",
+  "customer_group_id",
+] as const;
+
 // The PUT edit-leg route. Kept separate so it registers in the same early
 // position it held in routes.ts (ahead of the analytics/charge reads).
 export function registerPaymentUpdateRoute(router: Router, ctx: PaymentRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
+  const data = makeDataSurface(pool);
 
   router.put(
     "/:id/payments/:paymentId",
@@ -46,18 +65,20 @@ export function registerPaymentUpdateRoute(router: Router, ctx: PaymentRouteCtx)
         return;
       }
       try {
-        const result = await pool.query(
-          `UPDATE accounts.transaction_payments
-             SET financial_account_id = $1, amount = $2
-             WHERE id = $3 AND transaction_id = $4 AND workspace_id = $5
-             RETURNING id, transaction_id, workspace_id, financial_account_id, amount, notes, created_at, updated_at, customer_group_id`,
-          [financial_account_id, parsed, req.params.paymentId, req.params.id, req.workspaceId],
+        // The surface injects `AND workspace_id = <ctx>`; the route's id +
+        // transaction_id scoping stays in the user WHERE. Returns [] (→ 404)
+        // when no row matches in this workspace.
+        const rows = await data.update(
+          "transaction_payments",
+          { financial_account_id, amount: parsed },
+          { where: "id = $1 AND transaction_id = $2", params: [req.params.paymentId, req.params.id] },
+          PAYMENT_COLS,
         );
-        if (result.rows.length === 0) {
+        if (rows.length === 0) {
           res.status(404).json({ error: "Not found" });
           return;
         }
-        const payment = result.rows[0];
+        const payment = rows[0] as Record<string, unknown> & { financial_account_id: number | null };
         if (payment.financial_account_id != null) {
           const idh = identityHeaderOf(req);
           const accounts = await findAccountsByIds([payment.financial_account_id], idh);
@@ -77,6 +98,7 @@ export function registerPaymentUpdateRoute(router: Router, ctx: PaymentRouteCtx)
 // visibility route).
 export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
+  const data = makeDataSurface(pool);
 
   // ── Payments (settlement legs) ────────────────────────────────────────────
   router.get(
@@ -86,14 +108,15 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {
-        const rows = await pool.query(
-          `SELECT id, financial_account_id, amount, notes, created_at, customer_group_id
-             FROM accounts.transaction_payments
-            WHERE transaction_id = $1 AND workspace_id = $2
-            ORDER BY created_at ASC, id ASC`,
-          [req.params.id, req.workspaceId],
-        );
-        const payments = rows.rows;
+        const payments = await data.find(
+          "transaction_payments",
+          ["id", "financial_account_id", "amount", "notes", "created_at", "customer_group_id"],
+          {
+            where: "transaction_id = $1",
+            params: [req.params.id],
+            orderBy: "created_at ASC, id ASC",
+          },
+        ) as Array<{ financial_account_id: number | null; financial_account_name?: string | null }>;
         const accountIds = [
           ...new Set(payments.map((p: { financial_account_id: number | null }) => p.financial_account_id).filter((v: number | null): v is number => v != null)),
         ];
@@ -132,20 +155,26 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
         return;
       }
       try {
-        const tx = await pool.query(
-          `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-          [req.params.id, req.workspaceId],
-        );
-        if (tx.rows.length === 0) {
+        const tx = await data.findOne("transactions", ["id"], {
+          where: "id = $1",
+          params: [req.params.id],
+        });
+        if (!tx) {
           res.status(404).json({ error: "Not found" });
           return;
         }
-        const result = await pool.query(
-          `INSERT INTO accounts.transaction_payments (transaction_id, workspace_id, financial_account_id, amount, notes)
-             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-          [req.params.id, req.workspaceId, financial_account_id, parsed, notes?.trim() || null],
-        );
-        const payment = result.rows[0];
+        // workspace_id is injected from the ambient tenant context by the
+        // surface — never passed by the handler.
+        const payment = (await data.insert(
+          "transaction_payments",
+          {
+            transaction_id: req.params.id,
+            financial_account_id,
+            amount: parsed,
+            notes: notes?.trim() || null,
+          },
+          PAYMENT_COLS,
+        )) as Record<string, unknown> & { financial_account_id: number | null };
         if (payment.financial_account_id != null) {
           const idh = identityHeaderOf(req);
           const accounts = await findAccountsByIds([payment.financial_account_id], idh);
@@ -166,12 +195,11 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       try {
-        const result = await pool.query(
-          `DELETE FROM accounts.transaction_payments
-             WHERE id = $1 AND transaction_id = $2 AND workspace_id = $3 RETURNING id`,
-          [req.params.paymentId, req.params.id, req.workspaceId],
-        );
-        if (result.rows.length === 0) {
+        const n = await data.delete("transaction_payments", {
+          where: "id = $1 AND transaction_id = $2",
+          params: [req.params.paymentId, req.params.id],
+        });
+        if (n === 0) {
           res.status(404).json({ error: "Not found" });
           return;
         }

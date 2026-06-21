@@ -64,7 +64,7 @@ beforeAll(async () => {
   await pool.query(
     `INSERT INTO public."user" (id, email, role, name)
      VALUES ('test-user-id', 'test@ci.local', 'superuser', 'CI User')
-     ON CONFLICT (id) DO NOTHING`,
+     ON CONFLICT DO NOTHING`,
   );
   await pool.query(
     `INSERT INTO public.workspaces (id, name, slug)
