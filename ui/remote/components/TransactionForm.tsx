@@ -197,7 +197,7 @@ export default function TransactionForm(props: TransactionFormProps) {
 
   // True once the async resource has resolved at least once. Gates the
   // SearchableSelect mount so the loading-state placeholder shows while the
-  // per-org options are still in flight.
+  // per-workspace options are still in flight.
   const subcategoryOptionsReady = () => subcategoryOptions() !== undefined;
 
   function addFiles(files: File[]) {

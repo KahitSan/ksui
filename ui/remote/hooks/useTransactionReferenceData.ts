@@ -1,7 +1,7 @@
 // Reference-data + name-resolution layer for the /transactions screen.
 // Extracted verbatim from index.tsx. Owns the subcategory taxonomy
 // (income/expense lists + counts), the creator stats/name maps, the accounts /
-// org-members / shareable-roles lists, and the peers-unavailable flag; plus the
+// workspace-members / shareable-roles lists, and the peers-unavailable flag; plus the
 // async loaders (reloadSubcategoryCounts, reloadCreators, loadOrgMembers), the
 // onMount that seeds subcategories + counts + creators, the subcategoryOptions
 // memo, the creatorName resolver, the creators memo, and the three loader
@@ -10,7 +10,7 @@
 // The effects/loaders close over nothing from Component(): the accessors they
 // read (activeWorkspace, canShare, activeCategories) are threaded in via the deps
 // object. Behavior is byte-for-byte identical to the inline version — same
-// endpoints, same org-generation staleness guards (activeWorkspace()?.ws_id === gen),
+// endpoints, same workspace-generation staleness guards (activeWorkspace()?.ws_id === gen),
 // same graceful-degradation try/catch, same onMount sequencing.
 //
 // peersUnavailable/setPeersUnavailable are exposed because the DataTable fetchFn
@@ -50,7 +50,7 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
   // surfaced in the `creators` memo.
   const [creatorStats, setCreatorStats] = createSignal<{ id: string; count?: number }[]>([]);
   // user id -> display name for every creator. Filled from the kernel's
-  // /api/users/names so it covers creators who aren't in the caller's org member
+  // /api/users/names so it covers creators who aren't in the caller's workspace member
   // list (superusers, ex-members, import accounts) — members/basic can't name
   // those. Authenticated, returns only { id, name }.
   const [creatorNameById, setCreatorNameById] = createSignal<Map<string, string>>(new Map());
@@ -118,7 +118,7 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
   // Resolve a transaction's created_by user id to a display name. The server
   // returns only the id (kernel `user` table is off the plugin's search_path —
   // see GET /creators), so names come from the kernel /api/users/names map
-  // (covers non-members), falling back to the org member list.
+  // (covers non-members), falling back to the workspace member list.
   const creatorName = (userId: string | null | undefined): string | null => {
     if (!userId) return null;
     return (
@@ -129,7 +129,7 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
   };
 
   // The "By" filter's options: raw creator ids/counts from the server, with names
-  // resolved from the org member list. Recomputes when members load, so labels go
+  // resolved from the workspace member list. Recomputes when members load, so labels go
   // from "Unknown" to the real name without a refetch. Ex-members (not in the
   // current member list) stay "Unknown".
   const creators = createMemo(() =>
@@ -161,7 +161,7 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
     const gen = activeWorkspace()?.ws_id;
     (async () => {
       try {
-        const res = await fetch("/api/roles?scope=org", { credentials: "include" });
+        const res = await fetch("/api/roles?scope=workspace", { credentials: "include" });
         if (!res.ok || activeWorkspace()?.ws_id !== gen) return;
         const data = await res.json();
         const rows = (data.data || []) as { code: string; label: string }[];
@@ -172,7 +172,7 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
     })();
   });
 
-  // Load org members for the list's "By" column (created_by → display name).
+  // Load workspace members for the list's "By" column (created_by → display name).
   // Independent of the share-picker's gated loader below: every viewer of the
   // list needs creator names, not just users who can share. Degrades to initials
   // / "Unknown" when the endpoint is unavailable or forbidden for the role.
