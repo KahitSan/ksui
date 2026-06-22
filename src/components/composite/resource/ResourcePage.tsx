@@ -63,8 +63,12 @@ export interface ResourcePageHost {
   requestInit?: () => RequestInit;
   /** Reactive value; when it changes the list resets to page 1 and refetches. */
   refetchKey?: () => unknown;
-  /** Extra action elements rendered in the header before the built-in create button. */
-  headerActions?: JSX.Element;
+  /**
+   * Render extra header actions before the built-in create button. A function
+   * (not a pre-created element) so it runs inside this component's render scope —
+   * a pre-created element would re-run outside it if the host object is rebuilt.
+   */
+  headerActions?: () => JSX.Element;
 }
 
 export interface ResourcePageProps<T extends ResourceRow> {
@@ -76,20 +80,32 @@ export interface ResourcePageProps<T extends ResourceRow> {
 
 type RefetchApi = { refetch: () => void; resetAndRefetch: () => void };
 
-export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>) {
+export function ResourcePage<T extends ResourceRow>(
+  props: ResourcePageProps<T>
+) {
   const spec = props.spec;
   const ep = endpoints(spec);
-  const doFetch = props.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
+  const doFetch =
+    props.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
 
-  const { PageShell } = props.host;
-  const can = (key: string) => props.host.can?.(key) ?? true;
+  // Read the host config ONCE so the component is robust against a consumer
+  // passing an inline `host={{...}}` literal (which Solid re-evaluates on each
+  // `props.host.*` access — re-instantiating headerActions outside render scope).
+  const {
+    PageShell,
+    can: hostCan,
+    requestInit: hostRequestInit,
+    refetchKey,
+    headerActions,
+  } = props.host;
+  const can = (key: string) => hostCan?.(key) ?? true;
   const canView = () => can(spec.permissions.view);
   const canEdit = () => spec.permissions.edit.some(can);
   const canDelete = () => can(spec.permissions.delete);
 
   /** Merge the host's per-request init (headers/credentials) with method + body. */
   function reqInit(extra?: RequestInit): RequestInit {
-    const base = props.host.requestInit?.() ?? {};
+    const base = hostRequestInit?.() ?? {};
     return {
       ...base,
       ...extra,
@@ -100,14 +116,18 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
     };
   }
 
-  const [filterState, setFilterState] = createStore<Record<string, string>>(initialFilterState(spec));
+  const [filterState, setFilterState] = createStore<Record<string, string>>(
+    initialFilterState(spec)
+  );
   let refetchFn: RefetchApi | undefined;
 
   const [detailRow, setDetailRow] = createSignal<ResourceRow | null>(null);
   const [editing, setEditing] = createSignal(false);
   const [createOpen, setCreateOpen] = createSignal(false);
 
-  const [form, setForm] = createStore<Record<string, string>>(emptyFormValues(spec));
+  const [form, setForm] = createStore<Record<string, string>>(
+    emptyFormValues(spec)
+  );
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal("");
   const setValue = (key: string, value: string) => setForm(key, value);
@@ -140,7 +160,12 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
     setEditing(true);
   }
 
-  async function submit(method: "POST" | "PUT", url: string, fallback: string, onOk: (row: ResourceRow) => void) {
+  async function submit(
+    method: "POST" | "PUT",
+    url: string,
+    fallback: string,
+    onOk: (row: ResourceRow) => void
+  ) {
     const msg = validateForm(spec, form);
     if (msg) {
       setError(msg);
@@ -155,7 +180,7 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
           method,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(formToBody(spec, form)),
-        }),
+        })
       );
       // create allows the idempotent-200 path; both treat non-ok as an error
       if (!res.ok && !(method === "POST" && res.status === 200)) {
@@ -182,10 +207,15 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
   async function handleUpdate() {
     const row = detailRow();
     if (!row) return;
-    await submit("PUT", ep.one(row.id), spec.labels.updateErrorFallback, (updated) => {
-      if (updated && typeof updated.id === "number") setDetailRow(updated);
-      setEditing(false);
-    });
+    await submit(
+      "PUT",
+      ep.one(row.id),
+      spec.labels.updateErrorFallback,
+      (updated) => {
+        if (updated && typeof updated.id === "number") setDetailRow(updated);
+        setEditing(false);
+      }
+    );
   }
 
   async function handleArchive(id: number) {
@@ -233,7 +263,7 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
         subtitle={spec.subtitle}
         actions={
           <>
-            {props.host.headerActions}
+            {headerActions?.()}
             <Show when={canEdit()}>
               <Button
                 intent="primary"
@@ -252,8 +282,10 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
         }
       >
         <DataTable<ResourceRow>
-          refetchKey={props.host.refetchKey}
-          fetchFn={async (params: FetchParams): Promise<FetchResult<ResourceRow>> => {
+          refetchKey={refetchKey}
+          fetchFn={async (
+            params: FetchParams
+          ): Promise<FetchResult<ResourceRow>> => {
             const q = buildListQuery(spec, params, filterState);
             const res = await doFetch(`${ep.list}?${q}`, reqInit());
             return res.json();
@@ -279,10 +311,14 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
                   ) : (
                     <select
                       value={filterState[f.param]}
-                      onChange={(e) => setFilterState(f.param, e.currentTarget.value)}
+                      onChange={(e) =>
+                        setFilterState(f.param, e.currentTarget.value)
+                      }
                       class="rounded-lg border border-zinc-800/50 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 cursor-pointer"
                     >
-                      <For each={f.options}>{(o) => <option value={o.value}>{o.label}</option>}</For>
+                      <For each={f.options}>
+                        {(o) => <option value={o.value}>{o.label}</option>}
+                      </For>
                     </select>
                   )
                 }
@@ -306,7 +342,9 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
         >
           <div data-testid={`${spec.testIdPrefix}-create-modal`}>
             <div class="flex items-center justify-between mb-6">
-              <h2 class="text-lg font-semibold text-zinc-100">{spec.labels.createTitle}</h2>
+              <h2 class="text-lg font-semibold text-zinc-100">
+                {spec.labels.createTitle}
+              </h2>
               <button
                 onClick={() => {
                   setCreateOpen(false);
@@ -348,7 +386,9 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
             <div data-testid={`${spec.testIdPrefix}-detail-modal`}>
               <div class="flex items-center justify-between mb-6">
                 <h2 class="text-lg font-semibold text-zinc-100">
-                  {editing() ? spec.labels.editTitle : String(row()[spec.labels.titleField] ?? "")}
+                  {editing()
+                    ? spec.labels.editTitle
+                    : String(row()[spec.labels.titleField] ?? "")}
                 </h2>
                 <div class="flex items-center gap-2">
                   <Show when={!editing() && canEdit()}>
@@ -395,7 +435,10 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
                 </div>
               </div>
 
-              <Show when={editing()} fallback={<ResourceDetail rows={spec.detail} row={row()} />}>
+              <Show
+                when={editing()}
+                fallback={<ResourceDetail rows={spec.detail} row={row()} />}
+              >
                 <ResourceForm
                   spec={spec}
                   values={form}
