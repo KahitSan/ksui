@@ -1,13 +1,13 @@
-// The spec-driven default-datatable page: list + create + detail/edit + archive,
-// composed from a ResourceUiSpec onto the ksui DataTable/Modal/FormField shell.
-// This is the generic runtime that reproduces a hand-written base plugin's UI
-// (proved byte-for-behavior against payees). A base plugin's `ui/remote/index.tsx`
-// shrinks to: build a spec, render <ResourcePage spec={...} host={...} />.
+// A config-driven CRUD page: a list (DataTable) with search, filters and paging,
+// plus create / view / edit / archive / restore modals — all described by one
+// declarative `ResourceUiSpec` (columns, fields, filters, labels, REST endpoints).
+// It talks to a REST resource exposing list / create / get / update / delete /
+// restore over `basePath`.
 //
-// ksui stays standalone — it never imports `@kserp/host-ui`. The host primitives
-// (PageShell, PageShareButton, and the workspace/permission hooks) are INJECTED
-// via the `host` prop; the plugin passes them from its host UI kit, where the
-// hooks run inside the plugin's own component tree (correct reactive context).
+// Everything application-specific is injected via the `host` prop — the page-shell
+// layout, a permission check, per-request init (auth headers / credentials), a
+// refetch trigger, and any extra header actions — so the component carries no
+// app, transport, or auth assumptions of its own.
 import { createSignal, For, Show, type Component, type JSX } from "solid-js";
 import { createStore } from "solid-js/store";
 import Plus from "lucide-solid/icons/plus";
@@ -40,26 +40,31 @@ import { ResourceForm } from "./ResourceForm";
 import { ResourceDetail } from "./ResourceDetail";
 
 /**
- * Host primitives injected by the plugin so ksui never imports `@kserp/host-ui`.
- * The plugin's remote entry passes these from the host UI kit; the hooks are
- * invoked at the top of ResourcePage's render, inside the plugin's component
- * tree, so their reactive context resolves correctly.
+ * Application-specific dependencies injected by the consumer. The component holds
+ * no transport, auth, tenancy or layout assumptions of its own — they all arrive
+ * here. Only `PageShell` is required; the rest default to permissive no-ops.
  */
 export interface ResourcePageHost {
+  /** Page-shell layout: a heading area + an actions slot wrapping the body. */
   PageShell: Component<{
     title: string;
     subtitle?: string;
     actions?: JSX.Element;
     children: JSX.Element;
   }>;
-  PageShareButton?: Component<{ module: string; moduleLabel: string }>;
-  useActiveWorkspace: () => {
-    activeWorkspace: () => { ws_id: number | string } | null | undefined;
-  };
-  usePermissions: () => {
-    has: (code: string) => boolean;
-    hasAny: (...codes: string[]) => boolean;
-  };
+  /** Permission check against the spec's permission keys. Defaults to allow-all. */
+  can?: (permission: string) => boolean;
+  /**
+   * `RequestInit` merged into every request the page makes — the seam for auth
+   * headers, credentials, or any per-tenant header. Called per request so it can
+   * read live context. The component adds only `method` and (on writes) the JSON
+   * `Content-Type` + body on top of what this returns.
+   */
+  requestInit?: () => RequestInit;
+  /** Reactive value; when it changes the list resets to page 1 and refetches. */
+  refetchKey?: () => unknown;
+  /** Extra action elements rendered in the header before the built-in create button. */
+  headerActions?: JSX.Element;
 }
 
 export interface ResourcePageProps<T extends ResourceRow> {
@@ -76,12 +81,24 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
   const ep = endpoints(spec);
   const doFetch = props.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
 
-  const { PageShell, PageShareButton } = props.host;
-  const { activeWorkspace } = props.host.useActiveWorkspace();
-  const perms = props.host.usePermissions();
-  const canView = () => perms.has(spec.permissions.view);
-  const canEdit = () => perms.hasAny(...spec.permissions.edit);
-  const canDelete = () => perms.has(spec.permissions.delete);
+  const { PageShell } = props.host;
+  const can = (key: string) => props.host.can?.(key) ?? true;
+  const canView = () => can(spec.permissions.view);
+  const canEdit = () => spec.permissions.edit.some(can);
+  const canDelete = () => can(spec.permissions.delete);
+
+  /** Merge the host's per-request init (headers/credentials) with method + body. */
+  function reqInit(extra?: RequestInit): RequestInit {
+    const base = props.host.requestInit?.() ?? {};
+    return {
+      ...base,
+      ...extra,
+      headers: {
+        ...(base.headers as Record<string, string> | undefined),
+        ...(extra?.headers as Record<string, string> | undefined),
+      },
+    };
+  }
 
   const [filterState, setFilterState] = createStore<Record<string, string>>(initialFilterState(spec));
   let refetchFn: RefetchApi | undefined;
@@ -104,14 +121,9 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
     setError("");
   }
 
-  function wsHeaders(): Record<string, string> {
-    const ws = activeWorkspace();
-    return ws ? { "X-Workspace-Id": String(ws.ws_id) } : {};
-  }
-
   async function openDetail(id: number) {
     try {
-      const res = await doFetch(ep.one(id), { credentials: "include", headers: wsHeaders() });
+      const res = await doFetch(ep.one(id), reqInit());
       if (res.ok) {
         setDetailRow(await res.json());
         setEditing(false);
@@ -137,12 +149,14 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
     setSaving(true);
     setError("");
     try {
-      const res = await doFetch(url, {
-        method,
-        credentials: "include",
-        headers: { "Content-Type": "application/json", ...wsHeaders() },
-        body: JSON.stringify(formToBody(spec, form)),
-      });
+      const res = await doFetch(
+        url,
+        reqInit({
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formToBody(spec, form)),
+        }),
+      );
       // create allows the idempotent-200 path; both treat non-ok as an error
       if (!res.ok && !(method === "POST" && res.status === 200)) {
         const err = await res.json().catch(() => ({}));
@@ -185,7 +199,7 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
     )
       return;
     try {
-      await doFetch(ep.one(id), { method: "DELETE", credentials: "include", headers: wsHeaders() });
+      await doFetch(ep.one(id), reqInit({ method: "DELETE" }));
       setDetailRow(null);
       refetchFn?.refetch();
     } catch {
@@ -195,7 +209,7 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
 
   async function handleRestore(id: number) {
     try {
-      const res = await doFetch(ep.restore(id), { method: "PATCH", credentials: "include", headers: wsHeaders() });
+      const res = await doFetch(ep.restore(id), reqInit({ method: "PATCH" }));
       if (res.ok) {
         setDetailRow(await res.json());
         refetchFn?.refetch();
@@ -219,13 +233,7 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
         subtitle={spec.subtitle}
         actions={
           <>
-            <Show when={spec.share}>
-              {(s) =>
-                PageShareButton ? (
-                  <PageShareButton module={s().module} moduleLabel={s().moduleLabel} />
-                ) : null
-              }
-            </Show>
+            {props.host.headerActions}
             <Show when={canEdit()}>
               <Button
                 intent="primary"
@@ -244,10 +252,10 @@ export function ResourcePage<T extends ResourceRow>(props: ResourcePageProps<T>)
         }
       >
         <DataTable<ResourceRow>
-          refetchKey={() => activeWorkspace()?.ws_id}
+          refetchKey={props.host.refetchKey}
           fetchFn={async (params: FetchParams): Promise<FetchResult<ResourceRow>> => {
             const q = buildListQuery(spec, params, filterState);
-            const res = await doFetch(`${ep.list}?${q}`, { credentials: "include", headers: wsHeaders() });
+            const res = await doFetch(`${ep.list}?${q}`, reqInit());
             return res.json();
           }}
           columns={columns}

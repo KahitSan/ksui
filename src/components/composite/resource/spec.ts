@@ -1,18 +1,8 @@
-// Spec-driven default-datatable UI runtime — the declarative contract + its PURE
-// helpers (no solid-js / ksui imports, so it unit-tests under plain node).
-//
-// Phase 2 P1 (UI half): a base plugin's list/create/edit/archive page is the
-// data-shaped projection of its resource. This module is the UI mirror of the
-// server-side `defineResource(spec)` runtime (kernel-base/resource/*): the SAME
-// field/column declarations that drive the table + migration + CRUD routes also
-// drive the page. Authored once as a `ResourceUiSpec`, rendered by `ResourcePage`
-// (ResourcePage.tsx) into the exact ksui DataTable + Modal + FormField shell a
-// hand-written base plugin ships.
-//
-// Built inside kplugin_payees as the make-or-break proof (byte-for-behavior ==
-// hand-written payees). It imports only ksui + @kserp/host-ui + solid-js, so it
-// lifts into the shared SDK / UI-kit later (that lift needs the plugin UI build
-// to resolve the SDK — a vite alias + tsconfig.ui paths entry — out of scope here).
+// The declarative contract for `ResourcePage` plus its PURE helpers (no solid-js
+// or component imports, so they unit-test under plain node). A `ResourceUiSpec`
+// describes a CRUD page's columns, form fields, filters, labels and REST endpoints
+// once; `ResourcePage` renders it. The shape is transport- and framework-agnostic
+// — it names columns and fields, never how requests are authed or sent.
 
 /** A row the runtime can render: any record with a numeric surrogate id. */
 export interface ResourceRow {
@@ -129,14 +119,12 @@ export interface UiDetailRow {
 // ---- the spec --------------------------------------------------------------
 
 export interface ResourceUiSpec {
-  /** REST base, e.g. "/api/payees". CRUD endpoints derive from it. */
+  /** REST base, e.g. "/api/things"; the CRUD endpoints derive from it. */
   readonly basePath: string;
   /** Page title + framing. */
   readonly title: string;
   readonly subtitle?: string;
-  /** PageShareButton wiring. */
-  readonly share?: { readonly module: string; readonly moduleLabel: string };
-  /** Capability codes. `edit` is satisfied by hasAny(...edit). */
+  /** Permission keys passed to `host.can`. `edit` passes if ANY of its keys do. */
   readonly permissions: {
     readonly view: string;
     readonly edit: readonly string[];
@@ -166,7 +154,7 @@ export interface ResourceUiSpec {
     readonly archiveMessage: string;
     readonly archiveConfirm: string;
   };
-  /** data-testid prefix (e.g. "payees" → payees-add-btn, payees-row-3). */
+  /** data-testid prefix (e.g. "things" → things-add-btn, things-row-3). */
   readonly testIdPrefix: string;
 }
 
@@ -201,9 +189,9 @@ export interface ListParams {
 }
 
 /**
- * Build the list-request query string. Mirrors hand-written payees exactly:
- * page/limit/search/sortBy/sortDir are always present; a segmented filter is
- * always sent; a select filter is sent only when its value is non-empty.
+ * Build the list-request query string: page/limit/search/sortBy/sortDir are
+ * always present; a segmented filter is always sent; a select filter is sent
+ * only when its value is non-empty.
  */
 export function buildListQuery(
   spec: ResourceUiSpec,
@@ -269,7 +257,7 @@ export function cleanLabel(label: string): string {
 
 /**
  * Validate the form. Returns the first required-but-empty field's error message,
- * or null when valid. Matches payees' "Name is required" exactly.
+ * or null when valid (e.g. "Name is required").
  */
 export function validateForm(
   spec: ResourceUiSpec,
