@@ -11,3 +11,7 @@ playwright-report/
 # Built plugin UI bundle (built in CI/deploy, served by the plugin process)
 dist-ui/
 .fallow/
+
+# Local env: DB connection for `npm test` / dev (worktree-written; CI sets vars).
+.env
+!.env.example
