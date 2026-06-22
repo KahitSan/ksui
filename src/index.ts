@@ -147,6 +147,19 @@ export type { VoucherOption } from "./components/composite/VoucherPicker";
 
 export { default as NotFound, type NotFoundProps } from "./components/composite/NotFound";
 
+// Spec-driven default-datatable runtime: a base plugin's list/create/edit/archive
+// page expressed as a declarative ResourceUiSpec and rendered through ResourcePage
+// (DataTable + Modal + FormField + the host shell). Host primitives (PageShell,
+// PageShareButton, and the workspace/permission hooks) are INJECTED via the `host`
+// prop, so ksui stays standalone — it never imports `@kserp/host-ui`. The plugin's
+// remote entry shrinks to: build a ResourceUiSpec, render <ResourcePage host={...}/>.
+export { ResourcePage } from "./components/composite/resource/ResourcePage";
+export type {
+  ResourcePageProps,
+  ResourcePageHost,
+} from "./components/composite/resource/ResourcePage";
+export * from "./components/composite/resource/spec";
+
 // ---------------------------------------------------------------------------
 // Utils (not components)
 // ---------------------------------------------------------------------------
