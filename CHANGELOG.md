@@ -1,5 +1,15 @@
 # @kahitsan/ksui
 
+## 0.16.0
+
+### Minor Changes
+
+- aaeeb74: Add `ResourcePage` — a spec-driven default-datatable runtime. A base plugin's list/create/edit/archive page is expressed as a declarative `ResourceUiSpec` (columns with render hints, form fields, filters, labels) and rendered through `ResourcePage`, which composes the existing DataTable + Modal + FormField + StatusPill + SegmentedFilter + DetailRow primitives. Host primitives (PageShell, PageShareButton, and the workspace/permission hooks) are injected via a `host` prop, so the library stays standalone — it never imports the host UI kit. Also exports the pure spec helpers (`buildListQuery`, `validateForm`, `formToBody`, `emptyFormValues`, `rowToFormValues`, `endpoints`, …) and the `ResourceUiSpec` type vocabulary. Proven byte-for-behavior against the hand-written payees page.
+
+### Patch Changes
+
+- 0931bdf: Add vitest + @solidjs/testing-library component test harness with first 14 tests covering Modal (dialog rendering, Escape dismissal, dismissable flag, size, tone), DataTable (column headers, row rendering, empty state, search placeholder), and DatePicker (trigger label, popover open, day selection, disabled state). Establishes the dedup source: a plugin UI test must NOT re-assert widget behaviors covered here.
+
 ## 0.15.2
 
 ### Patch Changes
