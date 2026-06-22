@@ -1,6 +1,5 @@
-// Column-cell rendering for the spec-driven datatable. One pure function maps a
-// UiColumn's declared render hint to the exact JSX hand-written payees ships, so
-// the generated table is byte-for-behavior identical.
+// Column-cell rendering for the datatable. One pure function maps a column's
+// declared render hint (title / enum / status / text) to its cell markup.
 import type { JSX } from "solid-js";
 import StatusPill from "../../base/StatusPill";
 import type { ResourceRow, ResourceUiSpec, UiColumn } from "./spec";

@@ -1,7 +1,6 @@
-// The spec-driven create/edit form. Renders one control per declared field
-// (text / textarea / select), reproducing hand-written payees' markup, testids,
-// and the ksui FormField + Button shell. Form state is owned by ResourcePage and
-// passed in, so a single instance backs both the create and edit modals.
+// The create/edit form: one control per declared field (text / textarea /
+// select) on the FormField + Button shell. Form state is owned by ResourcePage
+// and passed in, so one instance backs both the create and edit modals.
 import { For, Show } from "solid-js";
 import FormField from "../../base/FormField";
 import Button from "../../base/Button";

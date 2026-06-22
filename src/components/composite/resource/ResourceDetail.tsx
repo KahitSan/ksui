@@ -1,7 +1,6 @@
-// The spec-driven read-only detail view (the non-editing face of the detail
-// modal). Renders one ksui DetailRow per declared detail row, deriving each
-// value by its kind (raw field / enum label / status / formatted datetime),
-// reproducing hand-written payees' PayeeDetail.
+// The read-only detail view (the non-editing face of the detail modal). Renders
+// one DetailRow per declared detail row, deriving each value by its kind (raw
+// field / enum label / status / formatted datetime).
 import { For } from "solid-js";
 import DetailRow from "../../base/DetailRow";
 import type { ResourceRow, UiDetailRow, UiDetailValue } from "./spec";
