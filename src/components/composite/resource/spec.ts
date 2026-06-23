@@ -42,6 +42,63 @@ export interface UiColumn {
   readonly title: string;
   readonly orderable?: boolean;
   readonly render: UiColumnRender;
+  /**
+   * Optional: the value is read from a PEER plugin, not this resource's own row
+   * (see UiForeignColumn). A foreign column is never sortable server-side.
+   */
+  readonly foreign?: UiForeignColumn;
+}
+
+// ---- U4: foreign data sources (declarative; resolved via the host consent model) ----
+
+/**
+ * Declares that a column's value is sourced from a PEER plugin rather than the
+ * resource's own row. The cross-plugin read is mediated by the host's consent model
+ * (kernel IP1). This is a FORWARD CONTRACT: a spec may declare a foreign source before
+ * the runtime can serve it — `resolveForeignValue` throws until a resolver is wired,
+ * so a missing consent path fails loud, never silently renders an empty cell.
+ */
+export interface UiForeignSource {
+  /** The peer plugin that owns the value (e.g. "financial-accounts"). */
+  readonly peer: string;
+  /** The field on the peer record this column reads. */
+  readonly field: string;
+  /** Opaque id on THIS row used to join to the peer (defaults to the column key). */
+  readonly joinKey?: string;
+}
+
+/** How a foreign column degrades when the peer read is unavailable/slow/denied. */
+export type UiForeignOnError = "hide" | "dash" | "warn";
+
+/** A column whose value comes from a peer plugin via the consent model. */
+export interface UiForeignColumn {
+  readonly source: UiForeignSource;
+  /** Degrade policy when the peer read fails — never breaks the row. Defaults to "dash". */
+  readonly onError?: UiForeignOnError;
+}
+
+/** The consent-gated peer-read seam the host supplies (kernel IP1). */
+export type ForeignResolver = (source: UiForeignSource, row: ResourceRow) => unknown;
+
+/**
+ * Read a column's value, honouring a declared foreign source. A plain column reads
+ * `row[key]`. A foreign column requires a wired `ForeignResolver` — without one it
+ * THROWS (the throw-on-unwired guard), because foreign reads cannot resolve until the
+ * host consent model exists. Callers that catch this apply the column's `onError`.
+ */
+export function resolveForeignValue(
+  col: UiColumn,
+  row: ResourceRow,
+  resolver?: ForeignResolver,
+): unknown {
+  if (!col.foreign) return row[col.key];
+  if (!resolver) {
+    throw new Error(
+      `ksui: column "${col.key}" declares a foreign source (peer "${col.foreign.source.peer}") ` +
+        `but no ForeignResolver is wired — foreign reads require the host consent model.`,
+    );
+  }
+  return resolver(col.foreign.source, row);
 }
 
 // ---- form fields -----------------------------------------------------------
