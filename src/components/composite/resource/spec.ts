@@ -156,6 +156,13 @@ export interface ResourceUiSpec {
   };
   /** data-testid prefix (e.g. "things" → things-add-btn, things-row-3). */
   readonly testIdPrefix: string;
+  /** Initial rows-per-page for the list (DataTable `pageLength`). When omitted,
+   * DataTable's own default (10) applies. A host can lower a resolved user/workspace
+   * preference in here (the platform's route-settings `pageSize`). */
+  readonly pageLength?: number;
+  /** The rows-per-page options offered in the list's page-size menu (DataTable
+   * `lengthMenu`). When omitted, DataTable's default ([10, 25, 50, 100]) applies. */
+  readonly lengthMenu?: readonly number[];
 }
 
 // ---- derived endpoints -----------------------------------------------------
