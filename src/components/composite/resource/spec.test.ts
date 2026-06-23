@@ -11,8 +11,10 @@ import {
   selectDefault,
   cleanLabel,
   validateForm,
+  resolveForeignValue,
   type ResourceUiSpec,
   type UiFieldSelect,
+  type UiColumn,
 } from "./spec";
 
 // A self-contained fixture exercising every helper branch (segmented + select
@@ -112,5 +114,27 @@ describe("formToBody", () => {
   it("trims required text, nulls empty optional, passes select raw", () => {
     expect(formToBody(spec, { name: "  X  ", kind: "customer", category: "   ", notes: "  n  " }))
       .toEqual({ name: "X", kind: "customer", category: null, notes: "n" });
+  });
+});
+
+describe("resolveForeignValue (U4 foreign-data contract)", () => {
+  const plain: UiColumn = { key: "name", title: "Name", render: { type: "text" } };
+  const foreign: UiColumn = {
+    key: "balance",
+    title: "Balance",
+    render: { type: "text" },
+    foreign: { source: { peer: "financial-accounts", field: "balance" }, onError: "dash" },
+  };
+  const row = { id: 1, name: "Acme", balance: "ignored-own-value" };
+
+  it("reads the own row value for a plain column", () => {
+    expect(resolveForeignValue(plain, row)).toBe("Acme");
+  });
+  it("THROWS for a foreign column with no resolver wired (throw-on-unwired guard)", () => {
+    expect(() => resolveForeignValue(foreign, row)).toThrow(/foreign source.*no ForeignResolver/);
+  });
+  it("delegates to a wired resolver for a foreign column", () => {
+    const resolver = (s: { peer: string; field: string }) => `${s.peer}:${s.field}=42`;
+    expect(resolveForeignValue(foreign, row, resolver)).toBe("financial-accounts:balance=42");
   });
 });
