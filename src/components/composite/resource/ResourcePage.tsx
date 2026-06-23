@@ -294,6 +294,8 @@ export function ResourcePage<T extends ResourceRow>(
           searching={true}
           ordering={true}
           paging={true}
+          pageLength={spec.pageLength}
+          lengthMenu={spec.lengthMenu ? [...spec.lengthMenu] : undefined}
           searchPlaceholder={spec.labels.searchPlaceholder}
           emptyMessage={spec.labels.empty}
           noResultsMessage={spec.labels.noResults}

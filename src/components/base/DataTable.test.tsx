@@ -48,4 +48,14 @@ describe("DataTable (client-side mode)", () => {
     ));
     expect(screen.getByPlaceholderText("Filter...")).toBeTruthy();
   });
+
+  it("respects pageLength: only that many rows render on page 1 (client-side)", () => {
+    render(() => (
+      <DataTable columns={COLUMNS} data={DATA} paging={true} pageLength={2} />
+    ));
+    // page size 2 over 3 rows → page 1 shows the first two, the third is on page 2.
+    expect(screen.getByText("Alpha")).toBeTruthy();
+    expect(screen.getByText("Beta")).toBeTruthy();
+    expect(screen.queryByText("Gamma")).toBeNull();
+  });
 });
