@@ -30,5 +30,20 @@
     "transactions.edit",
     "transactions.delete",
     "transactions.backdate"
-  ]
+  ],
+  "exposes": {
+    "transactions:capacity": {
+      "methods": ["getPackageCapacityUsage"],
+      "risk": "low",
+      "visibility": "public",
+      "grants": ["transactions.view"]
+    },
+    "transactions:read": {
+      "methods": ["findById"],
+      "routes": ["GET /api/transactions"],
+      "risk": "low",
+      "visibility": "public",
+      "grants": ["transactions.view"]
+    }
+  }
 }
