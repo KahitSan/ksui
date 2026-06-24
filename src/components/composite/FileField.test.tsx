@@ -84,6 +84,18 @@ describe("FileField", () => {
     expect(getByTestId("ff-drop")).toBeTruthy();
   });
 
+  it("loads a pre-seeded image value via the presigned (https) URL into the preview", async () => {
+    const presignUrl = vi.fn(async () => "https://signed.example/preview.png?sig=abc");
+    const { getByTestId } = render(() => (
+      <FileField testId="ff" value={imageHandle} onUpload={vi.fn(async () => imageHandle)} presignUrl={presignUrl} />
+    ));
+    // A value handle present at mount presigns eagerly and shows the done card.
+    expect(getByTestId("ff-done")).toBeTruthy();
+    await waitFor(() => expect(presignUrl).toHaveBeenCalledWith(imageHandle));
+    const img = (await waitFor(() => getByTestId("ff-preview"))) as HTMLImageElement;
+    expect(img.getAttribute("src")).toBe("https://signed.example/preview.png?sig=abc");
+  });
+
   it("renders a non-image handle with a file icon (no presign)", () => {
     const presignUrl = vi.fn(async () => "x");
     const { getByTestId } = render(() => (
