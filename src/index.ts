@@ -160,6 +160,18 @@ export type {
 } from "./components/composite/resource/ResourcePage";
 export * from "./components/composite/resource/spec";
 
+// U6 — declarative file/media field for the spec-driven form runtime. Value is an
+// opaque asset handle; host injects onUpload + presignUrl (storage-agnostic).
+export { default as FileField, type FileFieldProps, type AssetHandle, type FileFieldStatus } from "./components/composite/FileField";
+
+// U7 — client renderer for a server-driven flow node graph. Host injects `advance`;
+// the client only renders UI-effect nodes and POSTs each step (authority is server-side).
+export { default as FlowRunner, type FlowRunnerProps } from "./components/composite/FlowRunner";
+
+// U8 — schema-bound custom renderer: looks up an id in the in-process registry and
+// renders it with validated props, falling back safely on miss/mismatch.
+export { default as CustomRenderer, type CustomRendererProps } from "./components/composite/CustomRenderer";
+
 // ---------------------------------------------------------------------------
 // Utils (not components)
 // ---------------------------------------------------------------------------
@@ -198,6 +210,46 @@ export type { ParsedDate } from "./utils/parse-date";
 export { highlightMatch, HighlightedText, matchesQuery, matchesAny } from "./utils/highlight";
 export { confirm, type ConfirmOptions } from "./utils/confirm";
 export { useFocusTrap, autoFocusOnMount, lockPullToRefresh, unlockPullToRefresh } from "./utils/dom";
+
+// U7 — flow node model (pure): the discriminated union of client-renderable
+// UI-effect nodes + the host-injected `advance` resolver type + pure step helpers.
+export {
+  isTerminal,
+  collectsInput,
+  formNodeInput,
+  missingRequired,
+} from "./utils/flow";
+export type {
+  FlowNode,
+  FlowFormNode,
+  FlowDisplayNode,
+  FlowChoiceNode,
+  FlowMessageNode,
+  FlowTerminalNode,
+  FlowFormField,
+  FlowChoiceOption,
+  FlowAdvance,
+  FlowState,
+  FlowInput,
+} from "./utils/flow";
+
+// U8 — in-process, build-time custom renderer registry (no eval/remote code) and
+// its consumes-schema validator. Hosts register renderers at startup.
+export {
+  registerRenderer,
+  getRenderer,
+  hasRenderer,
+  unregisterRenderer,
+  clearRenderers,
+  validateConsumes,
+} from "./utils/renderers";
+export type {
+  RendererDefinition,
+  RendererProps,
+  ConsumesSchema,
+  ConsumeKind,
+  ValidationResult,
+} from "./utils/renderers";
 
 // Optional host integrations. Components degrade gracefully when these are not
 // configured; a host app opts in once at startup.
