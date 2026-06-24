@@ -64,6 +64,7 @@ export { default as KpiCard, type KpiCardProps, type KpiTone } from "./component
 export { default as RadioCardGroup } from "./components/base/RadioCardGroup";
 export { default as FormErrorBanner } from "./components/base/FormErrorBanner";
 export { default as TagPill } from "./components/base/TagPill";
+export { default as BadgeSelect, type BadgeSelectProps, type BadgeSelectOption } from "./components/base/BadgeSelect";
 export { default as DateTile, type DateTileProps } from "./components/base/DateTile";
 export { default as Button, type ButtonProps, type ButtonIntent, type ButtonVariant } from "./components/base/Button";
 export { default as ThemeToggle, type ThemeToggleProps, type ThemeToggleValue } from "./components/base/ThemeToggle";
