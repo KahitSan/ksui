@@ -239,6 +239,14 @@ export type {
   FlowInput,
 } from "./utils/flow";
 
+// Flow-spec (pure): the node-based PROGRAM model — defineFlow + node/edge
+// builders producing a serializable FlowDefinition (the source of truth an
+// author writes in code), plus flowToGraph which lowers it to the graph the
+// FlowGraph canvas draws. This is the "authored in SDK code → parsed to a
+// diagram" seam.
+export { defineFlow, node, edge, flowToGraph } from "./utils/flow-spec";
+export type { FlowDefinition, FlowNodeDef, FlowNodeKind, FlowPort } from "./utils/flow-spec";
+
 // FlowGraph model (pure): the node/edge types + the dependency-free layout the
 // renderer uses. Exported so hosts can type their graph data and, if needed,
 // pre-compute layout off the DOM.

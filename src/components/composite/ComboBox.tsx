@@ -205,7 +205,7 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
           <div
             ref={popupRef}
             data-testid={tid("popup")}
-            class="z-[100] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[10000] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={eng.popupStyle()}
           >
             <div class="px-2 py-2 border-b border-zinc-800 flex items-center gap-2">

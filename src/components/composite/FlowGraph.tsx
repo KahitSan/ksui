@@ -1,26 +1,65 @@
-// FlowGraph (Vision §9 companion to FlowRunner): a renderer for a DECLARATIVE
-// node graph. Where FlowRunner *executes* a server-driven flow, FlowGraph
-// *draws* it — a flow's trigger→form→call→effect chain, a plugin-connection
-// map, any directed graph. With `interactive` it becomes a pan/zoom CANVAS;
-// with `animated` the edges show flow direction as marching dashes.
+// FlowGraph — a blueprint/automation-tool renderer for a declarative node graph
+// (the projection of a FlowDefinition; see utils/flow-spec). Where FlowRunner
+// *executes* a flow, FlowGraph *draws* it as connectable node cards — the way a
+// game-engine node editor or n8n shows behavior. With `interactive` it's a
+// pan/zoom canvas; with `animated` the connectors flow toward the arrowhead.
 //
-// Composite because it composes the pure graph model (utils/graph) with SVG
-// layout + interaction. Domain-free: it knows nothing about plugins or roles;
-// the host supplies typed nodes/edges and optional handlers. Self-contained CSS
-// (ksui-fg-* unscoped classes + CSS custom props); no Tailwind, no host-brand
-// classes (standalone-library rule). No graph/canvas library — pan/zoom is a
-// plain SVG group transform, animation is a CSS keyframe.
+// Composite: composes the pure graph model (utils/graph) with SVG edges + HTML
+// node cards (foreignObject) + interaction. Domain-free; self-contained CSS
+// (ksui-fg-* classes + CSS custom props); no Tailwind, no host-brand classes;
+// no graph/canvas library — pan/zoom is a group transform, layout is the pure
+// layoutGraph. Connectors are drawn BEHIND the opaque cards so an edge never
+// visibly crosses a node block.
 
 import type { Component, JSX } from "solid-js";
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { Dynamic } from "solid-js/web";
+import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
+import Database from "lucide-solid/icons/database";
+import MousePointerClick from "lucide-solid/icons/mouse-pointer-click";
+import AppWindow from "lucide-solid/icons/app-window";
+import DownloadCloud from "lucide-solid/icons/download-cloud";
+import ArrowLeftRight from "lucide-solid/icons/arrow-left-right";
+import Calculator from "lucide-solid/icons/calculator";
+import GitBranch from "lucide-solid/icons/git-branch";
+import Save from "lucide-solid/icons/save";
+import Radio from "lucide-solid/icons/radio";
+import Sparkles from "lucide-solid/icons/sparkles";
+import CircleCheck from "lucide-solid/icons/circle-check-big";
+import Circle from "lucide-solid/icons/circle";
 import {
-  DEFAULT_METRICS,
   layoutGraph,
+  type GraphDirection,
   type GraphEdge,
   type GraphLayout,
+  type GraphMetrics,
   type GraphNode,
   type PositionedNode,
 } from "../../utils/graph";
+
+type IconComp = Component<{ size?: number; class?: string }>;
+
+// Blueprint node-kind → icon. Unknown kinds fall back to a plain dot.
+const KIND_ICON: Record<string, IconComp> = {
+  data: Database,
+  trigger: MousePointerClick,
+  modal: AppWindow,
+  load: DownloadCloud,
+  call: ArrowLeftRight,
+  compute: Calculator,
+  condition: GitBranch,
+  commit: Save,
+  emit: Radio,
+  effect: Sparkles,
+  terminal: CircleCheck,
+};
+const iconFor = (kind?: string): IconComp => KIND_ICON[kind ?? ""] ?? Circle;
+
+// Gaps are at least half the larger node dimension (max(190,60)/2 ≈ 95) on both
+// axes, so nodes never crowd a neighbour from any side.
+const METRICS: GraphMetrics = { nodeW: 190, nodeH: 60, gapX: 100, gapY: 100, pad: 28 };
+const { nodeW, nodeH, pad } = METRICS;
+const ZOOM_MIN = 0.3;
+const ZOOM_MAX = 3;
 
 const STYLE_ID = "ksui-flow-graph-style";
 
@@ -30,39 +69,47 @@ function ensureStyle(): void {
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-.ksui-fg-wrap{width:100%;overflow:auto;position:relative;}
-.ksui-fg-wrap.interactive{overflow:hidden;border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.12));border-radius:8px;background:var(--ksui-fg-canvas,rgba(0,0,0,0.18));cursor:grab;touch-action:none;}
+.ksui-fg-wrap{width:100%;overflow:auto;position:relative;user-select:none;-webkit-user-select:none;}
+.ksui-fg-card,.ksui-fg-title,.ksui-fg-kind,.ksui-fg-elabel{user-select:none;-webkit-user-select:none;}
+.ksui-fg-wrap.interactive{overflow:hidden;border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.12));border-radius:10px;background:var(--ksui-fg-canvas,#101014);background-image:radial-gradient(var(--ksui-fg-dot,rgba(255,255,255,0.05)) 1px,transparent 1px);background-size:20px 20px;cursor:grab;touch-action:none;}
 .ksui-fg-wrap.interactive.grabbing{cursor:grabbing;}
+.ksui-fg-wrap.scroll{overflow:auto;border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.12));border-radius:10px;background:var(--ksui-fg-canvas,#101014);background-image:radial-gradient(var(--ksui-fg-dot,rgba(255,255,255,0.05)) 1px,transparent 1px);background-size:20px 20px;}
 .ksui-fg-svg{display:block;max-width:100%;height:auto;font-family:inherit;}
+.ksui-fg-wrap.scroll .ksui-fg-svg{margin:0 auto;}
 .ksui-fg-wrap.interactive .ksui-fg-svg{max-width:none;width:100%;height:100%;}
-.ksui-fg-edge{fill:none;stroke:var(--ksui-fg-edge,rgba(255,255,255,0.22));stroke-width:1.5;}
-.ksui-fg-edge.dashed{stroke-dasharray:4 4;}
+.ksui-fg-edge{fill:none;stroke:var(--ksui-fg-edge,rgba(255,255,255,0.28));stroke-width:1.75;}
+.ksui-fg-edge.dashed{stroke-dasharray:5 4;}
 .ksui-fg-edge.primary{stroke:var(--ksui-fg-primary,#c9a961);}
-.ksui-fg-edge.info{stroke:#3b82f6;}
-.ksui-fg-edge.success{stroke:#22c55e;}
-.ksui-fg-edge.danger{stroke:#ef4444;}
-.ksui-fg-edge.muted{stroke:rgba(255,255,255,0.14);}
-.ksui-fg-edge.flow{stroke-dasharray:5 5;animation:ksui-fg-march .7s linear infinite;}
-@keyframes ksui-fg-march{to{stroke-dashoffset:-10;}}
+.ksui-fg-edge.info{stroke:#5b9bf0;}
+.ksui-fg-edge.success{stroke:#43c478;}
+.ksui-fg-edge.danger{stroke:#ef6a6a;}
+.ksui-fg-edge.muted{stroke:rgba(255,255,255,0.2);}
+.ksui-fg-edge.flow{stroke-dasharray:6 5;animation:ksui-fg-march .8s linear infinite;}
+@keyframes ksui-fg-march{to{stroke-dashoffset:-11;}}
 @media (prefers-reduced-motion:reduce){.ksui-fg-edge.flow{animation:none;}}
-.ksui-fg-elabel{fill:var(--ksui-fg-muted,rgba(255,255,255,0.7));font-size:9px;}
-.ksui-fg-elabel-bg{fill:var(--ksui-fg-bg,#18181b);opacity:0.82;}
-.ksui-fg-box{fill:var(--ksui-fg-node-bg,rgba(255,255,255,0.04));stroke:var(--ksui-fg-node-border,rgba(255,255,255,0.16));stroke-width:1;}
-.ksui-fg-node.primary .ksui-fg-box{stroke:var(--ksui-fg-primary,#c9a961);fill:rgba(201,169,97,0.08);}
-.ksui-fg-node.info .ksui-fg-box{stroke:#3b82f6;fill:rgba(59,130,246,0.08);}
-.ksui-fg-node.success .ksui-fg-box{stroke:#22c55e;fill:rgba(34,197,94,0.08);}
-.ksui-fg-node.danger .ksui-fg-box{stroke:#ef4444;fill:rgba(239,68,68,0.08);}
-.ksui-fg-node.muted .ksui-fg-box{stroke:rgba(255,255,255,0.16);fill:rgba(255,255,255,0.02);}
-.ksui-fg-node.clickable{cursor:pointer;}
-.ksui-fg-node.clickable:hover .ksui-fg-box{fill:rgba(255,255,255,0.10);}
-.ksui-fg-node.clickable:focus{outline:none;}
-.ksui-fg-node.clickable:focus-visible .ksui-fg-box{stroke:var(--ksui-fg-primary,#c9a961);stroke-width:2;}
-.ksui-fg-label{fill:var(--ksui-fg-fg,#e4e4e7);font-size:12px;font-weight:600;}
-.ksui-fg-sublabel{fill:var(--ksui-fg-muted,rgba(255,255,255,0.55));font-size:9.5px;text-transform:uppercase;letter-spacing:0.04em;}
+.ksui-fg-handle{fill:var(--ksui-fg-canvas,#101014);stroke:var(--ksui-fg-edge,rgba(255,255,255,0.4));stroke-width:1.5;}
+.ksui-fg-node,.ksui-fg-edge,.ksui-fg-elabel,.ksui-fg-elabel-bg,.ksui-fg-handle{transition:opacity .12s ease;}
+.ksui-fg-dim{opacity:0.14;}
+.ksui-fg-elabel{fill:var(--ksui-fg-muted,rgba(255,255,255,0.78));font-size:9.5px;}
+.ksui-fg-elabel-bg{fill:var(--ksui-fg-canvas,#101014);opacity:0.92;}
+.ksui-fg-card{box-sizing:border-box;height:100%;display:flex;align-items:center;gap:9px;padding:0 11px;border-radius:9px;background:var(--ksui-fg-card,#1c1c22);border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.14));border-left-width:3px;overflow:hidden;}
+.ksui-fg-node.clickable .ksui-fg-card{cursor:pointer;}
+.ksui-fg-node.clickable .ksui-fg-card:hover{background:#23232b;}
+.ksui-fg-node:focus{outline:none;}
+.ksui-fg-node:focus-visible .ksui-fg-card{border-color:var(--ksui-fg-primary,#c9a961);}
+.ksui-fg-chip{flex:none;width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;}
+.ksui-fg-txt{min-width:0;display:flex;flex-direction:column;line-height:1.15;}
+.ksui-fg-title{font-size:12px;font-weight:600;color:var(--ksui-fg-fg,#ececef);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ksui-fg-kind{font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ksui-fg-muted,rgba(255,255,255,0.45));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ksui-fg-card.primary{border-left-color:#c9a961;} .ksui-fg-card.primary .ksui-fg-chip{background:#c9a961;color:#18181b;}
+.ksui-fg-card.info{border-left-color:#5b9bf0;} .ksui-fg-card.info .ksui-fg-chip{background:#3f6fb0;}
+.ksui-fg-card.success{border-left-color:#43c478;} .ksui-fg-card.success .ksui-fg-chip{background:#2f8e57;}
+.ksui-fg-card.danger{border-left-color:#ef6a6a;} .ksui-fg-card.danger .ksui-fg-chip{background:#b04545;}
+.ksui-fg-card.muted{border-left-color:rgba(255,255,255,0.3);} .ksui-fg-card.muted .ksui-fg-chip{background:#3a3a42;}
 .ksui-fg-empty{padding:1.75rem 1rem;text-align:center;font-size:0.82rem;color:var(--ksui-fg-muted,rgba(255,255,255,0.55));}
 .ksui-fg-controls{position:absolute;right:8px;bottom:8px;display:flex;gap:4px;z-index:1;}
-.ksui-fg-ctrl{width:24px;height:24px;display:grid;place-items:center;border-radius:5px;border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.18));background:var(--ksui-fg-bg,#18181b);color:var(--ksui-fg-fg,#e4e4e7);font-size:14px;line-height:1;cursor:pointer;user-select:none;}
-.ksui-fg-ctrl:hover{background:rgba(255,255,255,0.08);}
+.ksui-fg-ctrl{width:24px;height:24px;display:grid;place-items:center;border-radius:5px;border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.18));background:var(--ksui-fg-card,#1c1c22);color:var(--ksui-fg-fg,#ececef);font-size:14px;line-height:1;cursor:pointer;user-select:none;}
+.ksui-fg-ctrl:hover{background:#23232b;}
 .ksui-fg-hint{position:absolute;left:8px;bottom:8px;font-size:9.5px;color:var(--ksui-fg-muted,rgba(255,255,255,0.4));pointer-events:none;}
 `;
   document.head.appendChild(style);
@@ -77,99 +124,256 @@ export interface FlowGraphProps {
   emptyLabel?: string;
   /** Accessible description of the whole graph (the svg's aria-label). */
   ariaLabel?: string;
-  /** When supplied, nodes become buttons that fire this with the node id. */
+  /** When supplied, node cards become buttons that fire this with the node id. */
   onNodeSelect?: (id: string) => void;
-  /** Turn the graph into a pan (drag) + zoom (wheel/buttons) canvas. */
+  /** Turn the graph into a pan (drag) + zoom (wheel/buttons) canvas. Ignored for
+   *  vertical direction, which scrolls instead. */
   interactive?: boolean;
-  /** Animate edges as marching dashes flowing toward the arrowhead. */
+  /** Animate connectors as marching dashes flowing toward the arrowhead. */
   animated?: boolean;
-  /** Canvas viewport height in px when interactive (default 360). */
+  /** "horizontal" (default) flows left→right; "vertical" flows top→bottom and
+   *  renders in a scrollable panel (scroll to follow the flow). */
+  direction?: GraphDirection;
+  /** Viewport height in px — canvas height (horizontal) or max scroll height
+   *  (vertical). Default 360. */
   height?: number;
   testId?: string;
 }
 
-/** SVG has no text overflow; trim to keep labels inside the node box. */
+/** Trim a label to fit the card (CSS ellipsis also guards, but keep SVG sane). */
 function clip(text: string, max: number): string {
   return text.length > max ? text.slice(0, max - 1) + "…" : text;
 }
-
-const { nodeW, nodeH } = DEFAULT_METRICS;
-const ZOOM_MIN = 0.3;
-const ZOOM_MAX = 3;
 
 export const FlowGraph: Component<FlowGraphProps> = (props) => {
   ensureStyle();
   const tid = (s: string) => (props.testId ? `${props.testId}-${s}` : undefined);
 
-  const laid = createMemo(() => layoutGraph(props.nodes, props.edges, props.layout ?? "layered"));
+  const vertical = () => props.direction === "vertical";
+  // Pan/zoom canvas applies whenever interactive — in BOTH directions. Direction
+  // only changes the layout axis + how connectors leave/enter the cards.
+  const canvas = () => !!props.interactive;
+  const laid = createMemo(() =>
+    layoutGraph(props.nodes, props.edges, props.layout ?? "layered", METRICS, props.direction),
+  );
 
-  // Pan/zoom view transform (interactive mode only).
+  // Node ports: a node shows an INPUT handle only when something feeds it (so a
+  // trigger/root has none), and one OUTPUT handle per outgoing edge — a 2-branch
+  // condition therefore has two output handles, each driving a distinct edge.
+  const ports = createMemo(() => {
+    const incoming = new Set<string>();
+    const outBySource = new Map<string, GraphEdge[]>();
+    for (const e of props.edges) {
+      incoming.add(e.to);
+      const arr = outBySource.get(e.from) ?? [];
+      arr.push(e);
+      outBySource.set(e.from, arr);
+    }
+    return { incoming, outBySource };
+  });
+
+  // Order each node's outgoing edges by their TARGET's cross-axis position, so
+  // output handle 0 (leftmost/topmost) drives the edge whose target sits
+  // leftmost — branches then fan out without crossing (a condition's yes/no
+  // reach the correct sides). Falls back to declared order when positions tie.
+  const outRank = createMemo(() => {
+    const rank = new Map<GraphEdge, number>();
+    const cross = (id: string) => {
+      const p = laid().byId.get(id);
+      return p ? (vertical() ? p.x : p.y) : 0;
+    };
+    for (const es of ports().outBySource.values()) {
+      [...es]
+        .map((e, i) => ({ e, i }))
+        .sort((a, b) => cross(a.e.to) - cross(b.e.to) || a.i - b.i)
+        .forEach(({ e }, idx) => rank.set(e, idx));
+    }
+    return rank;
+  });
+
+  // The position of a node's i-th output handle (of n), spread along the leaving
+  // edge (bottom for vertical, right for horizontal). A single output centers.
+  const outHandle = (src: PositionedNode, i: number, n: number): { x: number; y: number } => {
+    const f = (i + 1) / (n + 1);
+    return vertical()
+      ? { x: src.x + nodeW * f, y: src.y + nodeH }
+      : { x: src.x + nodeW, y: src.y + nodeH * f };
+  };
+  const inHandle = (dst: PositionedNode): { x: number; y: number } =>
+    vertical()
+      ? { x: dst.x + nodeW / 2, y: dst.y }
+      : { x: dst.x, y: dst.y + nodeH / 2 };
+
+  // ── Node drag (move a node; edges follow) ──────────────────────────────────
+  const [offsets, setOffsets] = createSignal<Record<string, { dx: number; dy: number }>>({});
+  // The drawn position of a node = its laid-out slot + any drag offset.
+  const pos = (n: PositionedNode): PositionedNode => {
+    const o = offsets()[n.id];
+    return o ? { ...n, x: n.x + o.dx, y: n.y + o.dy } : n;
+  };
+  const drawn = (id: string): PositionedNode | undefined => {
+    const n = laid().byId.get(id);
+    return n ? pos(n) : undefined;
+  };
+
+  // ── Highlight (hover/click dims everything not connected) ──────────────────
+  const [hover, setHover] = createSignal<string | null>(null);
+  const [pinned, setPinned] = createSignal<string | null>(null);
+  const active = () => pinned() ?? hover();
+  const lit = createMemo<Set<string> | null>(() => {
+    const a = active();
+    if (!a) return null;
+    const s = new Set<string>([a]);
+    for (const e of props.edges) {
+      if (e.from === a) s.add(e.to);
+      if (e.to === a) s.add(e.from);
+    }
+    return s;
+  });
+  const nodeDim = (id: string) => lit() !== null && !lit()!.has(id);
+  const edgeDim = (e: GraphEdge) =>
+    lit() !== null && !(lit()!.has(e.from) && lit()!.has(e.to) && (e.from === active() || e.to === active()));
+
   const [view, setView] = createSignal({ x: 0, y: 0, k: 1 });
   const [grabbing, setGrabbing] = createSignal(false);
   let svgRef: SVGSVGElement | undefined;
   let dragging = false;
   let lastX = 0;
   let lastY = 0;
-  let moved = false; // distinguishes a pan from a node click
+  let moved = false;
+
+  // Fit the whole graph into the viewport (zoom-to-fit), centered, from the
+  // ACTUAL drawn bounding box (including any drag offsets) so the reset control
+  // always frames everything regardless of pan/zoom/drag state.
+  const fitView = () => {
+    if (!svgRef) return;
+    const rect = svgRef.getBoundingClientRect();
+    const vw = rect.width;
+    const vh = rect.height;
+    const ns = laid().nodes.map(pos);
+    if (!vw || !vh || ns.length === 0) return;
+    const minX = Math.min(...ns.map((n) => n.x)) - pad;
+    const minY = Math.min(...ns.map((n) => n.y)) - pad;
+    const maxX = Math.max(...ns.map((n) => n.x)) + nodeW + pad;
+    const maxY = Math.max(...ns.map((n) => n.y)) + nodeH + pad;
+    const gw = Math.max(1, maxX - minX);
+    const gh = Math.max(1, maxY - minY);
+    const k = Math.min(vw / gw, vh / gh, 1.4);
+    setView({ x: (vw - gw * k) / 2 - minX * k, y: (vh - gh * k) / 2 - minY * k, k });
+  };
+  // Default placement: NOT zoom-to-fit (keep 1:1), just pan so the graph's top is
+  // centered horizontally and visible — otherwise a centered layout can sit
+  // off-screen. Re-runs whenever the node SET changes (e.g. the flow selector
+  // switches flows), clearing prior drags, so a freshly-chosen flow is framed
+  // instead of leaving the view on the previous flow's now-empty region.
+  const nodeSig = createMemo(() => props.nodes.map((n) => n.id).join("|"));
+  let lastSig: string | null = null;
+  createEffect(() => {
+    const sig = nodeSig();
+    if (canvas() && sig !== lastSig && laid().nodes.length > 0 && svgRef) {
+      lastSig = sig;
+      setOffsets({});
+      requestAnimationFrame(() => {
+        if (!svgRef) return;
+        const vw = svgRef.clientWidth || 0;
+        const ns = laid().nodes;
+        if (!vw || ns.length === 0) return;
+        const minX = Math.min(...ns.map((n) => n.x));
+        const maxX = Math.max(...ns.map((n) => n.x)) + nodeW;
+        const minY = Math.min(...ns.map((n) => n.y));
+        // Center horizontally, align the content's actual top to a small margin.
+        setView({ x: vw / 2 - (minX + maxX) / 2, y: pad - minY, k: 1 });
+      });
+    }
+  });
 
   const clampK = (k: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, k));
-
   const zoomBy = (factor: number, cx?: number, cy?: number) => {
     const v = view();
     const k = clampK(v.k * factor);
-    // Keep the point (cx,cy) under the cursor fixed while zooming.
     const px = cx ?? (svgRef?.clientWidth ?? 0) / 2;
     const py = cy ?? (svgRef?.clientHeight ?? 0) / 2;
     setView({ x: px - (px - v.x) * (k / v.k), y: py - (py - v.y) * (k / v.k), k });
   };
-
   const onWheel = (e: WheelEvent) => {
-    if (!props.interactive) return;
+    if (!canvas()) return;
     e.preventDefault();
     const rect = svgRef?.getBoundingClientRect();
     zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - (rect?.left ?? 0), e.clientY - (rect?.top ?? 0));
   };
-
+  // A press that started on a node card (recorded by the card's handler) becomes
+  // a node-drag; a press on empty canvas pans. svgRef captures the pointer so the
+  // gesture continues even when it leaves the element.
+  let pendingNode: string | null = null;
+  let nodeDrag: string | null = null;
   const onPointerDown = (e: PointerEvent) => {
-    if (!props.interactive) return;
-    dragging = true;
+    if (!canvas()) return;
     moved = false;
-    setGrabbing(true);
     lastX = e.clientX;
     lastY = e.clientY;
     svgRef?.setPointerCapture(e.pointerId);
+    if (pendingNode) {
+      nodeDrag = pendingNode;
+      pendingNode = null;
+    } else {
+      dragging = true;
+      setGrabbing(true);
+    }
   };
   const onPointerMove = (e: PointerEvent) => {
-    if (!dragging) return;
+    if (!dragging && !nodeDrag) return;
     const dx = e.clientX - lastX;
     const dy = e.clientY - lastY;
     if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
     lastX = e.clientX;
     lastY = e.clientY;
-    setView((v) => ({ ...v, x: v.x + dx, y: v.y + dy }));
+    if (nodeDrag) {
+      const id = nodeDrag;
+      const k = view().k || 1;
+      setOffsets((o) => {
+        const cur = o[id] ?? { dx: 0, dy: 0 };
+        return { ...o, [id]: { dx: cur.dx + dx / k, dy: cur.dy + dy / k } };
+      });
+    } else {
+      setView((v) => ({ ...v, x: v.x + dx, y: v.y + dy }));
+    }
   };
   const endDrag = (e: PointerEvent) => {
+    // A press on a node that didn't move = a click → toggle its pinned highlight.
+    // A press on empty canvas that didn't move = a click-away → clear the focus.
+    if (nodeDrag && !moved) setPinned((p) => (p === nodeDrag ? null : nodeDrag));
+    else if (dragging && !moved) setPinned(null);
     dragging = false;
+    nodeDrag = null;
+    pendingNode = null;
     setGrabbing(false);
     try {
       svgRef?.releasePointerCapture(e.pointerId);
     } catch {
-      /* pointer already released */
+      /* already released */
     }
   };
 
-  // A cubic bezier from a source node's right edge to a target's left edge.
-  const edgePath = (s: PositionedNode, t: PositionedNode): string => {
-    const x1 = s.x + nodeW;
-    const y1 = s.y + nodeH / 2;
-    const x2 = t.x;
-    const y2 = t.y + nodeH / 2;
-    const dx = Math.max(36, (x2 - x1) / 2);
-    return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+  // Bezier from a source output handle to a target input handle. Control points
+  // pulled along the flow axis (down for vertical, right for horizontal) so the
+  // curve bows through the gaps rather than cutting across rows.
+  // Control-point reach is capped so a long edge (e.g. a back-edge looping up)
+  // curves gently instead of ballooning its handles far past the endpoints.
+  const edgePath = (a: { x: number; y: number }, b: { x: number; y: number }): string => {
+    if (vertical()) {
+      const dy = Math.min(110, Math.max(34, Math.abs(b.y - a.y) * 0.5));
+      return `M ${a.x} ${a.y} C ${a.x} ${a.y + dy}, ${b.x} ${b.y - dy}, ${b.x} ${b.y}`;
+    }
+    const dx = Math.min(140, Math.max(46, Math.abs(b.x - a.x) * 0.5));
+    return `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
   };
+  const mid = (a: { x: number; y: number }, b: { x: number; y: number }) => ({
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+  });
 
   const selectNode = (id: string) => {
-    if (moved) return; // a pan ended over the node — don't treat it as a click
+    if (moved) return;
     props.onNodeSelect?.(id);
   };
   const activate = (e: KeyboardEvent, id: string) => {
@@ -178,15 +382,20 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
       props.onNodeSelect?.(id);
     }
   };
-
   const groupTransform = () =>
-    props.interactive ? `translate(${view().x} ${view().y}) scale(${view().k})` : undefined;
+    canvas() ? `translate(${view().x} ${view().y}) scale(${view().k})` : undefined;
 
   return (
     <div
       class="ksui-fg-wrap"
-      classList={{ interactive: !!props.interactive, grabbing: grabbing() }}
-      style={props.interactive ? { height: `${props.height ?? 360}px` } : undefined}
+      classList={{ interactive: canvas(), scroll: vertical(), grabbing: grabbing() }}
+      style={
+        canvas()
+          ? { height: `${props.height ?? 360}px` }
+          : vertical()
+            ? { "max-height": `${props.height ?? 360}px` }
+            : undefined
+      }
       data-testid={tid("root")}
     >
       <Show
@@ -200,11 +409,11 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
         <svg
           ref={svgRef}
           class="ksui-fg-svg"
-          viewBox={props.interactive ? undefined : `0 0 ${laid().width} ${laid().height}`}
-          width={props.interactive ? "100%" : laid().width}
-          height={props.interactive ? "100%" : laid().height}
+          viewBox={canvas() ? undefined : `0 0 ${laid().width} ${laid().height}`}
+          width={canvas() ? "100%" : laid().width}
+          height={canvas() ? "100%" : laid().height}
           role="img"
-          aria-label={props.ariaLabel ?? "Relationship graph"}
+          aria-label={props.ariaLabel ?? "Flow graph"}
           data-testid={tid("svg")}
           onWheel={onWheel}
           onPointerDown={onPointerDown}
@@ -222,43 +431,48 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
               markerHeight="6"
               orient="auto-start-reverse"
             >
-              <path d="M0 0 L8 4 L0 8 z" fill="var(--ksui-fg-edge,rgba(255,255,255,0.35))" />
+              <path d="M0 0 L8 4 L0 8 z" fill="var(--ksui-fg-edge,rgba(255,255,255,0.45))" />
             </marker>
           </defs>
 
           <g transform={groupTransform()}>
-            {/* Edges first so nodes paint on top of the connectors. */}
+            {/* 1) Connectors — drawn first so the opaque cards paint over them. */}
             <For each={props.edges}>
               {(e) => {
-                const s = () => laid().byId.get(e.from);
-                const t = () => laid().byId.get(e.to);
+                const s = () => drawn(e.from);
+                const t = () => drawn(e.to);
                 return (
                   <Show when={s() && t()}>
                     {(() => {
-                      const src = s() as PositionedNode;
-                      const dst = t() as PositionedNode;
-                      const mx = (src.x + nodeW + dst.x) / 2;
-                      const my = (src.y + dst.y) / 2 + nodeH / 2;
+                      // Reactive endpoints so the connector follows a dragged node;
+                      // the output-handle slot is ranked by target position to avoid
+                      // crossings.
+                      const sibs = ports().outBySource.get(e.from) ?? [];
+                      const a = () =>
+                        outHandle(s() as PositionedNode, outRank().get(e) ?? 0, sibs.length || 1);
+                      const b = () => inHandle(t() as PositionedNode);
+                      const m = () => mid(a(), b());
+                      const lbl = () => clip(e.label ?? "", 18);
                       return (
-                        <g>
+                        <g classList={{ "ksui-fg-dim": edgeDim(e) }}>
                           <path
                             class={`ksui-fg-edge ${e.accent ?? ""} ${e.dashed ? "dashed" : ""} ${
                               props.animated ? "flow" : ""
                             }`}
-                            d={edgePath(src, dst)}
+                            d={edgePath(a(), b())}
                             marker-end="url(#ksui-fg-arrow)"
                           />
                           <Show when={e.label}>
                             <rect
                               class="ksui-fg-elabel-bg"
-                              x={mx - clip(e.label!, 18).length * 2.6 - 3}
-                              y={my - 7}
-                              width={clip(e.label!, 18).length * 5.2 + 6}
+                              x={m().x - lbl().length * 2.7 - 3}
+                              y={m().y - 7}
+                              width={lbl().length * 5.4 + 6}
                               height={12}
-                              rx={2}
+                              rx={3}
                             />
-                            <text class="ksui-fg-elabel" x={mx} y={my + 2} text-anchor="middle">
-                              {clip(e.label!, 18)}
+                            <text class="ksui-fg-elabel" x={m().x} y={m().y + 2} text-anchor="middle">
+                              {lbl()}
                             </text>
                           </Show>
                         </g>
@@ -269,30 +483,79 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
               }}
             </For>
 
-            {/* Nodes */}
+            {/* 2) Node cards (opaque HTML via foreignObject — the blueprint look). */}
             <For each={laid().nodes}>
-              {(n) => {
-                const interactiveNode = () => typeof props.onNodeSelect === "function";
+              {(base) => {
+                const n = () => pos(base);
+                const clickable = () => typeof props.onNodeSelect === "function";
                 return (
-                  <g
-                    class={`ksui-fg-node ${n.accent ?? ""} ${interactiveNode() ? "clickable" : ""}`}
-                    transform={`translate(${n.x} ${n.y})`}
-                    data-testid={tid(`node-${n.id}`)}
-                    role={interactiveNode() ? "button" : undefined}
-                    tabindex={interactiveNode() ? 0 : undefined}
-                    aria-label={n.sublabel ? `${n.label} — ${n.sublabel}` : n.label}
-                    onClick={interactiveNode() ? () => selectNode(n.id) : undefined}
-                    onKeyDown={interactiveNode() ? (ev) => activate(ev, n.id) : undefined}
+                  <foreignObject
+                    x={n().x}
+                    y={n().y}
+                    width={nodeW}
+                    height={nodeH}
+                    class="ksui-fg-node"
+                    classList={{ clickable: clickable(), "ksui-fg-dim": nodeDim(base.id) }}
+                    data-testid={tid(`node-${base.id}`)}
+                    role={clickable() ? "button" : undefined}
+                    tabindex={clickable() ? 0 : undefined}
+                    aria-label={base.sublabel ? `${base.label} — ${base.sublabel}` : base.label}
+                    onClick={clickable() ? () => selectNode(base.id) : undefined}
+                    onKeyDown={clickable() ? (ev) => activate(ev, base.id) : undefined}
+                    onPointerDown={canvas() ? () => (pendingNode = base.id) : undefined}
+                    onPointerEnter={canvas() ? () => setHover(base.id) : undefined}
+                    onPointerLeave={canvas() ? () => setHover(null) : undefined}
                   >
-                    <rect class="ksui-fg-box" width={nodeW} height={nodeH} rx={8} />
-                    <text class="ksui-fg-label" x={12} y={n.sublabel ? 20 : nodeH / 2 + 4}>
-                      {clip(n.label, 24)}
-                    </text>
-                    <Show when={n.sublabel}>
-                      <text class="ksui-fg-sublabel" x={12} y={34}>
-                        {clip(n.sublabel!, 28)}
-                      </text>
+                    <div
+                      // @ts-expect-error xmlns switches the foreignObject child back to HTML ns
+                      xmlns="http://www.w3.org/1999/xhtml"
+                      class={`ksui-fg-card ${base.accent ?? "muted"}`}
+                      style={canvas() ? { cursor: "grab" } : { "pointer-events": "none" }}
+                    >
+                      <span class="ksui-fg-chip">
+                        <Dynamic component={iconFor(base.kind)} size={15} />
+                      </span>
+                      <span class="ksui-fg-txt">
+                        <span class="ksui-fg-title">{base.label}</span>
+                        <Show when={base.sublabel}>
+                          <span class="ksui-fg-kind">{base.sublabel}</span>
+                        </Show>
+                      </span>
+                    </div>
+                  </foreignObject>
+                );
+              }}
+            </For>
+
+            {/* 3) I/O port handles, over everything. INPUT only when fed (a
+                 trigger/root has none); one OUTPUT per outgoing edge (a 2-branch
+                 condition shows two). */}
+            <For each={laid().nodes}>
+              {(base) => {
+                const n = () => pos(base);
+                const outs = () => ports().outBySource.get(base.id) ?? [];
+                const hasIn = () => ports().incoming.has(base.id);
+                return (
+                  <g classList={{ "ksui-fg-dim": nodeDim(base.id) }}>
+                    {/* cx/cy are accessor-driven so handles follow a dragged node. */}
+                    <Show when={hasIn()}>
+                      <circle
+                        class="ksui-fg-handle in"
+                        cx={inHandle(n()).x}
+                        cy={inHandle(n()).y}
+                        r={3.5}
+                      />
                     </Show>
+                    <For each={outs()}>
+                      {(_e, i) => (
+                        <circle
+                          class="ksui-fg-handle out"
+                          cx={outHandle(n(), i(), outs().length).x}
+                          cy={outHandle(n(), i(), outs().length).y}
+                          r={3.5}
+                        />
+                      )}
+                    </For>
                   </g>
                 );
               }}
@@ -300,14 +563,9 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
           </g>
         </svg>
 
-        <Show when={props.interactive}>
+        <Show when={canvas()}>
           <div class="ksui-fg-controls" data-testid={tid("controls")}>
-            <button
-              type="button"
-              class="ksui-fg-ctrl"
-              aria-label="Zoom in"
-              onClick={() => zoomBy(1.2)}
-            >
+            <button type="button" class="ksui-fg-ctrl" aria-label="Zoom in" onClick={() => zoomBy(1.2)}>
               +
             </button>
             <button
@@ -321,9 +579,9 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
             <button
               type="button"
               class="ksui-fg-ctrl"
-              aria-label="Reset view"
+              aria-label="Fit to view"
               data-testid={tid("reset")}
-              onClick={() => setView({ x: 0, y: 0, k: 1 })}
+              onClick={fitView}
             >
               ⤢
             </button>
