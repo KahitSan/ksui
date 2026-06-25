@@ -280,7 +280,9 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
         if (!vw || ns.length === 0) return;
         const minX = Math.min(...ns.map((n) => n.x));
         const maxX = Math.max(...ns.map((n) => n.x)) + nodeW;
-        setView({ x: vw / 2 - (minX + maxX) / 2, y: 0, k: 1 });
+        const minY = Math.min(...ns.map((n) => n.y));
+        // Center horizontally, align the content's actual top to a small margin.
+        setView({ x: vw / 2 - (minX + maxX) / 2, y: pad - minY, k: 1 });
       });
     }
   });
