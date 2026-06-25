@@ -102,4 +102,39 @@ describe("FlowGraph", () => {
     ));
     expect(getByTestId("fg-node-a").getAttribute("role")).toBeNull();
   });
+
+  it("renders pan/zoom controls only when interactive", () => {
+    const staticGraph = render(() => (
+      <FlowGraph testId="s" nodes={[{ id: "a", label: "A" }]} edges={[]} />
+    ));
+    expect(staticGraph.queryByTestId("s-controls")).toBeNull();
+
+    const canvas = render(() => (
+      <FlowGraph testId="c" interactive nodes={[{ id: "a", label: "A" }]} edges={[]} />
+    ));
+    expect(canvas.getByTestId("c-controls")).toBeTruthy();
+    expect(canvas.getByTestId("c-reset")).toBeTruthy();
+    // interactive svg fills the viewport rather than sizing to content
+    expect(canvas.getByTestId("c-svg").getAttribute("width")).toBe("100%");
+  });
+
+  it("animates edges with the flow class only when animated", () => {
+    const { container } = render(() => (
+      <FlowGraph
+        testId="fg"
+        animated
+        nodes={[{ id: "a", label: "A" }, { id: "b", label: "B" }]}
+        edges={[{ from: "a", to: "b" }]}
+      />
+    ));
+    expect(container.querySelector(".ksui-fg-edge.flow")).toBeTruthy();
+
+    const plain = render(() => (
+      <FlowGraph
+        nodes={[{ id: "a", label: "A" }, { id: "b", label: "B" }]}
+        edges={[{ from: "a", to: "b" }]}
+      />
+    ));
+    expect(plain.container.querySelector(".ksui-fg-edge.flow")).toBeNull();
+  });
 });
