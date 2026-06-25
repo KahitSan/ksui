@@ -173,6 +173,11 @@ export { default as FlowRunner, type FlowRunnerProps } from "./components/compos
 // renders it with validated props, falling back safely on miss/mismatch.
 export { default as CustomRenderer, type CustomRendererProps } from "./components/composite/CustomRenderer";
 
+// FlowGraph — read-only renderer for a declarative directed graph (the static
+// companion to FlowRunner). Domain-free: host supplies typed nodes/edges; used
+// for plugin-connection and role→permission visualizations.
+export { default as FlowGraph, type FlowGraphProps } from "./components/composite/FlowGraph";
+
 // ---------------------------------------------------------------------------
 // Utils (not components)
 // ---------------------------------------------------------------------------
@@ -233,6 +238,20 @@ export type {
   FlowState,
   FlowInput,
 } from "./utils/flow";
+
+// FlowGraph model (pure): the node/edge types + the dependency-free layout the
+// renderer uses. Exported so hosts can type their graph data and, if needed,
+// pre-compute layout off the DOM.
+export { layoutGraph, DEFAULT_METRICS } from "./utils/graph";
+export type {
+  GraphNode,
+  GraphEdge,
+  GraphLayout,
+  GraphAccent,
+  GraphMetrics,
+  PositionedNode,
+  GraphLayoutResult,
+} from "./utils/graph";
 
 // U8 — in-process, build-time custom renderer registry (no eval/remote code) and
 // its consumes-schema validator. Hosts register renderers at startup.
