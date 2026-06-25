@@ -169,7 +169,7 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
         <Portal>
           <div
             ref={popupRef}
-            class="z-[100] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[10000] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
           >
             <div class="px-2 py-1.5 border-b border-zinc-800">
