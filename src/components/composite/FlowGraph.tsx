@@ -336,12 +336,14 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
   // Bezier from a source output handle to a target input handle. Control points
   // pulled along the flow axis (down for vertical, right for horizontal) so the
   // curve bows through the gaps rather than cutting across rows.
+  // Control-point reach is capped so a long edge (e.g. a back-edge looping up)
+  // curves gently instead of ballooning its handles far past the endpoints.
   const edgePath = (a: { x: number; y: number }, b: { x: number; y: number }): string => {
     if (vertical()) {
-      const dy = Math.max(34, Math.abs(b.y - a.y) * 0.5);
+      const dy = Math.min(110, Math.max(34, Math.abs(b.y - a.y) * 0.5));
       return `M ${a.x} ${a.y} C ${a.x} ${a.y + dy}, ${b.x} ${b.y - dy}, ${b.x} ${b.y}`;
     }
-    const dx = Math.max(46, Math.abs(b.x - a.x) * 0.5);
+    const dx = Math.min(140, Math.max(46, Math.abs(b.x - a.x) * 0.5));
     return `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
   };
   const mid = (a: { x: number; y: number }, b: { x: number; y: number }) => ({
@@ -421,34 +423,33 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
                 return (
                   <Show when={s() && t()}>
                     {(() => {
-                      const src = s() as PositionedNode;
-                      const dst = t() as PositionedNode;
+                      // Reactive endpoints so the connector follows a dragged node.
                       const sibs = ports().outBySource.get(e.from) ?? [];
-                      const a = outHandle(src, Math.max(0, sibs.indexOf(e)), sibs.length || 1);
-                      const b = inHandle(dst);
-                      const m = mid(a, b);
-                      const mx = m.x;
-                      const my = m.y;
+                      const idx = Math.max(0, sibs.indexOf(e));
+                      const a = () => outHandle(s() as PositionedNode, idx, sibs.length || 1);
+                      const b = () => inHandle(t() as PositionedNode);
+                      const m = () => mid(a(), b());
+                      const lbl = () => clip(e.label ?? "", 18);
                       return (
                         <g classList={{ "ksui-fg-dim": edgeDim(e) }}>
                           <path
                             class={`ksui-fg-edge ${e.accent ?? ""} ${e.dashed ? "dashed" : ""} ${
                               props.animated ? "flow" : ""
                             }`}
-                            d={edgePath(a, b)}
+                            d={edgePath(a(), b())}
                             marker-end="url(#ksui-fg-arrow)"
                           />
                           <Show when={e.label}>
                             <rect
                               class="ksui-fg-elabel-bg"
-                              x={mx - clip(e.label!, 18).length * 2.7 - 3}
-                              y={my - 7}
-                              width={clip(e.label!, 18).length * 5.4 + 6}
+                              x={m().x - lbl().length * 2.7 - 3}
+                              y={m().y - 7}
+                              width={lbl().length * 5.4 + 6}
                               height={12}
                               rx={3}
                             />
-                            <text class="ksui-fg-elabel" x={mx} y={my + 2} text-anchor="middle">
-                              {clip(e.label!, 18)}
+                            <text class="ksui-fg-elabel" x={m().x} y={m().y + 2} text-anchor="middle">
+                              {lbl()}
                             </text>
                           </Show>
                         </g>
@@ -513,17 +514,24 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
                 const hasIn = () => ports().incoming.has(base.id);
                 return (
                   <g classList={{ "ksui-fg-dim": nodeDim(base.id) }}>
+                    {/* cx/cy are accessor-driven so handles follow a dragged node. */}
                     <Show when={hasIn()}>
-                      {(() => {
-                        const p = inHandle(n());
-                        return <circle class="ksui-fg-handle in" cx={p.x} cy={p.y} r={3.5} />;
-                      })()}
+                      <circle
+                        class="ksui-fg-handle in"
+                        cx={inHandle(n()).x}
+                        cy={inHandle(n()).y}
+                        r={3.5}
+                      />
                     </Show>
                     <For each={outs()}>
-                      {(_e, i) => {
-                        const p = outHandle(n(), i(), outs().length);
-                        return <circle class="ksui-fg-handle out" cx={p.x} cy={p.y} r={3.5} />;
-                      }}
+                      {(_e, i) => (
+                        <circle
+                          class="ksui-fg-handle out"
+                          cx={outHandle(n(), i(), outs().length).x}
+                          cy={outHandle(n(), i(), outs().length).y}
+                          r={3.5}
+                        />
+                      )}
                     </For>
                   </g>
                 );
