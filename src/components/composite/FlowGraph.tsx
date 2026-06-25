@@ -172,6 +172,25 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
     return { incoming, outBySource };
   });
 
+  // Order each node's outgoing edges by their TARGET's cross-axis position, so
+  // output handle 0 (leftmost/topmost) drives the edge whose target sits
+  // leftmost — branches then fan out without crossing (a condition's yes/no
+  // reach the correct sides). Falls back to declared order when positions tie.
+  const outRank = createMemo(() => {
+    const rank = new Map<GraphEdge, number>();
+    const cross = (id: string) => {
+      const p = laid().byId.get(id);
+      return p ? (vertical() ? p.x : p.y) : 0;
+    };
+    for (const es of ports().outBySource.values()) {
+      [...es]
+        .map((e, i) => ({ e, i }))
+        .sort((a, b) => cross(a.e.to) - cross(b.e.to) || a.i - b.i)
+        .forEach(({ e }, idx) => rank.set(e, idx));
+    }
+    return rank;
+  });
+
   // The position of a node's i-th output handle (of n), spread along the leaving
   // edge (bottom for vertical, right for horizontal). A single output centers.
   const outHandle = (src: PositionedNode, i: number, n: number): { x: number; y: number } => {
@@ -423,10 +442,12 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
                 return (
                   <Show when={s() && t()}>
                     {(() => {
-                      // Reactive endpoints so the connector follows a dragged node.
+                      // Reactive endpoints so the connector follows a dragged node;
+                      // the output-handle slot is ranked by target position to avoid
+                      // crossings.
                       const sibs = ports().outBySource.get(e.from) ?? [];
-                      const idx = Math.max(0, sibs.indexOf(e));
-                      const a = () => outHandle(s() as PositionedNode, idx, sibs.length || 1);
+                      const a = () =>
+                        outHandle(s() as PositionedNode, outRank().get(e) ?? 0, sibs.length || 1);
                       const b = () => inHandle(t() as PositionedNode);
                       const m = () => mid(a(), b());
                       const lbl = () => clip(e.label ?? "", 18);
