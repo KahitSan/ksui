@@ -54,8 +54,9 @@ const KIND_ICON: Record<string, IconComp> = {
 };
 const iconFor = (kind?: string): IconComp => KIND_ICON[kind ?? ""] ?? Circle;
 
-// Roomier than the default metrics so connectors have space and cards breathe.
-const METRICS: GraphMetrics = { nodeW: 190, nodeH: 60, gapX: 96, gapY: 30, pad: 26 };
+// Gaps are at least half the larger node dimension (max(190,60)/2 ≈ 95) on both
+// axes, so nodes never crowd a neighbour from any side.
+const METRICS: GraphMetrics = { nodeW: 190, nodeH: 60, gapX: 100, gapY: 100, pad: 28 };
 const { nodeW, nodeH, pad } = METRICS;
 const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 3;
@@ -68,7 +69,8 @@ function ensureStyle(): void {
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-.ksui-fg-wrap{width:100%;overflow:auto;position:relative;}
+.ksui-fg-wrap{width:100%;overflow:auto;position:relative;user-select:none;-webkit-user-select:none;}
+.ksui-fg-card,.ksui-fg-title,.ksui-fg-kind,.ksui-fg-elabel{user-select:none;-webkit-user-select:none;}
 .ksui-fg-wrap.interactive{overflow:hidden;border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.12));border-radius:10px;background:var(--ksui-fg-canvas,#101014);background-image:radial-gradient(var(--ksui-fg-dot,rgba(255,255,255,0.05)) 1px,transparent 1px);background-size:20px 20px;cursor:grab;touch-action:none;}
 .ksui-fg-wrap.interactive.grabbing{cursor:grabbing;}
 .ksui-fg-wrap.scroll{overflow:auto;border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.12));border-radius:10px;background:var(--ksui-fg-canvas,#101014);background-image:radial-gradient(var(--ksui-fg-dot,rgba(255,255,255,0.05)) 1px,transparent 1px);background-size:20px 20px;}
@@ -240,17 +242,22 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
     const k = Math.min(vw / gw, vh / gh, 1.4);
     setView({ x: (vw - gw * k) / 2 - minX * k, y: (vh - gh * k) / 2 - minY * k, k });
   };
-  // Default placement on first load: NOT zoom-to-fit (keep 1:1), just pan so the
-  // graph's top is centered horizontally and visible — otherwise a centered
-  // layout can sit off-screen. The Fit control still zooms-to-fit on demand.
-  let placed = false;
+  // Default placement: NOT zoom-to-fit (keep 1:1), just pan so the graph's top is
+  // centered horizontally and visible — otherwise a centered layout can sit
+  // off-screen. Re-runs whenever the node SET changes (e.g. the flow selector
+  // switches flows), clearing prior drags, so a freshly-chosen flow is framed
+  // instead of leaving the view on the previous flow's now-empty region.
+  const nodeSig = createMemo(() => props.nodes.map((n) => n.id).join("|"));
+  let lastSig: string | null = null;
   createEffect(() => {
-    if (canvas() && !placed && laid().nodes.length > 0 && svgRef) {
-      placed = true;
+    const sig = nodeSig();
+    if (canvas() && sig !== lastSig && laid().nodes.length > 0 && svgRef) {
+      lastSig = sig;
+      setOffsets({});
       requestAnimationFrame(() => {
         if (!svgRef) return;
         const vw = svgRef.clientWidth || 0;
-        const ns = laid().nodes.map(pos);
+        const ns = laid().nodes;
         if (!vw || ns.length === 0) return;
         const minX = Math.min(...ns.map((n) => n.x));
         const maxX = Math.max(...ns.map((n) => n.x)) + nodeW;
