@@ -36,9 +36,6 @@
         "../kserp/kernel/*/index.ts",
         "../kserp/kernel/*"
       ],
-      "@kahitsan/plugin-sdk": [
-        "../kserp/packages/plugin-sdk/src/index.ts"
-      ],
       "@kahitsan/plugin-server-utils": [
         "../kserp/packages/plugin-server-utils/src/index.ts"
       ],
