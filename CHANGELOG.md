@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.24.0
+
+### Minor Changes
+
+- 15c2db3: FlowGraph becomes a node-based blueprint editor. New `flow-spec` model (`defineFlow` + `node`/`edge` builders → a pure, serializable `FlowDefinition`) and a `flowToGraph` converter, plus a `kind` field on graph nodes. FlowGraph renders blueprint-style cards with a lucide type-icon per node kind, input/output port handles (one output handle per outgoing edge, ordered by target so branches don't cross), and runs as an interactive canvas: drag-to-pan, scroll/buttons zoom, draggable nodes (edges follow), hover/click to focus a node's connections (dimming the rest, click-away to clear), animated connectors, and a vertical layout option. Layout is a dependency-free barycenter pass, computed per connected component and cycle-safe (back-edges are excluded from depth so loops don't run the graph away), with content normalized to the origin. Also: SearchableSelect and ComboBox dropdowns raised above the modal layer (z-index) so they're not hidden inside high-z modals.
+
 ## 0.23.0
 
 ### Minor Changes
