@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig } from "vite";
 import { fileURLToPath } from "node:url";
+import { config as loadEnv } from "dotenv";
 
 // Plugin unit + integration tests.
 //
@@ -16,6 +17,13 @@ import { fileURLToPath } from "node:url";
 // kernel SOURCE (../kserp/kernel-*/index.ts), not a built dist.
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
+// Load THIS plugin's OWN .env so `npm test` gets its DB connection from the
+// plugin's own config — the plugin stays independent and never reaches into the
+// kernel's tree. worktree-create.sh writes this .env (shared dev DB) in a
+// worktree; .env.example documents the standalone contract; CI sets DB_* directly
+// (dotenv never overrides set vars, and a missing .env is a no-op).
+loadEnv({ path: r("./.env") });
+
 export default defineConfig({
   resolve: {
     alias: [
@@ -26,6 +34,7 @@ export default defineConfig({
       { find: /^@ks-erp\/kernel-theme$/, replacement: r("../kserp/kernel-theme/index.ts") },
       { find: /^@ks-erp\/kernel$/, replacement: r("../kserp/kernel/index.ts") },
       { find: /^@ks-erp\/kernel\/(.*)$/, replacement: r("../kserp/kernel/$1.ts") },
+      { find: /^@kahitsan\/plugin-sdk$/, replacement: r("../kserp/packages/plugin-sdk/src/index.ts") },
       {
         find: /^@kahitsan\/plugin-server-utils\/test$/,
         replacement: r("../kserp/packages/plugin-server-utils/src/test/index.ts"),

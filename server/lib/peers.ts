@@ -5,7 +5,7 @@
 // can't cross a process boundary, so this module wraps the kernel's HTTP RPC
 // (kernel/service-rpc → tryCallPlugin) instead. Every call relays the SAME
 // kernel-signed identity header transactions received, so the peer runs the
-// query as the original user/org and scopes it to req.workspaceId itself.
+// query as the original user/workspace and scopes it to req.workspaceId itself.
 //
 // GRACEFUL DEGRADATION is the whole point of using tryCallPlugin (not
 // callPlugin): when a peer plugin isn't loaded the kernel answers 503 and
@@ -25,7 +25,7 @@
 // voucher over RPC and compute the discount, but we DO NOT increment usage as
 // part of the charge transaction — see chargeFlow's best-effort note.
 
-import { tryCallPlugin, type PluginUnavailableError } from "@ks-erp/kernel-composite";
+import { tryCallPlugin, type PluginUnavailableError } from "@kahitsan/plugin-sdk";
 
 export type IdentityHeader = string | undefined;
 

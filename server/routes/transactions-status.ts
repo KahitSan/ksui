@@ -8,17 +8,43 @@
 // per-role share grants), GET /:id/line-items, and
 // POST /:id/line-items/:lineItemId/void.
 //
-// Extracted verbatim from transactions-core.ts. Every query keeps its
-// AND workspace_id = $N org scoping, the both-sides tenant delete in
-// visibility, and all BEGIN/COMMIT/ROLLBACK unchanged. registerCoreRoutes
+// Extracted from transactions-core.ts. Workspace scoping is preserved: routes
+// migrated onto makeDataSurface inject `AND workspace_id` from the ambient tenant
+// context; routes still on raw db.query keep their explicit `AND workspace_id = $N`
+// (incl. the both-sides tenant delete in visibility), and all
+// BEGIN/COMMIT/ROLLBACK are unchanged. registerCoreRoutes
 // calls this last (after Edit), reproducing the original tail order.
 
 import { type Router, type Request, type Response } from "express";
-import { tenant, readIdentity, applyTenantContext } from "@ks-erp/kernel-base";
+import { tenant, readIdentity, applyTenantContext, makeDataSurface } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
+
+// Explicit column list for a line-item row — the data surface bans `RETURNING *`;
+// these are every column of accounts.transaction_line_items, so the void
+// response stays byte-identical to the prior `RETURNING *`.
+const LINE_ITEM_COLS = [
+  "id",
+  "transaction_id",
+  "workspace_id",
+  "package_id",
+  "package_variant_id",
+  "description",
+  "quantity",
+  "unit_price",
+  "duration_value",
+  "duration_unit",
+  "started_at",
+  "ends_at",
+  "status",
+  "created_at",
+  "updated_at",
+  "client_id",
+  "customer_group_id",
+] as const;
 
 export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
+  const data = makeDataSurface(pool);
 
   // ── Soft-delete (void) ───────────────────────────────────────────────────
   router.delete(
@@ -28,12 +54,16 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
     requirePermission("transactions.delete"),
     async (req: Request, res: Response) => {
       try {
-        const result = await pool.query(
-          `UPDATE accounts.transactions SET status = 'voided', updated_at = NOW(), updated_by = $3
-             WHERE id = $1 AND workspace_id = $2 AND status != 'voided' RETURNING id`,
-          [req.params.id, req.workspaceId, req.user?.id ?? null],
+        // No BEFORE UPDATE trigger on accounts.transactions, so updated_at is
+        // set explicitly — `new Date()` (an absolute instant) is TZ-safe, vs
+        // `NOW()` which the surface's bound-param SET can't express.
+        const rows = await data.update(
+          "transactions",
+          { status: "voided", updated_at: new Date(), updated_by: req.user?.id ?? null },
+          { where: "id = $1 AND status != 'voided'", params: [req.params.id] },
+          ["id"],
         );
-        if (result.rows.length === 0) {
+        if (rows.length === 0) {
           res.status(404).json({ error: "Not found or already voided" });
           return;
         }
@@ -163,7 +193,7 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
           [req.params.id, req.workspaceId, Boolean(is_private)],
         );
         // Child tables have no workspace_id column; route both deletes
-        // through the org-scoped tenant handle (same pinned client, inside the
+        // through the workspace-scoped tenant handle (same pinned client, inside the
         // BEGIN/COMMIT) so it compiles a both-sides subquery against the FK
         // parent accounts.transactions and the delete can't cross tenants.
         await tenant(dbClient, identity).delete("transaction_visibility", {
@@ -210,14 +240,26 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
     requirePermission("transactions.view"),
     async (req: Request, res: Response) => {
       try {
-        const rows = await pool.query(
-          `SELECT id, package_id, package_variant_id, description, quantity, unit_price,
-                  duration_value, duration_unit, started_at, ends_at, status, client_id, customer_group_id
-             FROM accounts.transaction_line_items
-            WHERE transaction_id = $1 AND workspace_id = $2 ORDER BY id ASC`,
-          [req.params.id, req.workspaceId],
+        const line_items = await data.find(
+          "transaction_line_items",
+          [
+            "id",
+            "package_id",
+            "package_variant_id",
+            "description",
+            "quantity",
+            "unit_price",
+            "duration_value",
+            "duration_unit",
+            "started_at",
+            "ends_at",
+            "status",
+            "client_id",
+            "customer_group_id",
+          ],
+          { where: "transaction_id = $1", params: [req.params.id], orderBy: "id ASC" },
         );
-        res.json({ line_items: rows.rows });
+        res.json({ line_items });
       } catch (err) {
         console.error("[transactions] line-items list error:", err);
         res.status(500).json({ error: "Internal server error" });
@@ -232,16 +274,23 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
     requirePermission("transactions.edit"),
     async (req: Request, res: Response) => {
       try {
-        const result = await pool.query(
-          `UPDATE accounts.transaction_line_items SET status = 'voided', updated_at = NOW()
-             WHERE id = $1 AND transaction_id = $2 AND workspace_id = $3 AND status != 'voided' RETURNING *`,
-          [req.params.lineItemId, req.params.id, req.workspaceId],
+        // No BEFORE UPDATE trigger, so updated_at is set explicitly (TZ-safe
+        // absolute instant). RETURNING * → the full explicit column list so the
+        // response shape is unchanged.
+        const rows = await data.update(
+          "transaction_line_items",
+          { status: "voided", updated_at: new Date() },
+          {
+            where: "id = $1 AND transaction_id = $2 AND status != 'voided'",
+            params: [req.params.lineItemId, req.params.id],
+          },
+          LINE_ITEM_COLS,
         );
-        if (result.rows.length === 0) {
+        if (rows.length === 0) {
           res.status(404).json({ error: "Not found or already voided" });
           return;
         }
-        res.json(result.rows[0]);
+        res.json(rows[0]);
       } catch (err) {
         console.error("[transactions] line-item void error:", err);
         res.status(500).json({ error: "Internal server error" });

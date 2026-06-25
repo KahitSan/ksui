@@ -10,7 +10,7 @@
 //
 // The export file lives in S3-compatible object storage ONLY (DO Spaces in prod,
 // MinIO in dev/CI) — never on this server's disk, mirroring the attachment model.
-// Unlike a single attachment, a date-range export is a BULK dump of an org's
+// Unlike a single attachment, a date-range export is a BULK dump of a workspace's
 // financial rows, so the object is uploaded PRIVATE (not public-read) and served
 // back only through the authenticated /download route below — never at a
 // world-readable URL. Job state lives in accounts.export_jobs (created by the
@@ -21,8 +21,8 @@
 // requester can't already see in the list. Voided rows are excluded.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
-import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { s3Enabled, s3PutObject, s3GetObject, s3DeleteObject } from "@kahitsan/plugin-server-utils";
 import { privacyClause, isValidIsoDate, resolveUserNames } from "./shared.js";
 import { findAccountsByIds, findPayeesByIds, type IdentityHeader } from "../lib/peers.js";

@@ -189,7 +189,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
           <div class="mt-4 pt-3 border-t border-zinc-800/50">
             <p class="text-[10px] text-zinc-500 mb-3">
               Always visible to:{" "}
-              <span class="text-zinc-400">you (creator), org admins, superusers</span>
+              <span class="text-zinc-400">you (creator), workspace admins, superusers</span>
             </p>
 
             <span class="text-xs text-zinc-500 block mb-2">Share with role</span>

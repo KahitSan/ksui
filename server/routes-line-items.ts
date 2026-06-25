@@ -29,8 +29,8 @@
 //     degradation, consistent with the rest of the plugin.
 
 import { Router, type Request, type Response } from "express";
-import { applyTenantContext } from "@ks-erp/kernel-base";
-import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import { applyTenantContext } from "@kahitsan/plugin-sdk";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {
   findPackagesByIds,
   findVariantsByIds,
@@ -91,7 +91,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
       let idx = 1;
       const conditions: string[] = [];
 
-      // Org isolation (line items carry workspace_id directly).
+      // Workspace isolation (line items carry workspace_id directly).
       conditions.push(`li.workspace_id = $${idx++}`);
       params.push(req.workspaceId);
 
@@ -867,7 +867,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           customer_group_id: number | null;
         };
 
-        // Variant must belong to the same org (resolved over RPC), but NOT
+        // Variant must belong to the same workspace (resolved over RPC), but NOT
         // necessarily the source's package — cross-package extends are allowed.
         const variants = await findVariantsByIds([package_variant_id], idh);
         const variant = variants?.[0];

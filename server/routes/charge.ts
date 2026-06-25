@@ -8,11 +8,11 @@
 // position as before — ahead of "/:id" so the literal segments win.
 //
 // Cross-plugin data (package/client names) is resolved over the kernel RPC with
-// graceful degradation. privacyClause + org-scoping are unchanged.
+// graceful degradation. privacyClause + workspace-scoping are unchanged.
 
 import { type Router, type Request, type Response, type RequestHandler } from "express";
-import type { PluginDb } from "@ks-erp/kernel/services/database";
-import { identityHeaderOf } from "@ks-erp/kernel/service-rpc";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { findPackagesByIds, findClientsByIds } from "../lib/peers.js";
 import { runCharge, ChargeValidationError, type ChargePayload } from "../helpers-charge.js";
 import { privacyClause } from "./shared.js";
@@ -120,7 +120,7 @@ export function registerChargeRoutes(router: Router, ctx: ChargeRouteCtx): void 
     requirePermission("transactions.create"),
     async (req: Request, res: Response) => {
       if (!req.workspaceId || !req.user?.id) {
-        res.status(400).json({ error: "Organization and user context required" });
+        res.status(400).json({ error: "Workspace and user context required" });
         return;
       }
       try {
