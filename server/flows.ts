@@ -1,6 +1,6 @@
-// AUTO-GENERATED from the verified flow recon — the plugin's §9 interaction
+// Seeded from the verified flow recon — the plugin's §9 interaction
 // graph as node steps. Authored with the SDK buildFlow DSL; served at
-// /__meta/flows for the kernel to render. Regenerate, don't hand-edit.
+// /__meta/flows for the kernel to render. Edit by hand; ExecFlow nodes execute via runFlow.
 import {
   buildFlow,
   type FlowDefinition,
