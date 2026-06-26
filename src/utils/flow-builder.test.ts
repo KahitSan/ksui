@@ -1,5 +1,5 @@
 // flow-builder: node-step authoring → FlowDefinition. Tests linear chaining and
-// the condition fork (both arms captured).
+// a real graph (branch + loop + join), which the builder must express 1:1.
 import { describe, expect, it } from "vitest";
 import { buildFlow } from "./flow-builder";
 import { flowToGraph } from "./flow-spec";
@@ -7,37 +7,46 @@ import { flowToGraph } from "./flow-spec";
 describe("buildFlow", () => {
   it("chains linear steps into a connected path", () => {
     const def = buildFlow("item.create", "Add Item", (f) => {
-      f.trigger("Add Item button").modal("Item form").commit("Create", "POST /api/items");
+      const t = f.trigger("Add Item button");
+      const m = f.modal("Item form");
+      const c = f.commit("Create", "POST /api/items");
+      t.to(m).to(c);
     });
     expect(def.nodes.map((n) => n.kind)).toEqual(["trigger", "modal", "commit"]);
     const { edges } = flowToGraph(def);
-    // trigger → modal → commit
-    expect(edges).toHaveLength(2);
-    expect(edges[0].from).toBe(def.nodes[0].id);
-    expect(edges[0].to).toBe(def.nodes[1].id);
-    expect(edges[1].to).toBe(def.nodes[2].id);
+    expect(edges.map((e) => [e.from, e.to])).toEqual([
+      [def.nodes[0].id, def.nodes[1].id],
+      [def.nodes[1].id, def.nodes[2].id],
+    ]);
   });
 
-  it("forks a condition into two labelled branches, both rendered", () => {
+  it("expresses a branch, a loop, and a join (a real graph, not a tree)", () => {
     const def = buildFlow("cart.checkout", "Checkout", (f) => {
-      f.trigger("Checkout button")
-        .modal("Coupon entry")
-        .condition(
-          "Coupon valid?",
-          (yes) => yes.call("pricing:validate").compute("Apply discount").commit("Place order"),
-          (no) => no.commit("Place order"),
-        );
+      const list = f.data("Items");
+      const open = f.trigger("Checkout button");
+      const form = f.modal("Coupon entry");
+      const valid = f.condition("Coupon valid?");
+      const apply = f.compute("Apply discount");
+      const place = f.commit("Place order");
+      list.to(open).to(form).to(valid);
+      valid.to(apply, "yes").to(place); // yes arm
+      valid.to(form, "no"); // LOOP back to the form
+      apply.to(place); // (place already reached from apply) — keep single
+      place.to(list, "done"); // JOIN/loop back to the list
     });
+
     const cond = def.nodes.find((n) => n.kind === "condition")!;
-    // exactly two outgoing branches, to DIFFERENT nodes, each labelled
-    expect(cond.out).toHaveLength(2);
-    expect(cond.out![0].to).not.toBe(cond.out![1].to);
-    expect(cond.out!.map((p) => p.label)).toEqual(["yes", "no"]);
-    // the "yes" arm carries the validate→compute→commit chain
-    expect(def.nodes.some((n) => n.kind === "call" && n.detail === "pricing:validate")).toBe(true);
-    expect(def.nodes.filter((n) => n.kind === "commit")).toHaveLength(2);
-    // every edge resolves (defineFlow would have thrown otherwise)
+    expect(cond.out!.map((p) => p.label).sort()).toEqual(["no", "yes"]);
+
+    // a back-edge exists (loop): some edge points to an earlier node
+    const order = new Map(def.nodes.map((n, i) => [n.id, i] as const));
     const { nodes, edges } = flowToGraph(def);
+    expect(edges.some((e) => order.get(e.to)! <= order.get(e.from)!)).toBe(true);
+    // a join exists: some node has in-degree > 1
+    const indeg: Record<string, number> = {};
+    edges.forEach((e) => (indeg[e.to] = (indeg[e.to] ?? 0) + 1));
+    expect(Object.values(indeg).some((d) => d > 1)).toBe(true);
+    // every edge resolves (defineFlow would have thrown on a dangling one)
     const ids = new Set(nodes.map((n) => n.id));
     expect(edges.every((e) => ids.has(e.from) && ids.has(e.to))).toBe(true);
   });
