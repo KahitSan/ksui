@@ -32,9 +32,19 @@ export function SharedWithStack(props: {
   const extra = () => Math.max(0, props.people.length - MAX);
   const fullList = () => props.people.map((p) => p.name).join(", ");
   return (
-    <span class="hidden sm:flex items-center -space-x-1.5 shrink-0" title={`Shared with: ${fullList()}`}>
+    <span
+      class="hidden sm:flex items-center -space-x-1.5 shrink-0"
+      title={`Shared with: ${fullList()}`}
+    >
       <For each={visible()}>
-        {(p) => <Avatar name={p.name} image={p.image} size="xs" class="ring-2 ring-zinc-950" />}
+        {(p) => (
+          <Avatar
+            name={p.name}
+            image={p.image}
+            size="xs"
+            class="ring-2 ring-zinc-950"
+          />
+        )}
       </For>
       <Show when={extra() > 0}>
         <span class="w-5 h-5 rounded-full ring-2 ring-zinc-950 bg-zinc-700 flex items-center justify-center text-[8px] font-semibold text-zinc-200 select-none">

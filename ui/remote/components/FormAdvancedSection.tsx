@@ -58,13 +58,16 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
           when={
             props.amount &&
             parseFloat(props.amount) > 0 &&
-            (props.taxType === "vat_inclusive" || props.taxType === "vat_exclusive")
+            (props.taxType === "vat_inclusive" ||
+              props.taxType === "vat_exclusive")
           }
         >
           {(() => {
             const amt = parseFloat(props.amount);
             const sub =
-              props.taxType === "vat_inclusive" ? Math.round((amt / 1.12) * 100) / 100 : amt;
+              props.taxType === "vat_inclusive"
+                ? Math.round((amt / 1.12) * 100) / 100
+                : amt;
             const vat =
               props.taxType === "vat_inclusive"
                 ? Math.round((amt - sub) * 100) / 100
@@ -89,7 +92,9 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
           })()}
         </Show>
 
-        <Show when={props.category === "expense" || props.category === "payable"}>
+        <Show
+          when={props.category === "expense" || props.category === "payable"}
+        >
           <div class="mt-3 border-t border-zinc-800/50 pt-3">
             <label class="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer select-none">
               <input
@@ -174,7 +179,10 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
             class="ks-theme-toggle shrink-0"
             classList={{ "cursor-not-allowed": !props.canShare }}
           >
-            <span class="ks-theme-toggle-track" data-active={props.isPrivate ? "" : undefined}>
+            <span
+              class="ks-theme-toggle-track"
+              data-active={props.isPrivate ? "" : undefined}
+            >
               <span class="ks-theme-toggle-icon ks-theme-toggle-icon-moon">
                 <Lock size={12} />
               </span>
@@ -189,42 +197,59 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
           <div class="mt-4 pt-3 border-t border-zinc-800/50">
             <p class="text-[10px] text-zinc-500 mb-3">
               Always visible to:{" "}
-              <span class="text-zinc-400">you (creator), workspace admins, superusers</span>
+              <span class="text-zinc-400">
+                you (creator), workspace admins, superusers
+              </span>
             </p>
 
-            <span class="text-xs text-zinc-500 block mb-2">Share with role</span>
+            <span class="text-xs text-zinc-500 block mb-2">
+              Share with role
+            </span>
             <div class="flex gap-2 mb-3 flex-wrap">
               <For each={props.shareableRoles}>
                 {(role) => {
-                  const members = () => (Array.isArray(props.orgMembers) ? props.orgMembers : []);
-                  const membersInRole = () => members().filter((m) => m.role === role.code);
-                  const selected = () => props.sharedRoleCodes.includes(role.code);
+                  const members = () =>
+                    Array.isArray(props.orgMembers) ? props.orgMembers : [];
+                  const membersInRole = () =>
+                    members().filter((m) => m.role === role.code);
+                  const selected = () =>
+                    props.sharedRoleCodes.includes(role.code);
                   return (
                     <button
                       type="button"
                       onClick={() => {
                         if (selected()) {
                           props.setSharedRoleCodes(
-                            props.sharedRoleCodes.filter((c) => c !== role.code),
+                            props.sharedRoleCodes.filter((c) => c !== role.code)
                           );
                         } else {
-                          const roleMemberIds = membersInRole().map((m) => m.user_id);
-                          props.setSharedWith(
-                            props.sharedWith.filter((id) => !roleMemberIds.includes(id)),
+                          const roleMemberIds = membersInRole().map(
+                            (m) => m.user_id
                           );
-                          props.setSharedRoleCodes([...props.sharedRoleCodes, role.code]);
+                          props.setSharedWith(
+                            props.sharedWith.filter(
+                              (id) => !roleMemberIds.includes(id)
+                            )
+                          );
+                          props.setSharedRoleCodes([
+                            ...props.sharedRoleCodes,
+                            role.code,
+                          ]);
                         }
                       }}
                       class="px-3 py-2 text-xs rounded-lg border cursor-pointer min-h-[36px] capitalize transition-colors active:opacity-80"
                       classList={{
-                        "border-amber-500/40 bg-amber-500/10 text-amber-400": selected(),
+                        "border-amber-500/40 bg-amber-500/10 text-amber-400":
+                          selected(),
                         "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-600":
                           !selected(),
                       }}
                     >
                       All {role.label}s
                       <Show when={membersInRole().length > 0}>
-                        <span class="text-zinc-600 ml-1">({membersInRole().length})</span>
+                        <span class="text-zinc-600 ml-1">
+                          ({membersInRole().length})
+                        </span>
                       </Show>
                     </button>
                   );
@@ -232,17 +257,22 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
               </For>
             </div>
 
-            <span class="text-xs text-zinc-500 block mb-2">Or select people</span>
+            <span class="text-xs text-zinc-500 block mb-2">
+              Or select people
+            </span>
             <div class="space-y-0.5 max-h-[150px] overflow-y-auto">
               <For
-                each={(Array.isArray(props.orgMembers) ? props.orgMembers : []).filter(
-                  (m) => m.role !== "admin",
-                )}
+                each={(Array.isArray(props.orgMembers)
+                  ? props.orgMembers
+                  : []
+                ).filter((m) => m.role !== "admin")}
               >
                 {(m) => {
                   const coveringRole = () =>
                     props.shareableRoles.find(
-                      (r) => r.code === m.role && props.sharedRoleCodes.includes(r.code),
+                      (r) =>
+                        r.code === m.role &&
+                        props.sharedRoleCodes.includes(r.code)
                     );
                   const checked = () =>
                     props.sharedWith.includes(m.user_id) || !!coveringRole();
@@ -252,14 +282,17 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                       classList={{
                         "text-zinc-300 cursor-pointer hover:bg-zinc-800/30 active:bg-zinc-800/50":
                           !coveringRole(),
-                        "text-zinc-500 cursor-not-allowed bg-zinc-900/40": !!coveringRole(),
+                        "text-zinc-500 cursor-not-allowed bg-zinc-900/40":
+                          !!coveringRole(),
                       }}
                     >
                       <div
                         class="w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors"
                         classList={{
-                          "border-amber-500 bg-amber-500": checked() && !coveringRole(),
-                          "border-amber-500/40 bg-amber-500/40": checked() && !!coveringRole(),
+                          "border-amber-500 bg-amber-500":
+                            checked() && !coveringRole(),
+                          "border-amber-500/40 bg-amber-500/40":
+                            checked() && !!coveringRole(),
                           "border-zinc-600 bg-transparent": !checked(),
                         }}
                       >
@@ -271,7 +304,11 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                             stroke="currentColor"
                             stroke-width="3"
                           >
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
                           </svg>
                         </Show>
                       </div>
@@ -282,9 +319,14 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                         onChange={(e) => {
                           if (coveringRole()) return;
                           if (e.target.checked) {
-                            props.setSharedWith([...props.sharedWith, m.user_id]);
+                            props.setSharedWith([
+                              ...props.sharedWith,
+                              m.user_id,
+                            ]);
                           } else {
-                            props.setSharedWith(props.sharedWith.filter((id) => id !== m.user_id));
+                            props.setSharedWith(
+                              props.sharedWith.filter((id) => id !== m.user_id)
+                            );
                           }
                         }}
                         class="sr-only"
@@ -292,7 +334,11 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                       <span class="flex-1">{m.name}</span>
                       <Show
                         when={coveringRole()}
-                        fallback={<span class="text-[10px] text-zinc-600 capitalize">{m.role}</span>}
+                        fallback={
+                          <span class="text-[10px] text-zinc-600 capitalize">
+                            {m.role}
+                          </span>
+                        }
                       >
                         <span class="text-[10px] text-amber-500/70">
                           via All {coveringRole()!.label}s
@@ -302,7 +348,12 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                   );
                 }}
               </For>
-              <Show when={!Array.isArray(props.orgMembers) || props.orgMembers.length === 0}>
+              <Show
+                when={
+                  !Array.isArray(props.orgMembers) ||
+                  props.orgMembers.length === 0
+                }
+              >
                 <p class="text-xs text-zinc-600 py-2">Loading members...</p>
               </Show>
             </div>

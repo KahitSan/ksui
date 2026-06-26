@@ -24,7 +24,7 @@ export function makeAggregatedRow(
     total: string | number;
     currency: string;
   },
-  wsId: number,
+  wsId: number
 ): TransactionRow {
   const totalNum = typeof d.total === "string" ? parseFloat(d.total) : d.total;
   return {

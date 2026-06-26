@@ -1,7 +1,154 @@
 // AUTO-GENERATED from the verified flow recon — the plugin's §9 interaction
 // graph as node steps. Authored with the SDK buildFlow DSL; served at
 // /__meta/flows for the kernel to render. Regenerate, don't hand-edit.
-import { buildFlow, type FlowDefinition } from "@kahitsan/plugin-sdk";
+import {
+  buildFlow,
+  type FlowDefinition,
+  type ExecFlow,
+  type FlowContext,
+} from "@kahitsan/plugin-sdk/flow";
+
+// EXECUTABLE flows (Vision §9): the same objects the kernel renders (JSON.stringify
+// drops the functions → structure-only) are what the UI dispatches via runFlow.
+// One source — the diagram cannot drift from the behaviour.
+
+// Void a transaction (admin soft-delete). Mirrors handleVoid: DELETE the txn,
+// then close the detail sheet + refresh the list + reload subcategory counts.
+export const voidFlow: ExecFlow = {
+  id: "transactions.void.exec",
+  title: "Void Transaction",
+  nodes: [
+    {
+      id: "void",
+      kind: "trigger",
+      label: "Confirm void",
+      out: [{ id: "o", to: "commit" }],
+    },
+    {
+      id: "commit",
+      kind: "commit",
+      label: "Void transaction (soft-delete)",
+      detail: "DELETE /api/transactions/:id → status='voided'",
+      request: (ctx: FlowContext) => ({
+        url: `/api/transactions/${ctx.state.id}`,
+        method: "DELETE",
+      }),
+      out: [{ id: "o", to: "refresh" }],
+    },
+    {
+      id: "refresh",
+      kind: "effect",
+      label: "Close detail, refresh list + counts",
+      effect: "refresh",
+      out: [{ id: "o", to: "done" }],
+    },
+    { id: "done", kind: "terminal", label: "Transaction voided" },
+  ],
+};
+
+// Delete a single payment leg. Mirrors handleDeletePayment AFTER its confirm()
+// gate (the confirm stays in the UI): DELETE the leg, then on success reopen the
+// detail + refresh the list (balance rises); on failure surface the error.
+export const deletePaymentFlow: ExecFlow = {
+  id: "transactions.delete-payment.exec",
+  title: "Delete Payment",
+  nodes: [
+    {
+      id: "del",
+      kind: "trigger",
+      label: "Confirm delete payment",
+      out: [{ id: "o", to: "commit" }],
+    },
+    {
+      id: "commit",
+      kind: "commit",
+      label: "Delete payment leg",
+      detail: "DELETE /api/transactions/:id/payments/:pid",
+      request: (ctx: FlowContext) => ({
+        url: `/api/transactions/${ctx.state.id}/payments/${ctx.state.paymentId}`,
+        method: "DELETE",
+      }),
+      out: [{ id: "o", to: "ok" }],
+    },
+    {
+      id: "ok",
+      kind: "condition",
+      label: "Delete OK?",
+      when: (ctx: FlowContext) => (ctx.state.commit ? "yes" : "no"),
+      out: [
+        { id: "yes", to: "refresh", label: "yes" },
+        { id: "no", to: "error", label: "no" },
+      ],
+    },
+    {
+      id: "refresh",
+      kind: "effect",
+      label: "Reload detail + refresh list (balance rises)",
+      effect: "refresh",
+      out: [{ id: "o", to: "done" }],
+    },
+    {
+      id: "error",
+      kind: "effect",
+      label: "Show delete error",
+      effect: "toast",
+      out: [{ id: "o", to: "done" }],
+    },
+    { id: "done", kind: "terminal", label: "Payment deleted" },
+  ],
+};
+
+// Delete one attachment. Mirrors handleDeleteAttachment: DELETE the attachment,
+// then on success merge-out of the open detail + refresh the list; on failure
+// surface the server error message.
+export const deleteAttachmentFlow: ExecFlow = {
+  id: "transactions.delete-attachment.exec",
+  title: "Delete Attachment",
+  nodes: [
+    {
+      id: "del",
+      kind: "trigger",
+      label: "Delete an attachment",
+      out: [{ id: "o", to: "commit" }],
+    },
+    {
+      id: "commit",
+      kind: "commit",
+      label: "Delete attachment",
+      detail: "DELETE /api/transactions/:id/attachments/:aid",
+      request: (ctx: FlowContext) => ({
+        url: `/api/transactions/${ctx.state.id}/attachments/${ctx.state.attachmentId}`,
+        method: "DELETE",
+      }),
+      out: [{ id: "o", to: "ok" }],
+    },
+    {
+      id: "ok",
+      kind: "condition",
+      label: "Delete OK?",
+      when: (ctx: FlowContext) => (ctx.state.commit ? "yes" : "no"),
+      out: [
+        { id: "yes", to: "refresh", label: "yes" },
+        { id: "no", to: "error", label: "no" },
+      ],
+    },
+    {
+      id: "refresh",
+      kind: "effect",
+      label: "Merge out of gallery, refresh count",
+      effect: "refresh",
+      out: [{ id: "o", to: "done" }],
+    },
+    {
+      id: "error",
+      kind: "effect",
+      label: "Show delete error",
+      effect: "toast",
+      out: [{ id: "o", to: "done" }],
+    },
+    { id: "done", kind: "terminal", label: "Gallery updated" },
+  ],
+};
 
 export const flows: FlowDefinition[] = [
   buildFlow("transactions.board", "Transactions Ledger", (f) => {

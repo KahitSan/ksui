@@ -33,12 +33,16 @@ import {
   TransactionDetailSkeleton,
 } from "./components/TransactionDetail";
 import PaymentLegModal from "./components/PaymentLegModal";
+import { runFlow } from "@kahitsan/plugin-sdk/flow";
+import {
+  voidFlow,
+  deletePaymentFlow,
+  deleteAttachmentFlow,
+} from "../../server/flows.js";
 
 import ExportTransactionsModal from "./components/ExportTransactionsModal";
 import TransactionFilters from "./components/TransactionFilters";
-import {
-  useAccountsIndex,
-} from "@kahitsan/ksui";
+import { useAccountsIndex } from "@kahitsan/ksui";
 import { formatDate } from "./lib/format";
 import {
   type PendingFile,
@@ -47,11 +51,7 @@ import {
   type Transaction,
   type Attachment,
 } from "./lib/types";
-import {
-  CATEGORY_STYLES,
-  CATEGORY_TONE,
-  TONE_CLASSES,
-} from "./lib/constants";
+import { CATEGORY_STYLES, CATEGORY_TONE, TONE_CLASSES } from "./lib/constants";
 import { type TransactionRow, makeAggregatedRow } from "./lib/rows";
 import { makeTransactionColumns } from "./components/transactionColumns";
 import { useLazyDayGroups } from "./hooks/useLazyDayGroups";
@@ -79,7 +79,8 @@ export function Component() {
   const { activeWorkspace } = useActiveWorkspace();
   const perms = usePermissions();
   const canAccess = () => perms.has("transactions.view");
-  const canEdit = () => perms.hasAny("transactions.create", "transactions.edit");
+  const canEdit = () =>
+    perms.hasAny("transactions.create", "transactions.edit");
   const accountsIndex = useAccountsIndex();
 
   const isAdmin = () => perms.has("transactions.delete");
@@ -240,7 +241,9 @@ export function Component() {
     setDetailId(id);
     if (detailTxn()?.id !== id) setDetailTxn(null);
     try {
-      const res = await fetch(`/api/transactions/${id}`, { credentials: "include" });
+      const res = await fetch(`/api/transactions/${id}`, {
+        credentials: "include",
+      });
       if (!res.ok) {
         if (detailId() === id) closeDetail();
         return;
@@ -263,14 +266,21 @@ export function Component() {
   }
 
   async function handleVoid(id: number) {
-    try {
-      await fetch(`/api/transactions/${id}`, { method: "DELETE", credentials: "include" });
-      closeDetail();
-      resetAndRefetchFn?.();
-      void reloadSubcategoryCounts();
-    } catch {
-      /* ignore */
-    }
+    // §9 EXECUTION: the declared voidFlow IS this behaviour — runFlow walks
+    // void → commit (DELETE /api/transactions/:id) → refresh, the exact graph
+    // the Connections tab renders.
+    await runFlow(voidFlow, "void", {
+      state: { id },
+      fetch: (url: string, init?: RequestInit) =>
+        fetch(url, { ...init, credentials: "include" }),
+      ui: {
+        refresh: () => {
+          closeDetail();
+          resetAndRefetchFn?.();
+          void reloadSubcategoryCounts();
+        },
+      },
+    });
   }
 
   const [uploading, setUploading] = createSignal(false);
@@ -335,59 +345,74 @@ export function Component() {
     if (
       !(await confirm({
         title: "Delete this payment?",
-        message: "The payment will be removed and the outstanding balance will increase.",
+        message:
+          "The payment will be removed and the outstanding balance will increase.",
         danger: true,
       }))
     )
       return;
-    try {
-      const res = await fetch(`/api/transactions/${txnId}/payments/${paymentId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
-      setDetailTxn(null);
-      await openDetail(txnId);
-      resetAndRefetchFn?.();
-    } catch (err) {
-      console.error("[transactions] delete-payment:", err);
-    }
+    // §9 EXECUTION: post-confirm, deletePaymentFlow drives commit (DELETE the
+    // leg) → condition → refresh (reopen detail + refresh list) on success.
+    await runFlow(deletePaymentFlow, "del", {
+      state: { id: txnId, paymentId },
+      fetch: (url: string, init?: RequestInit) =>
+        fetch(url, { ...init, credentials: "include" }),
+      ui: {
+        refresh: () => {
+          setDetailTxn(null);
+          void openDetail(txnId);
+          resetAndRefetchFn?.();
+        },
+        toast: (m: string) =>
+          console.error("[transactions] delete-payment:", m),
+      },
+    });
   }
 
   async function handleDeleteAttachment(txnId: number, attachmentId: number) {
-    try {
-      const res = await fetch(`/api/transactions/${txnId}/attachments/${attachmentId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setFormError(body.error || `Could not delete attachment (${res.status})`);
-        return;
-      }
-      const t = detailTxn();
-      if (t && t.id === txnId) {
-        const remaining = (t.attachments || []).filter((a) => a.id !== attachmentId);
-        setDetailTxn({ ...t, attachments: remaining, attachment_count: String(remaining.length) });
-      }
-      resetAndRefetchFn?.();
-    } catch (err) {
-      console.error("[transactions] delete-attachment:", err);
-      setFormError("Could not delete attachment — check your connection");
-    }
+    // §9 EXECUTION: deleteAttachmentFlow drives commit (DELETE the attachment) →
+    // condition → on success merge it out of the open detail + refresh the list;
+    // on failure surface the error inline.
+    await runFlow(deleteAttachmentFlow, "del", {
+      state: { id: txnId, attachmentId },
+      fetch: (url: string, init?: RequestInit) =>
+        fetch(url, { ...init, credentials: "include" }),
+      ui: {
+        refresh: () => {
+          const t = detailTxn();
+          if (t && t.id === txnId) {
+            const remaining = (t.attachments || []).filter(
+              (a) => a.id !== attachmentId
+            );
+            setDetailTxn({
+              ...t,
+              attachments: remaining,
+              attachment_count: String(remaining.length),
+            });
+          }
+          resetAndRefetchFn?.();
+        },
+        toast: () => setFormError("Could not delete attachment"),
+      },
+    });
   }
 
-  const { expandedGroups, lazyDayData, setLazyDayData, toggleGroupExpanded, renderDayExpansion } =
-    useLazyDayGroups({
-      groupSalesByDay,
-      tableSearchTerm,
-      statusFilter,
-      subcategoryFilter,
-      accountFilter,
-      createdByFilter,
-      columns: () => columns,
-      openDetail,
-    });
+  const {
+    expandedGroups,
+    lazyDayData,
+    setLazyDayData,
+    toggleGroupExpanded,
+    renderDayExpansion,
+  } = useLazyDayGroups({
+    groupSalesByDay,
+    tableSearchTerm,
+    statusFilter,
+    subcategoryFilter,
+    accountFilter,
+    createdByFilter,
+    columns: () => columns,
+    openDetail,
+  });
 
   const columns = makeTransactionColumns({
     expandedGroups,
@@ -436,7 +461,9 @@ export function Component() {
         <div class="min-w-0 overflow-hidden">
           <DataTable<TransactionRow>
             refetchKey={() => activeWorkspace()?.ws_id}
-            fetchFn={async (params: FetchParams): Promise<FetchResult<TransactionRow>> => {
+            fetchFn={async (
+              params: FetchParams
+            ): Promise<FetchResult<TransactionRow>> => {
               setTableSearchTerm(params.search);
               if (lazyDayData().size > 0) setLazyDayData(new Map());
               if (groupSalesByDay()) {
@@ -445,22 +472,34 @@ export function Component() {
                   limit: String(params.limit),
                   search: params.search,
                   status: statusFilter(),
-                  ...(subcategoryFilter() ? { subcategory: subcategoryFilter() } : {}),
+                  ...(subcategoryFilter()
+                    ? { subcategory: subcategoryFilter() }
+                    : {}),
                   ...(accountFilter() ? { accountId: accountFilter() } : {}),
-                  ...(createdByFilter() ? { createdBy: createdByFilter() } : {}),
+                  ...(createdByFilter()
+                    ? { createdBy: createdByFilter() }
+                    : {}),
                 });
                 if (params.dateFrom) q.set("dateFrom", params.dateFrom);
                 if (params.dateTo) q.set("dateTo", params.dateTo);
-                const res = await fetch(`/api/transactions/grouped-by-date?${q}`, {
-                  credentials: "include",
-                });
+                const res = await fetch(
+                  `/api/transactions/grouped-by-date?${q}`,
+                  {
+                    credentials: "include",
+                  }
+                );
                 if (!res.ok) {
                   // The plugin server may not expose grouped-by-date; degrade
                   // to an empty grouped view rather than throwing.
                   return { data: [], total: 0 };
                 }
                 const result = (await res.json()) as {
-                  data: Array<{ date: string; count: number; total: string; currency: string }>;
+                  data: Array<{
+                    date: string;
+                    count: number;
+                    total: string;
+                    currency: string;
+                  }>;
                   total: number;
                 };
                 // Grouped view shows synthetic per-day rows (no account/payee
@@ -479,21 +518,30 @@ export function Component() {
                 sortBy: params.sortBy || "",
                 sortDir: params.sortDir,
                 status: statusFilter(),
-                ...(categoryFilterParam() ? { category: categoryFilterParam() } : {}),
-                ...(subcategoryFilter() ? { subcategory: subcategoryFilter() } : {}),
+                ...(categoryFilterParam()
+                  ? { category: categoryFilterParam() }
+                  : {}),
+                ...(subcategoryFilter()
+                  ? { subcategory: subcategoryFilter() }
+                  : {}),
                 ...(accountFilter() ? { accountId: accountFilter() } : {}),
                 ...(createdByFilter() ? { createdBy: createdByFilter() } : {}),
               });
               if (params.dateFrom) q.set("dateFrom", params.dateFrom);
               if (params.dateTo) q.set("dateTo", params.dateTo);
-              const res = await fetch(`/api/transactions?${q}`, { credentials: "include" });
+              const res = await fetch(`/api/transactions?${q}`, {
+                credentials: "include",
+              });
               const result = (await res.json()) as FetchResult<Transaction> & {
                 peersUnavailable?: { accounts: boolean; payees: boolean };
               };
               setPeersUnavailable(
-                result.peersUnavailable ?? { accounts: false, payees: false },
+                result.peersUnavailable ?? { accounts: false, payees: false }
               );
-              return { data: result.data as TransactionRow[], total: result.total };
+              return {
+                data: result.data as TransactionRow[],
+                total: result.total,
+              };
             }}
             expansionContent={(row: TransactionRow) => {
               if (!groupSalesByDay()) return null;
@@ -566,7 +614,9 @@ export function Component() {
                 <p class="text-[10px] tracking-[0.3em] uppercase text-amber-400 font-semibold mb-0.5">
                   New entry
                 </p>
-                <h2 class="text-lg font-bold text-zinc-100">Record transaction</h2>
+                <h2 class="text-lg font-bold text-zinc-100">
+                  Record transaction
+                </h2>
               </div>
               <button
                 onClick={() => closeCreate()}
@@ -694,10 +744,15 @@ export function Component() {
                 const tone = CATEGORY_TONE[t.category] || CATEGORY_TONE.expense;
                 const c = TONE_CLASSES[tone.tone];
                 const Ico = tone.icon;
-                const meta = CATEGORY_STYLES[t.category] || { label: t.category, class: "" };
+                const meta = CATEGORY_STYLES[t.category] || {
+                  label: t.category,
+                  class: "",
+                };
                 return (
                   <div class="px-5 sm:px-6 pt-5 pb-4 flex items-start gap-4 border-b border-zinc-800/60 shrink-0">
-                    <div class={`w-12 h-12 flex items-center justify-center border shrink-0 ${c.bg} ${c.text} ${c.border}`}>
+                    <div
+                      class={`w-12 h-12 flex items-center justify-center border shrink-0 ${c.bg} ${c.text} ${c.border}`}
+                    >
                       <Ico size={22} />
                     </div>
                     <div class="min-w-0 flex-1">
@@ -707,7 +762,9 @@ export function Component() {
                       <h2 class="text-base sm:text-lg font-bold text-zinc-100 leading-snug truncate">
                         {editing() ? "Edit transaction" : t.description}
                       </h2>
-                      <p class="text-xs text-zinc-500 mt-0.5">{formatDate(t.transaction_date)}</p>
+                      <p class="text-xs text-zinc-500 mt-0.5">
+                        {formatDate(t.transaction_date)}
+                      </p>
                     </div>
                     <button
                       onClick={() => closeDetail()}
@@ -721,16 +778,29 @@ export function Component() {
               })()}
             </Show>
 
-            <Show when={voidConfirm() && detailTxn() && detailTxn()!.id === detailId()}>
+            <Show
+              when={
+                voidConfirm() && detailTxn() && detailTxn()!.id === detailId()
+              }
+            >
               <div class="mx-5 sm:mx-6 mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
                 <p class="text-sm text-red-400 mb-3">
-                  Are you sure you want to void this transaction? This cannot be undone.
+                  Are you sure you want to void this transaction? This cannot be
+                  undone.
                 </p>
                 <div class="flex gap-2">
-                  <Button intent="primary" variant="clip1" onClick={() => handleVoid(detailTxn()!.id)}>
+                  <Button
+                    intent="primary"
+                    variant="clip1"
+                    onClick={() => handleVoid(detailTxn()!.id)}
+                  >
                     Void Transaction
                   </Button>
-                  <Button intent="secondary" variant="ghost" onClick={() => setVoidConfirm(false)}>
+                  <Button
+                    intent="secondary"
+                    variant="ghost"
+                    onClick={() => setVoidConfirm(false)}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -746,7 +816,11 @@ export function Component() {
                   {formError()}
                 </div>
               </Show>
-              <Show when={detailTxn() && detailTxn()!.id === detailId() && !editing()}>
+              <Show
+                when={
+                  detailTxn() && detailTxn()!.id === detailId() && !editing()
+                }
+              >
                 <TransactionDetail
                   txn={detailTxn()!}
                   creatorName={creatorName(detailTxn()!.created_by)}
@@ -757,13 +831,23 @@ export function Component() {
                   onUpload={handleUploadAttachment}
                   onDeleteAttachment={handleDeleteAttachment}
                   onDeletePayment={handleDeletePayment}
-                  onRecordPayment={(id) => setSettleLegWizard({ txId: id, mode: "list" })}
+                  onRecordPayment={(id) =>
+                    setSettleLegWizard({ txId: id, mode: "list" })
+                  }
                 />
               </Show>
-              <Show when={!editing() && (!detailTxn() || detailTxn()!.id !== detailId())}>
+              <Show
+                when={
+                  !editing() && (!detailTxn() || detailTxn()!.id !== detailId())
+                }
+              >
                 <TransactionDetailSkeleton />
               </Show>
-              <Show when={editing() && detailTxn() && detailTxn()!.id === detailId()}>
+              <Show
+                when={
+                  editing() && detailTxn() && detailTxn()!.id === detailId()
+                }
+              >
                 <TransactionForm
                   error={formError()}
                   saving={formSaving()}
@@ -864,7 +948,13 @@ export function Component() {
                   </Button>
                 </Show>
                 <Show when={canEdit()}>
-                  <Button intent="secondary" variant="clip1" icon={Pencil} class="ks-hud-glow" onClick={startEdit}>
+                  <Button
+                    intent="secondary"
+                    variant="clip1"
+                    icon={Pencil}
+                    class="ks-hud-glow"
+                    onClick={startEdit}
+                  >
                     Edit
                   </Button>
                 </Show>
@@ -897,7 +987,11 @@ export function Component() {
                 if (next.mode === "list") {
                   setSettleLegWizard({ txId: t.txId, mode: "list" });
                 } else if (next.mode === "edit-leg") {
-                  setSettleLegWizard({ txId: t.txId, mode: "edit-leg", legId: next.legId! });
+                  setSettleLegWizard({
+                    txId: t.txId,
+                    mode: "edit-leg",
+                    legId: next.legId!,
+                  });
                 } else {
                   setSettleLegWizard({ txId: t.txId, mode: "settle" });
                 }

@@ -8,7 +8,14 @@
 // the amount field). The outer form owns destination_account_id / payee /
 // dates; this component owns items[] + client / voucher / manual-discount.
 
-import { createSignal, createMemo, createEffect, For, Show, onMount } from "solid-js";
+import {
+  createSignal,
+  createMemo,
+  createEffect,
+  For,
+  Show,
+  onMount,
+} from "solid-js";
 import {
   ComboBox,
   type ClientOption,
@@ -25,10 +32,13 @@ import Plus from "lucide-solid/icons/plus";
 async function searchClients(query: string): Promise<ClientOption[]> {
   const params = new URLSearchParams({ status: "active", limit: "10" });
   if (query) params.set("search", query);
-  const r = await fetch(`/api/clients?${params.toString()}`, { credentials: "include" });
+  const r = await fetch(`/api/clients?${params.toString()}`, {
+    credentials: "include",
+  });
   if (!r.ok) {
     if (r.status === 403) throw new Error("Permission denied");
-    if (r.status === 404) throw new Error("Clients module isn't available — type a name instead");
+    if (r.status === 404)
+      throw new Error("Clients module isn't available — type a name instead");
     throw new Error("Failed to load");
   }
   const json = (await r.json()) as { data?: ClientOption[] };
@@ -43,7 +53,9 @@ async function createClient(name: string): Promise<ClientOption> {
     body: JSON.stringify({ name_raw: name }),
   });
   if (!res.ok && res.status !== 200) {
-    const body = (await res.json().catch(() => ({ error: "Failed to create client" }))) as {
+    const body = (await res
+      .json()
+      .catch(() => ({ error: "Failed to create client" }))) as {
       error?: string;
     };
     throw new Error(body.error || "Failed to create client");
@@ -104,7 +116,10 @@ export interface SalesBodyEditorProps {
 }
 
 function formatPHP(amount: number): string {
-  return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(amount);
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+  }).format(amount);
 }
 
 export default function SalesBodyEditor(props: SalesBodyEditorProps) {
@@ -118,7 +133,9 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
       const res = await fetch("/api/packages", { credentials: "include" });
       if (!res.ok)
         throw new Error(
-          res.status === 404 ? "Packages module isn't available" : "Failed to load packages",
+          res.status === 404
+            ? "Packages module isn't available"
+            : "Failed to load packages"
         );
       const json = await res.json();
       setPackages((json.data || []).filter((p: Package) => p.is_active));
@@ -133,10 +150,16 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
     const key = `${pkg.id}:${variant.id}`;
     const existing = props.items.find((l) => l.key === key);
     if (existing) {
-      props.setItems(props.items.map((l) => (l.key === key ? { ...l, quantity: l.quantity + 1 } : l)));
+      props.setItems(
+        props.items.map((l) =>
+          l.key === key ? { ...l, quantity: l.quantity + 1 } : l
+        )
+      );
     } else {
       const unitPrice =
-        typeof variant.price === "string" ? parseFloat(variant.price) : Number(variant.price);
+        typeof variant.price === "string"
+          ? parseFloat(variant.price)
+          : Number(variant.price);
       const dur =
         typeof variant.duration_value === "string"
           ? parseFloat(variant.duration_value)
@@ -162,8 +185,10 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
   function adjust(key: string, delta: number) {
     props.setItems(
       props.items
-        .map((l) => (l.key === key ? { ...l, quantity: l.quantity + delta } : l))
-        .filter((l) => l.quantity > 0),
+        .map((l) =>
+          l.key === key ? { ...l, quantity: l.quantity + delta } : l
+        )
+        .filter((l) => l.quantity > 0)
     );
   }
 
@@ -171,14 +196,18 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
     props.setItems(props.items.filter((l) => l.key !== key));
   }
 
-  const subtotal = createMemo(() => props.items.reduce((s, l) => s + l.unit_price * l.quantity, 0));
-  const voucherDiscount = createMemo(() => calculateDiscount(props.voucher, subtotal()));
+  const subtotal = createMemo(() =>
+    props.items.reduce((s, l) => s + l.unit_price * l.quantity, 0)
+  );
+  const voucherDiscount = createMemo(() =>
+    calculateDiscount(props.voucher, subtotal())
+  );
   const manualDiscountNumber = createMemo(() => {
     const n = parseFloat(props.manualDiscount);
     return Number.isFinite(n) && n > 0 ? n : 0;
   });
   const effectiveDiscount = createMemo(() =>
-    props.voucher ? voucherDiscount() : manualDiscountNumber(),
+    props.voucher ? voucherDiscount() : manualDiscountNumber()
   );
   const total = createMemo(() => Math.max(0, subtotal() - effectiveDiscount()));
   const cartPackageIds = createMemo(() => props.items.map((l) => l.package_id));
@@ -214,17 +243,27 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
       </div>
 
       <Show when={pickerOpen()}>
-        <Show when={!loading()} fallback={<div class="text-xs text-zinc-500">Loading packages…</div>}>
-          <Show when={!loadError()} fallback={<div class="text-xs text-rose-400">{loadError()}</div>}>
+        <Show
+          when={!loading()}
+          fallback={<div class="text-xs text-zinc-500">Loading packages…</div>}
+        >
+          <Show
+            when={!loadError()}
+            fallback={<div class="text-xs text-rose-400">{loadError()}</div>}
+          >
             <Show
               when={packages().length > 0}
-              fallback={<div class="text-xs text-zinc-500">No active packages.</div>}
+              fallback={
+                <div class="text-xs text-zinc-500">No active packages.</div>
+              }
             >
               <div class="space-y-1.5 max-h-56 overflow-y-auto rounded-md border border-emerald-500/15 p-2 bg-zinc-950/40">
                 <For each={packages()}>
                   {(pkg) => (
                     <div class="space-y-1">
-                      <div class="text-[11px] uppercase tracking-widest text-zinc-400">{pkg.name}</div>
+                      <div class="text-[11px] uppercase tracking-widest text-zinc-400">
+                        {pkg.name}
+                      </div>
                       <div class="flex flex-wrap gap-1.5">
                         <For each={pkg.variants.filter((v) => v.is_active)}>
                           {(v) => (
@@ -249,7 +288,9 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
 
       <Show
         when={props.items.length > 0}
-        fallback={<div class="text-xs text-zinc-500">No packages added yet.</div>}
+        fallback={
+          <div class="text-xs text-zinc-500">No packages added yet.</div>
+        }
       >
         <div class="space-y-1.5">
           <For each={props.items}>
@@ -257,10 +298,12 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
               <div class="flex items-center gap-2 text-sm">
                 <div class="min-w-0 flex-1">
                   <div class="text-zinc-200 truncate">
-                    {line.package_name} <span class="text-zinc-500">· {line.variant_name}</span>
+                    {line.package_name}{" "}
+                    <span class="text-zinc-500">· {line.variant_name}</span>
                   </div>
                   <div class="text-[11px] text-zinc-500 tabular-nums">
-                    {formatPHP(line.unit_price)} · {line.duration_value} {line.duration_unit}
+                    {formatPHP(line.unit_price)} · {line.duration_value}{" "}
+                    {line.duration_unit}
                     {line.duration_value !== 1 ? "s" : ""}
                   </div>
                 </div>
@@ -273,7 +316,9 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
                   >
                     <Minus size={12} />
                   </button>
-                  <span class="w-6 text-center text-sm text-zinc-200 tabular-nums">{line.quantity}</span>
+                  <span class="w-6 text-center text-sm text-zinc-200 tabular-nums">
+                    {line.quantity}
+                  </span>
                   <button
                     type="button"
                     onClick={() => adjust(line.key, 1)}
@@ -359,7 +404,11 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
           </div>
           <Show when={effectiveDiscount() > 0}>
             <div class="flex items-center justify-between text-zinc-400">
-              <span>{props.voucher ? `Voucher ${props.voucher.code}` : "Manual discount"}</span>
+              <span>
+                {props.voucher
+                  ? `Voucher ${props.voucher.code}`
+                  : "Manual discount"}
+              </span>
               <span>− {formatPHP(effectiveDiscount())}</span>
             </div>
           </Show>

@@ -25,17 +25,29 @@ export interface TransactionReferenceDataDeps {
   activeCategories: () => Set<string>;
 }
 
-export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) {
+export function useTransactionReferenceData(
+  deps: TransactionReferenceDataDeps
+) {
   const { activeWorkspace, canShare, activeCategories } = deps;
 
-  const [incomeSubcategories, setIncomeSubcategories] = createSignal<string[]>([]);
-  const [expenseSubcategories, setExpenseSubcategories] = createSignal<string[]>([]);
-  const [subcategoryCounts, setSubcategoryCounts] = createSignal<Record<string, number>>({});
+  const [incomeSubcategories, setIncomeSubcategories] = createSignal<string[]>(
+    []
+  );
+  const [expenseSubcategories, setExpenseSubcategories] = createSignal<
+    string[]
+  >([]);
+  const [subcategoryCounts, setSubcategoryCounts] = createSignal<
+    Record<string, number>
+  >({});
   async function reloadSubcategoryCounts() {
     try {
-      const r = await fetch("/api/transactions/subcategory-counts", { credentials: "include" });
+      const r = await fetch("/api/transactions/subcategory-counts", {
+        credentials: "include",
+      });
       if (r.ok) {
-        const json = (await r.json()) as { counts: { subcategory: string; count: number }[] };
+        const json = (await r.json()) as {
+          counts: { subcategory: string; count: number }[];
+        };
         const map: Record<string, number> = {};
         for (const c of json.counts || []) map[c.subcategory] = c.count;
         setSubcategoryCounts(map);
@@ -48,27 +60,42 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
   // off the plugin's search_path, so /creators returns no names — see GET
   // /creators). Names are resolved reactively via `creatorNameById` (below) and
   // surfaced in the `creators` memo.
-  const [creatorStats, setCreatorStats] = createSignal<{ id: string; count?: number }[]>([]);
+  const [creatorStats, setCreatorStats] = createSignal<
+    { id: string; count?: number }[]
+  >([]);
   // user id -> display name for every creator. Filled from the kernel's
   // /api/users/names so it covers creators who aren't in the caller's workspace member
   // list (superusers, ex-members, import accounts) — members/basic can't name
   // those. Authenticated, returns only { id, name }.
-  const [creatorNameById, setCreatorNameById] = createSignal<Map<string, string>>(new Map());
+  const [creatorNameById, setCreatorNameById] = createSignal<
+    Map<string, string>
+  >(new Map());
   async function reloadCreators() {
     try {
-      const r = await fetch("/api/transactions/creators", { credentials: "include" });
+      const r = await fetch("/api/transactions/creators", {
+        credentials: "include",
+      });
       if (!r.ok) return;
-      const json = (await r.json()) as { creators: { id: string; count: number }[] };
+      const json = (await r.json()) as {
+        creators: { id: string; count: number }[];
+      };
       const stats = json.creators || [];
       setCreatorStats(stats);
       const ids = stats.map((c) => c.id).filter(Boolean);
       if (ids.length === 0) return;
-      const nr = await fetch(`/api/users/names?ids=${encodeURIComponent(ids.join(","))}`, {
-        credentials: "include",
-      });
+      const nr = await fetch(
+        `/api/users/names?ids=${encodeURIComponent(ids.join(","))}`,
+        {
+          credentials: "include",
+        }
+      );
       if (nr.ok) {
-        const nj = (await nr.json()) as { users: { id: string; name: string }[] };
-        setCreatorNameById(new Map((nj.users || []).map((u) => [u.id, u.name])));
+        const nj = (await nr.json()) as {
+          users: { id: string; name: string }[];
+        };
+        setCreatorNameById(
+          new Map((nj.users || []).map((u) => [u.id, u.name]))
+        );
       }
     } catch {
       /* nice-to-have */
@@ -77,15 +104,19 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
   onMount(async () => {
     try {
       const [inc, exp] = await Promise.all([
-        fetch("/api/transactions/subcategories?applies_to=income", { credentials: "include" }).then((r) =>
-          r.json(),
-        ),
-        fetch("/api/transactions/subcategories?applies_to=expense", { credentials: "include" }).then(
-          (r) => r.json(),
-        ),
+        fetch("/api/transactions/subcategories?applies_to=income", {
+          credentials: "include",
+        }).then((r) => r.json()),
+        fetch("/api/transactions/subcategories?applies_to=expense", {
+          credentials: "include",
+        }).then((r) => r.json()),
       ]);
-      setIncomeSubcategories(((inc.subcategories as { name: string }[]) || []).map((s) => s.name));
-      setExpenseSubcategories(((exp.subcategories as { name: string }[]) || []).map((s) => s.name));
+      setIncomeSubcategories(
+        ((inc.subcategories as { name: string }[]) || []).map((s) => s.name)
+      );
+      setExpenseSubcategories(
+        ((exp.subcategories as { name: string }[]) || []).map((s) => s.name)
+      );
     } catch {
       /* dropdown stays empty until next refresh */
     }
@@ -104,7 +135,9 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
   // Accounts list (for filter dropdowns + the form's account picker).
   const [accounts, setAccounts] = createSignal<FinancialAccount[]>([]);
   const [orgMembers, setOrgMembers] = createSignal<OrgMember[]>([]);
-  const [shareableRoles, setShareableRoles] = createSignal<{ code: string; label: string }[]>([]);
+  const [shareableRoles, setShareableRoles] = createSignal<
+    { code: string; label: string }[]
+  >([]);
 
   // Set from the list response: which name-resolving peer plugins were absent
   // for the last fetch. Account + payee names resolve over kernel RPC server-
@@ -137,7 +170,7 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
       id: c.id,
       name: creatorName(c.id) ?? "Unknown",
       count: c.count,
-    })),
+    }))
   );
 
   createEffect(() => {
@@ -145,9 +178,12 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
     setOrgMembers([]);
     (async () => {
       try {
-        const res = await fetch("/api/financial-accounts?limit=200&status=active", {
-          credentials: "include",
-        });
+        const res = await fetch(
+          "/api/financial-accounts?limit=200&status=active",
+          {
+            credentials: "include",
+          }
+        );
         if (res.ok && activeWorkspace()?.ws_id === gen) {
           const data = await res.json();
           setAccounts(data.data || []);
@@ -161,7 +197,9 @@ export function useTransactionReferenceData(deps: TransactionReferenceDataDeps) 
     const gen = activeWorkspace()?.ws_id;
     (async () => {
       try {
-        const res = await fetch("/api/roles?scope=workspace", { credentials: "include" });
+        const res = await fetch("/api/roles?scope=workspace", {
+          credentials: "include",
+        });
         if (!res.ok || activeWorkspace()?.ws_id !== gen) return;
         const data = await res.json();
         const rows = (data.data || []) as { code: string; label: string }[];

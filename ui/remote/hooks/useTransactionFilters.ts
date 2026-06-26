@@ -26,7 +26,9 @@ export function useTransactionFilters(deps: TransactionFiltersDeps) {
 
   const ALL_CATEGORIES = ["expense", "sale", "business", "payable"] as const;
 
-  const [activeCategories, setActiveCategories] = createSignal<Set<string>>(new Set());
+  const [activeCategories, setActiveCategories] = createSignal<Set<string>>(
+    new Set()
+  );
   const [statusFilter, setStatusFilter] = createSignal("active");
   const [accountFilter, setAccountFilter] = createSignal("");
   const [subcategoryFilter, setSubcategoryFilter] = createSignal("");
@@ -50,7 +52,7 @@ export function useTransactionFilters(deps: TransactionFiltersDeps) {
       (subcategoryFilter() ? 1 : 0) +
       (createdByFilter() ? 1 : 0) +
       (statusFilter() !== "active" ? 1 : 0) +
-      (groupSalesByDay() ? 1 : 0),
+      (groupSalesByDay() ? 1 : 0)
   );
 
   function clearAllFilters() {
@@ -78,8 +80,8 @@ export function useTransactionFilters(deps: TransactionFiltersDeps) {
       () => {
         resetAndRefetch();
       },
-      { defer: true },
-    ),
+      { defer: true }
+    )
   );
 
   return {

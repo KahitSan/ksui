@@ -10,7 +10,9 @@ export default function AccountPicker(props: {
   autoDefault?: boolean;
 }) {
   const visible = () =>
-    props.accounts.filter((a) => !props.excludeId || a.id.toString() !== props.excludeId);
+    props.accounts.filter(
+      (a) => !props.excludeId || a.id.toString() !== props.excludeId
+    );
 
   createEffect(() => {
     if (props.autoDefault === false) return;
@@ -93,7 +95,8 @@ export default function AccountPicker(props: {
                 onClick={() => props.onChange(a.id.toString())}
                 class="group flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm transition-colors cursor-pointer ks-hud-clip-top-left-bottom-right"
                 classList={{
-                  "border-amber-500/50 bg-amber-600/10 text-amber-300": selected(),
+                  "border-amber-500/50 bg-amber-600/10 text-amber-300":
+                    selected(),
                   "border-zinc-700 bg-zinc-800/50 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800":
                     !selected(),
                 }}

@@ -59,7 +59,9 @@ export function useTransactionForm(deps: TransactionFormDeps) {
   const [formDate, setFormDate] = createSignal(todayManila());
   const [formPrivate, setFormPrivate] = createSignal(false);
   const [formSharedWith, setFormSharedWith] = createSignal<string[]>([]);
-  const [formSharedWithRoles, setFormSharedWithRoles] = createSignal<string[]>([]);
+  const [formSharedWithRoles, setFormSharedWithRoles] = createSignal<string[]>(
+    []
+  );
   const [formBackdateReason, setFormBackdateReason] = createSignal("");
   const [formPayee, setFormPayee] = createSignal("");
   const [formPayeeId, setFormPayeeId] = createSignal<number | null>(null);
@@ -72,10 +74,15 @@ export function useTransactionForm(deps: TransactionFormDeps) {
   const [formChequeNumber, setFormChequeNumber] = createSignal("");
   const [formPdcStatus, setFormPdcStatus] = createSignal("issued");
   const [formSubcategory, setFormSubcategory] = createSignal("");
-  const [formPendingFiles, setFormPendingFiles] = createSignal<PendingFile[]>([]);
+  const [formPendingFiles, setFormPendingFiles] = createSignal<PendingFile[]>(
+    []
+  );
   const [formSaleItems, setFormSaleItems] = createSignal<SalesLine[]>([]);
-  const [formSaleClient, setFormSaleClient] = createSignal<ClientOption | null>(null);
-  const [formSaleVoucher, setFormSaleVoucher] = createSignal<VoucherOption | null>(null);
+  const [formSaleClient, setFormSaleClient] = createSignal<ClientOption | null>(
+    null
+  );
+  const [formSaleVoucher, setFormSaleVoucher] =
+    createSignal<VoucherOption | null>(null);
   const [formSaleDiscount, setFormSaleDiscount] = createSignal("");
   const [formSaving, setFormSaving] = createSignal(false);
   const [formError, setFormError] = createSignal("");
@@ -159,8 +166,11 @@ export function useTransactionForm(deps: TransactionFormDeps) {
     setFormSaleItems(seededSale);
     setFormSaleClient(
       t.client_id != null
-        ? ({ id: t.client_id, name_raw: t.client_name ?? "Unknown" } as ClientOption)
-        : null,
+        ? ({
+            id: t.client_id,
+            name_raw: t.client_name ?? "Unknown",
+          } as ClientOption)
+        : null
     );
     setFormSaleVoucher(
       t.voucher
@@ -173,12 +183,14 @@ export function useTransactionForm(deps: TransactionFormDeps) {
             applicable_packages: null,
             minimum_purchase: null,
           } as unknown as VoucherOption)
-        : null,
+        : null
     );
     setFormSaleDiscount(
-      t.voucher == null && t.discount_amount && parseFloat(t.discount_amount) > 0
+      t.voucher == null &&
+        t.discount_amount &&
+        parseFloat(t.discount_amount) > 0
         ? t.discount_amount
-        : "",
+        : ""
     );
     formPendingFiles().forEach(revokePendingFile);
     setFormPendingFiles([]);
@@ -191,7 +203,10 @@ export function useTransactionForm(deps: TransactionFormDeps) {
   // reload (a blob: object URL does not). Field name "file" matches
   // upload.single("file"). A failure is surfaced inline; the transaction is
   // already saved. Returns the names that failed.
-  async function uploadPendingFiles(txnId: number, files: PendingFile[]): Promise<string[]> {
+  async function uploadPendingFiles(
+    txnId: number,
+    files: PendingFile[]
+  ): Promise<string[]> {
     const failed: string[] = [];
     for (const pf of files) {
       try {
@@ -215,9 +230,13 @@ export function useTransactionForm(deps: TransactionFormDeps) {
       setFormError("Description is required");
       return;
     }
-    const isSaleWithItems = formCategory() === "sale" && formSaleItems().length > 0;
+    const isSaleWithItems =
+      formCategory() === "sale" && formSaleItems().length > 0;
     const createAmt = parseFloat(formAmount());
-    if (!isSaleWithItems && (!formAmount() || !Number.isFinite(createAmt) || createAmt <= 0)) {
+    if (
+      !isSaleWithItems &&
+      (!formAmount() || !Number.isFinite(createAmt) || createAmt <= 0)
+    ) {
       setFormError("Amount must be greater than 0");
       return;
     }
@@ -248,7 +267,9 @@ export function useTransactionForm(deps: TransactionFormDeps) {
             transaction_date: formDate(),
             description: formDescription().trim(),
             notes: formNotes().trim() || null,
-            destination_account_id: formDestAccount() ? parseInt(formDestAccount()) : null,
+            destination_account_id: formDestAccount()
+              ? parseInt(formDestAccount())
+              : null,
             client_id: formSaleClient()?.id ?? null,
             voucher_id: formSaleVoucher()?.id ?? null,
             discount_amount:
@@ -277,8 +298,12 @@ export function useTransactionForm(deps: TransactionFormDeps) {
           body: JSON.stringify({
             category: formCategory(),
             subcategory: formSubcategory().trim() || null,
-            source_account_id: formSourceAccount() ? parseInt(formSourceAccount()) : null,
-            destination_account_id: formDestAccount() ? parseInt(formDestAccount()) : null,
+            source_account_id: formSourceAccount()
+              ? parseInt(formSourceAccount())
+              : null,
+            destination_account_id: formDestAccount()
+              ? parseInt(formDestAccount())
+              : null,
             amount: formAmount(),
             description: formDescription().trim(),
             notes: formNotes().trim() || null,
@@ -286,7 +311,9 @@ export function useTransactionForm(deps: TransactionFormDeps) {
             is_private: formPrivate(),
             shared_with: formPrivate() ? formSharedWith() : [],
             shared_with_roles: formPrivate() ? formSharedWithRoles() : [],
-            backdate_reason: isFormBackdated() ? formBackdateReason().trim() : null,
+            backdate_reason: isFormBackdated()
+              ? formBackdateReason().trim()
+              : null,
             payee: formPayee().trim() || null,
             payee_id: formPayeeId(),
             reference_number: formRefNumber().trim() || null,
@@ -296,7 +323,8 @@ export function useTransactionForm(deps: TransactionFormDeps) {
             payable_kind: isPayable ? formPayableKind() : null,
             due_date: isPayable ? formDueDate() || null : null,
             cheque_number: isPayable ? formChequeNumber().trim() || null : null,
-            pdc_status: isPayable && formChequeNumber().trim() ? formPdcStatus() : null,
+            pdc_status:
+              isPayable && formChequeNumber().trim() ? formPdcStatus() : null,
             client_id: formSaleClient()?.id ?? null,
           }),
         });
@@ -307,7 +335,8 @@ export function useTransactionForm(deps: TransactionFormDeps) {
         return;
       }
       const created = await res.json();
-      const createdId = created.id ?? created.transaction_id ?? created.transaction?.id;
+      const createdId =
+        created.id ?? created.transaction_id ?? created.transaction?.id;
 
       let failedNames: string[] = [];
       if (createdId && formPendingFiles().length > 0) {
@@ -315,14 +344,17 @@ export function useTransactionForm(deps: TransactionFormDeps) {
       }
       if (failedNames.length > 0) {
         setFormError(
-          `Transaction saved, but some files didn't upload: ${failedNames.join(", ")}. Open the transaction to retry.`,
+          `Transaction saved, but some files didn't upload: ${failedNames.join(
+            ", "
+          )}. Open the transaction to retry.`
         );
       } else {
         closeCreate();
       }
       const cats = activeCategories();
       const createdCat = created.category ?? "sale";
-      if (cats.size > 0 && !cats.has(createdCat)) setActiveCategories(new Set<string>());
+      if (cats.size > 0 && !cats.has(createdCat))
+        setActiveCategories(new Set<string>());
       if (statusFilter() === "voided") setStatusFilter("active");
       resetAndRefetch();
       void reloadSubcategoryCounts();
@@ -340,9 +372,13 @@ export function useTransactionForm(deps: TransactionFormDeps) {
       setFormError("Description is required");
       return;
     }
-    const isSaleWithItems = formCategory() === "sale" && formSaleItems().length > 0;
+    const isSaleWithItems =
+      formCategory() === "sale" && formSaleItems().length > 0;
     const updateAmt = parseFloat(formAmount());
-    if (!isSaleWithItems && (!formAmount() || !Number.isFinite(updateAmt) || updateAmt <= 0)) {
+    if (
+      !isSaleWithItems &&
+      (!formAmount() || !Number.isFinite(updateAmt) || updateAmt <= 0)
+    ) {
       setFormError("Amount must be greater than 0");
       return;
     }
@@ -359,8 +395,12 @@ export function useTransactionForm(deps: TransactionFormDeps) {
       const body: Record<string, unknown> = {
         category: formCategory(),
         subcategory: formSubcategory().trim() || null,
-        source_account_id: formSourceAccount() ? parseInt(formSourceAccount()) : null,
-        destination_account_id: formDestAccount() ? parseInt(formDestAccount()) : null,
+        source_account_id: formSourceAccount()
+          ? parseInt(formSourceAccount())
+          : null,
+        destination_account_id: formDestAccount()
+          ? parseInt(formDestAccount())
+          : null,
         amount: formAmount(),
         description: formDescription().trim(),
         notes: formNotes().trim() || null,
@@ -376,7 +416,8 @@ export function useTransactionForm(deps: TransactionFormDeps) {
         payable_kind: isPayable ? formPayableKind() : null,
         due_date: isPayable ? formDueDate() || null : null,
         cheque_number: isPayable ? formChequeNumber().trim() || null : null,
-        pdc_status: isPayable && formChequeNumber().trim() ? formPdcStatus() : null,
+        pdc_status:
+          isPayable && formChequeNumber().trim() ? formPdcStatus() : null,
       };
       if (isSaleWithItems) {
         body.items = formSaleItems().map((line) => ({
@@ -392,7 +433,9 @@ export function useTransactionForm(deps: TransactionFormDeps) {
         body.client_id = formSaleClient()?.id ?? null;
         body.voucher_id = formSaleVoucher()?.id ?? null;
         body.discount_amount =
-          !formSaleVoucher() && Number.isFinite(manualDiscountNumber) && manualDiscountNumber > 0
+          !formSaleVoucher() &&
+          Number.isFinite(manualDiscountNumber) &&
+          manualDiscountNumber > 0
             ? manualDiscountNumber
             : 0;
       }
@@ -429,7 +472,9 @@ export function useTransactionForm(deps: TransactionFormDeps) {
       }
       if (failedNames.length > 0) {
         setFormError(
-          `Saved, but some files didn't upload: ${failedNames.join(", ")}. Open the transaction to retry.`,
+          `Saved, but some files didn't upload: ${failedNames.join(
+            ", "
+          )}. Open the transaction to retry.`
         );
         resetAndRefetch();
         void reloadSubcategoryCounts();
