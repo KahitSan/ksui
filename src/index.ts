@@ -52,6 +52,7 @@ export { default as FormField } from "./components/base/FormField";
 export { default as DetailRow } from "./components/base/DetailRow";
 export { default as Tooltip } from "./components/base/Tooltip";
 export { default as ImageCropper } from "./components/base/ImageCropper";
+export { default as ImageViewer } from "./components/base/ImageViewer";
 export { default as ProgressBar, type ProgressBarProps } from "./components/base/ProgressBar";
 export { default as ChartLegend } from "./components/base/ChartLegend";
 
