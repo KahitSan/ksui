@@ -245,6 +245,7 @@ export type {
 // FlowGraph canvas draws. This is the "authored in SDK code → parsed to a
 // diagram" seam.
 export { defineFlow, node, edge, flowToGraph } from "./utils/flow-spec";
+export { buildFlow, FlowSteps } from "./utils/flow-builder";
 export type { FlowDefinition, FlowNodeDef, FlowNodeKind, FlowPort } from "./utils/flow-spec";
 
 // FlowGraph model (pure): the node/edge types + the dependency-free layout the
