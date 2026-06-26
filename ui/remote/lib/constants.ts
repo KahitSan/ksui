@@ -8,16 +8,33 @@ import ArrowRightLeft from "lucide-solid/icons/arrow-right-left";
 import CalendarDays from "lucide-solid/icons/calendar-days";
 import { type IconComponent } from "./types";
 
-export const CATEGORY_STYLES: Record<string, { label: string; class: string }> = {
-  expense: { label: "Expense", class: "border-red-400/40 text-red-400 bg-red-500/20" },
-  sale: { label: "Sale", class: "border-emerald-400/40 text-emerald-400 bg-emerald-500/20" },
-  business: { label: "Transfer", class: "border-blue-400/40 text-blue-400 bg-blue-500/20" },
-  payable: { label: "Payable", class: "border-amber-400/40 text-amber-400 bg-amber-500/20" },
-};
+export const CATEGORY_STYLES: Record<string, { label: string; class: string }> =
+  {
+    expense: {
+      label: "Expense",
+      class: "border-red-400/40 text-red-400 bg-red-500/20",
+    },
+    sale: {
+      label: "Sale",
+      class: "border-emerald-400/40 text-emerald-400 bg-emerald-500/20",
+    },
+    business: {
+      label: "Transfer",
+      class: "border-blue-400/40 text-blue-400 bg-blue-500/20",
+    },
+    payable: {
+      label: "Payable",
+      class: "border-amber-400/40 text-amber-400 bg-amber-500/20",
+    },
+  };
 
 export const CATEGORY_TONE: Record<
   string,
-  { tone: "emerald" | "red" | "blue" | "amber"; sign: "+" | "-" | ""; icon: IconComponent }
+  {
+    tone: "emerald" | "red" | "blue" | "amber";
+    sign: "+" | "-" | "";
+    icon: IconComponent;
+  }
 > = {
   sale: { tone: "emerald", sign: "+", icon: ArrowDownLeft },
   expense: { tone: "red", sign: "-", icon: ArrowUpRight },
@@ -29,10 +46,26 @@ export const TONE_CLASSES: Record<
   "emerald" | "red" | "blue" | "amber",
   { bg: string; text: string; border: string }
 > = {
-  emerald: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30" },
-  red: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30" },
-  blue: { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/30" },
-  amber: { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30" },
+  emerald: {
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-400",
+    border: "border-emerald-500/30",
+  },
+  red: {
+    bg: "bg-red-500/10",
+    text: "text-red-400",
+    border: "border-red-500/30",
+  },
+  blue: {
+    bg: "bg-blue-500/10",
+    text: "text-blue-400",
+    border: "border-blue-500/30",
+  },
+  amber: {
+    bg: "bg-amber-500/10",
+    text: "text-amber-400",
+    border: "border-amber-500/30",
+  },
 };
 
 export const PAYABLE_KIND_OPTIONS: { id: string; label: string }[] = [

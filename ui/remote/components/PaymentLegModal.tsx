@@ -12,13 +12,28 @@
 // degrades to a numeric account-id input when that's unavailable.
 
 import { Portal } from "solid-js/web";
-import { createSignal, createMemo, Show, onCleanup, onMount, For } from "solid-js";
+import {
+  createSignal,
+  createMemo,
+  Show,
+  onCleanup,
+  onMount,
+  For,
+} from "solid-js";
 import X from "lucide-solid/icons/x";
 import Loader2 from "lucide-solid/icons/loader-2";
 import AlertCircle from "lucide-solid/icons/alert-circle";
 import Trash2 from "lucide-solid/icons/trash-2";
 import Plus from "lucide-solid/icons/plus";
-import { AccountAvatar, useAccountsIndex, resolveAccount, autoFocusOnMount, useFocusTrap, confirm, Button } from "@kahitsan/ksui";
+import {
+  AccountAvatar,
+  useAccountsIndex,
+  resolveAccount,
+  autoFocusOnMount,
+  useFocusTrap,
+  confirm,
+  Button,
+} from "@kahitsan/ksui";
 
 interface TransactionPayment {
   id: number;
@@ -51,11 +66,17 @@ interface Props {
   legId?: number;
   onClose: () => void;
   onSuccess: () => void;
-  onSwitchTarget?: (target: { mode: "list" | "settle" | "edit-leg"; legId?: number }) => void;
+  onSwitchTarget?: (target: {
+    mode: "list" | "settle" | "edit-leg";
+    legId?: number;
+  }) => void;
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(amount);
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+  }).format(amount);
 }
 
 export default function PaymentLegModal(props: Props) {
@@ -85,16 +106,27 @@ export default function PaymentLegModal(props: Props) {
 
   const formatDate = (s: string) => {
     const d = new Date(s);
-    const date = d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
-    const time = d.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true });
+    const date = d.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+    const time = d.toLocaleTimeString("en-PH", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
     return `${date} · ${time}`;
   };
 
   async function loadAccounts() {
     try {
-      const res = await fetch("/api/financial-accounts?status=active&limit=200", {
-        credentials: "include",
-      });
+      const res = await fetch(
+        "/api/financial-accounts?status=active&limit=200",
+        {
+          credentials: "include",
+        }
+      );
       if (!res.ok) {
         setAccountsAvailable(false);
         return;
@@ -110,16 +142,23 @@ export default function PaymentLegModal(props: Props) {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`/api/transactions/${props.transactionId}`, { credentials: "include" });
+      const res = await fetch(`/api/transactions/${props.transactionId}`, {
+        credentials: "include",
+      });
       if (!res.ok) {
-        setLoadError(res.status === 403 ? "Permission denied" : "Failed to load transaction");
+        setLoadError(
+          res.status === 403
+            ? "Permission denied"
+            : "Failed to load transaction"
+        );
         return;
       }
       const row = (await res.json()) as TransactionRow;
       setTxn(row);
       // Seed the add form from the targeted leg (edit-leg) or the outstanding
       // balance (settle) so a quick re-record needs minimal typing.
-      const leg = (row.payments ?? []).find((p) => p.id === props.legId) ?? null;
+      const leg =
+        (row.payments ?? []).find((p) => p.id === props.legId) ?? null;
       if (props.mode === "edit-leg" && leg) {
         setFormAccount(String(leg.financial_account_id));
         setFormAmount(leg.amount);
@@ -151,10 +190,13 @@ export default function PaymentLegModal(props: Props) {
     if (!ok) return;
     setDeletingId(legId);
     try {
-      const res = await fetch(`/api/transactions/${props.transactionId}/payments/${legId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const res = await fetch(
+        `/api/transactions/${props.transactionId}/payments/${legId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
       if (!res.ok) return;
       await load();
       props.onSuccess();
@@ -177,16 +219,19 @@ export default function PaymentLegModal(props: Props) {
     }
     setSaving(true);
     try {
-      const res = await fetch(`/api/transactions/${props.transactionId}/payments`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          financial_account_id: accId,
-          amount: amt,
-          notes: formNotes().trim() || null,
-        }),
-      });
+      const res = await fetch(
+        `/api/transactions/${props.transactionId}/payments`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            financial_account_id: accId,
+            amount: amt,
+            notes: formNotes().trim() || null,
+          }),
+        }
+      );
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         setSaveError(body.error ?? "Failed to record payment");
@@ -249,17 +294,27 @@ export default function PaymentLegModal(props: Props) {
               <div class="w-9 h-9 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center">
                 <AlertCircle size={18} class="text-amber-300" />
               </div>
-              <p class="text-sm text-zinc-200 leading-snug" data-testid="payment-leg-load-error">
+              <p
+                class="text-sm text-zinc-200 leading-snug"
+                data-testid="payment-leg-load-error"
+              >
                 {loadError()}
               </p>
-              <Button intent="primary" variant="clip1" onClick={() => props.onClose()}>
+              <Button
+                intent="primary"
+                variant="clip1"
+                onClick={() => props.onClose()}
+              >
                 Close
               </Button>
             </div>
           </Show>
 
           <Show when={!loading() && !loadError() && txn()}>
-            <div class="flex-1 min-h-0 flex flex-col overflow-hidden" data-testid="payment-leg-history">
+            <div
+              class="flex-1 min-h-0 flex flex-col overflow-hidden"
+              data-testid="payment-leg-history"
+            >
               <header class="border-b border-zinc-800/50 px-4 py-3 bg-zinc-900/50 flex items-center justify-between gap-2">
                 <div>
                   <div class="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-400">
@@ -273,14 +328,18 @@ export default function PaymentLegModal(props: Props) {
                   <div class="shrink-0 text-right">
                     <div
                       class={`text-[9px] font-bold tracking-widest uppercase ${
-                        outstanding() <= 0 ? "text-emerald-400" : "text-amber-400"
+                        outstanding() <= 0
+                          ? "text-emerald-400"
+                          : "text-amber-400"
                       }`}
                     >
                       Outstanding
                     </div>
                     <div
                       class={`text-sm font-bold tabular-nums ${
-                        outstanding() <= 0 ? "text-emerald-300" : "text-amber-300"
+                        outstanding() <= 0
+                          ? "text-emerald-300"
+                          : "text-amber-300"
                       }`}
                       data-testid="record-payment-balance"
                     >
@@ -325,24 +384,35 @@ export default function PaymentLegModal(props: Props) {
                             class="ks-interactive inline-flex items-center justify-center w-6 h-6 rounded text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             title="Delete payment"
                           >
-                            <Show when={deletingId() === p.id} fallback={<Trash2 size={12} />}>
+                            <Show
+                              when={deletingId() === p.id}
+                              fallback={<Trash2 size={12} />}
+                            >
                               <Loader2 size={12} class="animate-spin" />
                             </Show>
                           </button>
                         </div>
                         <div class="mt-1 w-full flex items-center gap-1.5 min-w-0">
-                          <Show when={resolveAccount(accountsIndex(), p.financial_account_id)}>
+                          <Show
+                            when={resolveAccount(
+                              accountsIndex(),
+                              p.financial_account_id
+                            )}
+                          >
                             {(a) => <AccountAvatar account={a()} size={16} />}
                           </Show>
                           <span class="text-[11px] text-zinc-300 truncate flex-1">
-                            {p.financial_account_name ?? `Account #${p.financial_account_id}`}
+                            {p.financial_account_name ??
+                              `Account #${p.financial_account_id}`}
                           </span>
                           <span class="text-[11px] font-semibold tabular-nums text-zinc-100 shrink-0">
                             {formatCurrency(parseFloat(p.amount))}
                           </span>
                         </div>
                         <Show when={p.notes}>
-                          <div class="mt-1 text-[10px] text-zinc-500 truncate">{p.notes}</div>
+                          <div class="mt-1 text-[10px] text-zinc-500 truncate">
+                            {p.notes}
+                          </div>
                         </Show>
                       </div>
                     )}
@@ -390,7 +460,9 @@ export default function PaymentLegModal(props: Props) {
                         class="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-200 cursor-pointer focus:border-amber-500/50 focus:outline-none"
                       >
                         <option value="">Select…</option>
-                        <For each={accounts()}>{(a) => <option value={a.id}>{a.name}</option>}</For>
+                        <For each={accounts()}>
+                          {(a) => <option value={a.id}>{a.name}</option>}
+                        </For>
                       </select>
                     </Show>
                   </div>
@@ -419,7 +491,11 @@ export default function PaymentLegModal(props: Props) {
                   class="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
                 />
                 <div class="flex justify-end gap-2 pt-1">
-                  <Button intent="secondary" variant="ghost" onClick={() => props.onClose()}>
+                  <Button
+                    intent="secondary"
+                    variant="ghost"
+                    onClick={() => props.onClose()}
+                  >
                     Close
                   </Button>
                   <Button

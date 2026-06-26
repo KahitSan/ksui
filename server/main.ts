@@ -16,12 +16,17 @@
 
 import "dotenv/config";
 import { createPluginServer, applyTenantContext } from "@kahitsan/plugin-sdk";
-import { insertTransactionRow, insertVisibilityShares } from "./lib/create-transaction.js";
+import { flows } from "./flows.js";
+import {
+  insertTransactionRow,
+  insertVisibilityShares,
+} from "./lib/create-transaction.js";
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
 
 createPluginServer({
   importMetaUrl: import.meta.url,
+  flows,
   // ── Producer side: transactions.service ──────────────────────────────────
   // Secret-gated POST /_internal/services/:method, identity parsed so each
   // handler is workspace-scoped via req.workspaceId. These are the methods the
@@ -36,7 +41,7 @@ createPluginServer({
       const r = await db.query(
         `SELECT id, workspace_id, created_at, updated_at, amount, status, category
            FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-        [id, req.workspaceId],
+        [id, req.workspaceId]
       );
       return r.rows[0] ?? null;
     },
@@ -109,7 +114,7 @@ createPluginServer({
            FROM ids i
            LEFT JOIN leg_sums ls ON ls.account_id = i.account_id
            LEFT JOIN legacy_sums lg ON lg.account_id = i.account_id`,
-        [wsId, accountIds],
+        [wsId, accountIds]
       );
       for (const row of r.rows) {
         out[row.account_id] = { balance: parseFloat(row.balance) || 0 };
@@ -130,11 +135,17 @@ createPluginServer({
       const a = (args ?? {}) as { packageIds?: unknown; at?: unknown };
       const wsId = req.workspaceId;
       const packageIds = Array.isArray(a.packageIds)
-        ? a.packageIds.map((v) => (typeof v === "number" ? v : parseInt(String(v), 10))).filter((n) => Number.isInteger(n))
+        ? a.packageIds
+            .map((v) => (typeof v === "number" ? v : parseInt(String(v), 10)))
+            .filter((n) => Number.isInteger(n))
         : [];
-      const out: Record<number, { concurrent: number; daily: number; monthly: number; incoming: number }> = {};
+      const out: Record<
+        number,
+        { concurrent: number; daily: number; monthly: number; incoming: number }
+      > = {};
       if (wsId == null || packageIds.length === 0) return out;
-      for (const id of packageIds) out[id] = { concurrent: 0, daily: 0, monthly: 0, incoming: 0 };
+      for (const id of packageIds)
+        out[id] = { concurrent: 0, daily: 0, monthly: 0, incoming: 0 };
 
       const at = typeof a.at === "string" ? a.at : null;
       const useNow = at === null;
@@ -173,7 +184,7 @@ createPluginServer({
             AND li.package_id = ANY($2::int[])
             AND t.status <> 'voided'
           GROUP BY li.package_id`,
-        params,
+        params
       );
       for (const row of r.rows) {
         out[row.package_id] = {
@@ -206,24 +217,33 @@ createPluginServer({
       };
       const wsId = req.workspaceId;
       const userId = req.user?.id;
-      if (wsId == null || !userId) throw new Error("Workspace and user context required");
+      if (wsId == null || !userId)
+        throw new Error("Workspace and user context required");
 
-      const amount = typeof a.amount === "number" ? a.amount : parseFloat(String(a.amount));
-      if (!Number.isFinite(amount) || amount <= 0) throw new Error("amount must be greater than 0");
+      const amount =
+        typeof a.amount === "number" ? a.amount : parseFloat(String(a.amount));
+      if (!Number.isFinite(amount) || amount <= 0)
+        throw new Error("amount must be greater than 0");
 
       const payeeId =
-        a.payee_id == null ? null : Number.isFinite(Number(a.payee_id)) ? parseInt(String(a.payee_id), 10) : null;
+        a.payee_id == null
+          ? null
+          : Number.isFinite(Number(a.payee_id))
+          ? parseInt(String(a.payee_id), 10)
+          : null;
       const sourceAccountId =
         a.source_account_id == null
           ? null
           : Number.isFinite(Number(a.source_account_id))
-            ? parseInt(String(a.source_account_id), 10)
-            : null;
+          ? parseInt(String(a.source_account_id), 10)
+          : null;
       const transactionDate =
-        typeof a.transaction_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(a.transaction_date)
+        typeof a.transaction_date === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(a.transaction_date)
           ? a.transaction_date
           : null;
-      if (!transactionDate) throw new Error("transaction_date must be YYYY-MM-DD");
+      if (!transactionDate)
+        throw new Error("transaction_date must be YYYY-MM-DD");
       const notes = typeof a.notes === "string" ? a.notes : null;
 
       const client = await pool.connect();
@@ -279,7 +299,12 @@ createPluginServer({
   // router.
   routers: [
     ({ db, requireAuth, requireWorkspace, requirePermission }) =>
-      buildLineItemsRouter({ db, requireAuth, requireWorkspace, requirePermission }),
+      buildLineItemsRouter({
+        db,
+        requireAuth,
+        requireWorkspace,
+        requirePermission,
+      }),
     ({ db, requireAuth, requireWorkspace, requirePermission }) =>
       buildRouter({ db, requireAuth, requireWorkspace, requirePermission }),
   ],

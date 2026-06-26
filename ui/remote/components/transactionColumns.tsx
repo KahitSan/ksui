@@ -19,7 +19,14 @@ import ArrowDownLeft from "lucide-solid/icons/arrow-down-left";
 import ArrowUpRight from "lucide-solid/icons/arrow-up-right";
 import ArrowRight from "lucide-solid/icons/arrow-right";
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { Avatar, MarkdownNotes, AccountAvatar, resolveAccount, highlightMatch, type DataTableColumn } from "@kahitsan/ksui";
+import {
+  Avatar,
+  MarkdownNotes,
+  AccountAvatar,
+  resolveAccount,
+  highlightMatch,
+  type DataTableColumn,
+} from "@kahitsan/ksui";
 
 export interface TransactionColumnDeps {
   expandedGroups: () => Set<string>;
@@ -30,9 +37,15 @@ export interface TransactionColumnDeps {
 }
 
 export function makeTransactionColumns(
-  deps: TransactionColumnDeps,
+  deps: TransactionColumnDeps
 ): DataTableColumn<TransactionRow>[] {
-  const { expandedGroups, tableSearchTerm, peersUnavailable, accountsIndex, creatorName } = deps;
+  const {
+    expandedGroups,
+    tableSearchTerm,
+    peersUnavailable,
+    accountsIndex,
+    creatorName,
+  } = deps;
   return [
     {
       data: "transaction_date",
@@ -47,7 +60,10 @@ export function makeTransactionColumns(
               class="flex items-center gap-1 text-zinc-300 text-[11px] tabular-nums whitespace-nowrap font-semibold"
               data-testid="grouped-row-date"
             >
-              <Show when={isOpen} fallback={<ChevronRight size={12} class="text-zinc-500" />}>
+              <Show
+                when={isOpen}
+                fallback={<ChevronRight size={12} class="text-zinc-500" />}
+              >
                 <ChevronDown size={12} class="text-amber-400" />
               </Show>
               {formatDate(row._groupDate || row.transaction_date)}
@@ -69,7 +85,10 @@ export function makeTransactionColumns(
       title: "TX#",
       className: "w-[60px] text-right",
       render: (_val, _type, row) => (
-        <Show when={!row._grouped} fallback={<span class="text-[11px] text-zinc-700">—</span>}>
+        <Show
+          when={!row._grouped}
+          fallback={<span class="text-[11px] text-zinc-700">—</span>}
+        >
           <span class="text-[11px] tabular-nums text-zinc-500">#{row.id}</span>
         </Show>
       ),
@@ -84,7 +103,10 @@ export function makeTransactionColumns(
           return (
             <div class="min-w-0 py-1">
               <div class="flex items-center gap-1.5">
-                <span class="text-sm font-semibold text-zinc-100 truncate" data-testid="grouped-row-summary">
+                <span
+                  class="text-sm font-semibold text-zinc-100 truncate"
+                  data-testid="grouped-row-summary"
+                >
                   {count} {count === 1 ? "sale" : "sales"} on this day
                 </span>
               </div>
@@ -116,7 +138,10 @@ export function makeTransactionColumns(
               </Show>
             </div>
             <Show when={row.notes}>
-              <MarkdownNotes value={row.notes} class="text-[11px] text-zinc-500 leading-snug mt-0.5 line-clamp-1" />
+              <MarkdownNotes
+                value={row.notes}
+                class="text-[11px] text-zinc-500 leading-snug mt-0.5 line-clamp-1"
+              />
             </Show>
           </div>
         );
@@ -131,7 +156,9 @@ export function makeTransactionColumns(
           when={!row._grouped && row.subcategory}
           fallback={<span class="text-[11px] text-zinc-700">—</span>}
         >
-          <span class="inline-block text-[11px] text-zinc-400 truncate">{row.subcategory}</span>
+          <span class="inline-block text-[11px] text-zinc-400 truncate">
+            {row.subcategory}
+          </span>
         </Show>
       ),
     },
@@ -149,8 +176,14 @@ export function makeTransactionColumns(
         }
         // Has a payee but the name couldn't be loaded because the payees plugin
         // was unavailable for this fetch — show a marker, not a blank.
-        if (!row._grouped && row.payee_id != null && peersUnavailable().payees) {
-          return <PeerUnavailable title="Payees plugin unavailable — couldn't load payee name" />;
+        if (
+          !row._grouped &&
+          row.payee_id != null &&
+          peersUnavailable().payees
+        ) {
+          return (
+            <PeerUnavailable title="Payees plugin unavailable — couldn't load payee name" />
+          );
         }
         return <span class="text-[11px] text-zinc-700">—</span>;
       },
@@ -166,23 +199,37 @@ export function makeTransactionColumns(
         // The row references an account but no name resolved because the
         // financial-accounts plugin was unavailable for this fetch — show a
         // marker for the whole cell instead of misleading dashes.
-        const hasAccount = row.source_account_id != null || row.destination_account_id != null;
-        const nameResolved = !!(row.source_account_name || row.destination_account_name);
+        const hasAccount =
+          row.source_account_id != null || row.destination_account_id != null;
+        const nameResolved = !!(
+          row.source_account_name || row.destination_account_name
+        );
         if (hasAccount && !nameResolved && peersUnavailable().accounts) {
           return (
             <PeerUnavailable title="Financial accounts plugin unavailable — couldn't load accounts" />
           );
         }
         const srcAcct = resolveAccount(accountsIndex(), row.source_account_id);
-        const dstAcct = resolveAccount(accountsIndex(), row.destination_account_id);
+        const dstAcct = resolveAccount(
+          accountsIndex(),
+          row.destination_account_id
+        );
         if (row.category === "business") {
           return (
             <span class="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
-              <Show when={srcAcct}>{(a) => <AccountAvatar account={a()} size={14} />}</Show>
-              <span class="text-zinc-500 truncate">{row.source_account_name || "—"}</span>
+              <Show when={srcAcct}>
+                {(a) => <AccountAvatar account={a()} size={14} />}
+              </Show>
+              <span class="text-zinc-500 truncate">
+                {row.source_account_name || "—"}
+              </span>
               <ArrowRight size={10} class="text-zinc-600 shrink-0" />
-              <Show when={dstAcct}>{(a) => <AccountAvatar account={a()} size={14} />}</Show>
-              <span class="text-zinc-300 truncate">{row.destination_account_name || "—"}</span>
+              <Show when={dstAcct}>
+                {(a) => <AccountAvatar account={a()} size={14} />}
+              </Show>
+              <span class="text-zinc-300 truncate">
+                {row.destination_account_name || "—"}
+              </span>
             </span>
           );
         }
@@ -190,8 +237,12 @@ export function makeTransactionColumns(
           return (
             <span class="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
               <ArrowDownLeft size={10} class="text-emerald-500/70 shrink-0" />
-              <Show when={dstAcct}>{(a) => <AccountAvatar account={a()} size={14} />}</Show>
-              <span class="text-zinc-300 truncate">{row.destination_account_name || "—"}</span>
+              <Show when={dstAcct}>
+                {(a) => <AccountAvatar account={a()} size={14} />}
+              </Show>
+              <span class="text-zinc-300 truncate">
+                {row.destination_account_name || "—"}
+              </span>
             </span>
           );
         }
@@ -199,7 +250,11 @@ export function makeTransactionColumns(
           <span class="flex items-center gap-1.5 text-xs text-zinc-400 min-w-0">
             <ArrowUpRight
               size={10}
-              class={row.category === "payable" ? "text-amber-400/80 shrink-0" : "text-red-500/70 shrink-0"}
+              class={
+                row.category === "payable"
+                  ? "text-amber-400/80 shrink-0"
+                  : "text-red-500/70 shrink-0"
+              }
             />
             <Show
               when={dstAcct || row.destination_account_name}
@@ -208,17 +263,27 @@ export function makeTransactionColumns(
                   when={row.source_account_name}
                   fallback={<span class="text-zinc-300 truncate">{"—"}</span>}
                 >
-                  <Show when={srcAcct}>{(a) => <AccountAvatar account={a()} size={14} />}</Show>
-                  <span class="text-zinc-300 truncate">{row.source_account_name}</span>
+                  <Show when={srcAcct}>
+                    {(a) => <AccountAvatar account={a()} size={14} />}
+                  </Show>
+                  <span class="text-zinc-300 truncate">
+                    {row.source_account_name}
+                  </span>
                 </Show>
               }
             >
-              <Show when={dstAcct}>{(a) => <AccountAvatar account={a()} size={14} />}</Show>
-              <span class="text-zinc-300 truncate">{row.destination_account_name}</span>
+              <Show when={dstAcct}>
+                {(a) => <AccountAvatar account={a()} size={14} />}
+              </Show>
+              <span class="text-zinc-300 truncate">
+                {row.destination_account_name}
+              </span>
               <Show when={row.source_account_name}>
                 <span class="inline-flex items-center gap-1 text-zinc-600 truncate">
                   <span>·</span>
-                  <Show when={srcAcct}>{(a) => <AccountAvatar account={a()} size={14} />}</Show>
+                  <Show when={srcAcct}>
+                    {(a) => <AccountAvatar account={a()} size={14} />}
+                  </Show>
                   <span class="truncate">{row.source_account_name}</span>
                 </span>
               </Show>
@@ -238,7 +303,8 @@ export function makeTransactionColumns(
         // created_by is a kernel user id; the server can't join the kernel
         // `user` table, so resolve the display name from the host's workspace member
         // list. Falls back to "Unknown" until members load / for ex-members.
-        const name = creatorName(row.created_by) || row.created_by_name || "Unknown";
+        const name =
+          creatorName(row.created_by) || row.created_by_name || "Unknown";
         return (
           <div class="flex justify-center">
             <Avatar name={name} image={row.created_by_image} size="sm" />
@@ -257,16 +323,19 @@ export function makeTransactionColumns(
         const amt = row._grouped ? String(row._groupTotal ?? 0) : row.amount;
         const isVoided = !row._grouped && row.status === "voided";
         const balanceNum =
-          !row._grouped && !isVoided && row.payment_status === "partial" && row.balance != null
+          !row._grouped &&
+          !isVoided &&
+          row.payment_status === "partial" &&
+          row.balance != null
             ? parseFloat(row.balance)
             : 0;
         const showBalance = balanceNum > 0;
         return (
           <div class="flex flex-col items-end gap-0.5">
             <span
-              class={`text-sm font-bold tabular-nums whitespace-nowrap ${t.text} ${
-                isVoided ? "line-through text-zinc-500" : ""
-              }`}
+              class={`text-sm font-bold tabular-nums whitespace-nowrap ${
+                t.text
+              } ${isVoided ? "line-through text-zinc-500" : ""}`}
               data-testid={row._grouped ? "grouped-row-total" : undefined}
             >
               {tone.sign}

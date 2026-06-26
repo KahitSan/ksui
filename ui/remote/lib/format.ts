@@ -5,7 +5,10 @@
 
 export function formatCurrency(amount: string | number): string {
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(num);
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+  }).format(num);
 }
 
 export function formatDate(dateStr: string): string {
@@ -19,11 +22,21 @@ export function formatDate(dateStr: string): string {
 
 export function formatDateTime(stamp: string): string {
   const d = new Date(stamp);
-  const date = d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
-  const time = d.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true });
+  const date = d.toLocaleDateString("en-PH", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const time = d.toLocaleTimeString("en-PH", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
   return `${date} · ${time}`;
 }
 
 export function todayManila(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(
+    new Date()
+  );
 }
