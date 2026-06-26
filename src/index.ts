@@ -194,6 +194,9 @@ export { buildLogoSrc } from "./utils/account-logo-url";
 
 export { attachmentUrl, isResolvableAttachment } from "./utils/attachments";
 
+export { createObjectUrlResource } from "./utils/object-url-resource";
+export type { ObjectUrlOptions } from "./utils/object-url-resource";
+
 export { useAccountsIndex, resolveAccount, resolveAccountName } from "./utils/accounts-index";
 
 export { INPUT_CLASS } from "./utils/INPUT_CLASS";
