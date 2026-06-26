@@ -1,15 +1,23 @@
-// Renders one already-uploaded attachment as a 24×24 tile: an image preview or
-// a paperclip/file fallback linking to the s3_link public URL, an "Unavailable"
-// placeholder when the link can't be resolved (see lib/attachments.ts), and an
-// optional remove button. confirm is ksui's own self-contained dialog. The third
-// of the attachment widget set alongside AddAttachmentTile + CameraCapture.
+// Renders one already-uploaded attachment as a 24×24 tile: an image preview or a
+// paperclip/file fallback, an "Unavailable" placeholder when the source can't be
+// resolved, and an optional remove button. confirm is ksui's own self-contained
+// dialog. The third of the attachment widget set alongside AddAttachmentTile +
+// CameraCapture.
+//
+// Two source modes:
+//  • default — resolve the PUBLIC s3_link via attachmentUrl() (legacy public bucket).
+//  • `rawHref` set — stream the PRIVATE object's bytes from that authed same-origin
+//    route and render the resulting blob: (the proxy/blob pattern). s3_link is then
+//    ignored for rendering; a spinner shows while the bytes stream.
 
 import { Show, type Component } from "solid-js";
 import Paperclip from "lucide-solid/icons/paperclip";
 import X from "lucide-solid/icons/x";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
+import Loader2 from "lucide-solid/icons/loader-2";
 import { confirm } from "../../utils/confirm";
 import { attachmentUrl, isResolvableAttachment } from "../../utils/attachments";
+import { createObjectUrlResource } from "../../utils/object-url-resource";
 
 export interface ExistingAttachment {
   id: number;
@@ -23,10 +31,26 @@ interface Props {
   testId: string;
   onDelete?: (attachmentId: number) => Promise<void> | void;
   fallbackIcon?: Component<{ size?: number }>;
+  // When set, stream the private object's bytes from this authed same-origin route
+  // and render a blob: — the proxy/blob mode. When absent, fall back to the public
+  // s3_link. The fetch carries credentials; pass extra headers via `rawInit`.
+  rawHref?: string;
+  rawInit?: RequestInit;
 }
 
 export default function ExistingAttachmentTile(props: Props) {
-  const url = () => attachmentUrl(props.attachment.s3_link);
+  // Always call the hook (Solid rule); a null href no-ops when not in blob mode.
+  const blob = createObjectUrlResource(
+    () => props.rawHref ?? null,
+    { init: props.rawInit },
+  );
+  const isBlobMode = () => props.rawHref != null;
+  const url = (): string | undefined =>
+    isBlobMode() ? (blob() ?? undefined) : attachmentUrl(props.attachment.s3_link);
+  const resolvable = () =>
+    isBlobMode() ? blob() != null : isResolvableAttachment(props.attachment.s3_link);
+  const loading = () => (isBlobMode() ? blob.loading : false);
+
   const FallbackIcon = () => {
     const Icon = props.fallbackIcon ?? Paperclip;
     return <Icon size={20} />;
@@ -35,15 +59,26 @@ export default function ExistingAttachmentTile(props: Props) {
   return (
     <div class="relative group shrink-0" data-testid={props.testId}>
       <Show
-        when={isResolvableAttachment(props.attachment.s3_link)}
+        when={resolvable()}
         fallback={
           <div
             class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/40 px-2 text-center text-zinc-500"
-            title={`${props.attachment.file_name} (file is no longer available)`}
+            title={
+              loading()
+                ? `${props.attachment.file_name} (loading)`
+                : `${props.attachment.file_name} (file is no longer available)`
+            }
           >
-            <TriangleAlert size={18} class="text-amber-500/70" />
+            <Show
+              when={loading()}
+              fallback={<TriangleAlert size={18} class="text-amber-500/70" />}
+            >
+              <Loader2 size={18} class="animate-spin text-zinc-500" />
+            </Show>
             <span class="truncate max-w-full text-[10px]">{props.attachment.file_name}</span>
-            <span class="text-[9px] uppercase tracking-wider">Unavailable</span>
+            <span class="text-[9px] uppercase tracking-wider">
+              {loading() ? "Loading" : "Unavailable"}
+            </span>
           </div>
         }
       >
