@@ -3,9 +3,8 @@
 // dependency on Component(). useAccountsIndex() is the host-runtime context,
 // preserved by reading it from the same @kahitsan/ksui re-export.
 
-import { createSignal, createResource, Show, For } from "solid-js";
+import { createSignal, Show, For } from "solid-js";
 import Plus from "lucide-solid/icons/plus";
-import X from "lucide-solid/icons/x";
 import Loader2 from "lucide-solid/icons/loader-2";
 import Lock from "lucide-solid/icons/lock";
 import Paperclip from "lucide-solid/icons/paperclip";
@@ -13,7 +12,6 @@ import Trash2 from "lucide-solid/icons/trash-2";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import CalendarDays from "lucide-solid/icons/calendar-days";
-import TriangleAlert from "lucide-solid/icons/triangle-alert";
 
 import { formatCurrency, formatDate, formatDateTime } from "../lib/format";
 import { type PendingFile, type Transaction } from "../lib/types";
@@ -33,7 +31,7 @@ import {
   useAccountsIndex,
   resolveAccount,
   MarkdownNotes,
-  confirm,
+  ExistingAttachmentTile,
 } from "@kahitsan/ksui";
 
 export function TransactionDetailSkeleton() {
@@ -79,35 +77,6 @@ export function TransactionDetail(props: {
   const c = TONE_CLASSES[tone.tone];
   const accountsIndex = useAccountsIndex();
 
-  // A1 retire: attachments are PRIVATE (no public s3_link read path). Resolve each to
-  // a short-lived presigned GET URL from the ownership-scoped /presign route, keyed by
-  // the attachment-id list so it refetches when the set changes. credentials-only — the
-  // kernel proxy resolves the active workspace from the session (like the upload/list
-  // fetches). The url is scheme-checked before it reaches <img src>/<a href>.
-  const [presignedAtt] = createResource(
-    () => (props.txn.attachments ?? []).map((a) => a.id).join(","),
-    async () => {
-      const atts = props.txn.attachments ?? [];
-      const pairs = await Promise.all(
-        atts.map(async (a) => {
-          try {
-            const res = await fetch(
-              `/api/transactions/${props.txn.id}/attachments/${a.id}/presign`,
-              { credentials: "include" },
-            );
-            if (!res.ok) return [a.id, null] as const;
-            const body = (await res.json()) as { url?: string };
-            const u = body.url ?? null;
-            return [a.id, u && /^https?:/i.test(u) ? u : null] as const;
-          } catch {
-            return [a.id, null] as const;
-          }
-        }),
-      );
-      return new Map(pairs);
-    },
-  );
-  const attUrl = (att: { id: number }): string | null => presignedAtt()?.get(att.id) ?? null;
   let fileInput: HTMLInputElement | undefined;
   let cameraInput: HTMLInputElement | undefined;
 
@@ -628,84 +597,16 @@ export function TransactionDetail(props: {
         <div class="flex gap-2 overflow-x-auto pt-3 pr-3 pb-2 items-start">
           <For each={props.txn.attachments}>
             {(att) => (
-              <div class="relative group shrink-0">
-                <Show
-                  when={attUrl(att)}
-                  fallback={
-                    <div
-                      class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/40 px-2 text-center text-zinc-500"
-                      title={
-                        presignedAtt.loading
-                          ? `${att.file_name} — loading`
-                          : `${att.file_name} — file is no longer available`
-                      }
-                    >
-                      <Show
-                        when={presignedAtt.loading}
-                        fallback={<TriangleAlert size={18} class="text-amber-500/70" />}
-                      >
-                        <Loader2 size={18} class="animate-spin text-zinc-500" />
-                      </Show>
-                      <span class="truncate max-w-full text-[10px]">
-                        {att.file_name}
-                      </span>
-                      <span class="text-[9px] uppercase tracking-wider">
-                        {presignedAtt.loading ? "Loading" : "Unavailable"}
-                      </span>
-                    </div>
-                  }
-                >
-                  <Show
-                    when={att.mime_type.startsWith("image/")}
-                    fallback={
-                      <a
-                        href={attUrl(att)!}
-                        target="_blank"
-                        rel="noopener"
-                        class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300 hover:border-amber-500/30"
-                      >
-                        <Paperclip size={20} />
-                        <span class="truncate max-w-full text-[10px]">
-                          {att.file_name}
-                        </span>
-                      </a>
-                    }
-                  >
-                    <a
-                      href={attUrl(att)!}
-                      target="_blank"
-                      rel="noopener"
-                      class="block rounded-lg border border-zinc-700 overflow-hidden hover:border-amber-500/30"
-                    >
-                      <img
-                        src={attUrl(att)!}
-                        alt={att.file_name}
-                        class="w-24 h-24 object-cover"
-                      />
-                    </a>
-                  </Show>
-                </Show>
-                <Show when={props.canEdit}>
-                  <button
-                    aria-label="Remove attachment"
-                    onClick={async () => {
-                      if (
-                        await confirm({
-                          title: "Remove attachment?",
-                          message: `Remove attachment "${att.file_name}"?`,
-                          confirmLabel: "Remove",
-                          danger: true,
-                        })
-                      ) {
-                        props.onDeleteAttachment(t.id, att.id);
-                      }
-                    }}
-                    class="absolute -top-2 -right-2 flex w-7 h-7 items-center justify-center rounded-full bg-red-600/90 border border-red-400/60 text-white cursor-pointer hover:bg-red-500 active:bg-red-700 shadow-lg"
-                  >
-                    <X size={12} />
-                  </button>
-                </Show>
-              </div>
+              <ExistingAttachmentTile
+                attachment={att}
+                testId={`txn-attachment-${att.id}`}
+                rawHref={`/api/transactions/${t.id}/attachments/${att.id}/raw`}
+                onDelete={
+                  props.canEdit
+                    ? (attId) => props.onDeleteAttachment(t.id, attId)
+                    : undefined
+                }
+              />
             )}
           </For>
           <For each={props.pendingUploads}>

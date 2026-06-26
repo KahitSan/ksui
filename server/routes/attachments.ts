@@ -22,12 +22,13 @@ import {
   s3PutObject,
   s3DeleteObject,
   s3KeyFromUrl,
-  s3PresignUrl,
+  s3GetObject,
 } from "@kahitsan/plugin-server-utils";
 
-// Presigned-GET lifetime for an attachment (A1 retire): long enough to render an
-// inline image / open a PDF, short enough that a leaked URL expires fast.
-const ATTACHMENT_PRESIGN_TTL_SECONDS = 300;
+// How long the browser may cache a streamed attachment. `private` keeps it out of
+// shared caches (it's an authed, per-workspace object); 5 min covers a detail-view
+// session without re-streaming on every render.
+const ATTACHMENT_CACHE_SECONDS = 300;
 
 // ── Attachment upload config ─────────────────────────────────────────────
 // Attachments are stored in S3-compatible object storage ONLY (DO Spaces in
@@ -83,14 +84,14 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
     },
   );
 
-  // GET /:id/attachments/:attachmentId/presign — A1 retire: a short-lived,
-  // ownership-scoped presigned GET URL for one private attachment. The
-  // workspace+transaction JOIN scoping IS the access gate (RLS is the second
-  // wall); the presigned URL is just a time-limited capability over the private
-  // object, so a leaked link expires fast. Explicit whitelist response — no S3
-  // key, bucket, or credential leaks.
+  // GET /:id/attachments/:attachmentId/raw — stream the private attachment's bytes
+  // back through this authed route (the proxy/blob pattern). The object is NEVER
+  // exposed at a public or signed third-party URL; the workspace+transaction JOIN
+  // scoping IS the access gate (RLS is the second wall), re-checked on every fetch.
+  // The UI renders the streamed bytes as a same-origin blob: — no DO origin, no
+  // leakable bearer link.
   router.get(
-    "/:id/attachments/:attachmentId/presign",
+    "/:id/attachments/:attachmentId/raw",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
@@ -112,15 +113,12 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
           res.status(404).json({ error: "No object" });
           return;
         }
-        const url = s3PresignUrl(key, ATTACHMENT_PRESIGN_TTL_SECONDS);
-        res.json({
-          url,
-          expiresAt: new Date(
-            Date.now() + ATTACHMENT_PRESIGN_TTL_SECONDS * 1000,
-          ).toISOString(),
-        });
+        const { body, contentType } = await s3GetObject(key);
+        res.setHeader("Content-Type", contentType || "application/octet-stream");
+        res.setHeader("Cache-Control", `private, max-age=${ATTACHMENT_CACHE_SECONDS}`);
+        res.send(body);
       } catch (err) {
-        console.error("[transactions] attachment presign error:", err);
+        console.error("[transactions] attachment raw error:", err);
         res.status(500).json({ error: "Internal server error" });
       }
     },
