@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.9.1
+
+### Patch Changes
+
+- aae5f41: Declare the plugin's §9 node-step flows (authored with the buildFlow DSL) and serve them at the public GET /\_\_meta/flows for the kernel to render in the settings → Connections tab. Requires @kahitsan/plugin-sdk with the buildFlow DSL + createPluginServer flows option.
+
 ## 0.9.0
 
 ### Minor Changes
