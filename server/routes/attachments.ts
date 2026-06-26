@@ -197,8 +197,8 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
         const key = `uploads/${file_url}`;
         // A1 retire: financial-document attachments upload PRIVATE — never
         // world-readable at a guessable URL. They are served only through the
-        // ownership-scoped /presign route below. s3_link stays as the object
-        // reference (key recovery for presign/delete), not a public read path.
+        // ownership-scoped /raw stream route below. s3_link stays as the object
+        // reference (key recovery for raw-serve/delete), not a public read path.
         // NOTE(A1 ops): attachment objects uploaded BEFORE this retire stay served
         // from the Spaces CDN until a CDN purge (`doctl compute cdn flush`) — the
         // ACL flip doesn't evict cached copies. New uploads (here) are private.
