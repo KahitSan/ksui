@@ -10,7 +10,7 @@
 //    route and render the resulting blob: (the proxy/blob pattern). s3_link is then
 //    ignored for rendering; a spinner shows while the bytes stream.
 
-import { Show, type Component } from "solid-js";
+import { Show, createSignal, type Component } from "solid-js";
 import Paperclip from "lucide-solid/icons/paperclip";
 import X from "lucide-solid/icons/x";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
@@ -18,6 +18,7 @@ import Loader2 from "lucide-solid/icons/loader-2";
 import { confirm } from "../../utils/confirm";
 import { attachmentUrl, isResolvableAttachment } from "../../utils/attachments";
 import { createObjectUrlResource } from "../../utils/object-url-resource";
+import ImageViewer from "./ImageViewer";
 
 export interface ExistingAttachment {
   id: number;
@@ -50,6 +51,7 @@ export default function ExistingAttachmentTile(props: Props) {
   const resolvable = () =>
     isBlobMode() ? blob() != null : isResolvableAttachment(props.attachment.s3_link);
   const loading = () => (isBlobMode() ? blob.loading : false);
+  const [viewerOpen, setViewerOpen] = createSignal(false);
 
   const FallbackIcon = () => {
     const Icon = props.fallbackIcon ?? Paperclip;
@@ -87,8 +89,7 @@ export default function ExistingAttachmentTile(props: Props) {
           fallback={
             <a
               href={url()}
-              target="_blank"
-              rel="noopener"
+              download={props.attachment.file_name}
               class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300 hover:border-amber-500/30"
             >
               <FallbackIcon />
@@ -96,14 +97,13 @@ export default function ExistingAttachmentTile(props: Props) {
             </a>
           }
         >
-          <a
-            href={url()}
-            target="_blank"
-            rel="noopener"
-            class="block rounded-lg border border-zinc-700 overflow-hidden hover:border-amber-500/30"
+          <button
+            type="button"
+            onClick={() => setViewerOpen(true)}
+            class="block rounded-lg border border-zinc-700 overflow-hidden hover:border-amber-500/30 cursor-pointer"
           >
             <img src={url()} alt={props.attachment.file_name} class="w-24 h-24 object-cover" />
-          </a>
+          </button>
         </Show>
       </Show>
       <Show when={props.onDelete}>
@@ -123,6 +123,13 @@ export default function ExistingAttachmentTile(props: Props) {
         >
           <X size={12} />
         </button>
+      </Show>
+      <Show when={viewerOpen() && url()}>
+        <ImageViewer
+          src={url()!}
+          alt={props.attachment.file_name}
+          onClose={() => setViewerOpen(false)}
+        />
       </Show>
     </div>
   );
