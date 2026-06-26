@@ -22,7 +22,12 @@ import {
   s3PutObject,
   s3DeleteObject,
   s3KeyFromUrl,
+  s3PresignUrl,
 } from "@kahitsan/plugin-server-utils";
+
+// Presigned-GET lifetime for an attachment (A1 retire): long enough to render an
+// inline image / open a PDF, short enough that a leaked URL expires fast.
+const ATTACHMENT_PRESIGN_TTL_SECONDS = 300;
 
 // ── Attachment upload config ─────────────────────────────────────────────
 // Attachments are stored in S3-compatible object storage ONLY (DO Spaces in
@@ -73,6 +78,49 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
         res.json({ attachments: rows.rows });
       } catch (err) {
         console.error("[transactions] attachments list error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    },
+  );
+
+  // GET /:id/attachments/:attachmentId/presign — A1 retire: a short-lived,
+  // ownership-scoped presigned GET URL for one private attachment. The
+  // workspace+transaction JOIN scoping IS the access gate (RLS is the second
+  // wall); the presigned URL is just a time-limited capability over the private
+  // object, so a leaked link expires fast. Explicit whitelist response — no S3
+  // key, bucket, or credential leaks.
+  router.get(
+    "/:id/attachments/:attachmentId/presign",
+    requireAuth,
+    requireWorkspace,
+    requirePermission("transactions.view"),
+    async (req: Request, res: Response) => {
+      try {
+        const row = await pool.query<{ s3_link: string | null }>(
+          `SELECT a.s3_link
+             FROM accounts.transaction_attachments a
+             JOIN accounts.transactions t ON t.id = a.transaction_id
+            WHERE a.id = $1 AND a.transaction_id = $2 AND t.workspace_id = $3`,
+          [req.params.attachmentId, req.params.id, req.workspaceId],
+        );
+        if (row.rows.length === 0) {
+          res.status(404).json({ error: "Not found" });
+          return;
+        }
+        const key = s3KeyFromUrl(row.rows[0].s3_link);
+        if (!key) {
+          res.status(404).json({ error: "No object" });
+          return;
+        }
+        const url = s3PresignUrl(key, ATTACHMENT_PRESIGN_TTL_SECONDS);
+        res.json({
+          url,
+          expiresAt: new Date(
+            Date.now() + ATTACHMENT_PRESIGN_TTL_SECONDS * 1000,
+          ).toISOString(),
+        });
+      } catch (err) {
+        console.error("[transactions] attachment presign error:", err);
         res.status(500).json({ error: "Internal server error" });
       }
     },
@@ -149,7 +197,13 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
         // file_url is the generated object path; it builds the S3 key and the
         // public link. It is NOT stored — s3_link is the sole reference now.
         const key = `uploads/${file_url}`;
-        await s3PutObject(key, req.file.buffer, mime_type || "application/octet-stream");
+        // A1 retire: financial-document attachments upload PRIVATE — never
+        // world-readable at a guessable URL. They are served only through the
+        // ownership-scoped /presign route below. s3_link stays as the object
+        // reference (key recovery for presign/delete), not a public read path.
+        await s3PutObject(key, req.file.buffer, mime_type || "application/octet-stream", {
+          acl: "private",
+        });
         const s3Link = s3PublicUrl(key);
         let result;
         try {

@@ -3,7 +3,7 @@
 // dependency on Component(). useAccountsIndex() is the host-runtime context,
 // preserved by reading it from the same @kahitsan/ksui re-export.
 
-import { createSignal, Show, For } from "solid-js";
+import { createSignal, createResource, Show, For } from "solid-js";
 import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
 import Loader2 from "lucide-solid/icons/loader-2";
@@ -32,8 +32,6 @@ import {
   AccountAvatar,
   useAccountsIndex,
   resolveAccount,
-  attachmentUrl,
-  isResolvableAttachment,
   MarkdownNotes,
   confirm,
 } from "@kahitsan/ksui";
@@ -80,6 +78,36 @@ export function TransactionDetail(props: {
   const tone = CATEGORY_TONE[t.category] || CATEGORY_TONE.expense;
   const c = TONE_CLASSES[tone.tone];
   const accountsIndex = useAccountsIndex();
+
+  // A1 retire: attachments are PRIVATE (no public s3_link read path). Resolve each to
+  // a short-lived presigned GET URL from the ownership-scoped /presign route, keyed by
+  // the attachment-id list so it refetches when the set changes. credentials-only — the
+  // kernel proxy resolves the active workspace from the session (like the upload/list
+  // fetches). The url is scheme-checked before it reaches <img src>/<a href>.
+  const [presignedAtt] = createResource(
+    () => (props.txn.attachments ?? []).map((a) => a.id).join(","),
+    async () => {
+      const atts = props.txn.attachments ?? [];
+      const pairs = await Promise.all(
+        atts.map(async (a) => {
+          try {
+            const res = await fetch(
+              `/api/transactions/${props.txn.id}/attachments/${a.id}/presign`,
+              { credentials: "include" },
+            );
+            if (!res.ok) return [a.id, null] as const;
+            const body = (await res.json()) as { url?: string };
+            const u = body.url ?? null;
+            return [a.id, u && /^https?:/i.test(u) ? u : null] as const;
+          } catch {
+            return [a.id, null] as const;
+          }
+        }),
+      );
+      return new Map(pairs);
+    },
+  );
+  const attUrl = (att: { id: number }): string | null => presignedAtt()?.get(att.id) ?? null;
   let fileInput: HTMLInputElement | undefined;
   let cameraInput: HTMLInputElement | undefined;
 
@@ -602,18 +630,27 @@ export function TransactionDetail(props: {
             {(att) => (
               <div class="relative group shrink-0">
                 <Show
-                  when={isResolvableAttachment(att.s3_link)}
+                  when={attUrl(att)}
                   fallback={
                     <div
                       class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/40 px-2 text-center text-zinc-500"
-                      title={`${att.file_name} — file is no longer available`}
+                      title={
+                        presignedAtt.loading
+                          ? `${att.file_name} — loading`
+                          : `${att.file_name} — file is no longer available`
+                      }
                     >
-                      <TriangleAlert size={18} class="text-amber-500/70" />
+                      <Show
+                        when={presignedAtt.loading}
+                        fallback={<TriangleAlert size={18} class="text-amber-500/70" />}
+                      >
+                        <Loader2 size={18} class="animate-spin text-zinc-500" />
+                      </Show>
                       <span class="truncate max-w-full text-[10px]">
                         {att.file_name}
                       </span>
                       <span class="text-[9px] uppercase tracking-wider">
-                        Unavailable
+                        {presignedAtt.loading ? "Loading" : "Unavailable"}
                       </span>
                     </div>
                   }
@@ -622,7 +659,7 @@ export function TransactionDetail(props: {
                     when={att.mime_type.startsWith("image/")}
                     fallback={
                       <a
-                        href={attachmentUrl(att.s3_link)}
+                        href={attUrl(att)!}
                         target="_blank"
                         rel="noopener"
                         class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300 hover:border-amber-500/30"
@@ -635,13 +672,13 @@ export function TransactionDetail(props: {
                     }
                   >
                     <a
-                      href={attachmentUrl(att.s3_link)}
+                      href={attUrl(att)!}
                       target="_blank"
                       rel="noopener"
                       class="block rounded-lg border border-zinc-700 overflow-hidden hover:border-amber-500/30"
                     >
                       <img
-                        src={attachmentUrl(att.s3_link)}
+                        src={attUrl(att)!}
                         alt={att.file_name}
                         class="w-24 h-24 object-cover"
                       />
