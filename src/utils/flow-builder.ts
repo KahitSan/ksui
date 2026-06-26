@@ -1,14 +1,25 @@
-// Node-step authoring DSL — a fluent builder for a flow/node-graph definition.
-// An author wraps steps in calls (`f.trigger(...)`, `f.condition(label, onYes,
-// onNo)`, `f.call(...)`, …); each call appends a node wired from the previous
-// step, and a condition forks into two labelled branches. The whole thing lowers
-// to a `FlowDefinition` the FlowGraph renders.
+// Node-step authoring DSL — a small, optional graph builder for composing a
+// `FlowDefinition`. Each step creates a node and returns a handle; you wire
+// handles together with `.to(target, label?)`, which returns the target so
+// linear paths chain (`a.to(b).to(c)`) while joins, loops and multi-way
+// branches fall out of connecting the same handle more than once:
 //
-// Authoring with steps — instead of hand-building node/edge data — is what keeps
-// the diagram parseable and in lockstep with the code that declares it: the same
-// call tree that (in a step-running runtime) drives the behaviour is what gets
-// rendered. This is optional, additive sugar over `defineFlow`; consumers can
-// still build a `FlowDefinition` directly with `node`/`edge` if they prefer.
+//   buildFlow("checkout", "Checkout", (f) => {
+//     const list   = f.data("Items");
+//     const add    = f.trigger("Add button");
+//     const form   = f.modal("Item form");
+//     const valid  = f.condition("Valid?");
+//     const save   = f.commit("Save", "POST /api/items");
+//     list.to(add).to(form).to(valid);
+//     valid.to(save, "yes");        // branch
+//     valid.to(form, "no");         // loop back to the form
+//     save.to(list, "done");        // and back to the list (join)
+//   });
+//
+// It lowers to the same `FlowDefinition` the FlowGraph renders, so it is purely
+// additive sugar over `defineFlow` — consumers can still build flows from
+// `node`/`edge` directly. Domain-free: every step is a generic node kind, no app
+// or transport assumptions.
 
 import {
   defineFlow,
@@ -17,99 +28,87 @@ import {
   type FlowNodeKind,
 } from "./flow-spec";
 
-/**
- * A node-step recorder. Linear steps chain (`f.trigger(...).load(...).commit(...)`);
- * `condition` forks into two labelled branches that recurse with the SAME node
- * list, so the full tree — both arms, not just the one a runtime would take — is
- * captured for the diagram. Branch builders share `nodes` (and thus the running
- * id sequence via `nodes.length`), so ids never collide across arms.
- */
-export class FlowSteps {
-  constructor(
-    readonly prefix: string,
-    readonly nodes: FlowNodeDef[] = [],
-    private tail: string | null = null,
-    private pendingLabel?: string,
-  ) {}
+/** A handle to a created node. `.to(target)` connects this node → target and
+ *  returns target, so paths chain; call it again (or from another handle) to
+ *  form branches, joins and loops. */
+export interface FlowNode {
+  readonly id: string;
+  to(target: FlowNode, label?: string): FlowNode;
+}
 
-  private step(kind: FlowNodeKind, label: string, detail?: string): this {
-    const id = `${this.prefix}_${kind}_${this.nodes.length}`;
-    this.nodes.push({ id, kind, label, ...(detail ? { detail } : {}) });
-    if (this.tail) {
-      const prev = this.nodes.find((n) => n.id === this.tail);
-      if (prev) {
-        prev.out = prev.out ?? [];
-        const bl = this.pendingLabel;
-        prev.out.push(bl ? { id: bl, to: id, label: bl } : { id: "out", to: id });
-      }
-    }
-    this.tail = id;
-    this.pendingLabel = undefined; // a fork label applies only to the first step of the arm
-    return this;
+/** Graph builder: one method per node kind, each returning a connectable handle. */
+export class FlowSteps {
+  readonly nodes: FlowNodeDef[] = [];
+  constructor(readonly prefix: string) {}
+
+  private make(kind: FlowNodeKind, label: string, detail?: string): FlowNode {
+    const def: FlowNodeDef = {
+      id: `${this.prefix}_${kind}_${this.nodes.length}`,
+      kind,
+      label,
+      ...(detail ? { detail } : {}),
+    };
+    this.nodes.push(def);
+    const handle: FlowNode = {
+      id: def.id,
+      to(target: FlowNode, label?: string): FlowNode {
+        def.out = def.out ?? [];
+        def.out.push(label ? { id: label, to: target.id, label } : { id: "out", to: target.id });
+        return target;
+      },
+    };
+    return handle;
   }
 
   /** A UI event that starts/continues the flow (a button, a selection). */
-  trigger(label: string): this {
-    return this.step("trigger", label);
+  trigger(label: string): FlowNode {
+    return this.make("trigger", label);
   }
   /** A data source / list the screen shows. */
-  data(label: string, detail?: string): this {
-    return this.step("data", label, detail);
+  data(label: string, detail?: string): FlowNode {
+    return this.make("data", label, detail);
   }
   /** A fetch/load into the current screen. */
-  load(label: string, detail?: string): this {
-    return this.step("load", label, detail);
+  load(label: string, detail?: string): FlowNode {
+    return this.make("load", label, detail);
   }
   /** Opens an overlay / form. */
-  modal(label: string): this {
-    return this.step("modal", label);
+  modal(label: string): FlowNode {
+    return this.make("modal", label);
   }
   /** A call out to another service/capability; `target` is its identifier. */
-  call(target: string, label?: string): this {
-    return this.step("call", label ?? target, target);
+  call(target: string, label?: string): FlowNode {
+    return this.make("call", label ?? target, target);
   }
   /** A pure computation (apply a discount, total a cart). */
-  compute(label: string): this {
-    return this.step("compute", label);
+  compute(label: string): FlowNode {
+    return this.make("compute", label);
+  }
+  /** A branch — wire its outcomes with `.to(target, "yes")` / `.to(target, "no")`. */
+  condition(label: string): FlowNode {
+    return this.make("condition", label);
   }
   /** A write / command. */
-  commit(label: string, detail?: string): this {
-    return this.step("commit", label, detail);
+  commit(label: string, detail?: string): FlowNode {
+    return this.make("commit", label, detail);
   }
   /** Emits a domain event. */
-  emit(event: string): this {
-    return this.step("emit", event);
+  emit(event: string): FlowNode {
+    return this.make("emit", event);
   }
   /** A UI effect — refresh / toast / navigate / close. */
-  effect(label: string): this {
-    return this.step("effect", label);
+  effect(label: string): FlowNode {
+    return this.make("effect", label);
   }
   /** An end state. */
-  terminal(label: string): this {
-    return this.step("terminal", label);
-  }
-
-  /**
-   * A two-way branch. `onYes`/`onNo` each receive a builder rooted at the
-   * condition so both arms render; `labels` annotates the two out-edges
-   * (default "yes"/"no").
-   */
-  condition(
-    label: string,
-    onYes: (yes: FlowSteps) => void,
-    onNo: (no: FlowSteps) => void,
-    labels: readonly [string, string] = ["yes", "no"],
-  ): this {
-    this.step("condition", label);
-    const cond = this.tail as string;
-    onYes(new FlowSteps(this.prefix, this.nodes, cond, labels[0]));
-    onNo(new FlowSteps(this.prefix, this.nodes, cond, labels[1]));
-    return this;
+  terminal(label: string): FlowNode {
+    return this.make("terminal", label);
   }
 }
 
-/** Author one flow from node steps. The returned definition is identity-checked
- *  (`defineFlow` throws on a dangling edge) and renders on the FlowGraph canvas. */
+/** Author one flow by connecting node steps. The returned definition is
+ *  identity-checked (`defineFlow` throws on a dangling edge) and renders on the
+ *  FlowGraph canvas. */
 export function buildFlow(
   id: string,
   title: string,
