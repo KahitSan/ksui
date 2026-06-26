@@ -201,7 +201,7 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
         // world-readable at a guessable URL. They are served only through the
         // ownership-scoped /presign route below. s3_link stays as the object
         // reference (key recovery for presign/delete), not a public read path.
-        // TODO(A1 ops): attachment objects uploaded BEFORE this retire stay served
+        // NOTE(A1 ops): attachment objects uploaded BEFORE this retire stay served
         // from the Spaces CDN until a CDN purge (`doctl compute cdn flush`) — the
         // ACL flip doesn't evict cached copies. New uploads (here) are private.
         await s3PutObject(key, req.file.buffer, mime_type || "application/octet-stream", {
