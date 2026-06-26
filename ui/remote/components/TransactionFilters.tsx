@@ -124,7 +124,9 @@ export interface TransactionFiltersProps {
  * Refetch is driven by the route's centralized createEffect that watches
  * those signals — by design this component never calls resetAndRefetch.
  */
-export default function TransactionFilters(props: TransactionFiltersProps): JSX.Element {
+export default function TransactionFilters(
+  props: TransactionFiltersProps
+): JSX.Element {
   const [open, setOpen] = createSignal(false);
   const [editing, setEditing] = createSignal<PropertyId | null>(null);
   const [query, setQuery] = createSignal("");
@@ -167,23 +169,25 @@ export default function TransactionFilters(props: TransactionFiltersProps): JSX.
   const valueLabel = (id: PropertyId): string => {
     switch (id) {
       case "type": {
-        const names = CATEGORY_DEFS.filter((c) => props.activeCategories().has(c.id)).map(
-          (c) => c.label,
-        );
+        const names = CATEGORY_DEFS.filter((c) =>
+          props.activeCategories().has(c.id)
+        ).map((c) => c.label);
         if (names.length === 0) return "";
         if (names.length <= 2) return names.join(", ");
         return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
       }
       case "pdc": {
-        const names = PDC_DEFS.filter((p) => props.pdcFilter().has(p.id)).map((p) =>
-          p.label.replace("PDC ", ""),
+        const names = PDC_DEFS.filter((p) => props.pdcFilter().has(p.id)).map(
+          (p) => p.label.replace("PDC ", "")
         );
         if (names.length === 0) return "";
         if (names.length <= 2) return names.join(", ");
         return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
       }
       case "status":
-        return STATUS_DEFS.find((s) => s.id === props.statusFilter())?.label ?? "";
+        return (
+          STATUS_DEFS.find((s) => s.id === props.statusFilter())?.label ?? ""
+        );
       case "account": {
         const id = Number(props.accountFilter());
         return props.accounts().find((a) => a.id === id)?.name ?? "Account";
@@ -243,10 +247,12 @@ export default function TransactionFilters(props: TransactionFiltersProps): JSX.
     const spaceBelow = vpH - rect.bottom;
     const spaceAbove = rect.top;
     const flipUp = spaceBelow < POPUP_MAX_HEIGHT && spaceAbove > spaceBelow;
-    const top = flipUp ? Math.max(8, rect.top - POPUP_MAX_HEIGHT - 4) : rect.bottom + 4;
+    const top = flipUp
+      ? Math.max(8, rect.top - POPUP_MAX_HEIGHT - 4)
+      : rect.bottom + 4;
     const maxHeight = Math.max(
       200,
-      Math.min(POPUP_MAX_HEIGHT, flipUp ? spaceAbove - 12 : spaceBelow - 12),
+      Math.min(POPUP_MAX_HEIGHT, flipUp ? spaceAbove - 12 : spaceBelow - 12)
     );
     // Clamp horizontally so the fixed-width popup doesn't run off-screen
     // on a narrow viewport.
@@ -260,7 +266,10 @@ export default function TransactionFilters(props: TransactionFiltersProps): JSX.
     });
   };
 
-  const openPicker = (anchor: HTMLElement | undefined, prop: PropertyId | null): void => {
+  const openPicker = (
+    anchor: HTMLElement | undefined,
+    prop: PropertyId | null
+  ): void => {
     setAnchorEl(anchor);
     setEditing(prop);
     setQuery("");
@@ -291,7 +300,7 @@ export default function TransactionFilters(props: TransactionFiltersProps): JSX.
       // user sees a one-frame flicker plus an effect re-run racing the
       // stale anchor signal. Walking up to find any filter pill ancestor
       // lets openPicker swap the anchor cleanly.
-      const el = t instanceof Element ? t : (t.parentElement ?? null);
+      const el = t instanceof Element ? t : t.parentElement ?? null;
       if (el?.closest('[data-testid^="filter-pill-"]')) return;
       setOpen(false);
     };
@@ -394,7 +403,10 @@ export default function TransactionFilters(props: TransactionFiltersProps): JSX.
         class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium border ks-hud-clip-top-left-bottom-right transition-colors cursor-pointer border-zinc-800/60 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700"
         title="Add filter"
       >
-        <Show when={props.activeFilterCount() === 0} fallback={<Filter size={12} />}>
+        <Show
+          when={props.activeFilterCount() === 0}
+          fallback={<Filter size={12} />}
+        >
           <Plus size={12} />
         </Show>
         Filter
@@ -409,7 +421,8 @@ export default function TransactionFilters(props: TransactionFiltersProps): JSX.
         data-testid="group-sales-toggle"
         class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium border ks-hud-clip-top-left-bottom-right transition-colors cursor-pointer"
         classList={{
-          "bg-amber-500/15 border-amber-500/40 text-amber-400": props.groupSalesByDay(),
+          "bg-amber-500/15 border-amber-500/40 text-amber-400":
+            props.groupSalesByDay(),
           "border-zinc-800/60 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700":
             !props.groupSalesByDay(),
         }}
@@ -437,7 +450,9 @@ export default function TransactionFilters(props: TransactionFiltersProps): JSX.
             aria-modal="false"
             aria-label={
               editing()
-                ? `Edit ${PROPERTY_DEFS.find((d) => d.id === editing())?.label ?? ""} filter`
+                ? `Edit ${
+                    PROPERTY_DEFS.find((d) => d.id === editing())?.label ?? ""
+                  } filter`
                 : "Add filter"
             }
             class="z-[100] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
@@ -551,7 +566,9 @@ const PropertyPicker: Component<{
         <Show
           when={p.filtered().length > 0}
           fallback={
-            <div class="px-3 py-3 text-xs text-zinc-500 text-center">No matching properties</div>
+            <div class="px-3 py-3 text-xs text-zinc-500 text-center">
+              No matching properties
+            </div>
           }
         >
           <For each={p.filtered()}>
@@ -612,7 +629,9 @@ const ValueEditor: Component<{
         >
           <ChevronLeft size={14} class="text-zinc-400" />
         </button>
-        <span class="text-xs text-zinc-300 font-medium flex-1">{def().label}</span>
+        <span class="text-xs text-zinc-300 font-medium flex-1">
+          {def().label}
+        </span>
         <button
           type="button"
           onClick={p.onDone}
@@ -624,7 +643,11 @@ const ValueEditor: Component<{
 
       <Show when={p.editing === "type"}>
         <MultiSelectList
-          options={CATEGORY_DEFS.map((c) => ({ value: c.id, label: c.label, icon: c.icon }))}
+          options={CATEGORY_DEFS.map((c) => ({
+            value: c.id,
+            label: c.label,
+            icon: c.icon,
+          }))}
           selected={p.props.activeCategories}
           onToggle={(v) => {
             const next = new Set(p.props.activeCategories());
@@ -679,7 +702,9 @@ const ValueEditor: Component<{
         <SingleSelectList
           options={[
             { value: "", label: "All accounts" },
-            ...p.props.accounts().map((a) => ({ value: String(a.id), label: a.name })),
+            ...p.props
+              .accounts()
+              .map((a) => ({ value: String(a.id), label: a.name })),
           ]}
           selected={p.props.accountFilter}
           onPick={(v) => {
@@ -770,7 +795,11 @@ const MultiSelectList: Component<{
       <div class="flex-1 overflow-y-auto">
         <Show
           when={filtered().length > 0}
-          fallback={<div class="px-3 py-3 text-xs text-zinc-500 text-center">No matches</div>}
+          fallback={
+            <div class="px-3 py-3 text-xs text-zinc-500 text-center">
+              No matches
+            </div>
+          }
         >
           <For each={filtered()}>
             {(opt) => {
@@ -789,7 +818,10 @@ const MultiSelectList: Component<{
                   aria-pressed={checked()}
                   onClick={() => p.onToggle(opt.value)}
                   class="w-full text-left px-3 py-2 text-xs hover:bg-amber-500/10 transition-colors flex items-center gap-2 cursor-pointer"
-                  classList={{ "text-amber-400": checked(), "text-zinc-200": !checked() }}
+                  classList={{
+                    "text-amber-400": checked(),
+                    "text-zinc-200": !checked(),
+                  }}
                 >
                   <span
                     class="w-4 h-4 rounded border flex items-center justify-center shrink-0"
@@ -857,7 +889,11 @@ const SingleSelectList: Component<{
       <div class="flex-1 overflow-y-auto">
         <Show
           when={filtered().length > 0}
-          fallback={<div class="px-3 py-3 text-xs text-zinc-500 text-center">No matches</div>}
+          fallback={
+            <div class="px-3 py-3 text-xs text-zinc-500 text-center">
+              No matches
+            </div>
+          }
         >
           <For each={filtered()}>
             {(opt) => {
@@ -869,7 +905,10 @@ const SingleSelectList: Component<{
                   aria-pressed={selected()}
                   onClick={() => p.onPick(opt.value)}
                   class="w-full text-left px-3 py-2 text-xs hover:bg-amber-500/10 transition-colors flex items-center justify-between gap-2 cursor-pointer"
-                  classList={{ "text-amber-400": selected(), "text-zinc-200": !selected() }}
+                  classList={{
+                    "text-amber-400": selected(),
+                    "text-zinc-200": !selected(),
+                  }}
                 >
                   <span class="truncate">{opt.label}</span>
                   <Show when={selected()}>

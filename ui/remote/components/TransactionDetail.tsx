@@ -15,7 +15,6 @@ import ChevronUp from "lucide-solid/icons/chevron-up";
 import CalendarDays from "lucide-solid/icons/calendar-days";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 
-
 import { formatCurrency, formatDate, formatDateTime } from "../lib/format";
 import { type PendingFile, type Transaction } from "../lib/types";
 import {
@@ -100,27 +99,35 @@ export function TransactionDetail(props: {
   return (
     <div class="space-y-4">
       <div class="-mx-5 sm:-mx-6 -mt-5 px-6 py-6 border-b border-zinc-800/60 text-center bg-gradient-to-b from-transparent to-zinc-900/40">
-        <div class={`text-4xl sm:text-5xl font-bold tabular-nums leading-none ${c.text}`}>
+        <div
+          class={`text-4xl sm:text-5xl font-bold tabular-nums leading-none ${c.text}`}
+        >
           {tone.sign}
           {formatCurrency(t.amount)}
         </div>
         <Show
           when={
-            t.tax_type !== "vat_exempt" && t.tax_type !== "non_vat" && parseFloat(t.tax_amount) > 0
+            t.tax_type !== "vat_exempt" &&
+            t.tax_type !== "non_vat" &&
+            parseFloat(t.tax_amount) > 0
           }
         >
           <div class="mt-2 text-[11px] text-zinc-500 tabular-nums">
             Subtotal {formatCurrency(t.subtotal || "0")}
             {" · "}
-            VAT ({t.tax_type === "vat_inclusive" ? "incl." : "excl."} {t.tax_rate}%){" "}
-            {formatCurrency(t.tax_amount)}
+            VAT ({t.tax_type === "vat_inclusive" ? "incl." : "excl."}{" "}
+            {t.tax_rate}%) {formatCurrency(t.tax_amount)}
           </div>
         </Show>
         <Show when={t.tax_type === "vat_exempt"}>
-          <div class="mt-2 text-[10px] uppercase tracking-widest text-zinc-600">VAT Exempt</div>
+          <div class="mt-2 text-[10px] uppercase tracking-widest text-zinc-600">
+            VAT Exempt
+          </div>
         </Show>
         <Show when={t.tax_type === "non_vat"}>
-          <div class="mt-2 text-[10px] uppercase tracking-widest text-zinc-600">Non-VAT</div>
+          <div class="mt-2 text-[10px] uppercase tracking-widest text-zinc-600">
+            Non-VAT
+          </div>
         </Show>
         <Show when={t.status !== "completed"}>
           <div class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-800/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-zinc-300">
@@ -133,7 +140,11 @@ export function TransactionDetail(props: {
         <Show when={t.category !== "business"}>
           <DetailRow
             label={
-              t.category === "sale" ? "Received from" : t.category === "payable" ? "Payable to" : "Paid to"
+              t.category === "sale"
+                ? "Received from"
+                : t.category === "payable"
+                ? "Payable to"
+                : "Paid to"
             }
             value={t.payee}
           />
@@ -146,16 +157,32 @@ export function TransactionDetail(props: {
                 t.category === "sale"
                   ? "Received in"
                   : t.category === "payable"
-                    ? "Funding account"
-                    : "Paid from"
+                  ? "Funding account"
+                  : "Paid from"
               }
-              value={t.category === "sale" ? t.destination_account_name : t.source_account_name}
-              accountId={t.category === "sale" ? t.destination_account_id : t.source_account_id}
+              value={
+                t.category === "sale"
+                  ? t.destination_account_name
+                  : t.source_account_name
+              }
+              accountId={
+                t.category === "sale"
+                  ? t.destination_account_id
+                  : t.source_account_id
+              }
             />
           }
         >
-          <AccountDetailRow label="From account" value={t.source_account_name} accountId={t.source_account_id} />
-          <AccountDetailRow label="To account" value={t.destination_account_name} accountId={t.destination_account_id} />
+          <AccountDetailRow
+            label="From account"
+            value={t.source_account_name}
+            accountId={t.source_account_id}
+          />
+          <AccountDetailRow
+            label="To account"
+            value={t.destination_account_name}
+            accountId={t.destination_account_id}
+          />
         </Show>
         <DetailRow label="Date" value={formatDate(t.transaction_date)} />
         <Show when={t.reference_number}>
@@ -189,19 +216,30 @@ export function TransactionDetail(props: {
                     </div>
                     <div class="text-[11px] text-zinc-500 tabular-nums">
                       {li.quantity} × {formatCurrency(li.unit_price)}
-                      <Show when={li.client_name && li.client_name !== t.client_name}>
+                      <Show
+                        when={
+                          li.client_name && li.client_name !== t.client_name
+                        }
+                      >
                         <span> · for {li.client_name}</span>
                       </Show>
                     </div>
                   </div>
                   <div class="text-zinc-300 tabular-nums whitespace-nowrap">
-                    {formatCurrency((li.quantity * parseFloat(li.unit_price)).toFixed(2))}
+                    {formatCurrency(
+                      (li.quantity * parseFloat(li.unit_price)).toFixed(2)
+                    )}
                   </div>
                 </div>
               )}
             </For>
           </div>
-          <Show when={t.voucher || (t.discount_amount && parseFloat(t.discount_amount) > 0)}>
+          <Show
+            when={
+              t.voucher ||
+              (t.discount_amount && parseFloat(t.discount_amount) > 0)
+            }
+          >
             <div class="border-t border-emerald-500/15 pt-2 text-[11px] text-zinc-400 tabular-nums flex items-center justify-between">
               <span>
                 <Show when={t.voucher} fallback="Manual discount">
@@ -230,8 +268,8 @@ export function TransactionDetail(props: {
                   t.payment_status === "partial"
                     ? "text-amber-400"
                     : t.payment_status === "paid"
-                      ? "text-emerald-400"
-                      : "text-zinc-400"
+                    ? "text-emerald-400"
+                    : "text-zinc-400"
                 }
               >
                 Payments
@@ -252,7 +290,11 @@ export function TransactionDetail(props: {
                 </span>
               </Show>
             </div>
-            <Show when={t.payment_status === "partial" || t.payment_status === "unpaid"}>
+            <Show
+              when={
+                t.payment_status === "partial" || t.payment_status === "unpaid"
+              }
+            >
               <span class="text-[11px] tabular-nums text-amber-300">
                 Balance {formatCurrency(t.balance ?? "0")}
               </span>
@@ -279,7 +321,13 @@ export function TransactionDetail(props: {
                           {formatDateTime(p.created_at)}
                         </span>
                       </span>
-                      <Show when={props.canEdit && t.status !== "voided" && props.onDeletePayment}>
+                      <Show
+                        when={
+                          props.canEdit &&
+                          t.status !== "voided" &&
+                          props.onDeletePayment
+                        }
+                      >
                         <button
                           type="button"
                           aria-label="Delete payment"
@@ -293,18 +341,26 @@ export function TransactionDetail(props: {
                       </Show>
                     </div>
                     <div class="mt-1 w-full flex items-center gap-1.5 min-w-0">
-                      <Show when={resolveAccount(accountsIndex(), p.financial_account_id)}>
+                      <Show
+                        when={resolveAccount(
+                          accountsIndex(),
+                          p.financial_account_id
+                        )}
+                      >
                         {(a) => <AccountAvatar account={a()} size={16} />}
                       </Show>
                       <span class="text-[11px] text-zinc-300 truncate flex-1">
-                        {p.financial_account_name ?? `Account #${p.financial_account_id}`}
+                        {p.financial_account_name ??
+                          `Account #${p.financial_account_id}`}
                       </span>
                       <span class="text-[11px] font-semibold tabular-nums text-zinc-100 shrink-0">
                         {formatCurrency(p.amount)}
                       </span>
                     </div>
                     <Show when={p.notes}>
-                      <div class="mt-1 text-[10px] text-zinc-500 truncate">{p.notes}</div>
+                      <div class="mt-1 text-[10px] text-zinc-500 truncate">
+                        {p.notes}
+                      </div>
                     </Show>
                   </div>
                 )}
@@ -314,7 +370,8 @@ export function TransactionDetail(props: {
 
           <Show
             when={
-              (t.payment_status === "partial" || t.payment_status === "unpaid") &&
+              (t.payment_status === "partial" ||
+                t.payment_status === "unpaid") &&
               props.canEdit &&
               t.status !== "voided" &&
               props.onRecordPayment
@@ -346,17 +403,24 @@ export function TransactionDetail(props: {
               label="Kind"
               value={
                 t.payable_kind
-                  ? PAYABLE_KIND_OPTIONS.find((p) => p.id === t.payable_kind)?.label || t.payable_kind
+                  ? PAYABLE_KIND_OPTIONS.find((p) => p.id === t.payable_kind)
+                      ?.label || t.payable_kind
                   : null
               }
             />
-            <DetailRow label="Due date" value={t.due_date ? formatDate(t.due_date) : null} />
+            <DetailRow
+              label="Due date"
+              value={t.due_date ? formatDate(t.due_date) : null}
+            />
             <Show when={t.cheque_number}>
               <DetailRow label="Cheque #" value={t.cheque_number} />
               <DetailRow
                 label="PDC status"
                 value={
-                  t.pdc_status ? PDC_OPTIONS.find((p) => p.id === t.pdc_status)?.label || t.pdc_status : null
+                  t.pdc_status
+                    ? PDC_OPTIONS.find((p) => p.id === t.pdc_status)?.label ||
+                      t.pdc_status
+                    : null
                 }
               />
             </Show>
@@ -377,8 +441,13 @@ export function TransactionDetail(props: {
 
       <Show when={t.notes}>
         <div>
-          <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-1">Notes</p>
-          <MarkdownNotes value={t.notes} class="text-sm text-zinc-300 leading-relaxed" />
+          <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-1">
+            Notes
+          </p>
+          <MarkdownNotes
+            value={t.notes}
+            class="text-sm text-zinc-300 leading-relaxed"
+          />
         </div>
       </Show>
 
@@ -391,27 +460,47 @@ export function TransactionDetail(props: {
             onClick={() => setShowAdvanced(!showAdvanced())}
             class="flex items-center gap-2 text-xs text-zinc-500 hover:text-amber-400 transition-colors cursor-pointer"
           >
-            <span>{showAdvanced() ? "Hide advanced details" : "Show advanced details"}</span>
-            <Show when={showAdvanced()} fallback={<ChevronDown class="text-zinc-600" size={14} />}>
+            <span>
+              {showAdvanced()
+                ? "Hide advanced details"
+                : "Show advanced details"}
+            </span>
+            <Show
+              when={showAdvanced()}
+              fallback={<ChevronDown class="text-zinc-600" size={14} />}
+            >
               <ChevronUp class="text-zinc-600" size={14} />
             </Show>
           </button>
           <Show when={showAdvanced()}>
-            <div data-testid="detail-advanced-section" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <div
+              data-testid="detail-advanced-section"
+              class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3"
+            >
               <Show when={t.tax_type}>
-                <DetailRow label="Tax type" value={TAX_TYPE_LABELS[t.tax_type] || t.tax_type} />
+                <DetailRow
+                  label="Tax type"
+                  value={TAX_TYPE_LABELS[t.tax_type] || t.tax_type}
+                />
               </Show>
               <Show
                 when={
-                  (t.tax_type === "vat_inclusive" || t.tax_type === "vat_exclusive") &&
+                  (t.tax_type === "vat_inclusive" ||
+                    t.tax_type === "vat_exclusive") &&
                   t.tax_amount !== null &&
                   t.tax_amount !== undefined &&
                   parseFloat(t.tax_amount) > 0
                 }
               >
-                <DetailRow label={`VAT (${t.tax_rate}%)`} value={formatCurrency(t.tax_amount)} />
+                <DetailRow
+                  label={`VAT (${t.tax_rate}%)`}
+                  value={formatCurrency(t.tax_amount)}
+                />
                 <Show when={t.subtotal !== null && t.subtotal !== undefined}>
-                  <DetailRow label="VAT base" value={formatCurrency(t.subtotal || "0")} />
+                  <DetailRow
+                    label="VAT base"
+                    value={formatCurrency(t.subtotal || "0")}
+                  />
                 </Show>
               </Show>
               <Show when={t.has_ewt}>
@@ -431,23 +520,41 @@ export function TransactionDetail(props: {
             Created by
           </span>
           <div class="flex items-center gap-2">
-            <Avatar name={props.creatorName || t.created_by_name || "Unknown"} image={t.created_by_image} size="md" />
+            <Avatar
+              name={props.creatorName || t.created_by_name || "Unknown"}
+              image={t.created_by_image}
+              size="md"
+            />
             <div class="min-w-0">
-              <span class="text-sm text-zinc-200 block truncate">{props.creatorName || t.created_by_name || "Unknown"}</span>
-              <span class="text-[11px] text-zinc-500 block">{new Date(t.created_at).toLocaleString()}</span>
+              <span class="text-sm text-zinc-200 block truncate">
+                {props.creatorName || t.created_by_name || "Unknown"}
+              </span>
+              <span class="text-[11px] text-zinc-500 block">
+                {new Date(t.created_at).toLocaleString()}
+              </span>
             </div>
           </div>
         </div>
-        <Show when={t.updated_by && t.updated_at && t.updated_at !== t.created_at}>
+        <Show
+          when={t.updated_by && t.updated_at && t.updated_at !== t.created_at}
+        >
           <div>
             <span class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold block mb-1.5">
               Last updated by
             </span>
             <div class="flex items-center gap-2">
-              <Avatar name={t.updated_by_name || "Unknown"} image={t.updated_by_image} size="md" />
+              <Avatar
+                name={t.updated_by_name || "Unknown"}
+                image={t.updated_by_image}
+                size="md"
+              />
               <div class="min-w-0">
-                <span class="text-sm text-zinc-200 block truncate">{t.updated_by_name || "Unknown"}</span>
-                <span class="text-[11px] text-zinc-500 block">{new Date(t.updated_at).toLocaleString()}</span>
+                <span class="text-sm text-zinc-200 block truncate">
+                  {t.updated_by_name || "Unknown"}
+                </span>
+                <span class="text-[11px] text-zinc-500 block">
+                  {new Date(t.updated_at).toLocaleString()}
+                </span>
               </div>
             </div>
           </div>
@@ -461,7 +568,11 @@ export function TransactionDetail(props: {
           </span>
           <Show
             when={t.shared_with && t.shared_with.length > 0}
-            fallback={<span class="text-xs text-zinc-500 mt-1 block">Only visible to creator</span>}
+            fallback={
+              <span class="text-xs text-zinc-500 mt-1 block">
+                Only visible to creator
+              </span>
+            }
           >
             <div class="flex flex-wrap gap-1 mt-2">
               <For each={t.shared_with}>
@@ -479,7 +590,9 @@ export function TransactionDetail(props: {
       <div class="border-t border-zinc-800/50 pt-4 mt-2">
         <div class="flex items-center gap-1 mb-2 text-xs text-zinc-500">
           <Paperclip size={12} /> Attachments
-          <Show when={props.txn.attachments && props.txn.attachments.length > 0}>
+          <Show
+            when={props.txn.attachments && props.txn.attachments.length > 0}
+          >
             <span class="text-zinc-600">({props.txn.attachments!.length})</span>
           </Show>
         </div>
@@ -496,8 +609,12 @@ export function TransactionDetail(props: {
                       title={`${att.file_name} — file is no longer available`}
                     >
                       <TriangleAlert size={18} class="text-amber-500/70" />
-                      <span class="truncate max-w-full text-[10px]">{att.file_name}</span>
-                      <span class="text-[9px] uppercase tracking-wider">Unavailable</span>
+                      <span class="truncate max-w-full text-[10px]">
+                        {att.file_name}
+                      </span>
+                      <span class="text-[9px] uppercase tracking-wider">
+                        Unavailable
+                      </span>
                     </div>
                   }
                 >
@@ -511,7 +628,9 @@ export function TransactionDetail(props: {
                         class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300 hover:border-amber-500/30"
                       >
                         <Paperclip size={20} />
-                        <span class="truncate max-w-full text-[10px]">{att.file_name}</span>
+                        <span class="truncate max-w-full text-[10px]">
+                          {att.file_name}
+                        </span>
                       </a>
                     }
                   >
@@ -521,7 +640,11 @@ export function TransactionDetail(props: {
                       rel="noopener"
                       class="block rounded-lg border border-zinc-700 overflow-hidden hover:border-amber-500/30"
                     >
-                      <img src={attachmentUrl(att.s3_link)} alt={att.file_name} class="w-24 h-24 object-cover" />
+                      <img
+                        src={attachmentUrl(att.s3_link)}
+                        alt={att.file_name}
+                        class="w-24 h-24 object-cover"
+                      />
                     </a>
                   </Show>
                 </Show>
@@ -630,14 +753,19 @@ function AccountDetailRow(props: {
   accountId?: number | null;
 }) {
   const accountsIndex = useAccountsIndex();
-  const acct = () => (props.accountId != null ? resolveAccount(accountsIndex(), props.accountId) : null);
+  const acct = () =>
+    props.accountId != null
+      ? resolveAccount(accountsIndex(), props.accountId)
+      : null;
   return (
     <div>
       <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-1">
         {props.label}
       </div>
       <div class="text-sm text-zinc-100 font-medium leading-snug break-words flex items-center gap-2">
-        <Show when={acct()}>{(a) => <AccountAvatar account={a()} size={18} />}</Show>
+        <Show when={acct()}>
+          {(a) => <AccountAvatar account={a()} size={18} />}
+        </Show>
         <span class="min-w-0 break-words">{props.value || "—"}</span>
       </div>
     </div>

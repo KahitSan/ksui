@@ -20,7 +20,13 @@ declare module "@kserp/host-ui" {
     refetch: () => void;
     [key: string]: any;
   };
-  export const PermissionGate: (props: { when?: boolean; redirectTo?: string; fallback?: any; children: any; permission?: string }) => any;
+  export const PermissionGate: (props: {
+    when?: boolean;
+    redirectTo?: string;
+    fallback?: any;
+    children: any;
+    permission?: string;
+  }) => any;
 
   // Local wrapper types
   export interface SearchableOption {

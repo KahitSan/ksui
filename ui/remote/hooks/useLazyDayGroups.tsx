@@ -49,15 +49,19 @@ export function useLazyDayGroups(deps: LazyDayGroupsDeps) {
     openDetail,
   } = deps;
 
-  const [expandedGroups, setExpandedGroups] = createSignal<Set<string>>(new Set());
-  const [lazyDayData, setLazyDayData] = createSignal<Map<string, LazyDayState>>(new Map());
+  const [expandedGroups, setExpandedGroups] = createSignal<Set<string>>(
+    new Set()
+  );
+  const [lazyDayData, setLazyDayData] = createSignal<Map<string, LazyDayState>>(
+    new Map()
+  );
 
   async function loadDayPage(dateKey: string, append: boolean): Promise<void> {
     const current = lazyDayData().get(dateKey);
     if (current?.loading) return;
     const nextPage = append ? current!.page + 1 : 1;
     const next: LazyDayState = {
-      rows: append ? (current?.rows ?? []) : [],
+      rows: append ? current?.rows ?? [] : [],
       page: append ? current!.page : 0,
       total: current?.total ?? 0,
       loading: true,
@@ -83,14 +87,18 @@ export function useLazyDayGroups(deps: LazyDayGroupsDeps) {
         dateFrom: dateKey,
         dateTo: dateKey,
       });
-      const res = await fetch(`/api/transactions?${q}`, { credentials: "include" });
+      const res = await fetch(`/api/transactions?${q}`, {
+        credentials: "include",
+      });
       if (!res.ok) throw new Error(String(res.status));
       const result = (await res.json()) as FetchResult<Transaction>;
       setLazyDayData((prev) => {
         const m = new Map(prev);
         const existing = m.get(dateKey);
         m.set(dateKey, {
-          rows: append ? [...(existing?.rows ?? []), ...result.data] : result.data,
+          rows: append
+            ? [...(existing?.rows ?? []), ...result.data]
+            : result.data,
           page: nextPage,
           total: result.total,
           loading: false,
@@ -139,7 +147,10 @@ export function useLazyDayGroups(deps: LazyDayGroupsDeps) {
     const state = lazyDayData().get(dateKey);
     if (!state || (state.loading && state.rows.length === 0)) {
       return (
-        <div class="p-4 text-xs text-zinc-500" data-testid={`expansion-loading-${dateKey}`}>
+        <div
+          class="p-4 text-xs text-zinc-500"
+          data-testid={`expansion-loading-${dateKey}`}
+        >
           Loading transactions for this day…
         </div>
       );
@@ -148,14 +159,21 @@ export function useLazyDayGroups(deps: LazyDayGroupsDeps) {
       return (
         <div class="p-4 text-xs text-rose-400 flex items-center gap-3">
           <span>Failed to load transactions for this day.</span>
-          <button type="button" class="underline" onClick={() => void loadDayPage(dateKey, false)}>
+          <button
+            type="button"
+            class="underline"
+            onClick={() => void loadDayPage(dateKey, false)}
+          >
             Retry
           </button>
         </div>
       );
     }
     return (
-      <div class="max-h-96 overflow-y-auto" data-testid={`expansion-panel-${dateKey}`}>
+      <div
+        class="max-h-96 overflow-y-auto"
+        data-testid={`expansion-panel-${dateKey}`}
+      >
         <table class="w-full text-left text-sm">
           <tbody>
             <For each={state.rows}>
@@ -177,9 +195,15 @@ export function useLazyDayGroups(deps: LazyDayGroupsDeps) {
                                 : null,
                               "display",
                               { ...sub, _isSubrow: true } as TransactionRow,
-                              { row: 0, col: 0, search: "" },
+                              { row: 0, col: 0, search: "" }
                             )
-                          : String(col.data ? ((sub[col.data as keyof Transaction] as unknown) ?? "") : "")}
+                          : String(
+                              col.data
+                                ? (sub[
+                                    col.data as keyof Transaction
+                                  ] as unknown) ?? ""
+                                : ""
+                            )}
                       </td>
                     )}
                   </For>

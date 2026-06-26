@@ -6,7 +6,14 @@
 // export endpoint isn't implemented yet the modal lands in its error phase with
 // a retry-able banner instead of crashing the page.
 
-import { createSignal, createMemo, createResource, onCleanup, Show, For } from "solid-js";
+import {
+  createSignal,
+  createMemo,
+  createResource,
+  onCleanup,
+  Show,
+  For,
+} from "solid-js";
 import Download from "lucide-solid/icons/download";
 import Loader2 from "lucide-solid/icons/loader-2";
 import CheckCircle2 from "lucide-solid/icons/check-circle-2";
@@ -42,7 +49,10 @@ interface RecentJob {
 
 function todayStr(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function firstOfMonthStr(): string {
@@ -51,7 +61,7 @@ function firstOfMonthStr(): string {
 }
 
 function formatBytes(b: number | string | null | undefined): string {
-  const n = typeof b === "string" ? Number(b) : (b ?? 0);
+  const n = typeof b === "string" ? Number(b) : b ?? 0;
   if (!n || !Number.isFinite(n)) return "";
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
@@ -83,7 +93,9 @@ function activeWorkspaceId(): string | null {
 function withWsId(url: string): string {
   const wsId = activeWorkspaceId();
   if (!wsId || url.includes("wsId=")) return url;
-  return url + (url.includes("?") ? "&" : "?") + "wsId=" + encodeURIComponent(wsId);
+  return (
+    url + (url.includes("?") ? "&" : "?") + "wsId=" + encodeURIComponent(wsId)
+  );
 }
 
 function triggerDownload(url: string, filename: string) {
@@ -96,12 +108,18 @@ function triggerDownload(url: string, filename: string) {
   setTimeout(() => document.body.removeChild(a), 0);
 }
 
-export default function ExportTransactionsModal(props: ExportTransactionsModalProps) {
-  const [dateFrom, setDateFrom] = createSignal<string | null>(firstOfMonthStr());
+export default function ExportTransactionsModal(
+  props: ExportTransactionsModalProps
+) {
+  const [dateFrom, setDateFrom] = createSignal<string | null>(
+    firstOfMonthStr()
+  );
   const [dateTo, setDateTo] = createSignal<string | null>(todayStr());
   const [consolidate, setConsolidate] = createSignal(false);
 
-  const [phase, setPhase] = createSignal<"form" | "preparing" | "done" | "error">("form");
+  const [phase, setPhase] = createSignal<
+    "form" | "preparing" | "done" | "error"
+  >("form");
   const [progressDone, setProgressDone] = createSignal(0);
   const [progressTotal, setProgressTotal] = createSignal(0);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
@@ -121,7 +139,12 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
   });
 
   const canPrepare = createMemo(() => {
-    return dateFrom() != null && dateTo() != null && rangeError() == null && phase() === "form";
+    return (
+      dateFrom() != null &&
+      dateTo() != null &&
+      rangeError() == null &&
+      phase() === "form"
+    );
   });
 
   const progressPct = createMemo(() => {
@@ -150,7 +173,11 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dateFrom: dateFrom(), dateTo: dateTo(), consolidate: consolidate() }),
+        body: JSON.stringify({
+          dateFrom: dateFrom(),
+          dateTo: dateTo(),
+          consolidate: consolidate(),
+        }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -158,7 +185,9 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
       }
       const { jobId } = (await res.json()) as { jobId: string };
 
-      const es = new EventSource(withWsId(`/api/transactions/export/${jobId}/progress`));
+      const es = new EventSource(
+        withWsId(`/api/transactions/export/${jobId}/progress`)
+      );
       currentEventSource = es;
       let terminated = false;
 
@@ -187,7 +216,9 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
           triggerDownload(data.downloadUrl, data.filename);
           setRecentRefreshKey((k) => k + 1);
         } catch (err) {
-          setErrorMessage(err instanceof Error ? err.message : "Failed to start download");
+          setErrorMessage(
+            err instanceof Error ? err.message : "Failed to start download"
+          );
           setPhase("error");
         } finally {
           es.close();
@@ -219,7 +250,9 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
         currentEventSource = null;
       });
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Failed to start export");
+      setErrorMessage(
+        err instanceof Error ? err.message : "Failed to start export"
+      );
       setPhase("error");
     }
   }
@@ -233,11 +266,18 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
 
   function redownload(job: RecentJob) {
     if (!job.filename) return;
-    triggerDownload(`/api/transactions/export/${job.id}/download`, job.filename);
+    triggerDownload(
+      `/api/transactions/export/${job.id}/download`,
+      job.filename
+    );
   }
 
   return (
-    <Modal variant="sheet" onClose={props.onClose} ariaLabel="Export transactions">
+    <Modal
+      variant="sheet"
+      onClose={props.onClose}
+      ariaLabel="Export transactions"
+    >
       <div class="sm:w-[32rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh] text-zinc-100">
         <header class="px-5 sm:px-6 pt-5 pb-4 border-b border-zinc-800/60">
           <p class="text-[10px] tracking-[0.3em] uppercase text-amber-400 font-semibold mb-0.5">
@@ -245,8 +285,9 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
           </p>
           <h2 class="text-lg font-bold leading-tight">Export transactions</h2>
           <p class="text-xs text-zinc-500 mt-1 leading-relaxed">
-            Pick a date range and we'll prepare a CSV in the background. Voided rows and transactions
-            you don't have visibility on are excluded automatically.
+            Pick a date range and we'll prepare a CSV in the background. Voided
+            rows and transactions you don't have visibility on are excluded
+            automatically.
           </p>
         </header>
 
@@ -257,16 +298,24 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
                 <label class="block text-[10px] uppercase tracking-widest text-zinc-400 font-semibold mb-2">
                   Start date
                 </label>
-                <DatePicker value={dateFrom()} onChange={(d: string | null) => setDateFrom(d)} />
+                <DatePicker
+                  value={dateFrom()}
+                  onChange={(d: string | null) => setDateFrom(d)}
+                />
               </div>
               <div>
                 <label class="block text-[10px] uppercase tracking-widest text-zinc-400 font-semibold mb-2">
                   End date
                 </label>
-                <DatePicker value={dateTo()} onChange={(d: string | null) => setDateTo(d)} />
+                <DatePicker
+                  value={dateTo()}
+                  onChange={(d: string | null) => setDateTo(d)}
+                />
               </div>
               <Show when={rangeError()}>
-                <p class="col-span-2 -mt-1 text-xs text-red-400">{rangeError()}</p>
+                <p class="col-span-2 -mt-1 text-xs text-red-400">
+                  {rangeError()}
+                </p>
               </Show>
             </section>
 
@@ -280,10 +329,12 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
                   data-testid="export-consolidate"
                 />
                 <span>
-                  <span class="block text-sm font-semibold text-zinc-200">Consolidate daily sales</span>
+                  <span class="block text-sm font-semibold text-zinc-200">
+                    Consolidate daily sales
+                  </span>
                   <span class="block text-xs text-zinc-500 mt-0.5">
-                    Roll every day's sales into one row (date, count, total). Non-sale transactions are
-                    excluded from the file.
+                    Roll every day's sales into one row (date, count, total).
+                    Non-sale transactions are excluded from the file.
                   </span>
                 </span>
               </label>
@@ -307,8 +358,10 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
               </div>
               <p class="text-xs text-zinc-500 tabular-nums">
                 {progressDone().toLocaleString()}
-                {progressTotal() > 0 ? ` of ${progressTotal().toLocaleString()}` : ""} rows ·{" "}
-                {progressPct()}%
+                {progressTotal() > 0
+                  ? ` of ${progressTotal().toLocaleString()}`
+                  : ""}{" "}
+                rows · {progressPct()}%
               </p>
             </section>
           </Show>
@@ -323,8 +376,9 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
                 <span class="text-sm font-semibold">Download starting…</span>
               </div>
               <p class="text-xs text-zinc-400 leading-relaxed">
-                If the download didn't start, use the matching entry in "Recent exports" below to grab
-                it directly. We'll keep the file ready for 24 hours.
+                If the download didn't start, use the matching entry in "Recent
+                exports" below to grab it directly. We'll keep the file ready
+                for 24 hours.
               </p>
             </section>
           </Show>
@@ -338,7 +392,9 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
                 <AlertCircle size={16} />
                 <span class="text-sm font-semibold">Export failed</span>
               </div>
-              <p class="text-xs text-zinc-400">{errorMessage() ?? "Something went wrong."}</p>
+              <p class="text-xs text-zinc-400">
+                {errorMessage() ?? "Something went wrong."}
+              </p>
             </section>
           </Show>
 
@@ -348,7 +404,9 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
                 <h3 class="text-[10px] uppercase tracking-widest text-zinc-400 font-semibold">
                   Recent exports
                 </h3>
-                <span class="text-[10px] text-zinc-600">Available for 24 hours</span>
+                <span class="text-[10px] text-zinc-600">
+                  Available for 24 hours
+                </span>
               </div>
               <ul class="space-y-1.5">
                 <For each={recent() ?? []}>
@@ -361,18 +419,31 @@ export default function ExportTransactionsModal(props: ExportTransactionsModalPr
                         </div>
                         <div class="text-[10px] text-zinc-500 mt-0.5 flex items-center gap-2">
                           <Show when={job.status === "done"}>
-                            <span>{job.row_count?.toLocaleString() ?? 0} rows</span>
+                            <span>
+                              {job.row_count?.toLocaleString() ?? 0} rows
+                            </span>
                             <span>·</span>
                             <span>{formatBytes(job.byte_size)}</span>
                             <span>·</span>
                           </Show>
-                          <Show when={job.status === "running" || job.status === "pending"}>
-                            <Loader2 size={10} class="animate-spin text-amber-400 inline" />
+                          <Show
+                            when={
+                              job.status === "running" ||
+                              job.status === "pending"
+                            }
+                          >
+                            <Loader2
+                              size={10}
+                              class="animate-spin text-amber-400 inline"
+                            />
                             <span>preparing…</span>
                             <span>·</span>
                           </Show>
                           <Show when={job.status === "error"}>
-                            <AlertCircle size={10} class="text-red-400 inline" />
+                            <AlertCircle
+                              size={10}
+                              class="text-red-400 inline"
+                            />
                             <span>failed</span>
                             <span>·</span>
                           </Show>

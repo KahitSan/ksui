@@ -6,7 +6,13 @@
 // `viewMode === "advanced"` <Show>. Carved verbatim out of index.tsx; the two
 // call sites there keep their explicit prop lists unchanged.
 
-import { createEffect, createResource, createSignal, Show, For } from "solid-js";
+import {
+  createEffect,
+  createResource,
+  createSignal,
+  Show,
+  For,
+} from "solid-js";
 import X from "lucide-solid/icons/x";
 import Upload from "lucide-solid/icons/upload";
 import FileIcon from "lucide-solid/icons/file";
@@ -21,20 +27,29 @@ import Store from "lucide-solid/icons/store";
 // sibling payees plugin's /api/payees endpoint directly; `kind` is "customer"
 // for sales and "vendor" otherwise. Degrades gracefully — a missing payees
 // plugin surfaces a notice and the free-text fallback (selectedName) still works.
-async function searchPayees(query: string, kind: PayeeKind): Promise<PayeeOption[]> {
+async function searchPayees(
+  query: string,
+  kind: PayeeKind
+): Promise<PayeeOption[]> {
   const params = new URLSearchParams({ status: "active", limit: "20", kind });
   if (query) params.set("search", query);
-  const r = await fetch(`/api/payees?${params.toString()}`, { credentials: "include" });
+  const r = await fetch(`/api/payees?${params.toString()}`, {
+    credentials: "include",
+  });
   if (!r.ok) {
     if (r.status === 403) throw new Error("Permission denied");
-    if (r.status === 404) throw new Error("Payees module isn't available — type a name instead");
+    if (r.status === 404)
+      throw new Error("Payees module isn't available — type a name instead");
     throw new Error("Failed to load");
   }
   const json = (await r.json()) as { data?: PayeeOption[] };
   return json.data ?? [];
 }
 
-async function createPayee(name: string, kind: PayeeKind): Promise<PayeeOption> {
+async function createPayee(
+  name: string,
+  kind: PayeeKind
+): Promise<PayeeOption> {
   const res = await fetch("/api/payees", {
     method: "POST",
     credentials: "include",
@@ -42,7 +57,9 @@ async function createPayee(name: string, kind: PayeeKind): Promise<PayeeOption> 
     body: JSON.stringify({ name, kind }),
   });
   if (!res.ok && res.status !== 200) {
-    const body = (await res.json().catch(() => ({ error: "Failed to create payee" }))) as {
+    const body = (await res
+      .json()
+      .catch(() => ({ error: "Failed to create payee" }))) as {
       error?: string;
     };
     throw new Error(body.error || "Failed to create payee");
@@ -52,7 +69,11 @@ async function createPayee(name: string, kind: PayeeKind): Promise<PayeeOption> 
 
 function payeeSecondary(p: PayeeOption): string | null {
   if (!p.default_subcategory && p.kind === "vendor") return null;
-  return [p.kind === "vendor" ? null : p.kind, p.default_subcategory].filter(Boolean).join(" · ") || null;
+  return (
+    [p.kind === "vendor" ? null : p.kind, p.default_subcategory]
+      .filter(Boolean)
+      .join(" · ") || null
+  );
 }
 
 import {
@@ -160,11 +181,16 @@ export interface TransactionFormProps {
 }
 
 export default function TransactionForm(props: TransactionFormProps) {
-  const catConfig = () => CATEGORY_FORM[props.category] || CATEGORY_FORM.expense;
+  const catConfig = () =>
+    CATEGORY_FORM[props.category] || CATEGORY_FORM.expense;
   const [dragging, setDragging] = createSignal(false);
   const [cameraOpen, setCameraOpen] = createSignal(false);
-  const [viewMode, setViewMode] = createSignal<"default" | "advanced">("default");
-  const [selectedPayee, setSelectedPayee] = createSignal<PayeeOption | null>(null);
+  const [viewMode, setViewMode] = createSignal<"default" | "advanced">(
+    "default"
+  );
+  const [selectedPayee, setSelectedPayee] = createSignal<PayeeOption | null>(
+    null
+  );
   createEffect(() => {
     const name = props.payee;
     const id = props.payeeId;
@@ -182,18 +208,27 @@ export default function TransactionForm(props: TransactionFormProps) {
 
   const subcategoryAppliesTo = (): "income" | "expense" | null => {
     if (props.category === "sale") return "income";
-    if (props.category === "expense" || props.category === "payable") return "expense";
+    if (props.category === "expense" || props.category === "payable")
+      return "expense";
     return null;
   };
-  const [subcategoryOptions] = createResource(subcategoryAppliesTo, async (appliesTo) => {
-    if (!appliesTo) return [] as { id: number; name: string }[];
-    const res = await fetch(`/api/transactions/subcategories?applies_to=${appliesTo}`, {
-      credentials: "include",
-    });
-    if (!res.ok) return [] as { id: number; name: string }[];
-    const data = (await res.json()) as { subcategories: { id: number; name: string }[] };
-    return data.subcategories;
-  });
+  const [subcategoryOptions] = createResource(
+    subcategoryAppliesTo,
+    async (appliesTo) => {
+      if (!appliesTo) return [] as { id: number; name: string }[];
+      const res = await fetch(
+        `/api/transactions/subcategories?applies_to=${appliesTo}`,
+        {
+          credentials: "include",
+        }
+      );
+      if (!res.ok) return [] as { id: number; name: string }[];
+      const data = (await res.json()) as {
+        subcategories: { id: number; name: string }[];
+      };
+      return data.subcategories;
+    }
+  );
 
   // True once the async resource has resolved at least once. Gates the
   // SearchableSelect mount so the loading-state placeholder shows while the
@@ -202,10 +237,12 @@ export default function TransactionForm(props: TransactionFormProps) {
 
   function addFiles(files: File[]) {
     const existing = new Set(
-      props.pendingFiles.map((pf) => `${pf.file.name}::${pf.file.size}::${pf.file.lastModified}`),
+      props.pendingFiles.map(
+        (pf) => `${pf.file.name}::${pf.file.size}::${pf.file.lastModified}`
+      )
     );
     const deduped = files.filter(
-      (f) => !existing.has(`${f.name}::${f.size}::${f.lastModified}`),
+      (f) => !existing.has(`${f.name}::${f.size}::${f.lastModified}`)
     );
     if (deduped.length === 0) return;
     const newPending = deduped.map(createPendingFile);
@@ -267,7 +304,9 @@ export default function TransactionForm(props: TransactionFormProps) {
       <Show when={dragging()}>
         <div class="absolute inset-0 z-30 border-2 border-dashed border-amber-400/60 bg-amber-500/10 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-none">
           <Upload size={32} class="text-amber-400 mb-2" />
-          <span class="text-sm text-amber-400 font-medium">Drop files to attach</span>
+          <span class="text-sm text-amber-400 font-medium">
+            Drop files to attach
+          </span>
           <span class="text-[10px] text-amber-400/60 mt-1">Images or PDFs</span>
         </div>
       </Show>
@@ -300,7 +339,9 @@ export default function TransactionForm(props: TransactionFormProps) {
           </Show>
 
           <div>
-            <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-2">Type</div>
+            <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-2">
+              Type
+            </div>
             <div class="grid grid-cols-4 gap-2">
               <For each={["expense", "sale", "payable", "business"]}>
                 {(cat) => {
@@ -319,7 +360,8 @@ export default function TransactionForm(props: TransactionFormProps) {
                       }}
                       class="flex flex-col items-center justify-center gap-1.5 py-4 border transition-all ks-hud-clip-button cursor-pointer active:opacity-80"
                       classList={{
-                        [`${tc.bg} ${tc.border} ${tc.text}`]: props.category === cat,
+                        [`${tc.bg} ${tc.border} ${tc.text}`]:
+                          props.category === cat,
                         "border-zinc-800/60 text-zinc-500 hover:text-zinc-200 hover:border-zinc-700":
                           props.category !== cat,
                       }}
@@ -347,10 +389,14 @@ export default function TransactionForm(props: TransactionFormProps) {
             />
           </Show>
 
-          <Show when={!(props.category === "sale" && props.saleItems.length > 0)}>
+          <Show
+            when={!(props.category === "sale" && props.saleItems.length > 0)}
+          >
             <FormField label="Amount *">
               <div class="flex items-center gap-3 px-4 py-3 border bg-zinc-900/60 border-zinc-800/60 ks-hud-clip-button focus-within:border-amber-500/50 transition-colors">
-                <span class="text-3xl font-bold text-zinc-500 tabular-nums">₱</span>
+                <span class="text-3xl font-bold text-zinc-500 tabular-nums">
+                  ₱
+                </span>
                 <input
                   type="number"
                   step="0.01"
@@ -373,7 +419,9 @@ export default function TransactionForm(props: TransactionFormProps) {
               disabled={!props.isAdmin}
             />
             <Show when={!props.isAdmin}>
-              <p class="text-[10px] text-zinc-600 mt-0.5">Only admins can change the date</p>
+              <p class="text-[10px] text-zinc-600 mt-0.5">
+                Only admins can change the date
+              </p>
             </Show>
           </FormField>
 
@@ -384,7 +432,9 @@ export default function TransactionForm(props: TransactionFormProps) {
                   type="text"
                   data-testid="transactions-form-backdate-reason"
                   value={props.backdateReason}
-                  onInput={(e) => props.setBackdateReason(e.currentTarget.value)}
+                  onInput={(e) =>
+                    props.setBackdateReason(e.currentTarget.value)
+                  }
                   class="w-full rounded-lg border border-amber-500/30 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
                   placeholder="Why are you backdating this transaction?"
                   required
@@ -412,8 +462,18 @@ export default function TransactionForm(props: TransactionFormProps) {
                   testIdPrefix="form-payee-picker"
                   selected={selectedPayee()}
                   selectedName={props.payee}
-                  search={(q) => searchPayees(q, props.category === "sale" ? "customer" : "vendor")}
-                  onCreate={(name) => createPayee(name, props.category === "sale" ? "customer" : "vendor")}
+                  search={(q) =>
+                    searchPayees(
+                      q,
+                      props.category === "sale" ? "customer" : "vendor"
+                    )
+                  }
+                  onCreate={(name) =>
+                    createPayee(
+                      name,
+                      props.category === "sale" ? "customer" : "vendor"
+                    )
+                  }
                   idOf={(p) => p.id}
                   labelOf={(p) => p.name}
                   secondaryOf={payeeSecondary}
@@ -474,8 +534,14 @@ export default function TransactionForm(props: TransactionFormProps) {
                       label: opt.name,
                     }));
                     list.unshift({ value: "", label: "— Uncategorised —" });
-                    if (props.subcategory && !list.some((o) => o.value === props.subcategory)) {
-                      list.push({ value: props.subcategory, label: props.subcategory });
+                    if (
+                      props.subcategory &&
+                      !list.some((o) => o.value === props.subcategory)
+                    ) {
+                      list.push({
+                        value: props.subcategory,
+                        label: props.subcategory,
+                      });
                     }
                     return list;
                   })()}
@@ -488,7 +554,9 @@ export default function TransactionForm(props: TransactionFormProps) {
                   triggerLabelClass="truncate text-left flex-1 min-w-0"
                 />
               </Show>
-              <p class="text-[10px] text-zinc-600 mt-0.5">Optional. Used for tax-prep classification.</p>
+              <p class="text-[10px] text-zinc-600 mt-0.5">
+                Optional. Used for tax-prep classification.
+              </p>
             </FormField>
           </Show>
 
@@ -502,10 +570,14 @@ export default function TransactionForm(props: TransactionFormProps) {
                 <FormField label="Kind *">
                   <select
                     value={props.payableKind}
-                    onChange={(e) => props.setPayableKind(e.currentTarget.value)}
+                    onChange={(e) =>
+                      props.setPayableKind(e.currentTarget.value)
+                    }
                     class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button cursor-pointer focus:outline-none focus:border-amber-500/50"
                   >
-                    <For each={PAYABLE_KIND_OPTIONS}>{(opt) => <option value={opt.id}>{opt.label}</option>}</For>
+                    <For each={PAYABLE_KIND_OPTIONS}>
+                      {(opt) => <option value={opt.id}>{opt.label}</option>}
+                    </For>
                   </select>
                 </FormField>
                 <FormField label="Due date">
@@ -514,7 +586,8 @@ export default function TransactionForm(props: TransactionFormProps) {
                     onChange={(d: string | null) => props.setDueDate(d || "")}
                   />
                   <p class="text-[10px] text-zinc-600 mt-0.5">
-                    When payment is owed. Past-due payables show in the Payables tab.
+                    When payment is owed. Past-due payables show in the Payables
+                    tab.
                   </p>
                 </FormField>
               </div>
@@ -523,12 +596,15 @@ export default function TransactionForm(props: TransactionFormProps) {
                   <input
                     type="text"
                     value={props.chequeNumber}
-                    onInput={(e) => props.setChequeNumber(e.currentTarget.value)}
+                    onInput={(e) =>
+                      props.setChequeNumber(e.currentTarget.value)
+                    }
                     class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button focus:outline-none focus:border-amber-500/50"
                     placeholder="e.g. 0004429-007"
                   />
                   <p class="text-[10px] text-zinc-600 mt-0.5">
-                    For post-dated cheques (PDC). Leave blank for direct payments.
+                    For post-dated cheques (PDC). Leave blank for direct
+                    payments.
                   </p>
                 </FormField>
                 <Show when={props.chequeNumber.trim()}>
@@ -554,7 +630,11 @@ export default function TransactionForm(props: TransactionFormProps) {
                 <AccountPicker
                   accounts={props.accounts}
                   ariaLabel={catConfig().accountLabel}
-                  value={props.category === "sale" ? props.destAccount : props.sourceAccount}
+                  value={
+                    props.category === "sale"
+                      ? props.destAccount
+                      : props.sourceAccount
+                  }
                   onChange={(v) => {
                     if (props.category === "sale") {
                       props.setDestAccount(v);
@@ -566,7 +646,9 @@ export default function TransactionForm(props: TransactionFormProps) {
                   }}
                 />
                 <Show when={catConfig().accountHint}>
-                  <p class="text-[10px] text-zinc-600 mt-0.5">{catConfig().accountHint}</p>
+                  <p class="text-[10px] text-zinc-600 mt-0.5">
+                    {catConfig().accountHint}
+                  </p>
                 </Show>
               </FormField>
             }
@@ -608,9 +690,18 @@ export default function TransactionForm(props: TransactionFormProps) {
           <div>
             <div class="flex items-center gap-1 mb-2 text-xs text-zinc-500">
               <Paperclip size={12} /> Attachments
-              <Show when={(props.existingAttachments?.length ?? 0) + props.pendingFiles.length > 0}>
+              <Show
+                when={
+                  (props.existingAttachments?.length ?? 0) +
+                    props.pendingFiles.length >
+                  0
+                }
+              >
                 <span class="text-zinc-600">
-                  ({(props.existingAttachments?.length ?? 0) + props.pendingFiles.length})
+                  (
+                  {(props.existingAttachments?.length ?? 0) +
+                    props.pendingFiles.length}
+                  )
                 </span>
               </Show>
             </div>
@@ -633,19 +724,27 @@ export default function TransactionForm(props: TransactionFormProps) {
                       fallback={
                         <div class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300">
                           <FileIcon size={20} />
-                          <span class="truncate max-w-full text-[10px]">{pf.file.name}</span>
+                          <span class="truncate max-w-full text-[10px]">
+                            {pf.file.name}
+                          </span>
                         </div>
                       }
                     >
                       <div class="block rounded-lg border border-zinc-700 overflow-hidden">
-                        <img src={pf.previewUrl!} alt={pf.file.name} class="w-24 h-24 object-cover" />
+                        <img
+                          src={pf.previewUrl!}
+                          alt={pf.file.name}
+                          class="w-24 h-24 object-cover"
+                        />
                       </div>
                     </Show>
                     <button
                       type="button"
                       onClick={() => {
                         revokePendingFile(pf);
-                        props.setPendingFiles(props.pendingFiles.filter((f) => f.id !== pf.id));
+                        props.setPendingFiles(
+                          props.pendingFiles.filter((f) => f.id !== pf.id)
+                        );
                       }}
                       class="absolute -top-2 -right-2 flex w-7 h-7 items-center justify-center rounded-full bg-red-600/90 border border-red-400/60 text-white cursor-pointer hover:bg-red-500 active:bg-red-700 shadow-lg"
                       aria-label={`Remove ${pf.file.name}`}
@@ -670,7 +769,9 @@ export default function TransactionForm(props: TransactionFormProps) {
               class="hidden"
               onChange={(e) => {
                 if (e.target.files && e.target.files.length > 0) {
-                  const newFiles = Array.from(e.target.files).map(createPendingFile);
+                  const newFiles = Array.from(e.target.files).map(
+                    createPendingFile
+                  );
                   props.setPendingFiles([...props.pendingFiles, ...newFiles]);
                   e.target.value = "";
                 }
@@ -678,17 +779,23 @@ export default function TransactionForm(props: TransactionFormProps) {
             />
 
             <Show when={props.pendingFiles.length === 0}>
-              <p class="text-[10px] text-zinc-600 mt-1">Drop files here or paste from clipboard.</p>
+              <p class="text-[10px] text-zinc-600 mt-1">
+                Drop files here or paste from clipboard.
+              </p>
             </Show>
           </div>
 
           <div class="flex justify-center pt-2">
             <button
               type="button"
-              onClick={() => setViewMode(viewMode() === "default" ? "advanced" : "default")}
+              onClick={() =>
+                setViewMode(viewMode() === "default" ? "advanced" : "default")
+              }
               class="text-xs text-zinc-500 hover:text-amber-400 px-3 py-1.5 transition-colors cursor-pointer"
             >
-              {viewMode() === "default" ? "Show advanced fields" : "Hide advanced fields"}
+              {viewMode() === "default"
+                ? "Show advanced fields"
+                : "Hide advanced fields"}
             </button>
           </div>
 
@@ -732,7 +839,12 @@ export default function TransactionForm(props: TransactionFormProps) {
           </div>
           <div class="flex justify-end gap-3">
             <Show when={props.onCancel}>
-              <Button intent="secondary" variant="ghost" onClick={props.onCancel} disabled={props.saving}>
+              <Button
+                intent="secondary"
+                variant="ghost"
+                onClick={props.onCancel}
+                disabled={props.saving}
+              >
                 Cancel
               </Button>
             </Show>

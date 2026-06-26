@@ -137,4 +137,7 @@ export interface ShareableRole {
   label: string;
 }
 
-export type IconComponent = (props: { size?: number; class?: string }) => JSX.Element;
+export type IconComponent = (props: {
+  size?: number;
+  class?: string;
+}) => JSX.Element;
