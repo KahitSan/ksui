@@ -80,7 +80,7 @@ export function registerPaymentUpdateRoute(router: Router, ctx: PaymentRouteCtx)
         }
         const payment = rows[0] as Record<string, unknown> & { financial_account_id: number | null };
         if (payment.financial_account_id != null) {
-          const idh = identityHeaderOf(req);
+          const idh = (c.req.raw.headers.get("x-kserp-identity") ?? undefined);
           const accounts = await findAccountsByIds([payment.financial_account_id], idh);
           payment.financial_account_name = accounts?.[0]?.name ?? null;
         }
@@ -121,7 +121,7 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
           ...new Set(payments.map((p: { financial_account_id: number | null }) => p.financial_account_id).filter((v: number | null): v is number => v != null)),
         ];
         if (accountIds.length > 0) {
-          const idh = identityHeaderOf(req);
+          const idh = (c.req.raw.headers.get("x-kserp-identity") ?? undefined);
           const accounts = await findAccountsByIds(accountIds, idh);
           const acctById = new Map((accounts ?? []).map((a) => [a.id, a]));
           for (const p of payments) {
@@ -176,7 +176,7 @@ export function registerPaymentRoutes(router: Router, ctx: PaymentRouteCtx): voi
           PAYMENT_COLS,
         )) as Record<string, unknown> & { financial_account_id: number | null };
         if (payment.financial_account_id != null) {
-          const idh = identityHeaderOf(req);
+          const idh = (c.req.raw.headers.get("x-kserp-identity") ?? undefined);
           const accounts = await findAccountsByIds([payment.financial_account_id], idh);
           payment.financial_account_name = accounts?.[0]?.name ?? null;
         }

@@ -18,7 +18,7 @@
 // (package/variant/client/payee names, voucher discount) is resolved over the
 // kernel RPC (lib/peers.ts) with graceful degradation.
 
-import { type Router, type Request, type Response, type RequestHandler } from "express";
+import { type Hono, type Context as HonoContext, type MiddlewareHandler } from "hono";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { insertTransactionRow, insertVisibilityShares } from "../lib/create-transaction.js";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
@@ -41,38 +41,38 @@ import {
 
 export type CoreRouteCtx = {
   pool: PluginDb;
-  requireAuth: RequestHandler;
-  requireWorkspace: RequestHandler;
-  requirePermission: (...codes: string[]) => RequestHandler;
+  requireAuth: MiddlewareHandler;
+  requireWorkspace: MiddlewareHandler;
+  requirePermission: (...codes: string[]) => MiddlewareHandler;
 };
 
-export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
+export function registerCoreRoutes(app: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── List ────────────────────────────────────────────────────────────────
-  router.get(
+  app.get(
     "/",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
-      const search = (req.query.search as string | undefined)?.trim();
-      const category = req.query.category as string | undefined;
-      const subcategory = req.query.subcategory as string | undefined;
-      const status = req.query.status as string | undefined;
-      const accountId = req.query.accountId as string | undefined;
-      const createdBy = req.query.createdBy as string | undefined;
-      const dateFrom = req.query.dateFrom as string | undefined;
-      const dateTo = req.query.dateTo as string | undefined;
-      const sortBy = req.query.sortBy as string | undefined;
-      const sortDir = (req.query.sortDir as string)?.toUpperCase() === "ASC" ? "ASC" : "DESC";
-      const page = Math.max(1, parseInt(req.query.page as string) || 1);
-      const limit = Math.min(parseInt(req.query.limit as string) || 25, 200);
+    async (c: HonoContext) => {
+      const search = (c.req.query("search"))?.trim();
+      const category = c.req.query("category");
+      const subcategory = c.req.query("subcategory");
+      const status = c.req.query("status");
+      const accountId = c.req.query("accountId");
+      const createdBy = c.req.query("createdBy");
+      const dateFrom = c.req.query("dateFrom");
+      const dateTo = c.req.query("dateTo");
+      const sortBy = c.req.query("sortBy");
+      const sortDir = (c.req.query("sortDir"))?.toUpperCase() === "ASC" ? "ASC" : "DESC";
+      const page = Math.max(1, parseInt(c.req.query("page")) || 1);
+      const limit = Math.min(parseInt(c.req.query("limit")) || 25, 200);
       const offset = (page - 1) * limit;
 
       try {
         const conditions: string[] = ["t.workspace_id = $1"];
-        const params: unknown[] = [req.workspaceId];
+        const params: unknown[] = [c.get("workspaceId")];
         let idx = 2;
 
         const priv = privacyClause(req, params, idx);
@@ -175,7 +175,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         const total = parseInt(countResult.rows[0].count);
 
         // Enrich with account, payee, and user names.
-        const idh = identityHeaderOf(req);
+        const idh = (c.req.raw.headers.get("x-kserp-identity") ?? undefined);
 
         const accountIds = [
           ...new Set([
@@ -225,21 +225,21 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         if (accountsUnavailable) {
           body.peersUnavailable = { accounts: true, payees: false };
         }
-        res.json(body);
+        return c.json(body);
       } catch (err) {
         console.error("[transactions] list error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
 
   // ── Create (manual income/expense/business) ─────────────────────────────
-  router.post(
+  app.post(
     "/",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.create"),
-    async (req: Request, res: Response) => {
+    async (c: HonoContext) => {
       const {
         category,
         subcategory,
@@ -263,18 +263,18 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         pdc_status,
         payee_id,
         client_id,
-      } = req.body ?? {};
+      } = await c.req.json() ?? {};
 
       if (!category || !VALID_CATEGORIES.includes(category)) {
-        res.status(400).json({ error: `category must be one of: ${VALID_CATEGORIES.join(", ")}` });
+        return c.json({ error: `category must be one of: ${VALID_CATEGORIES.join(", ")}` }, 400);
         return;
       }
       if (client_id != null && (typeof client_id !== "number" || !Number.isFinite(client_id))) {
-        res.status(400).json({ error: "client_id must be a finite number" });
+        return c.json({ error: "client_id must be a finite number" }, 400);
         return;
       }
       if (payee_id != null && (typeof payee_id !== "number" || !Number.isFinite(payee_id))) {
-        res.status(400).json({ error: "payee_id must be a finite number" });
+        return c.json({ error: "payee_id must be a finite number" }, 400);
         return;
       }
 
@@ -282,40 +282,40 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
       try {
         validatedSubcategory = await validateSubcategory(pool, category, subcategory);
       } catch (err) {
-        res.status(400).json({ error: err instanceof Error ? err.message : "Invalid subcategory" });
+        return c.json({ error: err instanceof Error ? err.message : "Invalid subcategory" }, 400);
         return;
       }
 
       const parsedAmount = parseFloat(amount);
       // eslint-disable-next-line sonarjs/no-inverted-boolean-check -- !(x>0) also rejects NaN (non-numeric amount); `<=0` would let NaN through, changing validation.
       if (!amount || !(parsedAmount > 0)) {
-        res.status(400).json({ error: "amount must be greater than 0" });
+        return c.json({ error: "amount must be greater than 0" }, 400);
         return;
       }
       if (!description || !String(description).trim()) {
-        res.status(400).json({ error: "description is required" });
+        return c.json({ error: "description is required" }, 400);
         return;
       }
       if (!transaction_date || !isValidIsoDate(String(transaction_date))) {
-        res.status(400).json({ error: "transaction_date must be YYYY-MM-DD" });
+        return c.json({ error: "transaction_date must be YYYY-MM-DD" }, 400);
         return;
       }
-      if (!req.workspaceId || !req.user?.id) {
-        res.status(400).json({ error: "Workspace and user context required" });
+      if (!c.get("workspaceId") || !c.get("user")?.id) {
+        return c.json({ error: "Workspace and user context required" }, 400);
         return;
       }
 
       // Backdate gate (transactions.backdate). Admin/superuser bypass.
       const backdated = isBackdated(String(transaction_date));
       if (backdated) {
-        const isAdmin = req.user?.role === "superuser" || req.wsRole === "admin";
-        const allowed = isAdmin || (req.permissions ?? []).includes("transactions.backdate");
+        const isAdmin = c.get("user")?.role === "superuser" || c.get("wsRole") === "admin";
+        const allowed = isAdmin || (c.get("permissions") ?? []).includes("transactions.backdate");
         if (!allowed) {
-          res.status(403).json({ error: "Missing permission: transactions.backdate" });
+          return c.json({ error: "Missing permission: transactions.backdate" }, 403);
           return;
         }
         if (!backdate_reason?.trim()) {
-          res.status(400).json({ error: "backdate_reason is required when backdating" });
+          return c.json({ error: "backdate_reason is required when backdating" }, 400);
           return;
         }
       }
@@ -329,20 +329,20 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
       let txPdcStatus: string | null = null;
       if (category === "payable") {
         if (!payable_kind || !validPayableKinds.includes(payable_kind)) {
-          res.status(400).json({ error: `payable_kind must be one of: ${validPayableKinds.join(", ")}` });
+          return c.json({ error: `payable_kind must be one of: ${validPayableKinds.join(", ")}` }, 400);
           return;
         }
         txPayableKind = payable_kind;
         if (due_date) {
           if (typeof due_date !== "string" || !isValidIsoDate(due_date)) {
-            res.status(400).json({ error: "due_date must be YYYY-MM-DD" });
+            return c.json({ error: "due_date must be YYYY-MM-DD" }, 400);
             return;
           }
           txDueDate = due_date;
         }
         txChequeNumber = cheque_number?.trim() || null;
         if (txChequeNumber && pdc_status && !validPdcStatuses.includes(pdc_status)) {
-          res.status(400).json({ error: `pdc_status must be one of: ${validPdcStatuses.join(", ")}` });
+          return c.json({ error: `pdc_status must be one of: ${validPdcStatuses.join(", ")}` }, 400);
           return;
         }
         txPdcStatus = txChequeNumber ? pdc_status || "issued" : null;
@@ -350,7 +350,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
 
       // VAT computation.
       if (tax_type != null && !VALID_TAX_TYPES.includes(tax_type)) {
-        res.status(400).json({ error: `tax_type must be one of: ${VALID_TAX_TYPES.join(", ")}` });
+        return c.json({ error: `tax_type must be one of: ${VALID_TAX_TYPES.join(", ")}` }, 400);
         return;
       }
       const txTaxType = VALID_TAX_TYPES.includes(tax_type) ? tax_type : "vat_inclusive";
@@ -376,7 +376,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
       if (has_ewt === true) {
         const parsedRate = parseFloat(ewt_rate);
         if (!Number.isFinite(parsedRate) || parsedRate <= 0 || parsedRate > 100) {
-          res.status(400).json({ error: "ewt_rate must be a number greater than 0 and at most 100" });
+          return c.json({ error: "ewt_rate must be a number greater than 0 and at most 100" }, 400);
           return;
         }
         txHasEwt = true;
@@ -390,7 +390,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         await dbClient.query("BEGIN");
         await applyTenantContext(dbClient);
         const txn = await insertTransactionRow(dbClient, {
-          workspaceId: req.workspaceId,
+          workspaceId: c.get("workspaceId"),
           category,
           subcategory: validatedSubcategory,
           sourceAccountId: source_account_id || null,
@@ -402,7 +402,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           isPrivate: is_private || false,
           isBackdated: backdated,
           backdateReason: backdated ? backdate_reason?.trim() : null,
-          createdBy: req.user.id,
+          createdBy: c.get("user").id,
           referenceNumber: reference_number?.trim() || null,
           taxType: txTaxType,
           taxRate,
@@ -426,11 +426,11 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         });
 
         await dbClient.query("COMMIT");
-        res.status(201).json(txn);
+        return c.json(txn, 201);
       } catch (err) {
         if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
         console.error("[transactions] create error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       } finally {
         if (dbClient) dbClient.release();
       }
@@ -441,18 +441,18 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
   // The GET /:id detail handler lives in ./transactions-detail.ts and registers
   // here, BETWEEN Create and Edit, to preserve the exact Express match order
   // for the several '/:id' routes.
-  registerTransactionDetailRoute(router, ctx);
+  registerTransactionDetailRoute(app, ctx);
 
   // ── Edit (basic fields) ──────────────────────────────────────────────────
-  router.put(
+  app.put(
     "/:id",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (req: Request, res: Response) => {
-      const id = parseInt(String(req.params.id), 10);
+    async (c: HonoContext) => {
+      const id = parseInt(String(c.req.param("id")), 10);
       if (!Number.isFinite(id)) {
-        res.status(400).json({ error: "Invalid id" });
+        return c.json({ error: "Invalid id" }, 400);
         return;
       }
       const {
@@ -476,22 +476,22 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         pdc_status,
         payee_id,
         reason,
-      } = req.body ?? {};
+      } = await c.req.json() ?? {};
 
       // Reject an unrecognized tax_type up front so a typo doesn't silently
       // skip the apply path and leave the column untouched.
       if (tax_type !== undefined && tax_type !== null && !VALID_TAX_TYPES.includes(tax_type)) {
-        res.status(400).json({ error: `tax_type must be one of: ${VALID_TAX_TYPES.join(", ")}` });
+        return c.json({ error: `tax_type must be one of: ${VALID_TAX_TYPES.join(", ")}` }, 400);
         return;
       }
 
       try {
         const existing = await pool.query(
           `SELECT * FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-          [id, req.workspaceId],
+          [id, c.get("workspaceId")],
         );
         if (existing.rows.length === 0) {
-          res.status(404).json({ error: "Not found" });
+          return c.json({ error: "Not found" }, 404);
           return;
         }
         const existingRow = existing.rows[0];
@@ -502,7 +502,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         const newCategory = category ?? existing.rows[0].category;
         if (category !== undefined) {
           if (!VALID_CATEGORIES.includes(category)) {
-            res.status(400).json({ error: `category must be one of: ${VALID_CATEGORIES.join(", ")}` });
+            return c.json({ error: `category must be one of: ${VALID_CATEGORIES.join(", ")}` }, 400);
             return;
           }
           sets.push(`category = $${idx++}`);
@@ -513,7 +513,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           try {
             validated = await validateSubcategory(pool, newCategory, subcategory);
           } catch (err) {
-            res.status(400).json({ error: err instanceof Error ? err.message : "Invalid subcategory" });
+            return c.json({ error: err instanceof Error ? err.message : "Invalid subcategory" }, 400);
             return;
           }
           sets.push(`subcategory = $${idx++}`);
@@ -531,7 +531,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           const parsed = parseFloat(amount);
           // eslint-disable-next-line sonarjs/no-inverted-boolean-check -- !(x>0) also rejects NaN (non-numeric amount); `<=0` would let NaN through, changing validation.
           if (!(parsed > 0)) {
-            res.status(400).json({ error: "amount must be greater than 0" });
+            return c.json({ error: "amount must be greater than 0" }, 400);
             return;
           }
           sets.push(`amount = $${idx++}`);
@@ -539,7 +539,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         }
         if (description !== undefined) {
           if (!String(description).trim()) {
-            res.status(400).json({ error: "description cannot be empty" });
+            return c.json({ error: "description cannot be empty" }, 400);
             return;
           }
           sets.push(`description = $${idx++}`);
@@ -551,7 +551,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         }
         if (transaction_date !== undefined) {
           if (!isValidIsoDate(String(transaction_date))) {
-            res.status(400).json({ error: "transaction_date must be YYYY-MM-DD" });
+            return c.json({ error: "transaction_date must be YYYY-MM-DD" }, 400);
             return;
           }
           // Recompute the backdate posture. Flipping the date to/from today
@@ -560,14 +560,14 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           const backdated = isBackdated(String(transaction_date));
           const effectiveReason = backdate_reason?.trim() || reason?.trim();
           if (backdated) {
-            const isAdmin = req.user?.role === "superuser" || req.wsRole === "admin";
-            const allowed = isAdmin || (req.permissions ?? []).includes("transactions.backdate");
+            const isAdmin = c.get("user")?.role === "superuser" || c.get("wsRole") === "admin";
+            const allowed = isAdmin || (c.get("permissions") ?? []).includes("transactions.backdate");
             if (!allowed) {
-              res.status(403).json({ error: "Missing permission: transactions.backdate" });
+              return c.json({ error: "Missing permission: transactions.backdate" }, 403);
               return;
             }
             if (!effectiveReason) {
-              res.status(400).json({ error: "A reason is required when backdating" });
+              return c.json({ error: "A reason is required when backdating" }, 400);
               return;
             }
           }
@@ -593,7 +593,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         const validPdcStatuses = ["issued", "presented", "cleared", "bounced"];
         if (payable_kind !== undefined) {
           if (payable_kind !== null && !validPayableKinds.includes(payable_kind)) {
-            res.status(400).json({ error: `payable_kind must be one of: ${validPayableKinds.join(", ")}` });
+            return c.json({ error: `payable_kind must be one of: ${validPayableKinds.join(", ")}` }, 400);
             return;
           }
           sets.push(`payable_kind = $${idx++}`);
@@ -602,7 +602,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         if (due_date !== undefined) {
           if (due_date !== null && due_date !== "") {
             if (typeof due_date !== "string" || !isValidIsoDate(due_date)) {
-              res.status(400).json({ error: "due_date must be YYYY-MM-DD" });
+              return c.json({ error: "due_date must be YYYY-MM-DD" }, 400);
               return;
             }
           }
@@ -615,7 +615,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         }
         if (pdc_status !== undefined) {
           if (pdc_status !== null && !validPdcStatuses.includes(pdc_status)) {
-            res.status(400).json({ error: `pdc_status must be one of: ${validPdcStatuses.join(", ")}` });
+            return c.json({ error: `pdc_status must be one of: ${validPdcStatuses.join(", ")}` }, 400);
             return;
           }
           sets.push(`pdc_status = $${idx++}`);
@@ -623,7 +623,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         }
         if (payee_id !== undefined) {
           if (payee_id != null && (typeof payee_id !== "number" || !Number.isFinite(payee_id))) {
-            res.status(400).json({ error: "payee_id must be a finite number" });
+            return c.json({ error: "payee_id must be a finite number" }, 400);
             return;
           }
           sets.push(`payee_id = $${idx++}`);
@@ -664,7 +664,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
             const incomingRate = ewt_rate !== undefined ? ewt_rate : existingRow.ewt_rate;
             const parsedRate = parseFloat(String(incomingRate));
             if (!Number.isFinite(parsedRate) || parsedRate <= 0 || parsedRate > 100) {
-              res.status(400).json({ error: "ewt_rate must be a number greater than 0 and at most 100" });
+              return c.json({ error: "ewt_rate must be a number greater than 0 and at most 100" }, 400);
               return;
             }
             const baseAmount =
@@ -686,13 +686,13 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           }
         }
         if (sets.length === 0) {
-          res.status(400).json({ error: "No fields to update" });
+          return c.json({ error: "No fields to update" }, 400);
           return;
         }
         sets.push(`updated_at = NOW()`);
         sets.push(`updated_by = $${idx++}`);
-        params.push(req.user?.id ?? null);
-        params.push(id, req.workspaceId);
+        params.push(c.get("user")?.id ?? null);
+        params.push(id, c.get("workspaceId"));
 
         let dbClient: import("pg").PoolClient | null = null;
         try {
@@ -708,7 +708,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
             await dbClient.query(
               `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
                  VALUES ($1, $2, $3, $4, 'edit')`,
-              [id, req.workspaceId, req.user?.id ?? "", String(reason).trim()],
+              [id, c.get("workspaceId"), c.get("user")?.id ?? "", String(reason).trim()],
             );
           }
           await dbClient.query("COMMIT");
@@ -716,7 +716,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           // Enrich response with payee name and user names.
           let payee: string | null = null;
           if (updated.payee_id != null) {
-            const payees = await findPayeesByIds([updated.payee_id], identityHeaderOf(req));
+            const payees = await findPayeesByIds([updated.payee_id], (c.req.raw.headers.get("x-kserp-identity") ?? undefined));
             payee = payees?.[0]?.name ?? null;
           }
           const updUserIds = new Set<string>();
@@ -725,7 +725,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
           const updUserMap = await resolveUserNames(pool, updUserIds);
           const updCreatedBy = updated.created_by ? updUserMap.get(updated.created_by) : undefined;
           const updUpdatedBy = updated.updated_by ? updUserMap.get(updated.updated_by) : undefined;
-          res.json({ ...updated, payee, created_by_name: updCreatedBy?.name ?? null, created_by_image: updCreatedBy?.image ?? null, updated_by_name: updUpdatedBy?.name ?? null, updated_by_image: updUpdatedBy?.image ?? null });
+          return c.json({ ...updated, payee, created_by_name: updCreatedBy?.name ?? null, created_by_image: updCreatedBy?.image ?? null, updated_by_name: updUpdatedBy?.name ?? null, updated_by_image: updUpdatedBy?.image ?? null });
         } catch (err) {
           if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
           throw err;
@@ -734,7 +734,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
         }
       } catch (err) {
         console.error("[transactions] update error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -744,7 +744,7 @@ export function registerCoreRoutes(router: Router, ctx: CoreRouteCtx): void {
   // GET /:id/line-items, POST /:id/line-items/:lineItemId/void live in
   // ./transactions-status.ts and register here last (after Edit), reproducing
   // the original tail order of these handlers.
-  registerTransactionStatusRoutes(router, ctx);
+  registerTransactionStatusRoutes(app, ctx);
 }
 
 // The three counter PATCH routes live in ./transactions-counter-patch.ts and

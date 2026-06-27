@@ -382,7 +382,7 @@ export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void 
           dateTo,
           privacy: { frag, params: privacyParams },
         };
-        const identityHeader = identityHeaderOf(req);
+        const identityHeader = (c.req.raw.headers.get("x-kserp-identity") ?? undefined);
 
         void runExportJob(pool, jobId, consolidate, filters, identityHeader);
         res.json({ jobId });

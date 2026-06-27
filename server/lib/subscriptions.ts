@@ -12,7 +12,7 @@
 // then enrich client + variant names over RPC. The renew stays here too because
 // it INSERTs accounts.transactions + accounts.transaction_line_items.
 
-import type { Request } from "express";
+import type { Context as HonoContext } from "hono";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
@@ -78,14 +78,14 @@ export async function listSubscriptions(
   req: Request,
   privacyClause: PrivacyClause,
 ): Promise<{ data: SubscriptionRow[]; total: number; page: number; limit: number }> {
-  const search = (req.query.search as string | undefined)?.trim().toLowerCase();
-  const lineageSlug = (req.query.lineage_slug as string | undefined)?.trim();
-  const bucketRaw = (req.query.status_bucket as string | undefined)?.trim();
-  const sortByRaw = (req.query.sortBy as string | undefined) ?? "latest_ends_at";
+  const search = (c.req.query("search"))?.trim().toLowerCase();
+  const lineageSlug = (c.req.query("lineage_slug"))?.trim();
+  const bucketRaw = (c.req.query("status_bucket"))?.trim();
+  const sortByRaw = (c.req.query("sortBy")) ?? "latest_ends_at";
   const sortBy = SORTABLE.has(sortByRaw) ? sortByRaw : "latest_ends_at";
-  const sortDir = (req.query.sortDir as string | undefined)?.toUpperCase() === "ASC" ? 1 : -1;
-  const page = Math.max(1, parseInt(req.query.page as string) || 1);
-  const limit = Math.min(parseInt(req.query.limit as string) || 25, 200);
+  const sortDir = (c.req.query("sortDir"))?.toUpperCase() === "ASC" ? 1 : -1;
+  const page = Math.max(1, parseInt(c.req.query("page")) || 1);
+  const limit = Math.min(parseInt(c.req.query("limit")) || 25, 200);
 
   let buckets: Set<StatusBucket> | null;
   if (bucketRaw === "all") {
@@ -103,7 +103,7 @@ export async function listSubscriptions(
   // Qualifying line items from accounts.* (privacy enforced here so a private
   // renewal can't leak through the aggregate). No packages/clients JOIN — those
   // schemas are off this plugin's search_path; we resolve them over RPC below.
-  const params: unknown[] = [req.workspaceId];
+  const params: unknown[] = [c.get("workspaceId")];
   const conditions = [
     "li.workspace_id = $1",
     "li.client_id IS NOT NULL",
@@ -324,7 +324,7 @@ export async function renewSubscription(
         WHERE li.id = $1 AND li.workspace_id = $2
           AND li.duration_unit IN ('day', 'month')
           AND li.status <> 'voided'`,
-      [sourceId, req.workspaceId],
+      [sourceId, c.get("workspaceId")],
     );
     if (srcRes.rows.length === 0 || srcRes.rows[0].client_id == null) {
       await client.query("ROLLBACK");
@@ -342,7 +342,7 @@ export async function renewSubscription(
     // advisory lock rather than a row-level FOR UPDATE.
     const chainKey = lineageSlug ?? `pkg:${src.package_id}`;
     await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [
-      `renew:${req.workspaceId}:${src.client_id}:${chainKey}`,
+      `renew:${c.get("workspaceId")}:${src.client_id}:${chainKey}`,
     ]);
 
     // Latest ends_at across the (client, lineage) chain. lineage isn't in
@@ -356,7 +356,7 @@ export async function renewSubscription(
         WHERE li.workspace_id = $1 AND li.client_id = $2
           AND li.duration_unit IN ('day', 'month')
           AND li.status <> 'voided' AND t.status <> 'voided'`,
-      [req.workspaceId, src.client_id],
+      [c.get("workspaceId"), src.client_id],
     );
     const chainPkgIds = [...new Set(chainRes.rows.map((r) => r.package_id as number))];
     const chainPkgs = chainPkgIds.length > 0 ? ((await findPackagesByIds(chainPkgIds, idh)) ?? []) : [];
@@ -373,7 +373,7 @@ export async function renewSubscription(
     // Destination account must belong to this workspace (accounts.* — owned).
     const acctRes = await client.query(
       `SELECT id FROM accounts.financial_accounts WHERE id = $1 AND workspace_id = $2`,
-      [destination_account_id, req.workspaceId],
+      [destination_account_id, c.get("workspaceId")],
     );
     if (acctRes.rows.length === 0) {
       await client.query("ROLLBACK");
@@ -400,7 +400,7 @@ export async function renewSubscription(
                'vat_inclusive', 0, 0, $3,
                $6, 0)
        RETURNING id, workspace_id, category, amount, description, transaction_date, status, client_id, destination_account_id`,
-      [req.workspaceId, destination_account_id, total, `Renewal × ${variant.name}`, req.user!.id, src.client_id],
+      [c.get("workspaceId"), destination_account_id, total, `Renewal × ${variant.name}`, c.get("user")!.id, src.client_id],
     );
     const txn = txResult.rows[0];
 
@@ -417,7 +417,7 @@ export async function renewSubscription(
                  quantity, unit_price, started_at, ends_at, status, client_id`,
       [
         txn.id,
-        req.workspaceId,
+        c.get("workspaceId"),
         variant.package_id,
         package_variant_id,
         variant.name,

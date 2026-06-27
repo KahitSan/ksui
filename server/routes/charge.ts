@@ -10,7 +10,7 @@
 // Cross-plugin data (package/client names) is resolved over the kernel RPC with
 // graceful degradation. privacyClause + workspace-scoping are unchanged.
 
-import { type Router, type Request, type Response, type RequestHandler } from "express";
+import { type Hono, type Context as HonoContext, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { findPackagesByIds, findClientsByIds } from "../lib/peers.js";
@@ -19,23 +19,23 @@ import { privacyClause } from "./shared.js";
 
 export type ChargeRouteCtx = {
   pool: PluginDb;
-  requireAuth: RequestHandler;
-  requireWorkspace: RequestHandler;
-  requirePermission: (...codes: string[]) => RequestHandler;
+  requireAuth: MiddlewareHandler;
+  requireWorkspace: MiddlewareHandler;
+  requirePermission: (...codes: string[]) => MiddlewareHandler;
 };
 
-export function registerChargeRoutes(router: Router, ctx: ChargeRouteCtx): void {
+export function registerChargeRoutes(app: Hono, ctx: ChargeRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Outstanding (unpaid sales) — Counter board ──────────────────────────
-  router.get(
+  app.get(
     "/outstanding",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
+    async (c: HonoContext) => {
       try {
-        const params: unknown[] = [req.workspaceId];
+        const params: unknown[] = [c.get("workspaceId")];
         const conditions = [
           "t.workspace_id = $1",
           "t.category = 'sale'",
@@ -63,7 +63,7 @@ export function registerChargeRoutes(router: Router, ctx: ChargeRouteCtx): void 
 
         // Package summary + client names resolved over RPC (graceful: omitted
         // when the producer plugin is absent).
-        const idh = identityHeaderOf(req);
+        const idh = (c.req.raw.headers.get("x-kserp-identity") ?? undefined);
         const ids = result.rows.map((r) => r.id as number);
         const summaryByTxn = new Map<number, string>();
         if (ids.length > 0) {
@@ -104,32 +104,32 @@ export function registerChargeRoutes(router: Router, ctx: ChargeRouteCtx): void 
           package_summary: summaryByTxn.get(r.id) ?? "",
           client_name: r.client_id != null ? (clientName.get(r.client_id) ?? null) : null,
         }));
-        res.json({ data: enriched });
+        return c.json({ data: enriched });
       } catch (err) {
         console.error("[transactions] outstanding error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
 
   // ── POS charge flow ─────────────────────────────────────────────────────
-  router.post(
+  app.post(
     "/charge",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.create"),
-    async (req: Request, res: Response) => {
-      if (!req.workspaceId || !req.user?.id) {
-        res.status(400).json({ error: "Workspace and user context required" });
+    async (c: HonoContext) => {
+      if (!c.get("workspaceId") || !c.get("user")?.id) {
+        return c.json({ error: "Workspace and user context required" }, 400);
         return;
       }
       try {
         const result = await runCharge({
           pool,
-          workspaceId: req.workspaceId,
-          userId: req.user.id,
-          identityHeader: identityHeaderOf(req),
-          payload: req.body as ChargePayload,
+          workspaceId: c.get("workspaceId"),
+          userId: c.get("user").id,
+          identityHeader: (c.req.raw.headers.get("x-kserp-identity") ?? undefined),
+          payload: (await c.req.json()) as ChargePayload,
         });
 
         // Best-effort, NON-transactional voucher usage increment after the
@@ -145,14 +145,14 @@ export function registerChargeRoutes(router: Router, ctx: ChargeRouteCtx): void 
           // method yet. Documented gap — see report.
         }
 
-        res.status(201).json(result);
+        return c.json(result, 201);
       } catch (err) {
         if (err instanceof ChargeValidationError) {
-          res.status(err.status).json({ error: err.message });
+          return c.json({ error: err.message }, err.status);
           return;
         }
         console.error("[transactions] charge error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
