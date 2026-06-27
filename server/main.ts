@@ -16,7 +16,7 @@
 
 import "dotenv/config";
 import { createPluginServer, applyTenantContext } from "@kahitsan/plugin-sdk";
-import { flows } from "./flows.js";
+import { flows, voidFlow, deletePaymentFlow, deleteAttachmentFlow } from "./flows.js";
 import {
   insertTransactionRow,
   insertVisibilityShares,
@@ -27,6 +27,7 @@ import { buildLineItemsRouter } from "./routes-line-items.js";
 createPluginServer({
   importMetaUrl: import.meta.url,
   flows,
+  execFlows: [voidFlow, deletePaymentFlow, deleteAttachmentFlow],
   // ── Producer side: transactions.service ──────────────────────────────────
   // Secret-gated POST /_internal/services/:method, identity parsed so each
   // handler is workspace-scoped via req.workspaceId. These are the methods the
