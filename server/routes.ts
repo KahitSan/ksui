@@ -35,7 +35,7 @@
 // RPC (lib/peers.ts) with graceful degradation when a peer plugin is absent —
 // transactions never reaches into another plugin's schema with raw SQL.
 
-import { Hono, type Context as HonoContext, type MiddlewareHandler } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { validateVoucher } from "./lib/peers.js";
 import { appliesToFor } from "./lib/transaction-subcategories.js";

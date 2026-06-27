@@ -12,7 +12,6 @@
 
 import { type Hono, type Context as HonoContext, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { findPackagesByIds, findClientsByIds } from "../lib/peers.js";
 import { runCharge, ChargeValidationError, type ChargePayload } from "../helpers-charge.js";
 import { privacyClause } from "./shared.js";

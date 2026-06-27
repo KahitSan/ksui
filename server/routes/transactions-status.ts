@@ -15,7 +15,7 @@
 // BEGIN/COMMIT/ROLLBACK are unchanged. registerCoreRoutes
 // calls this last (after Edit), reproducing the original tail order.
 
-import { type Hono, type Context as HonoContext, type MiddlewareHandler } from "hono";
+import { type Hono, type Context as HonoContext } from "hono";
 import { tenant, readIdentity, applyTenantContext, makeDataSurface } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 

@@ -28,7 +28,7 @@
 //     by code, not by id, and transactions stores only voucher_id. Graceful
 //     degradation, consistent with the rest of the plugin.
 
-import { Hono, type Context as HonoContext, type MiddlewareHandler } from "hono";
+import { Hono, type Context as HonoContext } from "hono";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {

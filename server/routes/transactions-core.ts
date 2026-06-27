@@ -22,7 +22,6 @@ import { type Hono, type Context as HonoContext, type MiddlewareHandler } from "
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { insertTransactionRow, insertVisibilityShares } from "../lib/create-transaction.js";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { findAccountsByIds, findPayeesByIds } from "../lib/peers.js";
 import { validateSubcategory } from "../lib/transaction-subcategories.js";
 import { isBackdated } from "../lib/backdate.js";

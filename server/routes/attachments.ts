@@ -154,6 +154,7 @@ export function registerAttachmentRoutes(app: Hono, ctx: AttachmentRouteCtx): vo
           mimeType = file.type;
         }
       } catch (err) {
+        console.error("Attachment multipart parse failed:", err);
         return c.json({ error: "File upload failed" }, 400);
       }
 

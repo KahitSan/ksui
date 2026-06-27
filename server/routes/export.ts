@@ -22,7 +22,6 @@
 
 import { type Hono, type Context as HonoContext, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { s3Enabled, s3PutObject, s3GetObject, s3DeleteObject } from "@kahitsan/plugin-server-utils";
 import { privacyClause, isValidIsoDate, resolveUserNames } from "./shared.js";
 import { findAccountsByIds, findPayeesByIds, type IdentityHeader } from "../lib/peers.js";

@@ -16,7 +16,7 @@
 
 import { type Hono, type Context as HonoContext, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { identityHeaderOf, makeDataSurface } from "@kahitsan/plugin-sdk";
+import { makeDataSurface } from "@kahitsan/plugin-sdk";
 import { findAccountsByIds } from "../lib/peers.js";
 
 export type PaymentRouteCtx = {

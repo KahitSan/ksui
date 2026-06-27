@@ -8,7 +8,7 @@
 // COALESCE(quantity, 1) math, the conditional display_name SET, and all
 // BEGIN/COMMIT/ROLLBACK unchanged.
 
-import { type Hono, type Context as HonoContext, type MiddlewareHandler } from "hono";
+import { type Hono, type Context as HonoContext } from "hono";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 

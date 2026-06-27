@@ -13,8 +13,7 @@
 // scoping. Cross-plugin data is resolved over the kernel RPC (lib/peers.ts)
 // with graceful degradation.
 
-import { type Hono, type Context as HonoContext, type MiddlewareHandler } from "hono";
-import { identityHeaderOf } from "@kahitsan/plugin-sdk";
+import { type Hono, type Context as HonoContext } from "hono";
 import {
   findAccountsByIds,
   findPackagesByIds,
