@@ -66,8 +66,8 @@ export function registerCoreRoutes(app: Hono, ctx: CoreRouteCtx): void {
       const dateTo = c.req.query("dateTo");
       const sortBy = c.req.query("sortBy");
       const sortDir = (c.req.query("sortDir"))?.toUpperCase() === "ASC" ? "ASC" : "DESC";
-      const page = Math.max(1, parseInt(c.req.query("page")) || 1);
-      const limit = Math.min(parseInt(c.req.query("limit")) || 25, 200);
+      const page = Math.max(1, parseInt(c.req.query("page") ?? "") || 1);
+      const limit = Math.min(parseInt(c.req.query("limit") ?? "") || 25, 200);
       const offset = (page - 1) * limit;
 
       try {

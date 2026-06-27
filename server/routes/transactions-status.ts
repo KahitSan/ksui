@@ -180,7 +180,7 @@ export function registerTransactionStatusRoutes(app: Hono, ctx: CoreRouteCtx): v
           return c.json({ error: "Not found" }, 404);
           return;
         }
-        const identity = readIdentity({ headers: Object.fromEntries(c.req.raw.headers.entries()) });
+        const identity = readIdentity({ headers: Object.fromEntries(c.req.raw.headers.entries()) } as unknown as Parameters<typeof readIdentity>[0]);
         if (!identity) {
           return c.json({ error: "Not authenticated" }, 401);
           return;

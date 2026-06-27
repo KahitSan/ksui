@@ -26,8 +26,7 @@ import { buildLineItemsRouter } from "./routes-line-items.js";
 
 createPluginServer({
   importMetaUrl: import.meta.url,
-  flows,
-  execFlows: [voidFlow, deletePaymentFlow, deleteAttachmentFlow],
+  flows: [...flows, voidFlow, deletePaymentFlow, deleteAttachmentFlow],
   // ── Producer side: transactions.service ──────────────────────────────────
   // Secret-gated POST /_internal/services/:method, identity parsed so each
   // handler is workspace-scoped via (req as any).workspaceId. These are the methods the

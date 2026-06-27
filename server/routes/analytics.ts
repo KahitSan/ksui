@@ -66,7 +66,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
         return c.json(out, 201);
       } catch (err) {
         if (err instanceof RenewError) {
-          return c.json({ error: err.message }, err.status);
+          return c.json({ error: err.message }, err.status as 400 | 403 | 404 | 500);
           return;
         }
         console.error("[transactions] subscriptions renew error:", err);

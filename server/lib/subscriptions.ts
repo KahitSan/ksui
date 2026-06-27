@@ -84,8 +84,8 @@ export async function listSubscriptions(
   const sortByRaw = (c.req.query("sortBy")) ?? "latest_ends_at";
   const sortBy = SORTABLE.has(sortByRaw) ? sortByRaw : "latest_ends_at";
   const sortDir = (c.req.query("sortDir"))?.toUpperCase() === "ASC" ? 1 : -1;
-  const page = Math.max(1, parseInt(c.req.query("page")) || 1);
-  const limit = Math.min(parseInt(c.req.query("limit")) || 25, 200);
+  const page = Math.max(1, parseInt(c.req.query("page") ?? "") || 1);
+  const limit = Math.min(parseInt(c.req.query("limit") ?? "") || 25, 200);
 
   let buckets: Set<StatusBucket> | null;
   if (bucketRaw === "all") {
@@ -132,7 +132,7 @@ export async function listSubscriptions(
   // when the current era hasn't been sold yet, in which case the UI falls back
   // to the latest package name and resolves the renewal variants from
   // /api/packages by lineage_slug.
-  const idh = identityHeaderOf(c.req.raw);
+  const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
   const pkgIds = [...new Set(lines.map((l) => l.package_id))];
   const pkgs = pkgIds.length > 0 ? ((await findPackagesByIds(pkgIds, idh)) ?? []) : [];
   const pkgById = new Map(pkgs.map((p) => [p.id, p]));
@@ -297,7 +297,7 @@ export async function renewSubscription(
     throw new RenewError(400, "destination_account_id is required");
   }
 
-  const idh = identityHeaderOf(c.req.raw);
+  const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
 
   // Variant must be a workspace-owned day/month variant (RPC; clients/packages live
   // in their own schemas). Cross-package renewals are allowed (era upgrades).

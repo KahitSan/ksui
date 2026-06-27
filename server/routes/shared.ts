@@ -50,7 +50,7 @@ export async function resolveUserNames(
 // visible to its creator, to a user explicitly shared on it, to a role
 // shared on it, or to an admin/superuser (who bypass entirely). Returns the
 // SQL fragment + the next param index.
-export function privacyClause(req: Request, params: unknown[], startIdx: number): string | null {
+export function privacyClause(c: HonoContext, params: unknown[], startIdx: number): string | null {
   const isAdmin = c.get("wsRole") === "admin" || c.get("user")?.role === "superuser";
   if (isAdmin) return null;
   const userId = c.get("user")?.id ?? "";

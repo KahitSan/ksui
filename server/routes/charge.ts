@@ -148,7 +148,7 @@ export function registerChargeRoutes(app: Hono, ctx: ChargeRouteCtx): void {
         return c.json(result, 201);
       } catch (err) {
         if (err instanceof ChargeValidationError) {
-          return c.json({ error: err.message }, err.status);
+          return c.json({ error: err.message }, err.status as 400 | 403 | 404 | 500);
           return;
         }
         console.error("[transactions] charge error:", err);

@@ -326,7 +326,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           params,
         );
 
-        const idh = identityHeaderOf(c.req.raw);
+        const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
 
         // Resolve package + variant names over RPC (graceful: null when the
         // packages plugin is absent), mirroring the monolith's batch-fetch.
@@ -480,7 +480,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           return;
         }
 
-        const idh = identityHeaderOf(c.req.raw);
+        const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
         const packageIds = [...new Set(result.rows.map((r) => r.package_id))];
         const variantIds = [...new Set(result.rows.map((r) => r.package_variant_id))];
         const [packages, variants] = await Promise.all([
@@ -530,7 +530,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         return c.json({ error: "No workspace context" }, 403);
         return;
       }
-      const id = parseInt(c.req.param("id"));
+      const id = parseInt(c.req.param("id") ?? "");
       if (!id) {
         return c.json({ error: "id is required" }, 400);
         return;
@@ -662,7 +662,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         return c.json({ error: "No workspace context" }, 403);
         return;
       }
-      const id = parseInt(c.req.param("id"));
+      const id = parseInt(c.req.param("id") ?? "");
       if (!id) {
         return c.json({ error: "id is required" }, 400);
         return;
@@ -680,7 +680,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         return;
       }
 
-      const idh = identityHeaderOf(c.req.raw);
+      const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
       let client: import("pg").PoolClient | null = null;
       try {
         client = await pool.connect();
@@ -821,7 +821,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         return c.json({ error: "No workspace context" }, 403);
         return;
       }
-      const id = parseInt(c.req.param("id"));
+      const id = parseInt(c.req.param("id") ?? "");
       if (!id) {
         return c.json({ error: "id is required" }, 400);
         return;
@@ -839,7 +839,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         return;
       }
 
-      const idh = identityHeaderOf(c.req.raw);
+      const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
       let client: import("pg").PoolClient | null = null;
       try {
         client = await pool.connect();
