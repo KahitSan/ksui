@@ -41,7 +41,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
     requirePermission("transactions.view"),
     async (c: HonoContext) => {
       try {
-        return c.json(await listSubscriptions(pool, req, privacyClause));
+        return c.json(await listSubscriptions(pool, c, privacyClause));
       } catch (err) {
         console.error("[transactions] subscriptions list error:", err);
         return c.json({ error: "Internal server error" }, 500);
@@ -62,7 +62,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
         return;
       }
       try {
-        const out = await renewSubscription(pool, req, sourceId, await c.req.json() ?? {});
+        const out = await renewSubscription(pool, c, sourceId, await c.req.json() ?? {});
         return c.json(out, 201);
       } catch (err) {
         if (err instanceof RenewError) {
@@ -86,7 +86,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
       try {
         const params: unknown[] = [c.get("workspaceId")];
         const conditions = ["t.workspace_id = $1", "t.created_by IS NOT NULL"];
-        const priv = privacyClause(req, params, 2);
+        const priv = privacyClause(c, params, 2);
         if (priv) conditions.push(priv);
         // created_by names come from the kernel "user" table, which the plugin
         // never reads. We return the distinct creator ids + counts; the host UI
@@ -120,7 +120,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
           "t.status != 'voided'",
           "t.subcategory IS NOT NULL",
         ];
-        const priv = privacyClause(req, params, 2);
+        const priv = privacyClause(c, params, 2);
         if (priv) conditions.push(priv);
         const result = await pool.query(
           `SELECT t.subcategory AS subcategory, COUNT(*)::int AS count
@@ -160,7 +160,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
       try {
         const params: unknown[] = [c.get("workspaceId")];
         const conditions = ["t.workspace_id = $1", "t.status != 'voided'"];
-        const priv = privacyClause(req, params, params.length + 1);
+        const priv = privacyClause(c, params, params.length + 1);
         if (priv) conditions.push(priv);
 
         if (dateFrom) {
@@ -207,7 +207,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
         // the caller bypasses privacy (admin/superuser) — the count is always 0.
         let privateHidden = 0;
         const privParams: unknown[] = [c.get("workspaceId")];
-        const privFrag = privacyClause(req, [], 0); // probe: null => caller bypasses
+        const privFrag = privacyClause(c, [], 0); // probe: null => caller bypasses
         if (privFrag) {
           const userId = c.get("user")?.id ?? "";
           const privConditions = [
@@ -267,7 +267,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
       try {
         const params: unknown[] = [c.get("workspaceId")];
         const conditions = ["t.workspace_id = $1", "t.status != 'voided'"];
-        const priv = privacyClause(req, params, params.length + 1);
+        const priv = privacyClause(c, params, params.length + 1);
         if (priv) conditions.push(priv);
 
         if (dateFrom) {
@@ -351,7 +351,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
           "li.status != 'voided'",
           "t.status != 'voided'",
         ];
-        const priv = privacyClause(req, params, params.length + 1);
+        const priv = privacyClause(c, params, params.length + 1);
         if (priv) baseConds.push(priv);
 
         const dateFromIdx = dateFrom ? (params.push(dateFrom), params.length) : null;

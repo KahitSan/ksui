@@ -43,7 +43,7 @@ export function registerChargeRoutes(app: Hono, ctx: ChargeRouteCtx): void {
           "t.amount > 0",
           "t.amount > paid.total_paid",
         ];
-        const priv = privacyClause(req, params, 2);
+        const priv = privacyClause(c, params, 2);
         if (priv) conditions.push(priv);
         const result = await pool.query(
           `SELECT t.id, t.amount, t.transaction_date, t.client_id, t.destination_account_id,

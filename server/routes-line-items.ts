@@ -44,7 +44,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
 
   // Admin/superuser bypass the per-row privacy gate. Mirrors the monolith's
   // canBypassTransactionPrivacy, resolved from the kernel-forwarded identity.
-  const canBypassPrivacy = (req: Request): boolean =>
+  const canBypassPrivacy = (c: HonoContext): boolean =>
     c.get("wsRole") === "admin" || c.get("user")?.role === "superuser";
 
   // ── GET /api/transaction-line-items ──────────────────────────────────────
@@ -96,7 +96,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       params.push(c.get("workspaceId"));
 
       // Privacy: parent transaction must be public, owned, or shared.
-      if (userId && !canBypassPrivacy(req)) {
+      if (userId && !canBypassPrivacy(c)) {
         conditions.push(
           `(t.is_private = false OR t.created_by = $${idx} OR EXISTS (
              SELECT 1 FROM accounts.transaction_visibility tv
@@ -326,7 +326,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           params,
         );
 
-        const idh = identityHeaderOf(req);
+        const idh = identityHeaderOf(c.req.raw);
 
         // Resolve package + variant names over RPC (graceful: null when the
         // packages plugin is absent), mirroring the monolith's batch-fetch.
@@ -480,7 +480,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           return;
         }
 
-        const idh = identityHeaderOf(req);
+        const idh = identityHeaderOf(c.req.raw);
         const packageIds = [...new Set(result.rows.map((r) => r.package_id))];
         const variantIds = [...new Set(result.rows.map((r) => r.package_variant_id))];
         const [packages, variants] = await Promise.all([
@@ -680,7 +680,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         return;
       }
 
-      const idh = identityHeaderOf(req);
+      const idh = identityHeaderOf(c.req.raw);
       let client: import("pg").PoolClient | null = null;
       try {
         client = await pool.connect();
@@ -839,7 +839,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         return;
       }
 
-      const idh = identityHeaderOf(req);
+      const idh = identityHeaderOf(c.req.raw);
       let client: import("pg").PoolClient | null = null;
       try {
         client = await pool.connect();

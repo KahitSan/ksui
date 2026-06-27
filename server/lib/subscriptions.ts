@@ -32,7 +32,7 @@ const SORTABLE = new Set([
 
 // The privacy fragment is identical to routes.ts's privacyClause; passed in so
 // the two share one source of truth.
-type PrivacyClause = (req: Request, params: unknown[], startIdx: number) => string | null;
+type PrivacyClause = (c: HonoContext, params: unknown[], startIdx: number) => string | null;
 
 interface LineRow {
   id: number;
@@ -75,7 +75,7 @@ function bucketFor(latestEndsMs: number, nowMs: number): StatusBucket {
 /** GET /subscriptions — grouped list with bucket/search filters, sort, paging. */
 export async function listSubscriptions(
   db: PluginDb,
-  req: Request,
+  c: HonoContext,
   privacyClause: PrivacyClause,
 ): Promise<{ data: SubscriptionRow[]; total: number; page: number; limit: number }> {
   const search = (c.req.query("search"))?.trim().toLowerCase();
@@ -112,7 +112,7 @@ export async function listSubscriptions(
     "li.status <> 'voided'",
     "t.status <> 'voided'",
   ];
-  const priv = privacyClause(req, params, params.length + 1);
+  const priv = privacyClause(c, params, params.length + 1);
   if (priv) conditions.push(priv);
 
   const result = await db.query<LineRow>(
@@ -132,7 +132,7 @@ export async function listSubscriptions(
   // when the current era hasn't been sold yet, in which case the UI falls back
   // to the latest package name and resolves the renewal variants from
   // /api/packages by lineage_slug.
-  const idh = identityHeaderOf(req);
+  const idh = identityHeaderOf(c.req.raw);
   const pkgIds = [...new Set(lines.map((l) => l.package_id))];
   const pkgs = pkgIds.length > 0 ? ((await findPackagesByIds(pkgIds, idh)) ?? []) : [];
   const pkgById = new Map(pkgs.map((p) => [p.id, p]));
@@ -284,7 +284,7 @@ export class RenewError extends Error {
 /** POST /subscriptions/:line_item_id/renew — fresh sale chaining from prior expiry. */
 export async function renewSubscription(
   db: PluginDb,
-  req: Request,
+  c: HonoContext,
   sourceId: number,
   body: { package_variant_id?: number; quantity?: number; destination_account_id?: number },
 ): Promise<{ transaction: unknown; line_item: unknown }> {
@@ -297,7 +297,7 @@ export async function renewSubscription(
     throw new RenewError(400, "destination_account_id is required");
   }
 
-  const idh = identityHeaderOf(req);
+  const idh = identityHeaderOf(c.req.raw);
 
   // Variant must be a workspace-owned day/month variant (RPC; clients/packages live
   // in their own schemas). Cross-package renewals are allowed (era upgrades).

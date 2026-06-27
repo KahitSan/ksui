@@ -75,7 +75,7 @@ export function registerCoreRoutes(app: Hono, ctx: CoreRouteCtx): void {
         const params: unknown[] = [c.get("workspaceId")];
         let idx = 2;
 
-        const priv = privacyClause(req, params, idx);
+        const priv = privacyClause(c, params, idx);
         if (priv) {
           conditions.push(priv);
           idx += 2;
