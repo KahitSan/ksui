@@ -8,42 +8,42 @@
 // COALESCE(quantity, 1) math, the conditional display_name SET, and all
 // BEGIN/COMMIT/ROLLBACK unchanged.
 
-import { type Hono, type Context as HonoContext } from "hono";
+import { type Router, type Request, type Response } from "express";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 
-export function registerCounterPatchRoutes(app: Hono, ctx: CoreRouteCtx): void {
+export function registerCounterPatchRoutes(router: Router, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Client-pool patch (counter: replace transaction_customers) ──────────
-  app.patch(
+  router.patch(
     "/:id/client-pool",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (c: HonoContext) => {
-      const id = parseInt(String(c.req.param("id")), 10);
+    async (req: Request, res: Response) => {
+      const id = parseInt(String(req.params.id), 10);
       if (!Number.isFinite(id)) {
-        return c.json({ error: "Invalid id" }, 400);
+        res.status(400).json({ error: "Invalid id" });
         return;
       }
-      const { client_ids, reason } = await c.req.json() ?? {};
+      const { client_ids, reason } = req.body ?? {};
       if (!Array.isArray(client_ids) || client_ids.some((c: unknown) => typeof c !== "number" || !Number.isFinite(c) || c <= 0)) {
-        return c.json({ error: "client_ids must be an array of positive integers" }, 400);
+        res.status(400).json({ error: "client_ids must be an array of positive integers" });
         return;
       }
       if (!reason || !String(reason).trim()) {
-        return c.json({ error: "reason is required" }, 400);
+        res.status(400).json({ error: "reason is required" });
         return;
       }
       let dbClient: import("pg").PoolClient | null = null;
       try {
         const exists = await pool.query(
           `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-          [id, c.get("workspaceId")],
+          [id, req.workspaceId],
         );
         if (exists.rows.length === 0) {
-          return c.json({ error: "Not found" }, 404);
+          res.status(404).json({ error: "Not found" });
           return;
         }
         dbClient = await pool.connect();
@@ -51,7 +51,7 @@ export function registerCounterPatchRoutes(app: Hono, ctx: CoreRouteCtx): void {
         await applyTenantContext(dbClient);
         await dbClient.query(
           `DELETE FROM accounts.transaction_customers WHERE transaction_id = $1 AND workspace_id = $2`,
-          [id, c.get("workspaceId")],
+          [id, req.workspaceId],
         );
         if (client_ids.length > 0) {
           const values: string[] = [];
@@ -59,7 +59,7 @@ export function registerCounterPatchRoutes(app: Hono, ctx: CoreRouteCtx): void {
           let idx = 1;
           for (let i = 0; i < client_ids.length; i++) {
             values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++})`);
-            params.push(id, client_ids[i], c.get("workspaceId"), i);
+            params.push(id, client_ids[i], req.workspaceId, i);
           }
           await dbClient.query(
             `INSERT INTO accounts.transaction_customers (transaction_id, client_id, workspace_id, position)
@@ -71,14 +71,14 @@ export function registerCounterPatchRoutes(app: Hono, ctx: CoreRouteCtx): void {
         await dbClient.query(
           `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
              VALUES ($1, $2, $3, $4, 'counter_edit')`,
-          [id, c.get("workspaceId"), c.get("user")?.id ?? "", String(reason).trim()],
+          [id, req.workspaceId, req.user?.id ?? "", String(reason).trim()],
         );
         await dbClient.query("COMMIT");
-        return c.json({ ok: true });
+        res.json({ ok: true });
       } catch (err) {
         if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
         console.error("[transactions] client-pool patch error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       } finally {
         if (dbClient) dbClient.release();
       }
@@ -86,44 +86,44 @@ export function registerCounterPatchRoutes(app: Hono, ctx: CoreRouteCtx): void {
   );
 
   // ── Customer-group started-at patch (counter: update line item times) ──
-  app.patch(
+  router.patch(
     "/:id/customer-group-started-at",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (c: HonoContext) => {
-      const id = parseInt(String(c.req.param("id")), 10);
+    async (req: Request, res: Response) => {
+      const id = parseInt(String(req.params.id), 10);
       if (!Number.isFinite(id)) {
-        return c.json({ error: "Invalid id" }, 400);
+        res.status(400).json({ error: "Invalid id" });
         return;
       }
-      const { updates, reason } = await c.req.json() ?? {};
+      const { updates, reason } = req.body ?? {};
       if (!Array.isArray(updates) || updates.length === 0) {
-        return c.json({ error: "updates must be a non-empty array" }, 400);
+        res.status(400).json({ error: "updates must be a non-empty array" });
         return;
       }
       for (const u of updates) {
         if (typeof u.customer_group_id !== "number" || !Number.isFinite(u.customer_group_id) || u.customer_group_id <= 0) {
-          return c.json({ error: "each update must have a valid customer_group_id" }, 400);
+          res.status(400).json({ error: "each update must have a valid customer_group_id" });
           return;
         }
         if (typeof u.started_at !== "string" || Number.isNaN(Date.parse(u.started_at))) {
-          return c.json({ error: "each update must have a valid ISO started_at" }, 400);
+          res.status(400).json({ error: "each update must have a valid ISO started_at" });
           return;
         }
       }
       if (!reason || !String(reason).trim()) {
-        return c.json({ error: "reason is required" }, 400);
+        res.status(400).json({ error: "reason is required" });
         return;
       }
       let dbClient: import("pg").PoolClient | null = null;
       try {
         const exists = await pool.query(
           `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-          [id, c.get("workspaceId")],
+          [id, req.workspaceId],
         );
         if (exists.rows.length === 0) {
-          return c.json({ error: "Not found" }, 404);
+          res.status(404).json({ error: "Not found" });
           return;
         }
         dbClient = await pool.connect();
@@ -152,20 +152,20 @@ export function registerCounterPatchRoutes(app: Hono, ctx: CoreRouteCtx): void {
                     END,
                     updated_at = NOW()
               WHERE customer_group_id = $2 AND transaction_id = $3 AND workspace_id = $4`,
-            [u.started_at, u.customer_group_id, id, c.get("workspaceId")],
+            [u.started_at, u.customer_group_id, id, req.workspaceId],
           );
         }
         await dbClient.query(
           `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
              VALUES ($1, $2, $3, $4, 'counter_edit')`,
-          [id, c.get("workspaceId"), c.get("user")?.id ?? "", String(reason).trim()],
+          [id, req.workspaceId, req.user?.id ?? "", String(reason).trim()],
         );
         await dbClient.query("COMMIT");
-        return c.json({ ok: true });
+        res.json({ ok: true });
       } catch (err) {
         if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
         console.error("[transactions] customer-group-started-at patch error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       } finally {
         if (dbClient) dbClient.release();
       }
@@ -173,50 +173,50 @@ export function registerCounterPatchRoutes(app: Hono, ctx: CoreRouteCtx): void {
   );
 
   // ── Customer-group client patch (counter: replace primary client) ──────
-  app.patch(
+  router.patch(
     "/:id/customer-group-client",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (c: HonoContext) => {
-      const id = parseInt(String(c.req.param("id")), 10);
+    async (req: Request, res: Response) => {
+      const id = parseInt(String(req.params.id), 10);
       if (!Number.isFinite(id)) {
-        return c.json({ error: "Invalid id" }, 400);
+        res.status(400).json({ error: "Invalid id" });
         return;
       }
-      const { customer_group_id, client_id, display_name, reason } = await c.req.json() ?? {};
+      const { customer_group_id, client_id, display_name, reason } = req.body ?? {};
       if (typeof customer_group_id !== "number" || !Number.isFinite(customer_group_id) || customer_group_id <= 0) {
-        return c.json({ error: "customer_group_id must be a positive integer" }, 400);
+        res.status(400).json({ error: "customer_group_id must be a positive integer" });
         return;
       }
       if (client_id != null && (typeof client_id !== "number" || !Number.isFinite(client_id) || client_id <= 0)) {
-        return c.json({ error: "client_id must be a positive integer or null" }, 400);
+        res.status(400).json({ error: "client_id must be a positive integer or null" });
         return;
       }
       if (display_name != null && typeof display_name !== "string") {
-        return c.json({ error: "display_name must be a string or null" }, 400);
+        res.status(400).json({ error: "display_name must be a string or null" });
         return;
       }
       if (!reason || !String(reason).trim()) {
-        return c.json({ error: "reason is required" }, 400);
+        res.status(400).json({ error: "reason is required" });
         return;
       }
       let dbClient: import("pg").PoolClient | null = null;
       try {
         const exists = await pool.query(
           `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-          [id, c.get("workspaceId")],
+          [id, req.workspaceId],
         );
         if (exists.rows.length === 0) {
-          return c.json({ error: "Not found" }, 404);
+          res.status(404).json({ error: "Not found" });
           return;
         }
         const cgExists = await pool.query(
           `SELECT id FROM accounts.transaction_customer_groups WHERE id = $1 AND transaction_id = $2 AND workspace_id = $3`,
-          [customer_group_id, id, c.get("workspaceId")],
+          [customer_group_id, id, req.workspaceId],
         );
         if (cgExists.rows.length === 0) {
-          return c.json({ error: "Customer group not found" }, 404);
+          res.status(404).json({ error: "Customer group not found" });
           return;
         }
         dbClient = await pool.connect();
@@ -234,12 +234,12 @@ export function registerCounterPatchRoutes(app: Hono, ctx: CoreRouteCtx): void {
               SET client_id = $1${newDisplayName !== undefined ? ", display_name = $5" : ""}
             WHERE id = $2 AND transaction_id = $3 AND workspace_id = $4`,
           newDisplayName !== undefined
-            ? [client_id ?? null, customer_group_id, id, c.get("workspaceId"), newDisplayName]
-            : [client_id ?? null, customer_group_id, id, c.get("workspaceId")],
+            ? [client_id ?? null, customer_group_id, id, req.workspaceId, newDisplayName]
+            : [client_id ?? null, customer_group_id, id, req.workspaceId],
         );
         await dbClient.query(
           `UPDATE accounts.transaction_line_items SET client_id = $1 WHERE customer_group_id = $2 AND transaction_id = $3 AND workspace_id = $4`,
-          [client_id ?? null, customer_group_id, id, c.get("workspaceId")],
+          [client_id ?? null, customer_group_id, id, req.workspaceId],
         );
         // When the payer's customer group changes clients, sync the
         // top-level transaction.client_id so the counter listing card
@@ -252,19 +252,19 @@ export function registerCounterPatchRoutes(app: Hono, ctx: CoreRouteCtx): void {
             WHERE id = $2 AND workspace_id = $3
               AND EXISTS (SELECT 1 FROM accounts.transaction_customer_groups
                            WHERE id = $4 AND is_payer = TRUE)`,
-          [client_id ?? null, id, c.get("workspaceId"), customer_group_id],
+          [client_id ?? null, id, req.workspaceId, customer_group_id],
         );
         await dbClient.query(
           `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
              VALUES ($1, $2, $3, $4, 'counter_edit')`,
-          [id, c.get("workspaceId"), c.get("user")?.id ?? "", String(reason).trim()],
+          [id, req.workspaceId, req.user?.id ?? "", String(reason).trim()],
         );
         await dbClient.query("COMMIT");
-        return c.json({ ok: true });
+        res.json({ ok: true });
       } catch (err) {
         if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
         console.error("[transactions] customer-group-client patch error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       } finally {
         if (dbClient) dbClient.release();
       }
