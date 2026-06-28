@@ -1,8 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
-import { getRequestListener } from "@hono/node-server";
-import { createServer } from "node:http";
-import request from "supertest";
+import { testClient } from "hono/testing";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
@@ -50,7 +48,8 @@ vi.mock("@kahitsan/plugin-server-utils", async (importOriginal) => {
 const TEST_ORG = 3;
 const SCHEMAS = ["accounts"];
 
-let app: ReturnType<typeof createServer>;
+let honoApp: Hono;
+let client: ReturnType<typeof testClient>;
 let pool: pg.Pool;
 let rollback: () => Promise<void>;
 
@@ -96,7 +95,7 @@ beforeAll(async () => {
     requireWorkspace,
     requirePermission,
   });
-  const honoApp = new Hono();
+  honoApp = new Hono();
   honoApp.use("*", (_c, next) =>
     runWithTenantContext(
       { wsId: TEST_ORG, userId, role: "superuser", wsRole: "admin" },
@@ -104,11 +103,10 @@ beforeAll(async () => {
     ),
   );
   honoApp.route("/", router);
-  app = createServer(getRequestListener(honoApp.fetch));
+  client = testClient(honoApp);
 });
 
 afterAll(async () => {
-  await new Promise<void>((resolve) => app.close(() => resolve()));
   await rollback();
   await pool.end();
 });
@@ -118,8 +116,9 @@ afterAll(async () => {
 async function waitForJob(jobId: string, timeoutMs = 8000): Promise<Record<string, unknown>> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const res = await request(app).get("/export");
-    const job = (res.body.jobs as Array<Record<string, unknown>>).find((j) => j.id === jobId);
+    const res = await client.get("/export");
+    const body = await res.json();
+    const job = (body.jobs as Array<Record<string, unknown>>).find((j) => j.id === jobId);
     if (job && (job.status === "done" || job.status === "error")) return job;
     await new Promise((r) => setTimeout(r, 150));
   }
@@ -131,45 +130,49 @@ describe("transactions CSV export: create → poll → download (real Postgres)"
   const desc = `integ-export-${Date.now()}`;
 
   it("rejects an inverted date range", async () => {
-    const res = await request(app)
-      .post("/export")
-      .send({ dateFrom: today, dateTo: "2000-01-01" });
+    const res = await client.post("/export", {
+      body: { dateFrom: today, dateTo: "2000-01-01" },
+    });
     expect(res.status).toBe(400);
   });
 
   it("exports a detailed CSV that includes a freshly-created row", async () => {
     // Seed one row inside the export window so the assertion is meaningful even
     // on an empty CI database.
-    const create = await request(app).post("/").send({
-      category: "expense",
-      amount: "42.50",
-      description: desc,
-      transaction_date: today,
+    const create = await client.post("/", {
+      body: {
+        category: "expense",
+        amount: "42.50",
+        description: desc,
+        transaction_date: today,
+      },
     });
     expect(create.status).toBe(201);
 
-    const start = await request(app)
-      .post("/export")
-      .send({ dateFrom: today, dateTo: today, consolidate: false });
+    const start = await client.post("/export", {
+      body: { dateFrom: today, dateTo: today, consolidate: false },
+    });
+    const startBody = await start.json();
     expect(start.status).toBe(200);
-    const jobId = start.body.jobId as string;
+    const jobId = startBody.jobId as string;
     expect(typeof jobId).toBe("string");
 
     const job = await waitForJob(jobId);
     expect(job.status, JSON.stringify(job)).toBe("done");
     expect(job.filename).toContain(today);
 
-    const dl = await request(app).get(`/export/${jobId}/download`);
+    const dl = await client.get(`/export/${jobId}/download`);
     expect(dl.status).toBe(200);
-    expect(dl.headers["content-type"]).toContain("text/csv");
-    expect(dl.headers["content-disposition"]).toContain("attachment");
+    expect(dl.headers.get("content-type")).toContain("text/csv");
+    expect(dl.headers.get("content-disposition")).toContain("attachment");
     // Header row + the seeded transaction's description must be present.
-    expect(dl.text.startsWith("Date,Category,Subcategory,Description,Amount")).toBe(true);
-    expect(dl.text).toContain(desc);
+    const dlText = await dl.text();
+    expect(dlText.startsWith("Date,Category,Subcategory,Description,Amount")).toBe(true);
+    expect(dlText).toContain(desc);
   });
 
   it("404s a download for an unknown job", async () => {
-    const res = await request(app).get(
+    const res = await client.get(
       "/export/00000000-0000-0000-0000-000000000000/download",
     );
     expect(res.status).toBe(404);
