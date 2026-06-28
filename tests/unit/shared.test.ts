@@ -73,33 +73,43 @@ describe("escapeLike", () => {
 });
 
 describe("privacyClause", () => {
-  // Minimal req stub carrying only the fields privacyClause reads.
-  const req = (over: Partial<{ wsRole: string; userId: string }> = {}): any =>
-    ({
-      wsRole: over.wsRole,
-      user: over.userId ? { id: over.userId } : undefined,
-    }) as any;
+  // privacyClause now takes a Hono Context; build a minimal mock that
+  // satisfies the c.get() calls it makes.
+  const mockCtx = (over: {
+    wsRole?: string;
+    userId?: string;
+    userRole?: string;
+  } = {}): any => {
+    const store: Record<string, unknown> = {};
+    if (over.wsRole !== undefined) store.wsRole = over.wsRole;
+    if (over.userId !== undefined || over.userRole !== undefined) {
+      store.user = {
+        id: over.userId ?? "",
+        ...(over.userRole ? { role: over.userRole } : {}),
+      };
+    }
+    return { get: (k: string) => store[k] } as any;
+  };
 
   it("returns null for an admin (admins bypass the privacy filter entirely)", () => {
     const params: unknown[] = [];
-    expect(privacyClause(req({ wsRole: "admin", userId: "u1" }), params, 5)).toBeNull();
-    expect(params).toHaveLength(0); // admin pushes no params
+    expect(privacyClause(mockCtx({ wsRole: "admin", userId: "u1" }), params, 5)).toBeNull();
+    expect(params).toHaveLength(0);
   });
 
   it("returns null for a superuser (kernel-level bypass)", () => {
     const params: unknown[] = [];
-    const superuserReq = { user: { id: "u1", role: "superuser" } } as any;
-    expect(privacyClause(superuserReq, params, 5)).toBeNull();
+    expect(privacyClause(mockCtx({ userId: "u1", userRole: "superuser" }), params, 5)).toBeNull();
   });
 
   it("builds a visibility fragment for a non-admin and pushes exactly two params", () => {
     const params: unknown[] = [];
-    const frag = privacyClause(req({ wsRole: "member", userId: "u9" }), params, 5);
+    const frag = privacyClause(mockCtx({ wsRole: "member", userId: "u9" }), params, 5);
     expect(frag).not.toBeNull();
     expect(frag).toContain("t.is_private = false");
-    expect(frag).toContain("t.created_by = $5"); // startIdx honored
+    expect(frag).toContain("t.created_by = $5");
     expect(frag).toContain("transaction_visibility");
-    expect(frag).toContain("role_code = $6"); // wsRole placeholder
-    expect(params).toEqual(["u9", "member"]); // userId then wsRole
+    expect(frag).toContain("role_code = $6");
+    expect(params).toEqual(["u9", "member"]);
   });
 });
