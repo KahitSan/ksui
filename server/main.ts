@@ -24,6 +24,13 @@ import {
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
 
+/** Local type for the SDK's req object in service handlers — mirrors
+ *  ForwardedIdentity fields used by the handler code. */
+interface ServiceReq {
+  workspaceId?: number;
+  user?: { id: string; role?: string };
+}
+
 createPluginServer({
   importMetaUrl: import.meta.url,
   flows,
@@ -35,13 +42,13 @@ createPluginServer({
   // limits at the cart.
   services: ({ db, pool }) => ({
     // findById({ id }) → a workspace-scoped transaction row, or null.
-    findById: async (args, { req }) => {
+    findById: async (args, { req }) => { const svcReq = req as unknown as ServiceReq;
       const id = (args as { id?: unknown })?.id;
-      if (req.workspaceId == null || id == null) return null;
+      if (svcReq.workspaceId == null || id == null) return null;
       const r = await db.query(
         `SELECT id, workspace_id, created_at, updated_at, amount, status, category
            FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-        [id, req.workspaceId]
+        [id, svcReq.workspaceId]
       );
       return r.rows[0] ?? null;
     },
@@ -65,9 +72,9 @@ createPluginServer({
     //       (the NOT EXISTS guard) so (a) and (b) don't double-count.
     // Voided transactions are excluded on both sides. Returned as a plain
     // object (JSON over the RPC can't carry a Map).
-    getAccountBalances: async (args, { req }) => {
+    getAccountBalances: async (args, { req }) => { const svcReq = req as unknown as ServiceReq;
       const a = (args ?? {}) as { accountIds?: unknown };
-      const wsId = req.workspaceId;
+      const wsId = svcReq.workspaceId;
       const accountIds = Array.isArray(a.accountIds)
         ? a.accountIds
             .map((v) => (typeof v === "number" ? v : parseInt(String(v), 10)))
@@ -131,9 +138,9 @@ createPluginServer({
     // window. daily/monthly anchor on Asia/Manila wall-clock. Mirrors the
     // monolith's extension-point impl, returned as a plain object (JSON over
     // the RPC can't carry a Map).
-    getPackageCapacityUsage: async (args, { req }) => {
+    getPackageCapacityUsage: async (args, { req }) => { const svcReq = req as unknown as ServiceReq;
       const a = (args ?? {}) as { packageIds?: unknown; at?: unknown };
-      const wsId = req.workspaceId;
+      const wsId = svcReq.workspaceId;
       const packageIds = Array.isArray(a.packageIds)
         ? a.packageIds
             .map((v) => (typeof v === "number" ? v : parseInt(String(v), 10)))
@@ -207,7 +214,7 @@ createPluginServer({
     // caller-controlled, so the cross-plugin surface stays minimal. Salary is
     // not VATable, so tax is zeroed (non_vat). Workspace-scoped via req.workspaceId;
     // created_by is the calling user relayed in the signed identity header.
-    createSalaryTransaction: async (args, { req }) => {
+    createSalaryTransaction: async (args, { req }) => { const svcReq = req as unknown as ServiceReq;
       const a = (args ?? {}) as {
         amount?: unknown;
         payee_id?: unknown;
@@ -215,8 +222,8 @@ createPluginServer({
         notes?: unknown;
         transaction_date?: unknown;
       };
-      const wsId = req.workspaceId;
-      const userId = req.user?.id;
+      const wsId = svcReq.workspaceId;
+      const userId = svcReq.user?.id;
       if (wsId == null || !userId)
         throw new Error("Workspace and user context required");
 

@@ -15,9 +15,10 @@
 // BEGIN/COMMIT/ROLLBACK are unchanged. registerCoreRoutes
 // calls this last (after Edit), reproducing the original tail order.
 
-import { type Router, type Request, type Response } from "express";
+import { Hono } from "hono";
 import { tenant, readIdentity, applyTenantContext, makeDataSurface } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
+import { ctxGet } from "../types.js";
 
 // Explicit column list for a line-item row — the data surface bans `RETURNING *`;
 // these are every column of accounts.transaction_line_items, so the void
@@ -42,7 +43,7 @@ const LINE_ITEM_COLS = [
   "customer_group_id",
 ] as const;
 
-export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCtx): void {
+export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
   const data = makeDataSurface(pool);
 
@@ -52,25 +53,24 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.delete"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
         // No BEFORE UPDATE trigger on accounts.transactions, so updated_at is
         // set explicitly — `new Date()` (an absolute instant) is TZ-safe, vs
         // `NOW()` which the surface's bound-param SET can't express.
         const rows = await data.update(
           "transactions",
-          { status: "voided", updated_at: new Date(), updated_by: req.user?.id ?? null },
-          { where: "id = $1 AND status != 'voided'", params: [req.params.id] },
+          { status: "voided", updated_at: new Date(), updated_by: ctxGet(c, "user")?.id ?? null },
+          { where: "id = $1 AND status != 'voided'", params: [c.req.param("id")] },
           ["id"],
         );
         if (rows.length === 0) {
-          res.status(404).json({ error: "Not found or already voided" });
-          return;
+          return c.json({ error: "Not found or already voided" }, 404);
         }
-        res.status(204).send();
+        return c.body(null, 204);
       } catch (err) {
         console.error("[transactions] delete error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -81,11 +81,10 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.delete"),
-    async (req: Request, res: Response) => {
-      const { reason } = req.body ?? {};
+    async (c) => {
+      const { reason } = await c.req.json() ?? {};
       if (!reason || !String(reason).trim()) {
-        res.status(400).json({ error: "reason is required" });
-        return;
+        return c.json({ error: "reason is required" }, 400);
       }
       let dbClient: import("pg").PoolClient | null = null;
       try {
@@ -95,24 +94,23 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
         const result = await dbClient.query(
           `UPDATE accounts.transactions SET status = 'voided', updated_at = NOW(), updated_by = $3
              WHERE id = $1 AND workspace_id = $2 AND status != 'voided' RETURNING *`,
-          [req.params.id, req.workspaceId, req.user?.id ?? null],
+          [c.req.param("id"), ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? null],
         );
         if (result.rows.length === 0) {
           await dbClient.query("ROLLBACK");
-          res.status(404).json({ error: "Not found or already voided" });
-          return;
+          return c.json({ error: "Not found or already voided" }, 404);
         }
         await dbClient.query(
           `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
              VALUES ($1, $2, $3, $4, 'void')`,
-          [req.params.id, req.workspaceId, req.user?.id ?? "", String(reason).trim()],
+          [c.req.param("id"), ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? "", String(reason).trim()],
         );
         await dbClient.query("COMMIT");
-        res.json(result.rows[0]);
+        return c.json(result.rows[0]);
       } catch (err) {
         if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
         console.error("[transactions] void error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       } finally {
         if (dbClient) dbClient.release();
       }
@@ -124,11 +122,10 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.delete"),
-    async (req: Request, res: Response) => {
-      const { reason } = req.body ?? {};
+    async (c) => {
+      const { reason } = await c.req.json() ?? {};
       if (!reason || !String(reason).trim()) {
-        res.status(400).json({ error: "reason is required" });
-        return;
+        return c.json({ error: "reason is required" }, 400);
       }
       let dbClient: import("pg").PoolClient | null = null;
       try {
@@ -138,24 +135,23 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
         const result = await dbClient.query(
           `UPDATE accounts.transactions SET status = 'completed', updated_at = NOW(), updated_by = $3
              WHERE id = $1 AND workspace_id = $2 AND status = 'voided' RETURNING *`,
-          [req.params.id, req.workspaceId, req.user?.id ?? null],
+          [c.req.param("id"), ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? null],
         );
         if (result.rows.length === 0) {
           await dbClient.query("ROLLBACK");
-          res.status(404).json({ error: "Not found or not voided" });
-          return;
+          return c.json({ error: "Not found or not voided" }, 404);
         }
         await dbClient.query(
           `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
              VALUES ($1, $2, $3, $4, 'unvoid')`,
-          [req.params.id, req.workspaceId, req.user?.id ?? "", String(reason).trim()],
+          [c.req.param("id"), ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? "", String(reason).trim()],
         );
         await dbClient.query("COMMIT");
-        res.json(result.rows[0]);
+        return c.json(result.rows[0]);
       } catch (err) {
         if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
         console.error("[transactions] unvoid error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       } finally {
         if (dbClient) dbClient.release();
       }
@@ -168,29 +164,27 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (req: Request, res: Response) => {
-      const { is_private, shared_with, shared_with_roles } = req.body ?? {};
+    async (c) => {
+      const { is_private, shared_with, shared_with_roles } = await c.req.json() ?? {};
       let dbClient: import("pg").PoolClient | null = null;
       try {
         const exists = await pool.query(
           `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-          [req.params.id, req.workspaceId],
+          [c.req.param("id"), ctxGet(c, "workspaceId")],
         );
         if (exists.rows.length === 0) {
-          res.status(404).json({ error: "Not found" });
-          return;
+          return c.json({ error: "Not found" }, 404);
         }
-        const identity = readIdentity(req);
+        const identity = readIdentity(c);
         if (!identity) {
-          res.status(401).json({ error: "Not authenticated" });
-          return;
+          return c.json({ error: "Not authenticated" }, 401);
         }
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
         await applyTenantContext(dbClient);
         await dbClient.query(
           `UPDATE accounts.transactions SET is_private = $3, updated_at = NOW() WHERE id = $1 AND workspace_id = $2`,
-          [req.params.id, req.workspaceId, Boolean(is_private)],
+          [c.req.param("id"), ctxGet(c, "workspaceId"), Boolean(is_private)],
         );
         // Child tables have no workspace_id column; route both deletes
         // through the workspace-scoped tenant handle (same pinned client, inside the
@@ -198,18 +192,18 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
         // parent accounts.transactions and the delete can't cross tenants.
         await tenant(dbClient, identity).delete("transaction_visibility", {
           where: "transaction_id = $1",
-          params: [req.params.id],
+          params: [c.req.param("id")],
         });
         await tenant(dbClient, identity).delete("transaction_visibility_role", {
           where: "transaction_id = $1",
-          params: [req.params.id],
+          params: [c.req.param("id")],
         });
         if (is_private && Array.isArray(shared_with) && shared_with.length > 0) {
           const values = shared_with.map((_: string, i: number) => `($1, $${i + 2})`).join(", ");
           await dbClient.query(
             `INSERT INTO accounts.transaction_visibility (transaction_id, user_id) VALUES ${values}
                ON CONFLICT (transaction_id, user_id) DO NOTHING`,
-            [req.params.id, ...shared_with],
+            [c.req.param("id"), ...shared_with],
           );
         }
         if (is_private && Array.isArray(shared_with_roles) && shared_with_roles.length > 0) {
@@ -217,15 +211,15 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
           await dbClient.query(
             `INSERT INTO accounts.transaction_visibility_role (transaction_id, role_code) VALUES ${values}
                ON CONFLICT (transaction_id, role_code) DO NOTHING`,
-            [req.params.id, ...shared_with_roles],
+            [c.req.param("id"), ...shared_with_roles],
           );
         }
         await dbClient.query("COMMIT");
-        res.json({ ok: true });
+        return c.json({ ok: true });
       } catch (err) {
         if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
         console.error("[transactions] visibility error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       } finally {
         if (dbClient) dbClient.release();
       }
@@ -238,7 +232,7 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
         const line_items = await data.find(
           "transaction_line_items",
@@ -257,12 +251,12 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
             "client_id",
             "customer_group_id",
           ],
-          { where: "transaction_id = $1", params: [req.params.id], orderBy: "id ASC" },
+          { where: "transaction_id = $1", params: [c.req.param("id")], orderBy: "id ASC" },
         );
-        res.json({ line_items });
+        return c.json({ line_items });
       } catch (err) {
         console.error("[transactions] line-items list error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -272,7 +266,7 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
         // No BEFORE UPDATE trigger, so updated_at is set explicitly (TZ-safe
         // absolute instant). RETURNING * → the full explicit column list so the
@@ -282,18 +276,17 @@ export function registerTransactionStatusRoutes(router: Router, ctx: CoreRouteCt
           { status: "voided", updated_at: new Date() },
           {
             where: "id = $1 AND transaction_id = $2 AND status != 'voided'",
-            params: [req.params.lineItemId, req.params.id],
+            params: [c.req.param("lineItemId"), c.req.param("id")],
           },
           LINE_ITEM_COLS,
         );
         if (rows.length === 0) {
-          res.status(404).json({ error: "Not found or already voided" });
-          return;
+          return c.json({ error: "Not found or already voided" }, 404);
         }
-        res.json(rows[0]);
+        return c.json(rows[0]);
       } catch (err) {
         console.error("[transactions] line-item void error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );

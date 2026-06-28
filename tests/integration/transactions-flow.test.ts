@@ -1,12 +1,27 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import express from "express";
-import request from "supertest";
+import { Hono } from "hono";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { todayInOrgTimezone } from "../../server/lib/backdate.js";
 import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
-import { runWithTenantContext } from "@ks-erp/kernel/services/tenant-context";
+import { runWithTenantContext } from "@kahitsan/plugin-sdk";
+
+/** Make an HTTP request against a Hono app and return status + json accessor. */
+async function request(
+  app: Hono,
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<{ status: number; json: () => Promise<any> }> {
+  const init: RequestInit = { method };
+  if (body !== undefined) {
+    init.headers = { "Content-Type": "application/json" };
+    init.body = JSON.stringify(body);
+  }
+  const res = await app.request(path, init);
+  return { status: res.status, json: () => res.json() };
+}
 
 // Peer hydration (package / variant / client / account / payee / voucher names
 // resolved over the kernel RPC) is OUT OF SCOPE for this test — this suite is
@@ -34,7 +49,7 @@ vi.mock("../../server/lib/peers.js", () => ({
 const TEST_ORG = 3;
 const SCHEMAS = ["accounts"];
 
-let app: express.Express;
+let honoApp: Hono;
 let pool: pg.Pool;
 let rollback: () => Promise<void>;
 
@@ -89,19 +104,18 @@ beforeAll(async () => {
     requireWorkspace,
     requirePermission,
   });
-  app = express();
-  app.use(express.json());
+  honoApp = new Hono();
   // The F3 data surface reads the workspace from the ambient tenant context
   // (set by withTenantContext in prod). The stub middleware doesn't establish
   // that ALS scope, so wrap each request in runWithTenantContext here, matching
   // the stubbed identity, or the surface-backed routes fail-closed.
-  app.use((_req, _res, next) =>
+  honoApp.use("*", (_c, next) =>
     runWithTenantContext(
       { wsId: TEST_ORG, userId, role: "superuser", wsRole: "admin" },
       () => next(),
     ),
   );
-  app.use(router);
+  honoApp.route("/", router);
 });
 
 afterAll(async () => {
@@ -117,29 +131,32 @@ describe("transactions flow: list → create → list → detail → void (real 
   let newId: number;
 
   it("lists existing transactions for the active org", async () => {
-    const res = await request(app).get("/");
+    const res = await request(honoApp, "GET", "/");
+    const body = await res.json();
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
     // CI starts with an empty database; local dev may have prod data.
-    expect(typeof res.body.total).toBe("number");
+    expect(typeof body.total).toBe("number");
   });
 
   it("creates a manual expense scoped to the active org", async () => {
-    const res = await request(app).post("/").send({
+    const res = await request(honoApp, "POST", "/", {
       category: "expense",
       amount: "99.99",
       description: desc,
       transaction_date: todayInOrgTimezone(), // PHT today ⇒ no backdate gate
     });
+    const body = await res.json();
     expect(res.status).toBe(201);
-    expect(typeof res.body.id).toBe("number");
-    newId = res.body.id;
+    expect(typeof body.id).toBe("number");
+    newId = body.id;
   });
 
   it("the new transaction appears in the org-scoped list", async () => {
-    const res = await request(app).get(`/?search=${encodeURIComponent(desc)}`);
+    const res = await request(honoApp, "GET", `/?search=${encodeURIComponent(desc)}`);
+    const body = await res.json();
     expect(res.status).toBe(200);
-    const found = (res.body.data as Array<{ id: number; description: string }>).find(
+    const found = (body.data as Array<{ id: number; description: string }>).find(
       (t) => t.description === desc,
     );
     expect(found, "created transaction must show in the list").toBeTruthy();
@@ -147,22 +164,24 @@ describe("transactions flow: list → create → list → detail → void (real 
   });
 
   it("opens detail with 200 + customer_groups (the regression contract)", async () => {
-    const res = await request(app).get(`/${newId}`);
+    const res = await request(honoApp, "GET", `/${newId}`);
+    const body = await res.json();
     expect(res.status).toBe(200);
-    expect(res.body.id).toBe(newId);
+    expect(body.id).toBe(newId);
     // Mirrors the e2e guard: detail must not 500 on customer_group resolution.
-    expect(Array.isArray(res.body.customer_groups)).toBe(true);
+    expect(Array.isArray(body.customer_groups)).toBe(true);
   });
 
   it("voids (soft-deletes) the transaction", async () => {
-    const res = await request(app).delete(`/${newId}`);
+    const res = await request(honoApp, "DELETE", `/${newId}`);
     expect(res.status).toBe(204);
   });
 
   it("a voided transaction leaves the default active list", async () => {
-    const res = await request(app).get(`/?search=${encodeURIComponent(desc)}`);
+    const res = await request(honoApp, "GET", `/?search=${encodeURIComponent(desc)}`);
+    const body = await res.json();
     expect(res.status).toBe(200);
-    const found = (res.body.data as Array<{ id: number }>).find((t) => t.id === newId);
+    const found = (body.data as Array<{ id: number }>).find((t) => t.id === newId);
     expect(found, "voided transaction must not appear in the active list").toBeUndefined();
   });
 });

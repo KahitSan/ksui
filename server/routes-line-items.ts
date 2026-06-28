@@ -15,7 +15,7 @@
 //     the kernel RPC (lib/peers.ts) with graceful degradation, never raw
 //     cross-schema SQL.
 //   - The permission/privacy/backdate gates read the kernel-forwarded
-//     req.permissions / req.wsRole instead of the monolith's async
+//     ctxGet(c, "permissions") / ctxGet(c, "wsRole") instead of the monolith's async
 //     getPermissionsFor / canBypassTransactionPrivacy.
 //   - The monolith's `links.create` shadow-write is dropped (no cross-process
 //     links runner in the fork; the in-row package_variant_id FK is the source
@@ -28,7 +28,8 @@
 //     by code, not by id, and transactions stores only voucher_id. Graceful
 //     degradation, consistent with the rest of the plugin.
 
-import { Router, type Request, type Response } from "express";
+import { Hono } from "hono";
+import type { Context } from "hono";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {
@@ -37,15 +38,16 @@ import {
   findClientsByIds,
 } from "./lib/peers.js";
 import type { RouterDeps } from "./routes.js";
+import { ctxGet } from "./types.js";
 
-export function buildLineItemsRouter(deps: RouterDeps): Router {
-  const router = Router();
+export function buildLineItemsRouter(deps: RouterDeps): Hono {
+  const router = new Hono();
   const { db: pool, requireAuth, requireWorkspace, requirePermission } = deps;
 
   // Admin/superuser bypass the per-row privacy gate. Mirrors the monolith's
   // canBypassTransactionPrivacy, resolved from the kernel-forwarded identity.
-  const canBypassPrivacy = (req: Request): boolean =>
-    req.wsRole === "admin" || req.user?.role === "superuser";
+  const canBypassPrivacy = (c: Context): boolean =>
+    ctxGet(c, "wsRole") === "admin" || ctxGet(c, "user")?.role === "superuser";
 
   // ── GET /api/transaction-line-items ──────────────────────────────────────
   //
@@ -63,18 +65,17 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
-      if (!req.workspaceId) {
-        res.status(403).json({ error: "No workspace context" });
-        return;
+    async (c) => {
+      if (!ctxGet(c, "workspaceId")) {
+        return c.json({ error: "No workspace context" }, 403);
       }
 
-      const activeOnRaw = (req.query.active_on as string | undefined)?.trim();
-      const includeCarryover = req.query.include_carryover !== "false";
-      const includeTodayTxns = req.query.include_today_transactions !== "false";
-      const includeUpcoming = req.query.include_upcoming === "true";
-      const includeVoided = req.query.include_voided === "true";
-      const statusList = (req.query.status as string | undefined)
+      const activeOnRaw = (c.req.query("active_on") as string | undefined)?.trim();
+      const includeCarryover = c.req.query("include_carryover") !== "false";
+      const includeTodayTxns = c.req.query("include_today_transactions") !== "false";
+      const includeUpcoming = c.req.query("include_upcoming") === "true";
+      const includeVoided = c.req.query("include_voided") === "true";
+      const statusList = (c.req.query("status") as string | undefined)
         ?.split(",")
         .map((s) => s.trim())
         .filter(Boolean);
@@ -86,17 +87,17 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         activeOn = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
       }
 
-      const userId = req.user?.id;
+      const userId = ctxGet(c, "user")?.id;
       const params: (string | number | string[])[] = [];
       let idx = 1;
       const conditions: string[] = [];
 
       // Workspace isolation (line items carry workspace_id directly).
       conditions.push(`li.workspace_id = $${idx++}`);
-      params.push(req.workspaceId);
+      params.push(ctxGet(c, "workspaceId"));
 
       // Privacy: parent transaction must be public, owned, or shared.
-      if (userId && !canBypassPrivacy(req)) {
+      if (userId && !canBypassPrivacy(c)) {
         conditions.push(
           `(t.is_private = false OR t.created_by = $${idx} OR EXISTS (
              SELECT 1 FROM accounts.transaction_visibility tv
@@ -106,7 +107,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
              WHERE tvr.transaction_id = t.id AND tvr.role_code = $${idx + 1}
            ))`,
         );
-        params.push(userId, req.wsRole ?? "");
+        params.push(userId, ctxGet(c, "wsRole") ?? "");
         idx += 2;
       }
 
@@ -195,8 +196,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         );
       }
       if (dateClauses.length === 0) {
-        res.json({ data: [], active_on: activeOn });
-        return;
+        return c.json({ data: [], active_on: activeOn });
       }
       conditions.push(`(${dateClauses.join(" OR ")})`);
       params.push(activeOn);
@@ -326,7 +326,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           params,
         );
 
-        const idh = identityHeaderOf(req);
+        const idh = identityHeaderOf(c);
 
         // Resolve package + variant names over RPC (graceful: null when the
         // packages plugin is absent), mirroring the monolith's batch-fetch.
@@ -357,7 +357,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
               AND transaction_id = ANY($2::int[])
             ORDER BY transaction_id, "position" ASC, client_id ASC`,
           [
-            req.workspaceId,
+            ctxGet(c, "workspaceId"),
             [...new Set(result.rows.map((r) => r.transaction_id as number))],
           ],
         );
@@ -421,10 +421,10 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           };
         });
 
-        res.json({ data: rows, active_on: activeOn });
+        return c.json({ data: rows, active_on: activeOn });
       } catch (err) {
         console.error("[transaction-line-items] list error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -440,15 +440,13 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
-      if (!req.workspaceId) {
-        res.status(403).json({ error: "No workspace context" });
-        return;
+    async (c) => {
+      if (!ctxGet(c, "workspaceId")) {
+        return c.json({ error: "No workspace context" }, 403);
       }
-      const clientId = parseInt(String(req.query.client_id ?? ""), 10);
+      const clientId = parseInt(String(c.req.query("client_id") ?? ""), 10);
       if (!Number.isFinite(clientId) || clientId <= 0) {
-        res.status(400).json({ error: "client_id is required" });
-        return;
+        return c.json({ error: "client_id is required" }, 400);
       }
 
       try {
@@ -472,15 +470,14 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
               AND li.package_id IS NOT NULL
               AND li.package_variant_id IS NOT NULL
             ORDER BY li.package_id, li.ends_at DESC`,
-          [req.workspaceId, clientId],
+          [ctxGet(c, "workspaceId"), clientId],
         );
 
         if (result.rows.length === 0) {
-          res.json({ data: [] });
-          return;
+          return c.json({ data: [] });
         }
 
-        const idh = identityHeaderOf(req);
+        const idh = identityHeaderOf(c);
         const packageIds = [...new Set(result.rows.map((r) => r.package_id))];
         const variantIds = [...new Set(result.rows.map((r) => r.package_variant_id))];
         const [packages, variants] = await Promise.all([
@@ -507,10 +504,10 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           })
           .filter((r): r is NonNullable<typeof r> => r !== null);
 
-        res.json({ data });
+        return c.json({ data });
       } catch (err) {
         console.error("[transaction-line-items] active-subscriptions error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -525,37 +522,31 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (req: Request, res: Response) => {
-      if (!req.workspaceId) {
-        res.status(403).json({ error: "No workspace context" });
-        return;
+    async (c) => {
+      if (!ctxGet(c, "workspaceId")) {
+        return c.json({ error: "No workspace context" }, 403);
       }
-      const id = parseInt(req.params.id as string);
+      const id = parseInt(c.req.param("id") as string);
       if (!id) {
-        res.status(400).json({ error: "id is required" });
-        return;
+        return c.json({ error: "id is required" }, 400);
       }
-      const body = (req.body ?? {}) as { mode?: string; ends_at?: string };
+      const body = (await c.req.json() ?? {}) as { mode?: string; ends_at?: string };
       const mode = body.mode ?? "as_is";
       if (mode !== "as_is" && mode !== "backdated") {
-        res.status(400).json({ error: "mode must be 'as_is' or 'backdated'" });
-        return;
+        return c.json({ error: "mode must be 'as_is' or 'backdated'" }, 400);
       }
 
       let customEndsAt: Date | null = null;
       if (mode === "as_is" && body.ends_at != null) {
         if (typeof body.ends_at !== "string") {
-          res.status(400).json({ error: "ends_at must be an ISO timestamp string" });
-          return;
+          return c.json({ error: "ends_at must be an ISO timestamp string" }, 400);
         }
         const parsed = new Date(body.ends_at);
         if (isNaN(parsed.getTime())) {
-          res.status(400).json({ error: "ends_at is not a valid ISO timestamp" });
-          return;
+          return c.json({ error: "ends_at is not a valid ISO timestamp" }, 400);
         }
         if (parsed.getTime() - Date.now() > 60_000) {
-          res.status(400).json({ error: "ends_at cannot be in the future" });
-          return;
+          return c.json({ error: "ends_at cannot be in the future" }, 400);
         }
         customEndsAt = parsed;
       }
@@ -566,19 +557,17 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           `SELECT started_at, ends_at
              FROM accounts.transaction_line_items
             WHERE id = $1 AND workspace_id = $2 AND status IN ('active','expired')`,
-          [id, req.workspaceId],
+          [id, ctxGet(c, "workspaceId")],
         );
         if (lineRes.rows.length === 0) {
-          res.status(404).json({ error: "Settleable line item not found in this workspace" });
-          return;
+          return c.json({ error: "Settleable line item not found in this workspace" }, 404);
         }
         const startedAt: Date | null = lineRes.rows[0].started_at
           ? new Date(lineRes.rows[0].started_at)
           : null;
         bookedEnd = lineRes.rows[0].ends_at ? new Date(lineRes.rows[0].ends_at) : null;
         if (startedAt && customEndsAt.getTime() <= startedAt.getTime()) {
-          res.status(400).json({ error: "ends_at must be after the rental's started_at" });
-          return;
+          return c.json({ error: "ends_at must be after the rental's started_at" }, 400);
         }
       }
 
@@ -594,17 +583,16 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           bookedEndAlreadyPassed &&
           customEndsAt.getTime() < bookedEnd.getTime());
       if (requiresBackdate) {
-        const isAdmin = req.user?.role === "superuser" || req.wsRole === "admin";
-        const allowed = isAdmin || (req.permissions ?? []).includes("transactions.backdate");
+        const isAdmin = ctxGet(c, "user")?.role === "superuser" || ctxGet(c, "wsRole") === "admin";
+        const allowed = isAdmin || (ctxGet(c, "permissions") ?? []).includes("transactions.backdate");
         if (!allowed) {
-          res.status(403).json({ error: "Missing permission: transactions.backdate" });
-          return;
+          return c.json({ error: "Missing permission: transactions.backdate" }, 403);
         }
       }
 
       try {
         let setClause: string;
-        const params: unknown[] = [id, req.workspaceId];
+        const params: unknown[] = [id, ctxGet(c, "workspaceId")];
         if (mode === "as_is") {
           if (customEndsAt) {
             setClause = `status = 'completed', ends_at = $3, updated_at = NOW()`;
@@ -628,19 +616,17 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           const existing = await pool.query(
             `SELECT * FROM accounts.transaction_line_items
               WHERE id = $1 AND workspace_id = $2 AND status = 'completed'`,
-            [id, req.workspaceId],
+            [id, ctxGet(c, "workspaceId")],
           );
           if (existing.rows.length > 0) {
-            res.json(existing.rows[0]);
-            return;
+            return c.json(existing.rows[0]);
           }
-          res.status(404).json({ error: "Settleable line item not found in this workspace" });
-          return;
+          return c.json({ error: "Settleable line item not found in this workspace" }, 404);
         }
-        res.json(result.rows[0]);
+        return c.json(result.rows[0]);
       } catch (err) {
         console.error("[transaction-line-items] settle error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -657,30 +643,26 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (req: Request, res: Response) => {
-      if (!req.workspaceId || !req.user?.id) {
-        res.status(403).json({ error: "No workspace context" });
-        return;
+    async (c) => {
+      if (!ctxGet(c, "workspaceId") || !ctxGet(c, "user")?.id) {
+        return c.json({ error: "No workspace context" }, 403);
       }
-      const id = parseInt(req.params.id as string);
+      const id = parseInt(c.req.param("id") as string);
       if (!id) {
-        res.status(400).json({ error: "id is required" });
-        return;
+        return c.json({ error: "id is required" }, 400);
       }
-      const { package_variant_id, quantity } = req.body as {
+      const { package_variant_id, quantity } = await c.req.json() as {
         package_variant_id?: number;
         quantity?: number;
       };
       if (typeof package_variant_id !== "number" || package_variant_id <= 0) {
-        res.status(400).json({ error: "package_variant_id is required" });
-        return;
+        return c.json({ error: "package_variant_id is required" }, 400);
       }
       if (typeof quantity !== "number" || quantity <= 0) {
-        res.status(400).json({ error: "quantity must be > 0" });
-        return;
+        return c.json({ error: "quantity must be > 0" }, 400);
       }
 
-      const idh = identityHeaderOf(req);
+      const idh = identityHeaderOf(c);
       let client: import("pg").PoolClient | null = null;
       try {
         client = await pool.connect();
@@ -692,12 +674,11 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
              FROM accounts.transaction_line_items
             WHERE id = $1 AND workspace_id = $2
             FOR UPDATE`,
-          [id, req.workspaceId],
+          [id, ctxGet(c, "workspaceId")],
         );
         if (srcRes.rows.length === 0) {
           await client.query("ROLLBACK");
-          res.status(404).json({ error: "Line item not found in this workspace" });
-          return;
+          return c.json({ error: "Line item not found in this workspace" }, 404);
         }
         const src = srcRes.rows[0] as {
           id: number;
@@ -709,26 +690,22 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         };
         if (src.status !== "active" && src.status !== "expired") {
           await client.query("ROLLBACK");
-          res.status(409).json({ error: "Line item is not active or expired" });
-          return;
+          return c.json({ error: "Line item is not active or expired" }, 409);
         }
         if (src.ends_at == null || new Date(src.ends_at).getTime() > Date.now()) {
           await client.query("ROLLBACK");
-          res.status(409).json({ error: "charge-overage is only valid for overdue line items" });
-          return;
+          return c.json({ error: "charge-overage is only valid for overdue line items" }, 409);
         }
 
         const variants = await findVariantsByIds([package_variant_id], idh);
         const variant = variants?.[0];
         if (variant == null) {
           await client.query("ROLLBACK");
-          res.status(400).json({ error: "package_variant_id must belong to this workspace" });
-          return;
+          return c.json({ error: "package_variant_id must belong to this workspace" }, 400);
         }
         if (variant.duration_value == null) {
           await client.query("ROLLBACK");
-          res.status(400).json({ error: "package_variant has no duration_value" });
-          return;
+          return c.json({ error: "package_variant has no duration_value" }, 400);
         }
 
         const durationValue = parseFloat(String(variant.duration_value));
@@ -755,7 +732,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
            RETURNING *`,
           [
             src.transaction_id,
-            req.workspaceId,
+            ctxGet(c, "workspaceId"),
             variant.package_id,
             package_variant_id,
             variant.name,
@@ -774,7 +751,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           `UPDATE accounts.transactions
               SET amount = amount + $1, subtotal = COALESCE(subtotal, amount) + $1, updated_at = NOW(), updated_by = $2
             WHERE id = $3 AND workspace_id = $4`,
-          [extensionCost, req.user.id, src.transaction_id, req.workspaceId],
+          [extensionCost, ctxGet(c, "user").id, src.transaction_id, ctxGet(c, "workspaceId")],
         );
 
         if (src.customer_group_id != null) {
@@ -782,12 +759,12 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
             `UPDATE accounts.transaction_customer_groups
                 SET subtotal = subtotal + $1
               WHERE id = $2 AND workspace_id = $3`,
-            [extensionCost, src.customer_group_id, req.workspaceId],
+            [extensionCost, src.customer_group_id, ctxGet(c, "workspaceId")],
           );
         }
 
         await client.query("COMMIT");
-        res.status(201).json({
+        return c.json({
           source: src,
           overage_line: insertResult.rows[0],
         });
@@ -796,7 +773,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           await client.query("ROLLBACK").catch(() => {});
         }
         console.error("[transaction-line-items] charge-overage error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       } finally {
         if (client) client.release();
       }
@@ -816,30 +793,26 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (req: Request, res: Response) => {
-      if (!req.workspaceId || !req.user?.id) {
-        res.status(403).json({ error: "No workspace context" });
-        return;
+    async (c) => {
+      if (!ctxGet(c, "workspaceId") || !ctxGet(c, "user")?.id) {
+        return c.json({ error: "No workspace context" }, 403);
       }
-      const id = parseInt(req.params.id as string);
+      const id = parseInt(c.req.param("id") as string);
       if (!id) {
-        res.status(400).json({ error: "id is required" });
-        return;
+        return c.json({ error: "id is required" }, 400);
       }
-      const { package_variant_id, quantity } = req.body as {
+      const { package_variant_id, quantity } = await c.req.json() as {
         package_variant_id?: number;
         quantity?: number;
       };
       if (typeof package_variant_id !== "number" || package_variant_id <= 0) {
-        res.status(400).json({ error: "package_variant_id is required" });
-        return;
+        return c.json({ error: "package_variant_id is required" }, 400);
       }
       if (typeof quantity !== "number" || quantity <= 0) {
-        res.status(400).json({ error: "quantity must be > 0" });
-        return;
+        return c.json({ error: "quantity must be > 0" }, 400);
       }
 
-      const idh = identityHeaderOf(req);
+      const idh = identityHeaderOf(c);
       let client: import("pg").PoolClient | null = null;
       try {
         client = await pool.connect();
@@ -851,12 +824,11 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
              FROM accounts.transaction_line_items
             WHERE id = $1 AND workspace_id = $2
             FOR UPDATE`,
-          [id, req.workspaceId],
+          [id, ctxGet(c, "workspaceId")],
         );
         if (srcRes.rows.length === 0) {
           await client.query("ROLLBACK");
-          res.status(404).json({ error: "Line item not found in this workspace" });
-          return;
+          return c.json({ error: "Line item not found in this workspace" }, 404);
         }
         const src = srcRes.rows[0] as {
           id: number;
@@ -873,13 +845,11 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
         const variant = variants?.[0];
         if (variant == null) {
           await client.query("ROLLBACK");
-          res.status(400).json({ error: "package_variant_id must belong to this workspace" });
-          return;
+          return c.json({ error: "package_variant_id must belong to this workspace" }, 400);
         }
         if (variant.duration_value == null) {
           await client.query("ROLLBACK");
-          res.status(400).json({ error: "package_variant has no duration_value" });
-          return;
+          return c.json({ error: "package_variant has no duration_value" }, 400);
         }
 
         const durationValue = parseFloat(String(variant.duration_value));
@@ -911,7 +881,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
            RETURNING *`,
           [
             src.transaction_id,
-            req.workspaceId,
+            ctxGet(c, "workspaceId"),
             variant.package_id,
             package_variant_id,
             variant.name,
@@ -930,7 +900,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
           `UPDATE accounts.transactions
               SET amount = amount + $1, subtotal = COALESCE(subtotal, amount) + $1, updated_at = NOW(), updated_by = $2
             WHERE id = $3 AND workspace_id = $4`,
-          [extensionCost, req.user.id, src.transaction_id, req.workspaceId],
+          [extensionCost, ctxGet(c, "user").id, src.transaction_id, ctxGet(c, "workspaceId")],
         );
 
         if (src.customer_group_id != null) {
@@ -938,18 +908,18 @@ export function buildLineItemsRouter(deps: RouterDeps): Router {
             `UPDATE accounts.transaction_customer_groups
                 SET subtotal = subtotal + $1
               WHERE id = $2 AND workspace_id = $3`,
-            [extensionCost, src.customer_group_id, req.workspaceId],
+            [extensionCost, src.customer_group_id, ctxGet(c, "workspaceId")],
           );
         }
 
         await client.query("COMMIT");
-        res.status(201).json(insertResult.rows[0]);
+        return c.json(insertResult.rows[0], 201);
       } catch (err) {
         if (client) {
           await client.query("ROLLBACK").catch(() => {});
         }
         console.error("[transaction-line-items] extend error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       } finally {
         if (client) client.release();
       }

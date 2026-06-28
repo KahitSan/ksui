@@ -20,12 +20,13 @@
 // every list-style read reuses), so an export can never include rows the
 // requester can't already see in the list. Voided rows are excluded.
 
-import { type Router, type Request, type Response, type RequestHandler } from "express";
+import { Hono, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { s3Enabled, s3PutObject, s3GetObject, s3DeleteObject } from "@kahitsan/plugin-server-utils";
 import { privacyClause, isValidIsoDate, resolveUserNames } from "./shared.js";
 import { findAccountsByIds, findPayeesByIds, type IdentityHeader } from "../lib/peers.js";
+import { ctxGet } from "../types.js";
 
 // Mirrors the modal's EXPORT_MAX_RANGE_DAYS so the server enforces the same cap
 // the UI advertises (the UI gate is a courtesy; this one is the real limit).
@@ -36,9 +37,9 @@ const SSE_MAX_MS = 5 * 60 * 1000; // safety cap so a wedged job can't hold the s
 
 export type ExportRouteCtx = {
   pool: PluginDb;
-  requireAuth: RequestHandler;
-  requireWorkspace: RequestHandler;
-  requirePermission: (...codes: string[]) => RequestHandler;
+  requireAuth: MiddlewareHandler;
+  requireWorkspace: MiddlewareHandler;
+  requirePermission: (...codes: string[]) => MiddlewareHandler;
 };
 
 // ── CSV helpers ────────────────────────────────────────────────────────────
@@ -299,7 +300,7 @@ async function buildDetailedCsv(
   return { text, rowCount: rows.length };
 }
 
-export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void {
+export function registerExportRoutes(router: Hono, ctx: ExportRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Recent jobs (powers the modal's "Recent exports" list) ───────────────
@@ -308,7 +309,7 @@ export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void 
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
         const result = await pool.query(
           `SELECT id, status, consolidate, row_count, byte_size, filename, error_message,
@@ -319,12 +320,12 @@ export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void 
             WHERE workspace_id = $1 AND user_id = $2 AND expires_at > now()
             ORDER BY created_at DESC
             LIMIT 20`,
-          [req.workspaceId, req.user?.id ?? ""],
+          [ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? ""],
         );
-        res.json({ jobs: result.rows });
+        return c.json({ jobs: result.rows });
       } catch (err) {
         console.error("[transactions] export list error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -335,8 +336,8 @@ export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void 
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
-      const body = (req.body ?? {}) as {
+    async (c) => {
+      const body = (await c.req.json() ?? {}) as {
         dateFrom?: unknown;
         dateTo?: unknown;
         consolidate?: unknown;
@@ -346,20 +347,16 @@ export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void 
       const consolidate = body.consolidate === true;
 
       if (!isValidIsoDate(dateFrom) || !isValidIsoDate(dateTo)) {
-        res.status(400).json({ error: "dateFrom and dateTo must be YYYY-MM-DD" });
-        return;
+        return c.json({ error: "dateFrom and dateTo must be YYYY-MM-DD" }, 400);
       }
       if (dateFrom > dateTo) {
-        res.status(400).json({ error: "dateFrom must be on or before dateTo" });
-        return;
+        return c.json({ error: "dateFrom must be on or before dateTo" }, 400);
       }
       if (rangeSpanInDays(dateFrom, dateTo) > EXPORT_MAX_RANGE_DAYS) {
-        res.status(400).json({ error: `Range may not exceed ${EXPORT_MAX_RANGE_DAYS} days` });
-        return;
+        return c.json({ error: `Range may not exceed ${EXPORT_MAX_RANGE_DAYS} days` }, 400);
       }
       if (!s3Enabled()) {
-        res.status(503).json({ error: "Export storage is not configured" });
-        return;
+        return c.json({ error: "Export storage is not configured" }, 503);
       }
 
       try {
@@ -368,27 +365,27 @@ export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void 
              (workspace_id, user_id, kind, date_from, date_to, consolidate, status)
            VALUES ($1, $2, 'transactions', $3, $4, $5, 'pending')
            RETURNING id`,
-          [req.workspaceId, req.user?.id ?? "", dateFrom, dateTo, consolidate],
+          [ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? "", dateFrom, dateTo, consolidate],
         );
         const jobId: string = inserted.rows[0].id;
 
         // Snapshot what the worker needs from the request — it runs after this
         // response is sent, so it must not close over req for later reads.
         const privacyParams: unknown[] = [];
-        const frag = privacyClause(req, privacyParams, 4); // $1-$3 are ws/from/to
+        const frag = privacyClause(c, privacyParams, 4); // $1-$3 are ws/from/to
         const filters: RowFilters = {
-          workspaceId: req.workspaceId,
+          workspaceId: ctxGet(c, "workspaceId"),
           dateFrom,
           dateTo,
           privacy: { frag, params: privacyParams },
         };
-        const identityHeader = identityHeaderOf(req);
+        const identityHeader = identityHeaderOf(c);
 
         void runExportJob(pool, jobId, consolidate, filters, identityHeader);
-        res.json({ jobId });
+        return c.json({ jobId });
       } catch (err) {
         console.error("[transactions] export create error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -399,28 +396,26 @@ export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void 
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
-      const jobId = req.params.jobId;
+    async (c) => {
+      const jobId = c.req.param("jobId");
       const own = await pool.query(
         `SELECT 1 FROM accounts.export_jobs WHERE id = $1 AND workspace_id = $2`,
-        [jobId, req.workspaceId],
+        [jobId, ctxGet(c, "workspaceId")],
       );
       if (own.rows.length === 0) {
-        res.status(404).json({ error: "Not found" });
-        return;
+        return c.json({ error: "Not found" }, 404);
       }
 
-      res.writeHead(200, {
-        "Content-Type": "text/event-stream; charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
-        "X-Accel-Buffering": "no",
-      });
-      res.write(": open\n\n");
+      // Hono streaming: c.header() sets headers, c.body() will stream the response
+      c.header("Content-Type", "text/event-stream; charset=utf-8");
+      c.header("Cache-Control", "no-cache, no-transform");
+      c.header("X-Accel-Buffering", "no");
 
       let finished = false;
       let endTimer: NodeJS.Timeout | undefined;
+      const rawRes = (c as any).res || (c as any).raw?.res;
       const send = (event: string, data: unknown) => {
-        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+        if (rawRes) rawRes.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
       };
       const stopTimers = () => {
         clearInterval(timer);
@@ -436,7 +431,7 @@ export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void 
         if (finished) return;
         finished = true;
         clearInterval(timer);
-        endTimer = setTimeout(() => res.end(), 1500);
+        endTimer = setTimeout(() => { if (rawRes) rawRes.end(); }, 1500);
       };
 
       const startedAt = Date.now();
@@ -446,7 +441,7 @@ export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void 
           const r = await pool.query(
             `SELECT status, progress_done, progress_total, filename, error_message
                FROM accounts.export_jobs WHERE id = $1 AND workspace_id = $2`,
-            [jobId, req.workspaceId],
+            [jobId, ctxGet(c, "workspaceId")],
           );
           const job = r.rows[0] as
             | {
@@ -490,7 +485,7 @@ export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void 
       const timer = setInterval(() => void poll(), SSE_POLL_MS);
       // Client closed the stream (normal path after 'done'/'error', or navigated
       // away): drop all timers and let the socket go — nothing more to send.
-      req.on("close", () => {
+      ((c as any).raw?.on || (c as any).req?.on)?.call((c as any).raw || (c as any).req, "close", () => {
         finished = true;
         stopTimers();
       });
@@ -504,36 +499,35 @@ export function registerExportRoutes(router: Router, ctx: ExportRouteCtx): void 
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
         const r = await pool.query(
           `SELECT status, file_path, filename
              FROM accounts.export_jobs
             WHERE id = $1 AND workspace_id = $2 AND expires_at > now()`,
-          [req.params.jobId, req.workspaceId],
+          [c.req.param("jobId"), ctxGet(c, "workspaceId")],
         );
         const job = r.rows[0] as
           | { status: string; file_path: string | null; filename: string | null }
           | undefined;
         if (!job) {
-          res.status(404).json({ error: "Not found" });
-          return;
+          return c.json({ error: "Not found" }, 404);
         }
         if (job.status !== "done" || !job.file_path) {
-          res.status(409).json({ error: "Export is not ready" });
-          return;
+          return c.json({ error: "Export is not ready" }, 409);
         }
-        const { body, contentType } = await s3GetObject(job.file_path);
-        res.setHeader("Content-Type", contentType || "text/csv; charset=utf-8");
-        res.setHeader(
-          "Content-Disposition",
-          `attachment; filename="${sanitizeFilename(job.filename)}"`,
-        );
-        res.setHeader("Content-Length", String(body.length));
-        res.send(body);
+        const { body: csvBody, contentType } = await s3GetObject(job.file_path);
+        return new Response(csvBody as any, {
+          status: 200,
+          headers: {
+            "Content-Type": contentType || "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="${sanitizeFilename(job.filename)}"`,
+            "Content-Length": String(csvBody.length),
+          },
+        });
       } catch (err) {
         console.error("[transactions] export download error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );

@@ -13,7 +13,7 @@
 // scoping. Cross-plugin data is resolved over the kernel RPC (lib/peers.ts)
 // with graceful degradation.
 
-import { type Router, type Request, type Response } from "express";
+import { Hono } from "hono";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {
   findAccountsByIds,
@@ -24,8 +24,9 @@ import {
 } from "../lib/peers.js";
 import { resolveUserNames } from "./shared.js";
 import type { CoreRouteCtx } from "./transactions-core.js";
+import { ctxGet } from "../types.js";
 
-export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx): void {
+export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Detail ────────────────────────────────────────────────────────────
@@ -34,7 +35,7 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
         const result = await pool.query(
           `SELECT t.*,
@@ -54,28 +55,26 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
               FROM accounts.transaction_payments tp WHERE tp.transaction_id = t.id
           ) paid ON true
           WHERE t.id = $1 AND t.workspace_id = $2`,
-          [req.params.id, req.workspaceId],
+          [c.req.param("id"), ctxGet(c, "workspaceId")],
         );
         if (result.rows.length === 0) {
-          res.status(404).json({ error: "Not found" });
-          return;
+          return c.json({ error: "Not found" }, 404);
         }
         const txn = result.rows[0];
-        const idh = identityHeaderOf(req);
+        const idh = identityHeaderOf(c);
 
         // Privacy check.
-        const isAdmin = req.wsRole === "admin" || req.user?.role === "superuser";
-        if (txn.is_private && txn.created_by !== req.user?.id && !isAdmin) {
+        const isAdmin = ctxGet(c, "wsRole") === "admin" || ctxGet(c, "user")?.role === "superuser";
+        if (txn.is_private && txn.created_by !== ctxGet(c, "user")?.id && !isAdmin) {
           const vis = await pool.query(
             `SELECT 1 FROM accounts.transaction_visibility WHERE transaction_id = $1 AND user_id = $2
              UNION ALL
              SELECT 1 FROM accounts.transaction_visibility_role WHERE transaction_id = $1 AND role_code = $3
              LIMIT 1`,
-            [txn.id, req.user?.id, req.wsRole ?? ""],
+            [txn.id, ctxGet(c, "user")?.id, ctxGet(c, "wsRole") ?? ""],
           );
           if (vis.rows.length === 0) {
-            res.status(404).json({ error: "Not found" });
-            return;
+            return c.json({ error: "Not found" }, 404);
           }
         }
 
@@ -87,7 +86,7 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
 
         let shared_with: { user_id: string }[] = [];
         let shared_with_roles: { role_code: string }[] = [];
-        if (txn.is_private && (txn.created_by === req.user?.id || isAdmin)) {
+        if (txn.is_private && (txn.created_by === ctxGet(c, "user")?.id || isAdmin)) {
           shared_with = (
             await pool.query(`SELECT user_id FROM accounts.transaction_visibility WHERE transaction_id = $1`, [txn.id])
           ).rows;
@@ -102,7 +101,7 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
              FROM accounts.transaction_line_items
             WHERE transaction_id = $1 AND workspace_id = $2
             ORDER BY id ASC`,
-          [txn.id, req.workspaceId],
+          [txn.id, ctxGet(c, "workspaceId")],
         );
 
         // Enrich line items with package/variant/client names over RPC.
@@ -141,7 +140,7 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
                FROM accounts.transaction_edits
               WHERE transaction_id = $1 AND workspace_id = $2
               ORDER BY edited_at DESC`,
-            [txn.id, req.workspaceId],
+            [txn.id, ctxGet(c, "workspaceId")],
           )
         ).rows;
 
@@ -151,7 +150,7 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
                FROM accounts.transaction_payments
               WHERE transaction_id = $1 AND workspace_id = $2
               ORDER BY created_at ASC, id ASC`,
-            [txn.id, req.workspaceId],
+            [txn.id, ctxGet(c, "workspaceId")],
           )
         ).rows;
 
@@ -186,7 +185,7 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
                FROM accounts.transaction_customer_groups
               WHERE transaction_id = $1 AND workspace_id = $2
               ORDER BY position ASC`,
-            [txn.id, req.workspaceId],
+            [txn.id, ctxGet(c, "workspaceId")],
           )
         ).rows;
 
@@ -220,7 +219,7 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
           await pool.query(
             `SELECT client_id, position FROM accounts.transaction_customers
               WHERE transaction_id = $1 AND workspace_id = $2 ORDER BY position ASC, client_id ASC`,
-            [txn.id, req.workspaceId],
+            [txn.id, ctxGet(c, "workspaceId")],
           )
         ).rows;
         const poolClients = clientPoolRows.length > 0
@@ -244,7 +243,7 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
         const createdByUser = txn.created_by ? userMap.get(txn.created_by) : undefined;
         const updatedByUser = txn.updated_by ? userMap.get(txn.updated_by) : undefined;
 
-        res.json({
+        return c.json({
           ...txn,
           payee,
           created_by_name: createdByUser?.name ?? null,
@@ -263,7 +262,7 @@ export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx
         });
       } catch (err) {
         console.error("[transactions] get error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );

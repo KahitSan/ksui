@@ -11,9 +11,9 @@
 // Every query keeps its AND workspace_id = $N / both-sides JOIN workspace scoping
 // unchanged.
 
-import { type Router, type Request, type Response, type RequestHandler } from "express";
+import { Hono, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import multer from "multer";
+import { ctxGet } from "../types.js";
 import crypto from "crypto";
 import path from "node:path";
 import {
@@ -37,28 +37,22 @@ const ATTACHMENT_CACHE_SECONDS = 300;
 // link in s3_link (the sole reference). The object key is generated per upload
 // (`uploads/transactions/<wsId>/<uuid>.<ext>`) and recovered from s3_link via
 // s3KeyFromUrl on delete — the legacy file_path column has been dropped.
+
+// MIME types accepted for attachment uploads.
 const ALLOWED_ATTACHMENT_MIMES = [
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
   "application/pdf",
 ];
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB
 
-const attachmentUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_ATTACHMENT_SIZE },
-  fileFilter: (_req, file, cb) => {
-    cb(null, ALLOWED_ATTACHMENT_MIMES.includes(file.mimetype));
-  },
-});
-
 export type AttachmentRouteCtx = {
   pool: PluginDb;
-  requireAuth: RequestHandler;
-  requireWorkspace: RequestHandler;
-  requirePermission: (...codes: string[]) => RequestHandler;
+  requireAuth: MiddlewareHandler;
+  requireWorkspace: MiddlewareHandler;
+  requirePermission: (...codes: string[]) => MiddlewareHandler;
 };
 
-export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx): void {
+export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Attachments (multipart file upload) ──────────────────────────────────
@@ -67,19 +61,19 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
         const rows = await pool.query(
           `SELECT a.id, a.transaction_id, a.file_name, a.file_size, a.mime_type, a.uploaded_by, a.s3_link, a.created_at
              FROM accounts.transaction_attachments a
              JOIN accounts.transactions t ON t.id = a.transaction_id
             WHERE a.transaction_id = $1 AND t.workspace_id = $2 ORDER BY a.created_at`,
-          [req.params.id, req.workspaceId],
+          [c.req.param("id"), ctxGet(c, "workspaceId")],
         );
-        res.json({ attachments: rows.rows });
+        return c.json({ attachments: rows.rows });
       } catch (err) {
         console.error("[transactions] attachments list error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -95,31 +89,33 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
         const row = await pool.query<{ s3_link: string | null }>(
           `SELECT a.s3_link
              FROM accounts.transaction_attachments a
              JOIN accounts.transactions t ON t.id = a.transaction_id
             WHERE a.id = $1 AND a.transaction_id = $2 AND t.workspace_id = $3`,
-          [req.params.attachmentId, req.params.id, req.workspaceId],
+          [c.req.param("attachmentId"), c.req.param("id"), ctxGet(c, "workspaceId")],
         );
         if (row.rows.length === 0) {
-          res.status(404).json({ error: "Not found" });
-          return;
+          return c.json({ error: "Not found" }, 404);
         }
         const key = s3KeyFromUrl(row.rows[0].s3_link);
         if (!key) {
-          res.status(404).json({ error: "No object" });
-          return;
+          return c.json({ error: "No object" }, 404);
         }
-        const { body, contentType } = await s3GetObject(key);
-        res.setHeader("Content-Type", contentType || "application/octet-stream");
-        res.setHeader("Cache-Control", `private, max-age=${ATTACHMENT_CACHE_SECONDS}`);
-        res.send(body);
+        const { body: s3Body, contentType } = await s3GetObject(key);
+        return new Response(s3Body as any, {
+          status: 200,
+          headers: {
+            "Content-Type": contentType || "application/octet-stream",
+            "Cache-Control": `private, max-age=${ATTACHMENT_CACHE_SECONDS}`,
+          },
+        });
       } catch (err) {
         console.error("[transactions] attachment raw error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -129,68 +125,35 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    (req: Request, res: Response, next) => {
-      const wsId = req.workspaceId!;
-      const upload = attachmentUpload.single("file");
-      upload(req, res, (err) => {
-        if (err) {
-          if (err instanceof multer.MulterError) {
-            if (err.code === "LIMIT_FILE_SIZE") {
-              res.status(413).json({ error: "File too large (max 10MB)" });
-              return;
-            }
-            res.status(400).json({ error: err.message });
-            return;
-          }
-          res.status(400).json({ error: "File upload failed" });
-          return;
-        }
-        // Normalize: if a file was uploaded via multipart, populate req.body
-        // with the metadata the handler expects. The filename keeps the
-        // pre-S3 shape (UUID + original extension) and doubles as the S3 key
-        // suffix — no bytes ever touch the local disk.
-        if (req.file) {
-          const filename =
-            crypto.randomUUID() + path.extname(req.file.originalname).toLowerCase();
-          req.body = {
-            file_name: req.file.originalname,
-            file_url: `transactions/${wsId}/${filename}`,
-            file_size: req.file.size,
-            mime_type: req.file.mimetype,
-          };
-        }
-        next();
-      });
-    },
-    async (req: Request, res: Response) => {
-      const { file_name, file_url, file_size, mime_type } = req.body ?? {};
-      // Object storage is the only write target for attachment bytes — a
-      // metadata-only (JSON) POST would create a row whose link can never
-      // resolve, so multipart with an actual file is required.
-      if (!req.file) {
-        res.status(400).json({ error: "file is required (multipart/form-data)" });
-        return;
-      }
+    async (c) => {
+      const wsId = ctxGet(c, "workspaceId")!;
       if (!s3Enabled()) {
-        res.status(503).json({ error: "Attachment storage is not configured" });
-        return;
+        return c.json({ error: "Attachment storage is not configured" }, 503);
       }
-      if (!file_name || typeof file_name !== "string") {
-        res.status(400).json({ error: "file_name is required" });
-        return;
+      // Parse multipart form data via Hono's built-in parser (replaces multer).
+      const body = await c.req.parseBody();
+      const file = body["file"];
+      if (!(file instanceof File)) {
+        return c.json({ error: "file is required (multipart/form-data)" }, 400);
       }
-      if (!file_url || typeof file_url !== "string") {
-        res.status(400).json({ error: "file_url is required" });
-        return;
+      if (file.size > MAX_ATTACHMENT_SIZE) {
+        return c.json({ error: "File too large (max 10MB)" }, 413);
       }
+      if (!ALLOWED_ATTACHMENT_MIMES.includes(file.type)) {
+        return c.json({ error: "File type not allowed" }, 400);
+      }
+      const file_name = (typeof body["file_name"] === "string" && body["file_name"]) || file.name;
+      const filename = crypto.randomUUID() + path.extname(file.name).toLowerCase();
+      const file_url = `transactions/${wsId}/${filename}`;
+      const file_size = file.size;
+      const mime_type = file.type || "application/octet-stream";
       try {
         const tx = await pool.query(
           `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-          [req.params.id, req.workspaceId],
+          [c.req.param("id"), wsId],
         );
         if (tx.rows.length === 0) {
-          res.status(404).json({ error: "Not found" });
-          return;
+          return c.json({ error: "Not found" }, 404);
         }
         // file_url is the generated object path; it builds the S3 key and the
         // public link. It is NOT stored — s3_link is the sole reference now.
@@ -202,7 +165,8 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
         // NOTE(A1 ops): attachment objects uploaded BEFORE this retire stay served
         // from the Spaces CDN until a CDN purge (`doctl compute cdn flush`) — the
         // ACL flip doesn't evict cached copies. New uploads (here) are private.
-        await s3PutObject(key, req.file.buffer, mime_type || "application/octet-stream", {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        await s3PutObject(key, buffer, mime_type, {
           acl: "private",
         });
         const s3Link = s3PublicUrl(key);
@@ -213,11 +177,11 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
                VALUES ($1, $2, $3, $4, $5, $6)
                RETURNING id, transaction_id, file_name, file_size, mime_type, uploaded_by, s3_link, created_at`,
             [
-              req.params.id,
+              c.req.param("id"),
               file_name,
               Number.isFinite(file_size) ? file_size : 0,
               mime_type || "application/octet-stream",
-              req.user?.id ?? "",
+              ctxGet(c, "user")?.id ?? "",
               s3Link,
             ],
           );
@@ -226,10 +190,10 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
           await s3DeleteObject(key).catch(() => {});
           throw insertErr;
         }
-        res.status(201).json(result.rows[0]);
+        return c.json(result.rows[0], 201);
       } catch (err) {
         console.error("[transactions] attachment create error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -239,7 +203,7 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
         const result = await pool.query(
           `DELETE FROM accounts.transaction_attachments a
@@ -247,11 +211,10 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
             WHERE a.transaction_id = t.id
               AND a.id = $1 AND a.transaction_id = $2 AND t.workspace_id = $3
             RETURNING a.id, a.s3_link`,
-          [req.params.attachmentId, req.params.id, req.workspaceId],
+          [c.req.param("attachmentId"), c.req.param("id"), ctxGet(c, "workspaceId")],
         );
         if (result.rows.length === 0) {
-          res.status(404).json({ error: "Not found" });
-          return;
+          return c.json({ error: "Not found" }, 404);
         }
         // Remove the stored object too — best-effort (the row is already gone;
         // a failed cleanup must not turn the delete into a 500). The object key
@@ -270,10 +233,10 @@ export function registerAttachmentRoutes(router: Router, ctx: AttachmentRouteCtx
             });
           }
         }
-        res.status(204).send();
+        return c.body(null, 204);
       } catch (err) {
         console.error("[transactions] attachment delete error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );

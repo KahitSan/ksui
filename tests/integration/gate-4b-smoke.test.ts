@@ -1,12 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import express from "express";
-import request from "supertest";
+import { Hono } from "hono";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { makeDatabaseService, makeDataSurface } from "@kahitsan/plugin-sdk";
+import { makeDatabaseService, makeDataSurface, runWithTenantContext } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
-import { runWithTenantContext } from "@ks-erp/kernel/services/tenant-context";
 
 // ── Gate-4b cross-subsystem smoke (transactions) ─────────────────────────────
 //
@@ -24,9 +22,9 @@ import { runWithTenantContext } from "@ks-erp/kernel/services/tenant-context";
 //                importable from a plugin; what IS reachable is the capability's
 //                OWN enforcement surface — the gated route + the workspace clamp —
 //                which is what this suite exercises. See `notes` for the gap.
-//   transport  → the request rides supertest through the real Express router the
-//                kernel proxy mounts in prod (buildRouter), so the assertions are
-//                on the wire shape, not an in-process function call.
+//   transport  → the request rides through the real Hono router the kernel proxy
+//                mounts in prod (buildRouter), so the assertions are on the wire
+//                shape, not an in-process function call.
 //
 // The data wall is the route's explicit `AND workspace_id = $N` — the ONLY tenant
 // gate that holds for a process-isolated plugin (the stub establishes no tenant
@@ -63,16 +61,16 @@ let userId = "";
 let wRowId = 0;
 let vRowId = 0;
 
-// One app per identity — stubMiddleware binds a FIXED identity, so a different
-// workspace / permission set needs its own router instance over the SAME
-// rollback db (all reads/writes share the one outer transaction).
-let appW: express.Express; // workspace W, holds transactions.view
-let appV: express.Express; // workspace V, holds transactions.view (the foreign tenant)
-let appNoPerm: express.Express; // workspace W, holds NO transactions.* permission
+// One Hono app per identity — stubMiddleware binds a FIXED identity, so a
+// different workspace / permission set needs its own router instance over the
+// SAME rollback db (all reads/writes share the one outer transaction).
+let appW: Hono;
+let appV: Hono;
+let appNoPerm: Hono;
 
 let ready = false;
 
-function mountApp(workspaceId: number, permissions: string[]): express.Express {
+function mountApp(workspaceId: number, permissions: string[]): Hono {
   const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId,
     userId,
@@ -86,10 +84,22 @@ function mountApp(workspaceId: number, permissions: string[]): express.Express {
     requireWorkspace,
     requirePermission,
   });
-  const app = express();
-  app.use(express.json());
-  app.use(router);
-  return app;
+  const honoApp = new Hono();
+  honoApp.use("*", (_c, next) =>
+    runWithTenantContext(
+      { wsId: workspaceId, userId, role: "member", wsRole: "admin" },
+      () => next(),
+    ),
+  );
+  honoApp.route("/", router);
+  return honoApp;
+}
+
+/** Convenience: make a GET request against a Hono app and parse JSON. */
+async function GET(app: Hono, path: string, init?: RequestInit) {
+  const res = await app.request(path, init);
+  const body = await res.json().catch(() => undefined);
+  return { status: res.status, body };
 }
 
 beforeAll(async () => {
@@ -190,9 +200,9 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   it("(a) principal with transactions.view in W reads the list capability and sees only W's row", async () => {
     if (!ready) return;
     const term = `${TAG}-`;
-    const res = await request(appW).get(`/?search=${encodeURIComponent(term)}`);
-    expect(res.status).toBe(200);
-    const rows = res.body.data as Array<{ id: number; workspace_id: number; description: string }>;
+    const { status, body } = await GET(appW, `/?search=${encodeURIComponent(term)}`);
+    expect(status).toBe(200);
+    const rows = body.data as Array<{ id: number; workspace_id: number; description: string }>;
     // The W row is present…
     expect(rows.some((r) => r.id === wRowId)).toBe(true);
     // …and NOTHING from V leaked into W's list.
@@ -202,10 +212,10 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
 
   it("(a) the same principal resolves W's row on the detail capability (GET /:id ⇒ 200)", async () => {
     if (!ready) return;
-    const res = await request(appW).get(`/${wRowId}`);
-    expect(res.status).toBe(200);
-    expect(res.body.id).toBe(wRowId);
-    expect(res.body.workspace_id).toBe(wsW);
+    const { status, body } = await GET(appW, `/${wRowId}`);
+    expect(status).toBe(200);
+    expect(body.id).toBe(wRowId);
+    expect(body.workspace_id).toBe(wsW);
   });
 
   // ── (b) NEGATIVE — ungranted capability ─────────────────────────────────────
@@ -216,15 +226,15 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   // permission.
   it("(b) principal WITHOUT transactions.view is refused (403) on the read capability", async () => {
     if (!ready) return;
-    const res = await request(appNoPerm).get("/");
-    expect(res.status).toBe(403);
-    expect(res.body.error).toContain("transactions.view");
+    const { status, body } = await GET(appNoPerm, "/");
+    expect(status).toBe(403);
+    expect(body.error).toContain("transactions.view");
   });
 
   it("(b) the same ungranted principal is refused (403) on the detail capability too", async () => {
     if (!ready) return;
-    const res = await request(appNoPerm).get(`/${wRowId}`);
-    expect(res.status).toBe(403);
+    const { status } = await GET(appNoPerm, `/${wRowId}`);
+    expect(status).toBe(403);
   });
 
   // ── (c) NEGATIVE — cross-workspace ──────────────────────────────────────────
@@ -233,16 +243,16 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   // 404. The leak is closed on the capability path, server-side.
   it("(c) W's principal canNOT read V's transaction by id (cross-workspace ⇒ 404)", async () => {
     if (!ready) return;
-    const res = await request(appW).get(`/${vRowId}`);
-    expect(res.status).toBe(404);
+    const { status } = await GET(appW, `/${vRowId}`);
+    expect(status).toBe(404);
   });
 
   it("(c) V's row is invisible to W's list even with a matching search term", async () => {
     if (!ready) return;
     const termV = `${TAG}-V`;
-    const res = await request(appW).get(`/?search=${encodeURIComponent(termV)}`);
-    expect(res.status).toBe(200);
-    const rows = res.body.data as Array<{ id: number }>;
+    const { status, body } = await GET(appW, `/?search=${encodeURIComponent(termV)}`);
+    expect(status).toBe(200);
+    const rows = body.data as Array<{ id: number }>;
     expect(rows.some((r) => r.id === vRowId)).toBe(false);
   });
 
@@ -250,10 +260,10 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   // the workspace clamp biting, not a vacuously-broken query.
   it("(c) V's own principal sees V's row (clamp bites by workspace, not by accident)", async () => {
     if (!ready) return;
-    const res = await request(appV).get(`/${vRowId}`);
-    expect(res.status).toBe(200);
-    expect(res.body.id).toBe(vRowId);
-    expect(res.body.workspace_id).toBe(wsV);
+    const { status, body } = await GET(appV, `/${vRowId}`);
+    expect(status).toBe(200);
+    expect(body.id).toBe(vRowId);
+    expect(body.workspace_id).toBe(wsV);
   });
 
   // ── (d) NEGATIVE — forged / zero delegation ─────────────────────────────────
@@ -270,12 +280,14 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
     // appNoPerm's identity carries NO transactions.view; a client cannot inject
     // it — these headers are advisory and never feed requirePermission, which
     // reads only the kernel-verified permissions[].
-    const res = await request(appNoPerm)
-      .get("/")
-      .set("x-permissions", "transactions.view")
-      .set("x-ks-grant", "transactions:read");
-    expect(res.status).toBe(403);
-    expect(res.body.error).toContain("transactions.view");
+    const { status, body } = await GET(appNoPerm, "/", {
+      headers: {
+        "x-permissions": "transactions.view",
+        "x-ks-grant": "transactions:read",
+      },
+    });
+    expect(status).toBe(403);
+    expect(body.error).toContain("transactions.view");
   });
 
   // ── Surface/RLS capability path (real tenant context engaged) ───────────────

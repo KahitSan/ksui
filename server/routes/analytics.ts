@@ -13,19 +13,20 @@
 // transaction_date `date` with NO timezone cast (deliberate). privacyClause
 // calls are unchanged.
 
-import { type Router, type Request, type Response, type RequestHandler } from "express";
+import { Hono, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { listSubscriptions, renewSubscription, RenewError } from "../lib/subscriptions.js";
 import { privacyClause } from "./shared.js";
+import { ctxGet } from "../types.js";
 
 export type AnalyticsRouteCtx = {
   pool: PluginDb;
-  requireAuth: RequestHandler;
-  requireWorkspace: RequestHandler;
-  requirePermission: (...codes: string[]) => RequestHandler;
+  requireAuth: MiddlewareHandler;
+  requireWorkspace: MiddlewareHandler;
+  requirePermission: (...codes: string[]) => MiddlewareHandler;
 };
 
-export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx): void {
+export function registerAnalyticsRoutes(router: Hono, ctx: AnalyticsRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Subscriptions (recurring-revenue view over line items) ───────────────
@@ -39,12 +40,12 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
-        res.json(await listSubscriptions(pool, req, privacyClause));
+        return c.json(await listSubscriptions(pool, c, privacyClause));
       } catch (err) {
         console.error("[transactions] subscriptions list error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -55,22 +56,21 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.create"),
-    async (req: Request, res: Response) => {
-      const sourceId = parseInt(String(req.params.line_item_id), 10);
+    async (c) => {
+      const sourceId = parseInt(String(c.req.param("line_item_id")), 10);
       if (!Number.isInteger(sourceId) || sourceId <= 0) {
-        res.status(400).json({ error: "line_item_id is required" });
-        return;
+        return c.json({ error: "line_item_id is required" }, 400);
       }
       try {
-        const out = await renewSubscription(pool, req, sourceId, req.body ?? {});
-        res.status(201).json(out);
+        const out = await renewSubscription(pool, c, sourceId, await c.req.json() ?? {});
+        return c.json(out, 201);
       } catch (err) {
         if (err instanceof RenewError) {
-          res.status(err.status).json({ error: err.message });
+          return c.json({ error: err.message }, (err as any).status);
           return;
         }
         console.error("[transactions] subscriptions renew error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -82,11 +82,11 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
-        const params: unknown[] = [req.workspaceId];
+        const params: unknown[] = [ctxGet(c, "workspaceId")];
         const conditions = ["t.workspace_id = $1", "t.created_by IS NOT NULL"];
-        const priv = privacyClause(req, params, 2);
+        const priv = privacyClause(c, params, 2);
         if (priv) conditions.push(priv);
         // created_by names come from the kernel "user" table, which the plugin
         // never reads. We return the distinct creator ids + counts; the host UI
@@ -99,10 +99,10 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
             ORDER BY last_used DESC NULLS LAST`,
           params,
         );
-        res.json({ creators: result.rows });
+        return c.json({ creators: result.rows });
       } catch (err) {
         console.error("[transactions] creators error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -112,15 +112,15 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
-        const params: unknown[] = [req.workspaceId];
+        const params: unknown[] = [ctxGet(c, "workspaceId")];
         const conditions = [
           "t.workspace_id = $1",
           "t.status != 'voided'",
           "t.subcategory IS NOT NULL",
         ];
-        const priv = privacyClause(req, params, 2);
+        const priv = privacyClause(c, params, 2);
         if (priv) conditions.push(priv);
         const result = await pool.query(
           `SELECT t.subcategory AS subcategory, COUNT(*)::int AS count
@@ -129,10 +129,10 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
             GROUP BY t.subcategory`,
           params,
         );
-        res.json({ counts: result.rows });
+        return c.json({ counts: result.rows });
       } catch (err) {
         console.error("[transactions] subcategory-counts error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -153,14 +153,14 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
-      const dateFrom = req.query.dateFrom as string | undefined;
-      const dateTo = req.query.dateTo as string | undefined;
+    async (c) => {
+      const dateFrom = c.req.query("dateFrom") as string | undefined;
+      const dateTo = c.req.query("dateTo") as string | undefined;
 
       try {
-        const params: unknown[] = [req.workspaceId];
+        const params: unknown[] = [ctxGet(c, "workspaceId")];
         const conditions = ["t.workspace_id = $1", "t.status != 'voided'"];
-        const priv = privacyClause(req, params, params.length + 1);
+        const priv = privacyClause(c, params, params.length + 1);
         if (priv) conditions.push(priv);
 
         if (dateFrom) {
@@ -206,10 +206,10 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
         // Count private rows hidden from the current user. Skip entirely when
         // the caller bypasses privacy (admin/superuser) — the count is always 0.
         let privateHidden = 0;
-        const privParams: unknown[] = [req.workspaceId];
-        const privFrag = privacyClause(req, [], 0); // probe: null => caller bypasses
+        const privParams: unknown[] = [ctxGet(c, "workspaceId")];
+        const privFrag = privacyClause(c, [], 0); // probe: null => caller bypasses
         if (privFrag) {
-          const userId = req.user?.id ?? "";
+          const userId = ctxGet(c, "user")?.id ?? "";
           const privConditions = [
             "t.workspace_id = $1",
             "t.status != 'voided'",
@@ -218,7 +218,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
             `NOT EXISTS (SELECT 1 FROM accounts.transaction_visibility tv WHERE tv.transaction_id = t.id AND tv.user_id = $2)`,
             `NOT EXISTS (SELECT 1 FROM accounts.transaction_visibility_role tvr WHERE tvr.transaction_id = t.id AND tvr.role_code = $3)`,
           ];
-          privParams.push(userId, req.wsRole ?? "");
+          privParams.push(userId, ctxGet(c, "wsRole") ?? "");
           if (dateFrom) {
             privParams.push(dateFrom);
             privConditions.push(`t.transaction_date >= $${privParams.length}`);
@@ -234,10 +234,10 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
           privateHidden = Number(privResult.rows[0].count);
         }
 
-        res.json({ ...summary, _privateHidden: privateHidden });
+        return c.json({ ...summary, _privateHidden: privateHidden });
       } catch (err) {
         console.error("[transactions] summary error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -260,14 +260,14 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
-      const dateFrom = req.query.dateFrom as string | undefined;
-      const dateTo = req.query.dateTo as string | undefined;
+    async (c) => {
+      const dateFrom = c.req.query("dateFrom") as string | undefined;
+      const dateTo = c.req.query("dateTo") as string | undefined;
 
       try {
-        const params: unknown[] = [req.workspaceId];
+        const params: unknown[] = [ctxGet(c, "workspaceId")];
         const conditions = ["t.workspace_id = $1", "t.status != 'voided'"];
-        const priv = privacyClause(req, params, params.length + 1);
+        const priv = privacyClause(c, params, params.length + 1);
         if (priv) conditions.push(priv);
 
         if (dateFrom) {
@@ -297,7 +297,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
           params,
         );
 
-        res.json({
+        return c.json({
           buckets: (
             result.rows as { date: string; in_amt: string; out_amt: string; transfer_amt: string }[]
           ).map((r) => ({
@@ -309,7 +309,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
         });
       } catch (err) {
         console.error("[transactions] cashflow error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -331,10 +331,10 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
-      const dateFrom = req.query.dateFrom as string | undefined;
-      const dateTo = req.query.dateTo as string | undefined;
-      const bucketMinutes = req.query.bucketMinutes === "30" ? 30 : 60;
+    async (c) => {
+      const dateFrom = c.req.query("dateFrom") as string | undefined;
+      const dateTo = c.req.query("dateTo") as string | undefined;
+      const bucketMinutes = c.req.query("bucketMinutes") === "30" ? 30 : 60;
 
       // Bucketing + date filtering happen in the workspace's local timezone so the
       // chart's "hour of day" matches the operator's wall clock. Hardcoded
@@ -342,7 +342,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
       const ORG_TZ = "Asia/Manila";
 
       try {
-        const params: unknown[] = [req.workspaceId];
+        const params: unknown[] = [ctxGet(c, "workspaceId")];
         // Line items inherit the parent transaction's privacy posture, so we
         // join up to the transaction and apply the same visibility rules.
         const baseConds = [
@@ -351,7 +351,7 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
           "li.status != 'voided'",
           "t.status != 'voided'",
         ];
-        const priv = privacyClause(req, params, params.length + 1);
+        const priv = privacyClause(c, params, params.length + 1);
         if (priv) baseConds.push(priv);
 
         const dateFromIdx = dateFrom ? (params.push(dateFrom), params.length) : null;
@@ -421,10 +421,10 @@ export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx):
           return { hour, minute, in: ins.get(i) ?? 0, out: outs.get(i) ?? 0 };
         });
 
-        res.json({ buckets, bucketMinutes });
+        return c.json({ buckets, bucketMinutes });
       } catch (err) {
         console.error("[transactions] by-hour error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
