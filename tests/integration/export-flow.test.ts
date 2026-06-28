@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import express from "express";
+import { Hono } from "hono";
 import request from "supertest";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
@@ -47,7 +47,7 @@ vi.mock("@kahitsan/plugin-server-utils", async (importOriginal) => {
 const TEST_ORG = 3;
 const SCHEMAS = ["accounts"];
 
-let app: express.Express;
+let app: any;
 let pool: pg.Pool;
 let rollback: () => Promise<void>;
 
@@ -93,9 +93,8 @@ beforeAll(async () => {
     requireWorkspace,
     requirePermission,
   });
-  app = express();
-  app.use(express.json());
-  app.use(router);
+  app = new Hono() as any;
+    app.route("/", router);
 });
 
 afterAll(async () => {

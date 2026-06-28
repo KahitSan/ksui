@@ -1,5 +1,5 @@
+import type { Context } from "hono";
 import { describe, expect, it } from "vitest";
-import type { Request } from "express";
 import {
   SORTABLE_COLUMNS,
   VALID_CATEGORIES,
@@ -74,11 +74,11 @@ describe("escapeLike", () => {
 
 describe("privacyClause", () => {
   // Minimal req stub carrying only the fields privacyClause reads.
-  const req = (over: Partial<{ wsRole: string; userId: string }> = {}): Request =>
+  const req = (over: Partial<{ wsRole: string; userId: string }> = {}): any =>
     ({
       wsRole: over.wsRole,
       user: over.userId ? { id: over.userId } : undefined,
-    }) as unknown as Request;
+    }) as any;
 
   it("returns null for an admin (admins bypass the privacy filter entirely)", () => {
     const params: unknown[] = [];
@@ -88,7 +88,7 @@ describe("privacyClause", () => {
 
   it("returns null for a superuser (kernel-level bypass)", () => {
     const params: unknown[] = [];
-    const superuserReq = { user: { id: "u1", role: "superuser" } } as unknown as Request;
+    const superuserReq = { user: { id: "u1", role: "superuser" } } as any;
     expect(privacyClause(superuserReq, params, 5)).toBeNull();
   });
 

@@ -35,7 +35,7 @@
 // RPC (lib/peers.ts) with graceful degradation when a peer plugin is absent —
 // transactions never reaches into another plugin's schema with raw SQL.
 
-import { Router, type RequestHandler } from "express";
+import { Hono, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { validateVoucher } from "./lib/peers.js";
 import { appliesToFor } from "./lib/transaction-subcategories.js";
@@ -49,13 +49,13 @@ import { registerExportRoutes } from "./routes/export.js";
 
 export type RouterDeps = {
   db: PluginDb;
-  requireAuth: RequestHandler;
-  requireWorkspace: RequestHandler;
-  requirePermission: (...codes: string[]) => RequestHandler;
+  requireAuth: MiddlewareHandler;
+  requireWorkspace: MiddlewareHandler;
+  requirePermission: (...codes: string[]) => MiddlewareHandler;
 };
 
-export function buildRouter(deps: RouterDeps): Router {
-  const router = Router();
+export function buildRouter(deps: RouterDeps): Hono {
+  const router = new Hono();
   const { db: pool, requireAuth, requireWorkspace, requirePermission } = deps;
 
   // ── Subcategory taxonomy (formerly /api/transaction-subcategories) ───────

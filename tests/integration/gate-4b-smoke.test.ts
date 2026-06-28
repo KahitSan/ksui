@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import express from "express";
+import { Hono } from "hono";
 import request from "supertest";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
@@ -66,13 +66,13 @@ let vRowId = 0;
 // One app per identity — stubMiddleware binds a FIXED identity, so a different
 // workspace / permission set needs its own router instance over the SAME
 // rollback db (all reads/writes share the one outer transaction).
-let appW: express.Express; // workspace W, holds transactions.view
-let appV: express.Express; // workspace V, holds transactions.view (the foreign tenant)
-let appNoPerm: express.Express; // workspace W, holds NO transactions.* permission
+let appW: any; // workspace W, holds transactions.view
+let appV: any; // workspace V, holds transactions.view (the foreign tenant)
+let appNoPerm: any; // workspace W, holds NO transactions.* permission
 
 let ready = false;
 
-function mountApp(workspaceId: number, permissions: string[]): express.Express {
+function mountApp(workspaceId: number, permissions: string[]): Hono {
   const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId,
     userId,
@@ -86,9 +86,8 @@ function mountApp(workspaceId: number, permissions: string[]): express.Express {
     requireWorkspace,
     requirePermission,
   });
-  const app = express();
-  app.use(express.json());
-  app.use(router);
+  const app = new Hono();
+    app.route("/", router);
   return app;
 }
 

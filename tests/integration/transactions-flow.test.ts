@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import express from "express";
+import { Hono } from "hono";
+import { serve } from "@hono/node-server";
 import request from "supertest";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
@@ -34,7 +35,7 @@ vi.mock("../../server/lib/peers.js", () => ({
 const TEST_ORG = 3;
 const SCHEMAS = ["accounts"];
 
-let app: express.Express;
+let app: Hono;
 let pool: pg.Pool;
 let rollback: () => Promise<void>;
 
@@ -89,19 +90,19 @@ beforeAll(async () => {
     requireWorkspace,
     requirePermission,
   });
-  app = express();
-  app.use(express.json());
-  // The F3 data surface reads the workspace from the ambient tenant context
+  const honoApp = new Hono();
+  app = serve({ fetch: honoApp.fetch, port: 0 }) as any;
+    // The F3 data surface reads the workspace from the ambient tenant context
   // (set by withTenantContext in prod). The stub middleware doesn't establish
   // that ALS scope, so wrap each request in runWithTenantContext here, matching
   // the stubbed identity, or the surface-backed routes fail-closed.
-  app.use((_req, _res, next) =>
+  app.use((_c, next) =>
     runWithTenantContext(
       { wsId: TEST_ORG, userId, role: "superuser", wsRole: "admin" },
       () => next(),
     ),
   );
-  app.use(router);
+  app.route("/", router);
 });
 
 afterAll(async () => {
@@ -117,7 +118,7 @@ describe("transactions flow: list → create → list → detail → void (real 
   let newId: number;
 
   it("lists existing transactions for the active org", async () => {
-    const res = await request(app).get("/");
+    const res = await request(app as any).get("/");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
     // CI starts with an empty database; local dev may have prod data.
@@ -125,7 +126,7 @@ describe("transactions flow: list → create → list → detail → void (real 
   });
 
   it("creates a manual expense scoped to the active org", async () => {
-    const res = await request(app).post("/").send({
+    const res = await request(app as any).post("/").send({
       category: "expense",
       amount: "99.99",
       description: desc,
@@ -137,7 +138,7 @@ describe("transactions flow: list → create → list → detail → void (real 
   });
 
   it("the new transaction appears in the org-scoped list", async () => {
-    const res = await request(app).get(`/?search=${encodeURIComponent(desc)}`);
+    const res = await request(app as any).get(`/?search=${encodeURIComponent(desc)}`);
     expect(res.status).toBe(200);
     const found = (res.body.data as Array<{ id: number; description: string }>).find(
       (t) => t.description === desc,
@@ -147,7 +148,7 @@ describe("transactions flow: list → create → list → detail → void (real 
   });
 
   it("opens detail with 200 + customer_groups (the regression contract)", async () => {
-    const res = await request(app).get(`/${newId}`);
+    const res = await request(app as any).get(`/${newId}`);
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(newId);
     // Mirrors the e2e guard: detail must not 500 on customer_group resolution.
@@ -155,12 +156,12 @@ describe("transactions flow: list → create → list → detail → void (real 
   });
 
   it("voids (soft-deletes) the transaction", async () => {
-    const res = await request(app).delete(`/${newId}`);
+    const res = await request(app as any).delete(`/${newId}`);
     expect(res.status).toBe(204);
   });
 
   it("a voided transaction leaves the default active list", async () => {
-    const res = await request(app).get(`/?search=${encodeURIComponent(desc)}`);
+    const res = await request(app as any).get(`/?search=${encodeURIComponent(desc)}`);
     expect(res.status).toBe(200);
     const found = (res.body.data as Array<{ id: number }>).find((t) => t.id === newId);
     expect(found, "voided transaction must not appear in the active list").toBeUndefined();

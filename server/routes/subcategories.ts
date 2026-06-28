@@ -6,18 +6,18 @@
 // mounts them onto the passed router under the same paths and middleware chain;
 // the call site in buildRouter registers them in the same position as before.
 
-import { type Router, type Request, type Response, type RequestHandler } from "express";
+import { Hono, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { listSubcategories, type AppliesTo } from "../lib/transaction-subcategories.js";
 
 export type SubcategoryRouteCtx = {
   pool: PluginDb;
-  requireAuth: RequestHandler;
-  requireWorkspace: RequestHandler;
-  requirePermission: (...codes: string[]) => RequestHandler;
+  requireAuth: MiddlewareHandler;
+  requireWorkspace: MiddlewareHandler;
+  requirePermission: (...codes: string[]) => MiddlewareHandler;
 };
 
-export function registerSubcategoryRoutes(router: Router, ctx: SubcategoryRouteCtx): void {
+export function registerSubcategoryRoutes(router: Hono, ctx: SubcategoryRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Subcategory taxonomy (formerly /api/transaction-subcategories) ───────
@@ -27,18 +27,17 @@ export function registerSubcategoryRoutes(router: Router, ctx: SubcategoryRouteC
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (req: Request, res: Response) => {
-      const appliesTo = req.query.applies_to as string | undefined;
+    async (c) => {
+      const appliesTo = c.req.query("applies_to") as string | undefined;
       if (appliesTo !== "income" && appliesTo !== "expense") {
-        res.status(400).json({ error: "applies_to must be 'income' or 'expense'" });
-        return;
+        return c.json({ error: "applies_to must be 'income' or 'expense'" }, 400);
       }
       try {
         const rows = await listSubcategories(pool, appliesTo as AppliesTo);
-        res.json({ subcategories: rows });
+        return c.json({ subcategories: rows });
       } catch (err) {
         console.error("[transactions] subcategories list error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -48,15 +47,13 @@ export function registerSubcategoryRoutes(router: Router, ctx: SubcategoryRouteC
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (req: Request, res: Response) => {
-      const { name, applies_to, sort_order } = req.body ?? {};
+    async (c) => {
+      const { name, applies_to, sort_order } = await c.req.json() ?? {};
       if (!name || typeof name !== "string" || !name.trim()) {
-        res.status(400).json({ error: "name is required" });
-        return;
+        return c.json({ error: "name is required" }, 400);
       }
       if (applies_to !== "income" && applies_to !== "expense") {
-        res.status(400).json({ error: "applies_to must be 'income' or 'expense'" });
-        return;
+        return c.json({ error: "applies_to must be 'income' or 'expense'" }, 400);
       }
       try {
         const result = await pool.query(
@@ -66,10 +63,10 @@ export function registerSubcategoryRoutes(router: Router, ctx: SubcategoryRouteC
              RETURNING *`,
           [name.trim(), applies_to, Number.isFinite(sort_order) ? sort_order : 0],
         );
-        res.status(201).json(result.rows[0]);
+        return c.json(result.rows[0], 201);
       } catch (err) {
         console.error("[transactions] subcategory create error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -79,15 +76,14 @@ export function registerSubcategoryRoutes(router: Router, ctx: SubcategoryRouteC
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (req: Request, res: Response) => {
-      const { name, sort_order, is_active } = req.body ?? {};
+    async (c) => {
+      const { name, sort_order, is_active } = await c.req.json() ?? {};
       const sets: string[] = [];
       const params: unknown[] = [];
       let idx = 1;
       if (name !== undefined) {
         if (typeof name !== "string" || !name.trim()) {
-          res.status(400).json({ error: "name cannot be empty" });
-          return;
+          return c.json({ error: "name cannot be empty" }, 400);
         }
         sets.push(`name = $${idx++}`);
         params.push(name.trim());
@@ -101,24 +97,22 @@ export function registerSubcategoryRoutes(router: Router, ctx: SubcategoryRouteC
         params.push(Boolean(is_active));
       }
       if (sets.length === 0) {
-        res.status(400).json({ error: "No fields to update" });
-        return;
+        return c.json({ error: "No fields to update" }, 400);
       }
       sets.push("updated_at = NOW()");
-      params.push(parseInt(String(req.params.id), 10));
+      params.push(parseInt(String(c.req.param("id")), 10));
       try {
         const result = await pool.query(
           `UPDATE transaction_subcategories SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`,
           params,
         );
         if (result.rows.length === 0) {
-          res.status(404).json({ error: "Not found" });
-          return;
+          return c.json({ error: "Not found" }, 404);
         }
-        res.json(result.rows[0]);
+        return c.json(result.rows[0]);
       } catch (err) {
         console.error("[transactions] subcategory update error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
@@ -128,20 +122,19 @@ export function registerSubcategoryRoutes(router: Router, ctx: SubcategoryRouteC
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (req: Request, res: Response) => {
+    async (c) => {
       try {
         const result = await pool.query(
           `UPDATE transaction_subcategories SET is_active = FALSE, updated_at = NOW() WHERE id = $1 RETURNING id`,
-          [parseInt(String(req.params.id), 10)],
+          [parseInt(String(c.req.param("id")), 10)],
         );
         if (result.rows.length === 0) {
-          res.status(404).json({ error: "Not found" });
-          return;
+          return c.json({ error: "Not found" }, 404);
         }
-        res.status(204).send();
+        return c.body(null, 204);
       } catch (err) {
         console.error("[transactions] subcategory delete error:", err);
-        res.status(500).json({ error: "Internal server error" });
+        return c.json({ error: "Internal server error" }, 500);
       }
     },
   );
