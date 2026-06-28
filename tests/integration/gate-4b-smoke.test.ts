@@ -1,10 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
-import { testClient } from "hono/testing";
-import type { Client } from "hono/testing";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { makeDatabaseService, makeDataSurface } from "@kahitsan/plugin-sdk";
+import { makeDatabaseService, makeDataSurface, runWithTenantContext as sdkRunWithTenantContext } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
 import { runWithTenantContext } from "@ks-erp/kernel/services/tenant-context";
@@ -25,9 +23,9 @@ import { runWithTenantContext } from "@ks-erp/kernel/services/tenant-context";
 //                importable from a plugin; what IS reachable is the capability's
 //                OWN enforcement surface — the gated route + the workspace clamp —
 //                which is what this suite exercises. See `notes` for the gap.
-//   transport  → the request rides testClient through the real Express router the
-//                kernel proxy mounts in prod (buildRouter), so the assertions are
-//                on the wire shape, not an in-process function call.
+//   transport  → the request rides through the real Hono router the kernel proxy
+//                mounts in prod (buildRouter), so the assertions are on the wire
+//                shape, not an in-process function call.
 //
 // The data wall is the route's explicit `AND workspace_id = $N` — the ONLY tenant
 // gate that holds for a process-isolated plugin (the stub establishes no tenant
@@ -64,16 +62,16 @@ let userId = "";
 let wRowId = 0;
 let vRowId = 0;
 
-// One client per identity — stubMiddleware binds a FIXED identity, so a different
-// workspace / permission set needs its own router instance over the SAME
-// rollback db (all reads/writes share the one outer transaction).
-let clientW: ReturnType<typeof mountApp>;
-let clientV: ReturnType<typeof mountApp>;
-let clientNoPerm: ReturnType<typeof mountApp>;
+// One Hono app per identity — stubMiddleware binds a FIXED identity, so a
+// different workspace / permission set needs its own router instance over the
+// SAME rollback db (all reads/writes share the one outer transaction).
+let appW: Hono;
+let appV: Hono;
+let appNoPerm: Hono;
 
 let ready = false;
 
-function mountApp(workspaceId: number, permissions: string[]) {
+function mountApp(workspaceId: number, permissions: string[]): Hono {
   const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId,
     userId,
@@ -95,7 +93,14 @@ function mountApp(workspaceId: number, permissions: string[]) {
     ),
   );
   honoApp.route("/", router);
-  return testClient(honoApp);
+  return honoApp;
+}
+
+/** Convenience: make a GET request against a Hono app and parse JSON. */
+async function GET(app: Hono, path: string, init?: RequestInit) {
+  const res = await app.request(path, init);
+  const body = await res.json().catch(() => undefined);
+  return { status: res.status, body };
 }
 
 beforeAll(async () => {
@@ -169,9 +174,9 @@ beforeAll(async () => {
   wRowId = w.rows[0].id;
   vRowId = v.rows[0].id;
 
-  clientW = mountApp(wsW, ["transactions.view"]);
-  clientV = mountApp(wsV, ["transactions.view"]);
-  clientNoPerm = mountApp(wsW, ["clients.view"]); // a real code from another plugin — NOT transactions.view
+  appW = mountApp(wsW, ["transactions.view"]);
+  appV = mountApp(wsV, ["transactions.view"]);
+  appNoPerm = mountApp(wsW, ["clients.view"]); // a real code from another plugin — NOT transactions.view
 
   ready = wsW !== wsV;
 });
@@ -196,9 +201,8 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   it("(a) principal with transactions.view in W reads the list capability and sees only W's row", async () => {
     if (!ready) return;
     const term = `${TAG}-`;
-    const res = await clientW.get(`/?search=${encodeURIComponent(term)}`);
-    const body = await res.json();
-    expect(res.status).toBe(200);
+    const { status, body } = await GET(appW, `/?search=${encodeURIComponent(term)}`);
+    expect(status).toBe(200);
     const rows = body.data as Array<{ id: number; workspace_id: number; description: string }>;
     // The W row is present…
     expect(rows.some((r) => r.id === wRowId)).toBe(true);
@@ -209,9 +213,8 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
 
   it("(a) the same principal resolves W's row on the detail capability (GET /:id ⇒ 200)", async () => {
     if (!ready) return;
-    const res = await clientW.get(`/${wRowId}`);
-    const body = await res.json();
-    expect(res.status).toBe(200);
+    const { status, body } = await GET(appW, `/${wRowId}`);
+    expect(status).toBe(200);
     expect(body.id).toBe(wRowId);
     expect(body.workspace_id).toBe(wsW);
   });
@@ -224,16 +227,15 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   // permission.
   it("(b) principal WITHOUT transactions.view is refused (403) on the read capability", async () => {
     if (!ready) return;
-    const res = await clientNoPerm.get("/");
-    const body = await res.json();
-    expect(res.status).toBe(403);
+    const { status, body } = await GET(appNoPerm, "/");
+    expect(status).toBe(403);
     expect(body.error).toContain("transactions.view");
   });
 
   it("(b) the same ungranted principal is refused (403) on the detail capability too", async () => {
     if (!ready) return;
-    const res = await clientNoPerm.get(`/${wRowId}`);
-    expect(res.status).toBe(403);
+    const { status } = await GET(appNoPerm, `/${wRowId}`);
+    expect(status).toBe(403);
   });
 
   // ── (c) NEGATIVE — cross-workspace ──────────────────────────────────────────
@@ -242,16 +244,15 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   // 404. The leak is closed on the capability path, server-side.
   it("(c) W's principal canNOT read V's transaction by id (cross-workspace ⇒ 404)", async () => {
     if (!ready) return;
-    const res = await clientW.get(`/${vRowId}`);
-    expect(res.status).toBe(404);
+    const { status } = await GET(appW, `/${vRowId}`);
+    expect(status).toBe(404);
   });
 
   it("(c) V's row is invisible to W's list even with a matching search term", async () => {
     if (!ready) return;
     const termV = `${TAG}-V`;
-    const res = await clientW.get(`/?search=${encodeURIComponent(termV)}`);
-    const body = await res.json();
-    expect(res.status).toBe(200);
+    const { status, body } = await GET(appW, `/?search=${encodeURIComponent(termV)}`);
+    expect(status).toBe(200);
     const rows = body.data as Array<{ id: number }>;
     expect(rows.some((r) => r.id === vRowId)).toBe(false);
   });
@@ -260,9 +261,8 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   // the workspace clamp biting, not a vacuously-broken query.
   it("(c) V's own principal sees V's row (clamp bites by workspace, not by accident)", async () => {
     if (!ready) return;
-    const res = await clientV.get(`/${vRowId}`);
-    const body = await res.json();
-    expect(res.status).toBe(200);
+    const { status, body } = await GET(appV, `/${vRowId}`);
+    expect(status).toBe(200);
     expect(body.id).toBe(vRowId);
     expect(body.workspace_id).toBe(wsV);
   });
@@ -278,17 +278,16 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   // route reads the kernel-verified permissions[], never a request-supplied one.
   it("(d) a forged client header claiming the grant does NOT bypass the server gate (403)", async () => {
     if (!ready) return;
-    // clientNoPerm's identity carries NO transactions.view; a client cannot inject
+    // appNoPerm's identity carries NO transactions.view; a client cannot inject
     // it — these headers are advisory and never feed requirePermission, which
     // reads only the kernel-verified permissions[].
-    const res = await clientNoPerm.get("/", {
+    const { status, body } = await GET(appNoPerm, "/", {
       headers: {
         "x-permissions": "transactions.view",
         "x-ks-grant": "transactions:read",
       },
     });
-    const body = await res.json();
-    expect(res.status).toBe(403);
+    expect(status).toBe(403);
     expect(body.error).toContain("transactions.view");
   });
 
@@ -330,7 +329,7 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
     try {
       const surface = () => makeDataSurface(makeDatabaseService(pool, ["accounts"]));
       const asW = <T>(fn: () => Promise<T>) =>
-        runWithTenantContext({ wsId: wsW, userId, role: "member", wsRole: "member" }, fn);
+        sdkRunWithTenantContext({ wsId: wsW, userId, role: "member", wsRole: "member" }, fn);
 
       // POSITIVE: W's own row resolves.
       const ownRows = await asW(() =>
