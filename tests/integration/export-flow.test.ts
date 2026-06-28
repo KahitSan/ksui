@@ -1,12 +1,27 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
-import { testClient } from "hono/testing";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { todayInOrgTimezone } from "../../server/lib/backdate.js";
 import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
 import { runWithTenantContext } from "@kahitsan/plugin-sdk";
+
+/** Make an HTTP request against a Hono app and return status + json accessor. */
+async function request(
+  app: Hono,
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<{ status: number; json: () => Promise<unknown>; headers: Headers }> {
+  const init: RequestInit = { method };
+  if (body !== undefined) {
+    init.headers = { "Content-Type": "application/json" };
+    init.body = JSON.stringify(body);
+  }
+  const res = await app.request(path, init);
+  return { status: res.status, json: () => res.json(), headers: res.headers };
+}
 
 // Same posture as transactions-flow: peer name resolution is out of scope, so
 // every cross-plugin resolver returns its degraded null (the export then leaves
@@ -49,7 +64,6 @@ const TEST_ORG = 3;
 const SCHEMAS = ["accounts"];
 
 let honoApp: Hono;
-let client: any;
 let pool: pg.Pool;
 let rollback: () => Promise<void>;
 
@@ -103,7 +117,6 @@ beforeAll(async () => {
     ),
   );
   honoApp.route("/", router);
-  client = testClient(honoApp);
 });
 
 afterAll(async () => {
@@ -116,8 +129,8 @@ afterAll(async () => {
 async function waitForJob(jobId: string, timeoutMs = 8000): Promise<Record<string, unknown>> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const res = await client.get("/export");
-    const body = await res.json();
+    const res = await request(honoApp, "GET", "/export");
+    const body = (await res.json()) as Record<string, unknown>;
     const job = (body.jobs as Array<Record<string, unknown>>).find((j) => j.id === jobId);
     if (job && (job.status === "done" || job.status === "error")) return job;
     await new Promise((r) => setTimeout(r, 150));
@@ -130,8 +143,9 @@ describe("transactions CSV export: create → poll → download (real Postgres)"
   const desc = `integ-export-${Date.now()}`;
 
   it("rejects an inverted date range", async () => {
-    const res = await client.post("/export", {
-      body: { dateFrom: today, dateTo: "2000-01-01" },
+    const res = await request(honoApp, "POST", "/export", {
+      dateFrom: today,
+      dateTo: "2000-01-01",
     });
     expect(res.status).toBe(400);
   });
@@ -139,20 +153,20 @@ describe("transactions CSV export: create → poll → download (real Postgres)"
   it("exports a detailed CSV that includes a freshly-created row", async () => {
     // Seed one row inside the export window so the assertion is meaningful even
     // on an empty CI database.
-    const create = await client.post("/", {
-      body: {
-        category: "expense",
-        amount: "42.50",
-        description: desc,
-        transaction_date: today,
-      },
+    const create = await request(honoApp, "POST", "/", {
+      category: "expense",
+      amount: "42.50",
+      description: desc,
+      transaction_date: today,
     });
     expect(create.status).toBe(201);
 
-    const start = await client.post("/export", {
-      body: { dateFrom: today, dateTo: today, consolidate: false },
+    const start = await request(honoApp, "POST", "/export", {
+      dateFrom: today,
+      dateTo: today,
+      consolidate: false,
     });
-    const startBody = await start.json();
+    const startBody = (await start.json()) as Record<string, unknown>;
     expect(start.status).toBe(200);
     const jobId = startBody.jobId as string;
     expect(typeof jobId).toBe("string");
@@ -161,18 +175,20 @@ describe("transactions CSV export: create → poll → download (real Postgres)"
     expect(job.status, JSON.stringify(job)).toBe("done");
     expect(job.filename).toContain(today);
 
-    const dl = await client.get(`/export/${jobId}/download`);
-    expect(dl.status).toBe(200);
-    expect(dl.headers.get("content-type")).toContain("text/csv");
-    expect(dl.headers.get("content-disposition")).toContain("attachment");
+    const dlRes = await honoApp.request(`/export/${jobId}/download`);
+    expect(dlRes.status).toBe(200);
+    expect(dlRes.headers.get("content-type")).toContain("text/csv");
+    expect(dlRes.headers.get("content-disposition")).toContain("attachment");
     // Header row + the seeded transaction's description must be present.
-    const dlText = await dl.text();
+    const dlText = await dlRes.text();
     expect(dlText.startsWith("Date,Category,Subcategory,Description,Amount")).toBe(true);
     expect(dlText).toContain(desc);
   });
 
   it("404s a download for an unknown job", async () => {
-    const res = await client.get(
+    const res = await request(
+      honoApp,
+      "GET",
       "/export/00000000-0000-0000-0000-000000000000/download",
     );
     expect(res.status).toBe(404);

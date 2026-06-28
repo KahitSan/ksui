@@ -1,12 +1,27 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
-import { testClient } from "hono/testing";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { todayInOrgTimezone } from "../../server/lib/backdate.js";
 import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
 import { runWithTenantContext } from "@kahitsan/plugin-sdk";
+
+/** Make an HTTP request against a Hono app and return status + json accessor. */
+async function request(
+  app: Hono,
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<{ status: number; json: () => Promise<unknown> }> {
+  const init: RequestInit = { method };
+  if (body !== undefined) {
+    init.headers = { "Content-Type": "application/json" };
+    init.body = JSON.stringify(body);
+  }
+  const res = await app.request(path, init);
+  return { status: res.status, json: () => res.json() };
+}
 
 // Peer hydration (package / variant / client / account / payee / voucher names
 // resolved over the kernel RPC) is OUT OF SCOPE for this test — this suite is
@@ -35,7 +50,6 @@ const TEST_ORG = 3;
 const SCHEMAS = ["accounts"];
 
 let honoApp: Hono;
-let client: any;
 let pool: pg.Pool;
 let rollback: () => Promise<void>;
 
@@ -102,7 +116,6 @@ beforeAll(async () => {
     ),
   );
   honoApp.route("/", router);
-  client = testClient(honoApp);
 });
 
 afterAll(async () => {
@@ -118,7 +131,7 @@ describe("transactions flow: list → create → list → detail → void (real 
   let newId: number;
 
   it("lists existing transactions for the active org", async () => {
-    const res = await client.get("/");
+    const res = await request(honoApp, "GET", "/");
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(Array.isArray(body.data)).toBe(true);
@@ -127,13 +140,11 @@ describe("transactions flow: list → create → list → detail → void (real 
   });
 
   it("creates a manual expense scoped to the active org", async () => {
-    const res = await client.post("/", {
-      body: {
-        category: "expense",
-        amount: "99.99",
-        description: desc,
-        transaction_date: todayInOrgTimezone(), // PHT today ⇒ no backdate gate
-      },
+    const res = await request(honoApp, "POST", "/", {
+      category: "expense",
+      amount: "99.99",
+      description: desc,
+      transaction_date: todayInOrgTimezone(), // PHT today ⇒ no backdate gate
     });
     const body = await res.json();
     expect(res.status).toBe(201);
@@ -142,7 +153,7 @@ describe("transactions flow: list → create → list → detail → void (real 
   });
 
   it("the new transaction appears in the org-scoped list", async () => {
-    const res = await client.get(`/?search=${encodeURIComponent(desc)}`);
+    const res = await request(honoApp, "GET", `/?search=${encodeURIComponent(desc)}`);
     const body = await res.json();
     expect(res.status).toBe(200);
     const found = (body.data as Array<{ id: number; description: string }>).find(
@@ -153,7 +164,7 @@ describe("transactions flow: list → create → list → detail → void (real 
   });
 
   it("opens detail with 200 + customer_groups (the regression contract)", async () => {
-    const res = await client.get(`/${newId}`);
+    const res = await request(honoApp, "GET", `/${newId}`);
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.id).toBe(newId);
@@ -162,12 +173,12 @@ describe("transactions flow: list → create → list → detail → void (real 
   });
 
   it("voids (soft-deletes) the transaction", async () => {
-    const res = await client.delete(`/${newId}`);
+    const res = await request(honoApp, "DELETE", `/${newId}`);
     expect(res.status).toBe(204);
   });
 
   it("a voided transaction leaves the default active list", async () => {
-    const res = await client.get(`/?search=${encodeURIComponent(desc)}`);
+    const res = await request(honoApp, "GET", `/?search=${encodeURIComponent(desc)}`);
     const body = await res.json();
     expect(res.status).toBe(200);
     const found = (body.data as Array<{ id: number }>).find((t) => t.id === newId);
