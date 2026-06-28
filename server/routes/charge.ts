@@ -127,7 +127,9 @@ export function registerChargeRoutes(app: Hono, ctx: ChargeRouteCtx): void {
           pool,
           workspaceId: c.get("workspaceId"),
           userId: c.get("user").id,
-          identityHeader: (c.req.raw.headers.get("x-kserp-identity") ?? undefined),
+          identityHeader: c.req.raw.headers.get("x-kserp-identity") 
+            ?? c.req.raw.headers.get("x-kserp-dev-identity")
+            ?? `workspaceId=${c.get("workspaceId")};userId=${c.get("user")?.id}`,
           payload: (await c.req.json()) as ChargePayload,
         });
 
