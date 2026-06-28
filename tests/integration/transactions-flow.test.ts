@@ -13,7 +13,7 @@ async function request(
   method: string,
   path: string,
   body?: unknown,
-): Promise<{ status: number; json: () => Promise<unknown> }> {
+): Promise<{ status: number; json: () => Promise<any> }> {
   const init: RequestInit = { method };
   if (body !== undefined) {
     init.headers = { "Content-Type": "application/json" };
