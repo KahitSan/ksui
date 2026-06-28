@@ -16,7 +16,6 @@
 // calls this last (after Edit), reproducing the original tail order.
 
 import { Hono } from "hono";
-import type { Context } from "hono";
 import { tenant, readIdentity, applyTenantContext, makeDataSurface } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet } from "../types.js";

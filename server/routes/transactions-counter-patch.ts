@@ -9,7 +9,6 @@
 // BEGIN/COMMIT/ROLLBACK unchanged.
 
 import { Hono } from "hono";
-import type { Context } from "hono";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet } from "../types.js";

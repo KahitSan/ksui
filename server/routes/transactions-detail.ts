@@ -14,7 +14,6 @@
 // with graceful degradation.
 
 import { Hono } from "hono";
-import type { Context } from "hono";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {
   findAccountsByIds,

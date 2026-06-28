@@ -1,4 +1,3 @@
-import type { Context } from "hono";
 import { describe, expect, it } from "vitest";
 import {
   SORTABLE_COLUMNS,
