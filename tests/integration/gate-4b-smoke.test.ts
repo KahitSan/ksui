@@ -1,8 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
-import { getRequestListener } from "@hono/node-server";
-import { createServer } from "node:http";
-import request from "supertest";
+import { testClient } from "hono/testing";
+import type { Client } from "hono/testing";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { makeDatabaseService, makeDataSurface } from "@kahitsan/plugin-sdk";
@@ -26,7 +25,7 @@ import { runWithTenantContext } from "@ks-erp/kernel/services/tenant-context";
 //                importable from a plugin; what IS reachable is the capability's
 //                OWN enforcement surface — the gated route + the workspace clamp —
 //                which is what this suite exercises. See `notes` for the gap.
-//   transport  → the request rides supertest through the real Express router the
+//   transport  → the request rides testClient through the real Express router the
 //                kernel proxy mounts in prod (buildRouter), so the assertions are
 //                on the wire shape, not an in-process function call.
 //
@@ -65,16 +64,16 @@ let userId = "";
 let wRowId = 0;
 let vRowId = 0;
 
-// One app per identity — stubMiddleware binds a FIXED identity, so a different
+// One client per identity — stubMiddleware binds a FIXED identity, so a different
 // workspace / permission set needs its own router instance over the SAME
 // rollback db (all reads/writes share the one outer transaction).
-let appW: ReturnType<typeof createServer>; // workspace W, holds transactions.view
-let appV: ReturnType<typeof createServer>; // workspace V, holds transactions.view (the foreign tenant)
-let appNoPerm: ReturnType<typeof createServer>; // workspace W, holds NO transactions.* permission
+let clientW: ReturnType<typeof mountApp>;
+let clientV: ReturnType<typeof mountApp>;
+let clientNoPerm: ReturnType<typeof mountApp>;
 
 let ready = false;
 
-function mountApp(workspaceId: number, permissions: string[]): ReturnType<typeof createServer> {
+function mountApp(workspaceId: number, permissions: string[]) {
   const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId,
     userId,
@@ -96,7 +95,7 @@ function mountApp(workspaceId: number, permissions: string[]): ReturnType<typeof
     ),
   );
   honoApp.route("/", router);
-  return createServer(getRequestListener(honoApp.fetch));
+  return testClient(honoApp);
 }
 
 beforeAll(async () => {
@@ -170,17 +169,14 @@ beforeAll(async () => {
   wRowId = w.rows[0].id;
   vRowId = v.rows[0].id;
 
-  appW = mountApp(wsW, ["transactions.view"]);
-  appV = mountApp(wsV, ["transactions.view"]);
-  appNoPerm = mountApp(wsW, ["clients.view"]); // a real code from another plugin — NOT transactions.view
+  clientW = mountApp(wsW, ["transactions.view"]);
+  clientV = mountApp(wsV, ["transactions.view"]);
+  clientNoPerm = mountApp(wsW, ["clients.view"]); // a real code from another plugin — NOT transactions.view
 
   ready = wsW !== wsV;
 });
 
 afterAll(async () => {
-  await new Promise<void>((resolve) => appW?.close(() => resolve()));
-  await new Promise<void>((resolve) => appV?.close(() => resolve()));
-  await new Promise<void>((resolve) => appNoPerm?.close(() => resolve()));
   if (rollback) await rollback(); // discards both seeded rows
   if (pool) await pool.end();
 });
@@ -200,9 +196,10 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   it("(a) principal with transactions.view in W reads the list capability and sees only W's row", async () => {
     if (!ready) return;
     const term = `${TAG}-`;
-    const res = await request(appW).get(`/?search=${encodeURIComponent(term)}`);
+    const res = await clientW.get(`/?search=${encodeURIComponent(term)}`);
+    const body = await res.json();
     expect(res.status).toBe(200);
-    const rows = res.body.data as Array<{ id: number; workspace_id: number; description: string }>;
+    const rows = body.data as Array<{ id: number; workspace_id: number; description: string }>;
     // The W row is present…
     expect(rows.some((r) => r.id === wRowId)).toBe(true);
     // …and NOTHING from V leaked into W's list.
@@ -212,10 +209,11 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
 
   it("(a) the same principal resolves W's row on the detail capability (GET /:id ⇒ 200)", async () => {
     if (!ready) return;
-    const res = await request(appW).get(`/${wRowId}`);
+    const res = await clientW.get(`/${wRowId}`);
+    const body = await res.json();
     expect(res.status).toBe(200);
-    expect(res.body.id).toBe(wRowId);
-    expect(res.body.workspace_id).toBe(wsW);
+    expect(body.id).toBe(wRowId);
+    expect(body.workspace_id).toBe(wsW);
   });
 
   // ── (b) NEGATIVE — ungranted capability ─────────────────────────────────────
@@ -226,14 +224,15 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   // permission.
   it("(b) principal WITHOUT transactions.view is refused (403) on the read capability", async () => {
     if (!ready) return;
-    const res = await request(appNoPerm).get("/");
+    const res = await clientNoPerm.get("/");
+    const body = await res.json();
     expect(res.status).toBe(403);
-    expect(res.body.error).toContain("transactions.view");
+    expect(body.error).toContain("transactions.view");
   });
 
   it("(b) the same ungranted principal is refused (403) on the detail capability too", async () => {
     if (!ready) return;
-    const res = await request(appNoPerm).get(`/${wRowId}`);
+    const res = await clientNoPerm.get(`/${wRowId}`);
     expect(res.status).toBe(403);
   });
 
@@ -243,16 +242,17 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   // 404. The leak is closed on the capability path, server-side.
   it("(c) W's principal canNOT read V's transaction by id (cross-workspace ⇒ 404)", async () => {
     if (!ready) return;
-    const res = await request(appW).get(`/${vRowId}`);
+    const res = await clientW.get(`/${vRowId}`);
     expect(res.status).toBe(404);
   });
 
   it("(c) V's row is invisible to W's list even with a matching search term", async () => {
     if (!ready) return;
     const termV = `${TAG}-V`;
-    const res = await request(appW).get(`/?search=${encodeURIComponent(termV)}`);
+    const res = await clientW.get(`/?search=${encodeURIComponent(termV)}`);
+    const body = await res.json();
     expect(res.status).toBe(200);
-    const rows = res.body.data as Array<{ id: number }>;
+    const rows = body.data as Array<{ id: number }>;
     expect(rows.some((r) => r.id === vRowId)).toBe(false);
   });
 
@@ -260,10 +260,11 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   // the workspace clamp biting, not a vacuously-broken query.
   it("(c) V's own principal sees V's row (clamp bites by workspace, not by accident)", async () => {
     if (!ready) return;
-    const res = await request(appV).get(`/${vRowId}`);
+    const res = await clientV.get(`/${vRowId}`);
+    const body = await res.json();
     expect(res.status).toBe(200);
-    expect(res.body.id).toBe(vRowId);
-    expect(res.body.workspace_id).toBe(wsV);
+    expect(body.id).toBe(vRowId);
+    expect(body.workspace_id).toBe(wsV);
   });
 
   // ── (d) NEGATIVE — forged / zero delegation ─────────────────────────────────
@@ -277,15 +278,18 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
   // route reads the kernel-verified permissions[], never a request-supplied one.
   it("(d) a forged client header claiming the grant does NOT bypass the server gate (403)", async () => {
     if (!ready) return;
-    // appNoPerm's identity carries NO transactions.view; a client cannot inject
+    // clientNoPerm's identity carries NO transactions.view; a client cannot inject
     // it — these headers are advisory and never feed requirePermission, which
     // reads only the kernel-verified permissions[].
-    const res = await request(appNoPerm)
-      .get("/")
-      .set("x-permissions", "transactions.view")
-      .set("x-ks-grant", "transactions:read");
+    const res = await clientNoPerm.get("/", {
+      headers: {
+        "x-permissions": "transactions.view",
+        "x-ks-grant": "transactions:read",
+      },
+    });
+    const body = await res.json();
     expect(res.status).toBe(403);
-    expect(res.body.error).toContain("transactions.view");
+    expect(body.error).toContain("transactions.view");
   });
 
   // ── Surface/RLS capability path (real tenant context engaged) ───────────────
