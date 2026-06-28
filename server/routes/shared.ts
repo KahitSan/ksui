@@ -5,7 +5,7 @@
 // privacyClause keeps the exact PrivacyClause signature lib/subscriptions.ts
 // expects: (req, params, startIdx) => string | null.
 
-import type { Context as HonoContext } from "hono";
+import type { Request } from "express";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 
 export const SORTABLE_COLUMNS = [
@@ -50,11 +50,11 @@ export async function resolveUserNames(
 // visible to its creator, to a user explicitly shared on it, to a role
 // shared on it, or to an admin/superuser (who bypass entirely). Returns the
 // SQL fragment + the next param index.
-export function privacyClause(c: HonoContext, params: unknown[], startIdx: number): string | null {
-  const isAdmin = c.get("wsRole") === "admin" || c.get("user")?.role === "superuser";
+export function privacyClause(req: Request, params: unknown[], startIdx: number): string | null {
+  const isAdmin = req.wsRole === "admin" || req.user?.role === "superuser";
   if (isAdmin) return null;
-  const userId = c.get("user")?.id ?? "";
+  const userId = req.user?.id ?? "";
   const frag = `(t.is_private = false OR t.created_by = $${startIdx} OR EXISTS (SELECT 1 FROM accounts.transaction_visibility tv WHERE tv.transaction_id = t.id AND tv.user_id = $${startIdx}) OR EXISTS (SELECT 1 FROM accounts.transaction_visibility_role tvr WHERE tvr.transaction_id = t.id AND tvr.role_code = $${startIdx + 1}))`;
-  params.push(userId, c.get("wsRole") ?? "");
+  params.push(userId, req.wsRole ?? "");
   return frag;
 }

@@ -1,6 +1,6 @@
 // GET /:id detail handler — the fully enriched single-transaction read.
 //
-// registerTransactionDetailRoute mounts app.get("/:id", ...) and registers
+// registerTransactionDetailRoute mounts router.get("/:id", ...) and registers
 // in its original position BETWEEN the Create and Edit registrars so the
 // Express match order for the several '/:id' routes is byte-for-byte preserved.
 //
@@ -13,7 +13,8 @@
 // scoping. Cross-plugin data is resolved over the kernel RPC (lib/peers.ts)
 // with graceful degradation.
 
-import { type Hono, type Context as HonoContext } from "hono";
+import { type Router, type Request, type Response } from "express";
+import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {
   findAccountsByIds,
   findPackagesByIds,
@@ -24,16 +25,16 @@ import {
 import { resolveUserNames } from "./shared.js";
 import type { CoreRouteCtx } from "./transactions-core.js";
 
-export function registerTransactionDetailRoute(app: Hono, ctx: CoreRouteCtx): void {
+export function registerTransactionDetailRoute(router: Router, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Detail ────────────────────────────────────────────────────────────
-  app.get(
+  router.get(
     "/:id",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (c: HonoContext) => {
+    async (req: Request, res: Response) => {
       try {
         const result = await pool.query(
           `SELECT t.*,
@@ -53,27 +54,27 @@ export function registerTransactionDetailRoute(app: Hono, ctx: CoreRouteCtx): vo
               FROM accounts.transaction_payments tp WHERE tp.transaction_id = t.id
           ) paid ON true
           WHERE t.id = $1 AND t.workspace_id = $2`,
-          [c.req.param("id"), c.get("workspaceId")],
+          [req.params.id, req.workspaceId],
         );
         if (result.rows.length === 0) {
-          return c.json({ error: "Not found" }, 404);
+          res.status(404).json({ error: "Not found" });
           return;
         }
         const txn = result.rows[0];
-        const idh = (c.req.raw.headers.get("x-kserp-identity") ?? undefined);
+        const idh = identityHeaderOf(req);
 
         // Privacy check.
-        const isAdmin = c.get("wsRole") === "admin" || c.get("user")?.role === "superuser";
-        if (txn.is_private && txn.created_by !== c.get("user")?.id && !isAdmin) {
+        const isAdmin = req.wsRole === "admin" || req.user?.role === "superuser";
+        if (txn.is_private && txn.created_by !== req.user?.id && !isAdmin) {
           const vis = await pool.query(
             `SELECT 1 FROM accounts.transaction_visibility WHERE transaction_id = $1 AND user_id = $2
              UNION ALL
              SELECT 1 FROM accounts.transaction_visibility_role WHERE transaction_id = $1 AND role_code = $3
              LIMIT 1`,
-            [txn.id, c.get("user")?.id, c.get("wsRole") ?? ""],
+            [txn.id, req.user?.id, req.wsRole ?? ""],
           );
           if (vis.rows.length === 0) {
-            return c.json({ error: "Not found" }, 404);
+            res.status(404).json({ error: "Not found" });
             return;
           }
         }
@@ -86,7 +87,7 @@ export function registerTransactionDetailRoute(app: Hono, ctx: CoreRouteCtx): vo
 
         let shared_with: { user_id: string }[] = [];
         let shared_with_roles: { role_code: string }[] = [];
-        if (txn.is_private && (txn.created_by === c.get("user")?.id || isAdmin)) {
+        if (txn.is_private && (txn.created_by === req.user?.id || isAdmin)) {
           shared_with = (
             await pool.query(`SELECT user_id FROM accounts.transaction_visibility WHERE transaction_id = $1`, [txn.id])
           ).rows;
@@ -101,7 +102,7 @@ export function registerTransactionDetailRoute(app: Hono, ctx: CoreRouteCtx): vo
              FROM accounts.transaction_line_items
             WHERE transaction_id = $1 AND workspace_id = $2
             ORDER BY id ASC`,
-          [txn.id, c.get("workspaceId")],
+          [txn.id, req.workspaceId],
         );
 
         // Enrich line items with package/variant/client names over RPC.
@@ -140,7 +141,7 @@ export function registerTransactionDetailRoute(app: Hono, ctx: CoreRouteCtx): vo
                FROM accounts.transaction_edits
               WHERE transaction_id = $1 AND workspace_id = $2
               ORDER BY edited_at DESC`,
-            [txn.id, c.get("workspaceId")],
+            [txn.id, req.workspaceId],
           )
         ).rows;
 
@@ -150,7 +151,7 @@ export function registerTransactionDetailRoute(app: Hono, ctx: CoreRouteCtx): vo
                FROM accounts.transaction_payments
               WHERE transaction_id = $1 AND workspace_id = $2
               ORDER BY created_at ASC, id ASC`,
-            [txn.id, c.get("workspaceId")],
+            [txn.id, req.workspaceId],
           )
         ).rows;
 
@@ -185,7 +186,7 @@ export function registerTransactionDetailRoute(app: Hono, ctx: CoreRouteCtx): vo
                FROM accounts.transaction_customer_groups
               WHERE transaction_id = $1 AND workspace_id = $2
               ORDER BY position ASC`,
-            [txn.id, c.get("workspaceId")],
+            [txn.id, req.workspaceId],
           )
         ).rows;
 
@@ -219,7 +220,7 @@ export function registerTransactionDetailRoute(app: Hono, ctx: CoreRouteCtx): vo
           await pool.query(
             `SELECT client_id, position FROM accounts.transaction_customers
               WHERE transaction_id = $1 AND workspace_id = $2 ORDER BY position ASC, client_id ASC`,
-            [txn.id, c.get("workspaceId")],
+            [txn.id, req.workspaceId],
           )
         ).rows;
         const poolClients = clientPoolRows.length > 0
@@ -243,7 +244,7 @@ export function registerTransactionDetailRoute(app: Hono, ctx: CoreRouteCtx): vo
         const createdByUser = txn.created_by ? userMap.get(txn.created_by) : undefined;
         const updatedByUser = txn.updated_by ? userMap.get(txn.updated_by) : undefined;
 
-        return c.json({
+        res.json({
           ...txn,
           payee,
           created_by_name: createdByUser?.name ?? null,
@@ -262,7 +263,7 @@ export function registerTransactionDetailRoute(app: Hono, ctx: CoreRouteCtx): vo
         });
       } catch (err) {
         console.error("[transactions] get error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       }
     },
   );

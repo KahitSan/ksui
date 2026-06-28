@@ -12,7 +12,7 @@
 // then enrich client + variant names over RPC. The renew stays here too because
 // it INSERTs accounts.transactions + accounts.transaction_line_items.
 
-import type { Context as HonoContext } from "hono";
+import type { Request } from "express";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
@@ -32,7 +32,7 @@ const SORTABLE = new Set([
 
 // The privacy fragment is identical to routes.ts's privacyClause; passed in so
 // the two share one source of truth.
-type PrivacyClause = (c: HonoContext, params: unknown[], startIdx: number) => string | null;
+type PrivacyClause = (req: Request, params: unknown[], startIdx: number) => string | null;
 
 interface LineRow {
   id: number;
@@ -75,17 +75,17 @@ function bucketFor(latestEndsMs: number, nowMs: number): StatusBucket {
 /** GET /subscriptions — grouped list with bucket/search filters, sort, paging. */
 export async function listSubscriptions(
   db: PluginDb,
-  c: HonoContext,
+  req: Request,
   privacyClause: PrivacyClause,
 ): Promise<{ data: SubscriptionRow[]; total: number; page: number; limit: number }> {
-  const search = (c.req.query("search"))?.trim().toLowerCase();
-  const lineageSlug = (c.req.query("lineage_slug"))?.trim();
-  const bucketRaw = (c.req.query("status_bucket"))?.trim();
-  const sortByRaw = (c.req.query("sortBy")) ?? "latest_ends_at";
+  const search = (req.query.search as string | undefined)?.trim().toLowerCase();
+  const lineageSlug = (req.query.lineage_slug as string | undefined)?.trim();
+  const bucketRaw = (req.query.status_bucket as string | undefined)?.trim();
+  const sortByRaw = (req.query.sortBy as string | undefined) ?? "latest_ends_at";
   const sortBy = SORTABLE.has(sortByRaw) ? sortByRaw : "latest_ends_at";
-  const sortDir = (c.req.query("sortDir"))?.toUpperCase() === "ASC" ? 1 : -1;
-  const page = Math.max(1, parseInt(c.req.query("page") ?? "") || 1);
-  const limit = Math.min(parseInt(c.req.query("limit") ?? "") || 25, 200);
+  const sortDir = (req.query.sortDir as string | undefined)?.toUpperCase() === "ASC" ? 1 : -1;
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.min(parseInt(req.query.limit as string) || 25, 200);
 
   let buckets: Set<StatusBucket> | null;
   if (bucketRaw === "all") {
@@ -103,7 +103,7 @@ export async function listSubscriptions(
   // Qualifying line items from accounts.* (privacy enforced here so a private
   // renewal can't leak through the aggregate). No packages/clients JOIN — those
   // schemas are off this plugin's search_path; we resolve them over RPC below.
-  const params: unknown[] = [c.get("workspaceId")];
+  const params: unknown[] = [req.workspaceId];
   const conditions = [
     "li.workspace_id = $1",
     "li.client_id IS NOT NULL",
@@ -112,7 +112,7 @@ export async function listSubscriptions(
     "li.status <> 'voided'",
     "t.status <> 'voided'",
   ];
-  const priv = privacyClause(c, params, params.length + 1);
+  const priv = privacyClause(req, params, params.length + 1);
   if (priv) conditions.push(priv);
 
   const result = await db.query<LineRow>(
@@ -132,7 +132,7 @@ export async function listSubscriptions(
   // when the current era hasn't been sold yet, in which case the UI falls back
   // to the latest package name and resolves the renewal variants from
   // /api/packages by lineage_slug.
-  const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
+  const idh = identityHeaderOf(req);
   const pkgIds = [...new Set(lines.map((l) => l.package_id))];
   const pkgs = pkgIds.length > 0 ? ((await findPackagesByIds(pkgIds, idh)) ?? []) : [];
   const pkgById = new Map(pkgs.map((p) => [p.id, p]));
@@ -284,7 +284,7 @@ export class RenewError extends Error {
 /** POST /subscriptions/:line_item_id/renew — fresh sale chaining from prior expiry. */
 export async function renewSubscription(
   db: PluginDb,
-  c: HonoContext,
+  req: Request,
   sourceId: number,
   body: { package_variant_id?: number; quantity?: number; destination_account_id?: number },
 ): Promise<{ transaction: unknown; line_item: unknown }> {
@@ -297,7 +297,7 @@ export async function renewSubscription(
     throw new RenewError(400, "destination_account_id is required");
   }
 
-  const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
+  const idh = identityHeaderOf(req);
 
   // Variant must be a workspace-owned day/month variant (RPC; clients/packages live
   // in their own schemas). Cross-package renewals are allowed (era upgrades).
@@ -324,7 +324,7 @@ export async function renewSubscription(
         WHERE li.id = $1 AND li.workspace_id = $2
           AND li.duration_unit IN ('day', 'month')
           AND li.status <> 'voided'`,
-      [sourceId, c.get("workspaceId")],
+      [sourceId, req.workspaceId],
     );
     if (srcRes.rows.length === 0 || srcRes.rows[0].client_id == null) {
       await client.query("ROLLBACK");
@@ -342,7 +342,7 @@ export async function renewSubscription(
     // advisory lock rather than a row-level FOR UPDATE.
     const chainKey = lineageSlug ?? `pkg:${src.package_id}`;
     await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [
-      `renew:${c.get("workspaceId")}:${src.client_id}:${chainKey}`,
+      `renew:${req.workspaceId}:${src.client_id}:${chainKey}`,
     ]);
 
     // Latest ends_at across the (client, lineage) chain. lineage isn't in
@@ -356,7 +356,7 @@ export async function renewSubscription(
         WHERE li.workspace_id = $1 AND li.client_id = $2
           AND li.duration_unit IN ('day', 'month')
           AND li.status <> 'voided' AND t.status <> 'voided'`,
-      [c.get("workspaceId"), src.client_id],
+      [req.workspaceId, src.client_id],
     );
     const chainPkgIds = [...new Set(chainRes.rows.map((r) => r.package_id as number))];
     const chainPkgs = chainPkgIds.length > 0 ? ((await findPackagesByIds(chainPkgIds, idh)) ?? []) : [];
@@ -373,7 +373,7 @@ export async function renewSubscription(
     // Destination account must belong to this workspace (accounts.* — owned).
     const acctRes = await client.query(
       `SELECT id FROM accounts.financial_accounts WHERE id = $1 AND workspace_id = $2`,
-      [destination_account_id, c.get("workspaceId")],
+      [destination_account_id, req.workspaceId],
     );
     if (acctRes.rows.length === 0) {
       await client.query("ROLLBACK");
@@ -400,7 +400,7 @@ export async function renewSubscription(
                'vat_inclusive', 0, 0, $3,
                $6, 0)
        RETURNING id, workspace_id, category, amount, description, transaction_date, status, client_id, destination_account_id`,
-      [c.get("workspaceId"), destination_account_id, total, `Renewal × ${variant.name}`, c.get("user")!.id, src.client_id],
+      [req.workspaceId, destination_account_id, total, `Renewal × ${variant.name}`, req.user!.id, src.client_id],
     );
     const txn = txResult.rows[0];
 
@@ -417,7 +417,7 @@ export async function renewSubscription(
                  quantity, unit_price, started_at, ends_at, status, client_id`,
       [
         txn.id,
-        c.get("workspaceId"),
+        req.workspaceId,
         variant.package_id,
         package_variant_id,
         variant.name,

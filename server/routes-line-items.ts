@@ -15,7 +15,7 @@
 //     the kernel RPC (lib/peers.ts) with graceful degradation, never raw
 //     cross-schema SQL.
 //   - The permission/privacy/backdate gates read the kernel-forwarded
-//     c.get("permissions") / c.get("wsRole") instead of the monolith's async
+//     req.permissions / req.wsRole instead of the monolith's async
 //     getPermissionsFor / canBypassTransactionPrivacy.
 //   - The monolith's `links.create` shadow-write is dropped (no cross-process
 //     links runner in the fork; the in-row package_variant_id FK is the source
@@ -28,7 +28,7 @@
 //     by code, not by id, and transactions stores only voucher_id. Graceful
 //     degradation, consistent with the rest of the plugin.
 
-import { Hono, type Context as HonoContext } from "hono";
+import { Router, type Request, type Response } from "express";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {
@@ -38,14 +38,14 @@ import {
 } from "./lib/peers.js";
 import type { RouterDeps } from "./routes.js";
 
-export function buildLineItemsRouter(deps: RouterDeps): Hono {
-  const app = new Hono();
+export function buildLineItemsRouter(deps: RouterDeps): Router {
+  const router = Router();
   const { db: pool, requireAuth, requireWorkspace, requirePermission } = deps;
 
   // Admin/superuser bypass the per-row privacy gate. Mirrors the monolith's
   // canBypassTransactionPrivacy, resolved from the kernel-forwarded identity.
-  const canBypassPrivacy = (c: HonoContext): boolean =>
-    c.get("wsRole") === "admin" || c.get("user")?.role === "superuser";
+  const canBypassPrivacy = (req: Request): boolean =>
+    req.wsRole === "admin" || req.user?.role === "superuser";
 
   // ── GET /api/transaction-line-items ──────────────────────────────────────
   //
@@ -58,23 +58,23 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
   //   include_upcoming=true|false (default: false)
   //   include_voided=true|false (default: false)
   //   status=comma-list — filter by line_item.status
-  app.get(
+  router.get(
     "/api/transaction-line-items",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (c: HonoContext) => {
-      if (!c.get("workspaceId")) {
-        return c.json({ error: "No workspace context" }, 403);
+    async (req: Request, res: Response) => {
+      if (!req.workspaceId) {
+        res.status(403).json({ error: "No workspace context" });
         return;
       }
 
-      const activeOnRaw = (c.req.query("active_on"))?.trim();
-      const includeCarryover = c.req.query("include_carryover") !== "false";
-      const includeTodayTxns = c.req.query("include_today_transactions") !== "false";
-      const includeUpcoming = c.req.query("include_upcoming") === "true";
-      const includeVoided = c.req.query("include_voided") === "true";
-      const statusList = (c.req.query("status"))
+      const activeOnRaw = (req.query.active_on as string | undefined)?.trim();
+      const includeCarryover = req.query.include_carryover !== "false";
+      const includeTodayTxns = req.query.include_today_transactions !== "false";
+      const includeUpcoming = req.query.include_upcoming === "true";
+      const includeVoided = req.query.include_voided === "true";
+      const statusList = (req.query.status as string | undefined)
         ?.split(",")
         .map((s) => s.trim())
         .filter(Boolean);
@@ -86,17 +86,17 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         activeOn = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
       }
 
-      const userId = c.get("user")?.id;
+      const userId = req.user?.id;
       const params: (string | number | string[])[] = [];
       let idx = 1;
       const conditions: string[] = [];
 
       // Workspace isolation (line items carry workspace_id directly).
       conditions.push(`li.workspace_id = $${idx++}`);
-      params.push(c.get("workspaceId"));
+      params.push(req.workspaceId);
 
       // Privacy: parent transaction must be public, owned, or shared.
-      if (userId && !canBypassPrivacy(c)) {
+      if (userId && !canBypassPrivacy(req)) {
         conditions.push(
           `(t.is_private = false OR t.created_by = $${idx} OR EXISTS (
              SELECT 1 FROM accounts.transaction_visibility tv
@@ -106,7 +106,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              WHERE tvr.transaction_id = t.id AND tvr.role_code = $${idx + 1}
            ))`,
         );
-        params.push(userId, c.get("wsRole") ?? "");
+        params.push(userId, req.wsRole ?? "");
         idx += 2;
       }
 
@@ -195,7 +195,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         );
       }
       if (dateClauses.length === 0) {
-        return c.json({ data: [], active_on: activeOn });
+        res.json({ data: [], active_on: activeOn });
         return;
       }
       conditions.push(`(${dateClauses.join(" OR ")})`);
@@ -326,7 +326,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           params,
         );
 
-        const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
+        const idh = identityHeaderOf(req);
 
         // Resolve package + variant names over RPC (graceful: null when the
         // packages plugin is absent), mirroring the monolith's batch-fetch.
@@ -357,7 +357,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
               AND transaction_id = ANY($2::int[])
             ORDER BY transaction_id, "position" ASC, client_id ASC`,
           [
-            c.get("workspaceId"),
+            req.workspaceId,
             [...new Set(result.rows.map((r) => r.transaction_id as number))],
           ],
         );
@@ -421,10 +421,10 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           };
         });
 
-        return c.json({ data: rows, active_on: activeOn });
+        res.json({ data: rows, active_on: activeOn });
       } catch (err) {
         console.error("[transaction-line-items] list error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       }
     },
   );
@@ -435,19 +435,19 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
   // package (latest-ending line is source of truth). Used by the Counter cart
   // to surface a "Subscription Use" item. The monthly-type filter runs in JS
   // via the packages RPC — never a cross-schema join.
-  app.get(
+  router.get(
     "/api/transaction-line-items/active-subscriptions",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (c: HonoContext) => {
-      if (!c.get("workspaceId")) {
-        return c.json({ error: "No workspace context" }, 403);
+    async (req: Request, res: Response) => {
+      if (!req.workspaceId) {
+        res.status(403).json({ error: "No workspace context" });
         return;
       }
-      const clientId = parseInt(String(c.req.query("client_id") ?? ""), 10);
+      const clientId = parseInt(String(req.query.client_id ?? ""), 10);
       if (!Number.isFinite(clientId) || clientId <= 0) {
-        return c.json({ error: "client_id is required" }, 400);
+        res.status(400).json({ error: "client_id is required" });
         return;
       }
 
@@ -472,15 +472,15 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
               AND li.package_id IS NOT NULL
               AND li.package_variant_id IS NOT NULL
             ORDER BY li.package_id, li.ends_at DESC`,
-          [c.get("workspaceId"), clientId],
+          [req.workspaceId, clientId],
         );
 
         if (result.rows.length === 0) {
-          return c.json({ data: [] });
+          res.json({ data: [] });
           return;
         }
 
-        const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
+        const idh = identityHeaderOf(req);
         const packageIds = [...new Set(result.rows.map((r) => r.package_id))];
         const variantIds = [...new Set(result.rows.map((r) => r.package_variant_id))];
         const [packages, variants] = await Promise.all([
@@ -507,10 +507,10 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           })
           .filter((r): r is NonNullable<typeof r> => r !== null);
 
-        return c.json({ data });
+        res.json({ data });
       } catch (err) {
         console.error("[transaction-line-items] active-subscriptions error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       }
     },
   );
@@ -520,41 +520,41 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
   // Marks an active or expired line item completed.
   // Body: { mode?: "as_is" | "backdated", ends_at?: string } (default: as_is)
   // Idempotent: a re-settle of an already-completed line 200s with the row.
-  app.post(
+  router.post(
     "/api/transaction-line-items/:id/settle",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (c: HonoContext) => {
-      if (!c.get("workspaceId")) {
-        return c.json({ error: "No workspace context" }, 403);
+    async (req: Request, res: Response) => {
+      if (!req.workspaceId) {
+        res.status(403).json({ error: "No workspace context" });
         return;
       }
-      const id = parseInt(c.req.param("id") ?? "");
+      const id = parseInt(req.params.id as string);
       if (!id) {
-        return c.json({ error: "id is required" }, 400);
+        res.status(400).json({ error: "id is required" });
         return;
       }
-      const body = (await c.req.json() ?? {}) as { mode?: string; ends_at?: string };
+      const body = (req.body ?? {}) as { mode?: string; ends_at?: string };
       const mode = body.mode ?? "as_is";
       if (mode !== "as_is" && mode !== "backdated") {
-        return c.json({ error: "mode must be 'as_is' or 'backdated'" }, 400);
+        res.status(400).json({ error: "mode must be 'as_is' or 'backdated'" });
         return;
       }
 
       let customEndsAt: Date | null = null;
       if (mode === "as_is" && body.ends_at != null) {
         if (typeof body.ends_at !== "string") {
-          return c.json({ error: "ends_at must be an ISO timestamp string" }, 400);
+          res.status(400).json({ error: "ends_at must be an ISO timestamp string" });
           return;
         }
         const parsed = new Date(body.ends_at);
         if (isNaN(parsed.getTime())) {
-          return c.json({ error: "ends_at is not a valid ISO timestamp" }, 400);
+          res.status(400).json({ error: "ends_at is not a valid ISO timestamp" });
           return;
         }
         if (parsed.getTime() - Date.now() > 60_000) {
-          return c.json({ error: "ends_at cannot be in the future" }, 400);
+          res.status(400).json({ error: "ends_at cannot be in the future" });
           return;
         }
         customEndsAt = parsed;
@@ -566,10 +566,10 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           `SELECT started_at, ends_at
              FROM accounts.transaction_line_items
             WHERE id = $1 AND workspace_id = $2 AND status IN ('active','expired')`,
-          [id, c.get("workspaceId")],
+          [id, req.workspaceId],
         );
         if (lineRes.rows.length === 0) {
-          return c.json({ error: "Settleable line item not found in this workspace" }, 404);
+          res.status(404).json({ error: "Settleable line item not found in this workspace" });
           return;
         }
         const startedAt: Date | null = lineRes.rows[0].started_at
@@ -577,7 +577,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           : null;
         bookedEnd = lineRes.rows[0].ends_at ? new Date(lineRes.rows[0].ends_at) : null;
         if (startedAt && customEndsAt.getTime() <= startedAt.getTime()) {
-          return c.json({ error: "ends_at must be after the rental's started_at" }, 400);
+          res.status(400).json({ error: "ends_at must be after the rental's started_at" });
           return;
         }
       }
@@ -594,17 +594,17 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           bookedEndAlreadyPassed &&
           customEndsAt.getTime() < bookedEnd.getTime());
       if (requiresBackdate) {
-        const isAdmin = c.get("user")?.role === "superuser" || c.get("wsRole") === "admin";
-        const allowed = isAdmin || (c.get("permissions") ?? []).includes("transactions.backdate");
+        const isAdmin = req.user?.role === "superuser" || req.wsRole === "admin";
+        const allowed = isAdmin || (req.permissions ?? []).includes("transactions.backdate");
         if (!allowed) {
-          return c.json({ error: "Missing permission: transactions.backdate" }, 403);
+          res.status(403).json({ error: "Missing permission: transactions.backdate" });
           return;
         }
       }
 
       try {
         let setClause: string;
-        const params: unknown[] = [id, c.get("workspaceId")];
+        const params: unknown[] = [id, req.workspaceId];
         if (mode === "as_is") {
           if (customEndsAt) {
             setClause = `status = 'completed', ends_at = $3, updated_at = NOW()`;
@@ -628,19 +628,19 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           const existing = await pool.query(
             `SELECT * FROM accounts.transaction_line_items
               WHERE id = $1 AND workspace_id = $2 AND status = 'completed'`,
-            [id, c.get("workspaceId")],
+            [id, req.workspaceId],
           );
           if (existing.rows.length > 0) {
-            return c.json(existing.rows[0]);
+            res.json(existing.rows[0]);
             return;
           }
-          return c.json({ error: "Settleable line item not found in this workspace" }, 404);
+          res.status(404).json({ error: "Settleable line item not found in this workspace" });
           return;
         }
-        return c.json(result.rows[0]);
+        res.json(result.rows[0]);
       } catch (err) {
         console.error("[transaction-line-items] settle error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       }
     },
   );
@@ -652,35 +652,35 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
   // transaction (and the cg subtotal) by its cost. The source line stays
   // 'active'; the caller settles it separately.
   // Body: { package_variant_id: number, quantity: number }
-  app.post(
+  router.post(
     "/api/transaction-line-items/:id/charge-overage",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (c: HonoContext) => {
-      if (!c.get("workspaceId") || !c.get("user")?.id) {
-        return c.json({ error: "No workspace context" }, 403);
+    async (req: Request, res: Response) => {
+      if (!req.workspaceId || !req.user?.id) {
+        res.status(403).json({ error: "No workspace context" });
         return;
       }
-      const id = parseInt(c.req.param("id") ?? "");
+      const id = parseInt(req.params.id as string);
       if (!id) {
-        return c.json({ error: "id is required" }, 400);
+        res.status(400).json({ error: "id is required" });
         return;
       }
-      const { package_variant_id, quantity } = (await c.req.json()) as {
+      const { package_variant_id, quantity } = req.body as {
         package_variant_id?: number;
         quantity?: number;
       };
       if (typeof package_variant_id !== "number" || package_variant_id <= 0) {
-        return c.json({ error: "package_variant_id is required" }, 400);
+        res.status(400).json({ error: "package_variant_id is required" });
         return;
       }
       if (typeof quantity !== "number" || quantity <= 0) {
-        return c.json({ error: "quantity must be > 0" }, 400);
+        res.status(400).json({ error: "quantity must be > 0" });
         return;
       }
 
-      const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
+      const idh = identityHeaderOf(req);
       let client: import("pg").PoolClient | null = null;
       try {
         client = await pool.connect();
@@ -692,11 +692,11 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              FROM accounts.transaction_line_items
             WHERE id = $1 AND workspace_id = $2
             FOR UPDATE`,
-          [id, c.get("workspaceId")],
+          [id, req.workspaceId],
         );
         if (srcRes.rows.length === 0) {
           await client.query("ROLLBACK");
-          return c.json({ error: "Line item not found in this workspace" }, 404);
+          res.status(404).json({ error: "Line item not found in this workspace" });
           return;
         }
         const src = srcRes.rows[0] as {
@@ -709,12 +709,12 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         };
         if (src.status !== "active" && src.status !== "expired") {
           await client.query("ROLLBACK");
-          return c.json({ error: "Line item is not active or expired" }, 409);
+          res.status(409).json({ error: "Line item is not active or expired" });
           return;
         }
         if (src.ends_at == null || new Date(src.ends_at).getTime() > Date.now()) {
           await client.query("ROLLBACK");
-          return c.json({ error: "charge-overage is only valid for overdue line items" }, 409);
+          res.status(409).json({ error: "charge-overage is only valid for overdue line items" });
           return;
         }
 
@@ -722,12 +722,12 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         const variant = variants?.[0];
         if (variant == null) {
           await client.query("ROLLBACK");
-          return c.json({ error: "package_variant_id must belong to this workspace" }, 400);
+          res.status(400).json({ error: "package_variant_id must belong to this workspace" });
           return;
         }
         if (variant.duration_value == null) {
           await client.query("ROLLBACK");
-          return c.json({ error: "package_variant has no duration_value" }, 400);
+          res.status(400).json({ error: "package_variant has no duration_value" });
           return;
         }
 
@@ -755,7 +755,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
            RETURNING *`,
           [
             src.transaction_id,
-            c.get("workspaceId"),
+            req.workspaceId,
             variant.package_id,
             package_variant_id,
             variant.name,
@@ -774,7 +774,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           `UPDATE accounts.transactions
               SET amount = amount + $1, subtotal = COALESCE(subtotal, amount) + $1, updated_at = NOW(), updated_by = $2
             WHERE id = $3 AND workspace_id = $4`,
-          [extensionCost, c.get("user").id, src.transaction_id, c.get("workspaceId")],
+          [extensionCost, req.user.id, src.transaction_id, req.workspaceId],
         );
 
         if (src.customer_group_id != null) {
@@ -782,21 +782,21 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
             `UPDATE accounts.transaction_customer_groups
                 SET subtotal = subtotal + $1
               WHERE id = $2 AND workspace_id = $3`,
-            [extensionCost, src.customer_group_id, c.get("workspaceId")],
+            [extensionCost, src.customer_group_id, req.workspaceId],
           );
         }
 
         await client.query("COMMIT");
-        return c.json({
+        res.status(201).json({
           source: src,
           overage_line: insertResult.rows[0],
-        }, 201);
+        });
       } catch (err) {
         if (client) {
           await client.query("ROLLBACK").catch(() => {});
         }
         console.error("[transaction-line-items] charge-overage error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       } finally {
         if (client) client.release();
       }
@@ -811,35 +811,35 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
   // single entry. Bumps the parent transaction (and cg subtotal) by the
   // extension cost.
   // Body: { package_variant_id: number, quantity: number }
-  app.post(
+  router.post(
     "/api/transaction-line-items/:id/extend",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.edit"),
-    async (c: HonoContext) => {
-      if (!c.get("workspaceId") || !c.get("user")?.id) {
-        return c.json({ error: "No workspace context" }, 403);
+    async (req: Request, res: Response) => {
+      if (!req.workspaceId || !req.user?.id) {
+        res.status(403).json({ error: "No workspace context" });
         return;
       }
-      const id = parseInt(c.req.param("id") ?? "");
+      const id = parseInt(req.params.id as string);
       if (!id) {
-        return c.json({ error: "id is required" }, 400);
+        res.status(400).json({ error: "id is required" });
         return;
       }
-      const { package_variant_id, quantity } = (await c.req.json()) as {
+      const { package_variant_id, quantity } = req.body as {
         package_variant_id?: number;
         quantity?: number;
       };
       if (typeof package_variant_id !== "number" || package_variant_id <= 0) {
-        return c.json({ error: "package_variant_id is required" }, 400);
+        res.status(400).json({ error: "package_variant_id is required" });
         return;
       }
       if (typeof quantity !== "number" || quantity <= 0) {
-        return c.json({ error: "quantity must be > 0" }, 400);
+        res.status(400).json({ error: "quantity must be > 0" });
         return;
       }
 
-      const idh = identityHeaderOf(c.req.raw as unknown as Parameters<typeof identityHeaderOf>[0]);
+      const idh = identityHeaderOf(req);
       let client: import("pg").PoolClient | null = null;
       try {
         client = await pool.connect();
@@ -851,11 +851,11 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              FROM accounts.transaction_line_items
             WHERE id = $1 AND workspace_id = $2
             FOR UPDATE`,
-          [id, c.get("workspaceId")],
+          [id, req.workspaceId],
         );
         if (srcRes.rows.length === 0) {
           await client.query("ROLLBACK");
-          return c.json({ error: "Line item not found in this workspace" }, 404);
+          res.status(404).json({ error: "Line item not found in this workspace" });
           return;
         }
         const src = srcRes.rows[0] as {
@@ -873,12 +873,12 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         const variant = variants?.[0];
         if (variant == null) {
           await client.query("ROLLBACK");
-          return c.json({ error: "package_variant_id must belong to this workspace" }, 400);
+          res.status(400).json({ error: "package_variant_id must belong to this workspace" });
           return;
         }
         if (variant.duration_value == null) {
           await client.query("ROLLBACK");
-          return c.json({ error: "package_variant has no duration_value" }, 400);
+          res.status(400).json({ error: "package_variant has no duration_value" });
           return;
         }
 
@@ -911,7 +911,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
            RETURNING *`,
           [
             src.transaction_id,
-            c.get("workspaceId"),
+            req.workspaceId,
             variant.package_id,
             package_variant_id,
             variant.name,
@@ -930,7 +930,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           `UPDATE accounts.transactions
               SET amount = amount + $1, subtotal = COALESCE(subtotal, amount) + $1, updated_at = NOW(), updated_by = $2
             WHERE id = $3 AND workspace_id = $4`,
-          [extensionCost, c.get("user").id, src.transaction_id, c.get("workspaceId")],
+          [extensionCost, req.user.id, src.transaction_id, req.workspaceId],
         );
 
         if (src.customer_group_id != null) {
@@ -938,23 +938,23 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
             `UPDATE accounts.transaction_customer_groups
                 SET subtotal = subtotal + $1
               WHERE id = $2 AND workspace_id = $3`,
-            [extensionCost, src.customer_group_id, c.get("workspaceId")],
+            [extensionCost, src.customer_group_id, req.workspaceId],
           );
         }
 
         await client.query("COMMIT");
-        return c.json(insertResult.rows[0], 201);
+        res.status(201).json(insertResult.rows[0]);
       } catch (err) {
         if (client) {
           await client.query("ROLLBACK").catch(() => {});
         }
         console.error("[transaction-line-items] extend error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       } finally {
         if (client) client.release();
       }
     },
   );
 
-  return app;
+  return router;
 }

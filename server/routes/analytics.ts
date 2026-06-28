@@ -13,19 +13,19 @@
 // transaction_date `date` with NO timezone cast (deliberate). privacyClause
 // calls are unchanged.
 
-import { type Hono, type Context as HonoContext, type MiddlewareHandler } from "hono";
+import { type Router, type Request, type Response, type RequestHandler } from "express";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { listSubscriptions, renewSubscription, RenewError } from "../lib/subscriptions.js";
 import { privacyClause } from "./shared.js";
 
 export type AnalyticsRouteCtx = {
   pool: PluginDb;
-  requireAuth: MiddlewareHandler;
-  requireWorkspace: MiddlewareHandler;
-  requirePermission: (...codes: string[]) => MiddlewareHandler;
+  requireAuth: RequestHandler;
+  requireWorkspace: RequestHandler;
+  requirePermission: (...codes: string[]) => RequestHandler;
 };
 
-export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void {
+export function registerAnalyticsRoutes(router: Router, ctx: AnalyticsRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
   // ── Subscriptions (recurring-revenue view over line items) ───────────────
@@ -34,59 +34,59 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
   // RPC, not SQL JOINs). Recovered from the monolith's /api/subscriptions.
 
   // GET /subscriptions — grouped, bucketed, searchable, paginated.
-  app.get(
+  router.get(
     "/subscriptions",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (c: HonoContext) => {
+    async (req: Request, res: Response) => {
       try {
-        return c.json(await listSubscriptions(pool, c, privacyClause));
+        res.json(await listSubscriptions(pool, req, privacyClause));
       } catch (err) {
         console.error("[transactions] subscriptions list error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       }
     },
   );
 
   // POST /subscriptions/:line_item_id/renew — fresh sale chaining from prior expiry.
-  app.post(
+  router.post(
     "/subscriptions/:line_item_id/renew",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.create"),
-    async (c: HonoContext) => {
-      const sourceId = parseInt(String(c.req.param("line_item_id")), 10);
+    async (req: Request, res: Response) => {
+      const sourceId = parseInt(String(req.params.line_item_id), 10);
       if (!Number.isInteger(sourceId) || sourceId <= 0) {
-        return c.json({ error: "line_item_id is required" }, 400);
+        res.status(400).json({ error: "line_item_id is required" });
         return;
       }
       try {
-        const out = await renewSubscription(pool, c, sourceId, await c.req.json() ?? {});
-        return c.json(out, 201);
+        const out = await renewSubscription(pool, req, sourceId, req.body ?? {});
+        res.status(201).json(out);
       } catch (err) {
         if (err instanceof RenewError) {
-          return c.json({ error: err.message }, err.status as 400 | 403 | 404 | 500);
+          res.status(err.status).json({ error: err.message });
           return;
         }
         console.error("[transactions] subscriptions renew error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       }
     },
   );
 
   // ── Filter-support reads (defined before /:id so they don't get captured) ─
 
-  app.get(
+  router.get(
     "/creators",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (c: HonoContext) => {
+    async (req: Request, res: Response) => {
       try {
-        const params: unknown[] = [c.get("workspaceId")];
+        const params: unknown[] = [req.workspaceId];
         const conditions = ["t.workspace_id = $1", "t.created_by IS NOT NULL"];
-        const priv = privacyClause(c, params, 2);
+        const priv = privacyClause(req, params, 2);
         if (priv) conditions.push(priv);
         // created_by names come from the kernel "user" table, which the plugin
         // never reads. We return the distinct creator ids + counts; the host UI
@@ -99,28 +99,28 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
             ORDER BY last_used DESC NULLS LAST`,
           params,
         );
-        return c.json({ creators: result.rows });
+        res.json({ creators: result.rows });
       } catch (err) {
         console.error("[transactions] creators error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       }
     },
   );
 
-  app.get(
+  router.get(
     "/subcategory-counts",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (c: HonoContext) => {
+    async (req: Request, res: Response) => {
       try {
-        const params: unknown[] = [c.get("workspaceId")];
+        const params: unknown[] = [req.workspaceId];
         const conditions = [
           "t.workspace_id = $1",
           "t.status != 'voided'",
           "t.subcategory IS NOT NULL",
         ];
-        const priv = privacyClause(c, params, 2);
+        const priv = privacyClause(req, params, 2);
         if (priv) conditions.push(priv);
         const result = await pool.query(
           `SELECT t.subcategory AS subcategory, COUNT(*)::int AS count
@@ -129,10 +129,10 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
             GROUP BY t.subcategory`,
           params,
         );
-        return c.json({ counts: result.rows });
+        res.json({ counts: result.rows });
       } catch (err) {
         console.error("[transactions] subcategory-counts error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       }
     },
   );
@@ -148,19 +148,19 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
   // category is { count, total }. Sale totals prefer the settled payment sum
   // (transaction_payments) over the headline amount so partially-paid sales
   // report what was actually collected.
-  app.get(
+  router.get(
     "/summary",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (c: HonoContext) => {
-      const dateFrom = c.req.query("dateFrom");
-      const dateTo = c.req.query("dateTo");
+    async (req: Request, res: Response) => {
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
 
       try {
-        const params: unknown[] = [c.get("workspaceId")];
+        const params: unknown[] = [req.workspaceId];
         const conditions = ["t.workspace_id = $1", "t.status != 'voided'"];
-        const priv = privacyClause(c, params, params.length + 1);
+        const priv = privacyClause(req, params, params.length + 1);
         if (priv) conditions.push(priv);
 
         if (dateFrom) {
@@ -206,10 +206,10 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
         // Count private rows hidden from the current user. Skip entirely when
         // the caller bypasses privacy (admin/superuser) — the count is always 0.
         let privateHidden = 0;
-        const privParams: unknown[] = [c.get("workspaceId")];
-        const privFrag = privacyClause(c, [], 0); // probe: null => caller bypasses
+        const privParams: unknown[] = [req.workspaceId];
+        const privFrag = privacyClause(req, [], 0); // probe: null => caller bypasses
         if (privFrag) {
-          const userId = c.get("user")?.id ?? "";
+          const userId = req.user?.id ?? "";
           const privConditions = [
             "t.workspace_id = $1",
             "t.status != 'voided'",
@@ -218,7 +218,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
             `NOT EXISTS (SELECT 1 FROM accounts.transaction_visibility tv WHERE tv.transaction_id = t.id AND tv.user_id = $2)`,
             `NOT EXISTS (SELECT 1 FROM accounts.transaction_visibility_role tvr WHERE tvr.transaction_id = t.id AND tvr.role_code = $3)`,
           ];
-          privParams.push(userId, c.get("wsRole") ?? "");
+          privParams.push(userId, req.wsRole ?? "");
           if (dateFrom) {
             privParams.push(dateFrom);
             privConditions.push(`t.transaction_date >= $${privParams.length}`);
@@ -234,10 +234,10 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
           privateHidden = Number(privResult.rows[0].count);
         }
 
-        return c.json({ ...summary, _privateHidden: privateHidden });
+        res.json({ ...summary, _privateHidden: privateHidden });
       } catch (err) {
         console.error("[transactions] summary error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       }
     },
   );
@@ -255,19 +255,19 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
   // omit both for all-time). Privacy-gated identically to /summary.
   //
   // Response: { buckets: Array<{ date, in, out, transfer }> }
-  app.get(
+  router.get(
     "/cashflow",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (c: HonoContext) => {
-      const dateFrom = c.req.query("dateFrom");
-      const dateTo = c.req.query("dateTo");
+    async (req: Request, res: Response) => {
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
 
       try {
-        const params: unknown[] = [c.get("workspaceId")];
+        const params: unknown[] = [req.workspaceId];
         const conditions = ["t.workspace_id = $1", "t.status != 'voided'"];
-        const priv = privacyClause(c, params, params.length + 1);
+        const priv = privacyClause(req, params, params.length + 1);
         if (priv) conditions.push(priv);
 
         if (dateFrom) {
@@ -297,7 +297,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
           params,
         );
 
-        return c.json({
+        res.json({
           buckets: (
             result.rows as { date: string; in_amt: string; out_amt: string; transfer_amt: string }[]
           ).map((r) => ({
@@ -309,7 +309,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
         });
       } catch (err) {
         console.error("[transactions] cashflow error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       }
     },
   );
@@ -326,15 +326,15 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
   // bucketMinutes (30 or 60, default 60).
   //
   // Response: { buckets: Array<{ hour, minute, in, out }>, bucketMinutes }
-  app.get(
+  router.get(
     "/by-hour",
     requireAuth,
     requireWorkspace,
     requirePermission("transactions.view"),
-    async (c: HonoContext) => {
-      const dateFrom = c.req.query("dateFrom");
-      const dateTo = c.req.query("dateTo");
-      const bucketMinutes = c.req.query("bucketMinutes") === "30" ? 30 : 60;
+    async (req: Request, res: Response) => {
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
+      const bucketMinutes = req.query.bucketMinutes === "30" ? 30 : 60;
 
       // Bucketing + date filtering happen in the workspace's local timezone so the
       // chart's "hour of day" matches the operator's wall clock. Hardcoded
@@ -342,7 +342,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
       const ORG_TZ = "Asia/Manila";
 
       try {
-        const params: unknown[] = [c.get("workspaceId")];
+        const params: unknown[] = [req.workspaceId];
         // Line items inherit the parent transaction's privacy posture, so we
         // join up to the transaction and apply the same visibility rules.
         const baseConds = [
@@ -351,7 +351,7 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
           "li.status != 'voided'",
           "t.status != 'voided'",
         ];
-        const priv = privacyClause(c, params, params.length + 1);
+        const priv = privacyClause(req, params, params.length + 1);
         if (priv) baseConds.push(priv);
 
         const dateFromIdx = dateFrom ? (params.push(dateFrom), params.length) : null;
@@ -421,10 +421,10 @@ export function registerAnalyticsRoutes(app: Hono, ctx: AnalyticsRouteCtx): void
           return { hour, minute, in: ins.get(i) ?? 0, out: outs.get(i) ?? 0 };
         });
 
-        return c.json({ buckets, bucketMinutes });
+        res.json({ buckets, bucketMinutes });
       } catch (err) {
         console.error("[transactions] by-hour error:", err);
-        return c.json({ error: "Internal server error" }, 500);
+        res.status(500).json({ error: "Internal server error" });
       }
     },
   );
