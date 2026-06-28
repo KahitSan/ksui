@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
-import { serve } from "@hono/node-server";
+import { getRequestListener } from "@hono/node-server";
+import { createServer } from "node:http";
 import request from "supertest";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
@@ -35,7 +36,7 @@ vi.mock("../../server/lib/peers.js", () => ({
 const TEST_ORG = 3;
 const SCHEMAS = ["accounts"];
 
-let app: Hono;
+let app: ReturnType<typeof createServer>;
 let pool: pg.Pool;
 let rollback: () => Promise<void>;
 
@@ -91,21 +92,22 @@ beforeAll(async () => {
     requirePermission,
   });
   const honoApp = new Hono();
-  app = serve({ fetch: honoApp.fetch, port: 0 }) as any;
-    // The F3 data surface reads the workspace from the ambient tenant context
+  // The F3 data surface reads the workspace from the ambient tenant context
   // (set by withTenantContext in prod). The stub middleware doesn't establish
   // that ALS scope, so wrap each request in runWithTenantContext here, matching
   // the stubbed identity, or the surface-backed routes fail-closed.
-  app.use((_c, next) =>
+  honoApp.use("*", (_c, next) =>
     runWithTenantContext(
       { wsId: TEST_ORG, userId, role: "superuser", wsRole: "admin" },
       () => next(),
     ),
   );
-  app.route("/", router);
+  honoApp.route("/", router);
+  app = createServer(getRequestListener(honoApp.fetch));
 });
 
 afterAll(async () => {
+  await new Promise<void>((resolve) => app.close(() => resolve()));
   await rollback(); // discard every row the suite wrote
   await pool.end();
 });

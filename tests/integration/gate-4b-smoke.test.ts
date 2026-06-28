@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
+import { getRequestListener } from "@hono/node-server";
+import { createServer } from "node:http";
 import request from "supertest";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
@@ -66,13 +68,13 @@ let vRowId = 0;
 // One app per identity — stubMiddleware binds a FIXED identity, so a different
 // workspace / permission set needs its own router instance over the SAME
 // rollback db (all reads/writes share the one outer transaction).
-let appW: any; // workspace W, holds transactions.view
-let appV: any; // workspace V, holds transactions.view (the foreign tenant)
-let appNoPerm: any; // workspace W, holds NO transactions.* permission
+let appW: ReturnType<typeof createServer>; // workspace W, holds transactions.view
+let appV: ReturnType<typeof createServer>; // workspace V, holds transactions.view (the foreign tenant)
+let appNoPerm: ReturnType<typeof createServer>; // workspace W, holds NO transactions.* permission
 
 let ready = false;
 
-function mountApp(workspaceId: number, permissions: string[]): Hono {
+function mountApp(workspaceId: number, permissions: string[]): ReturnType<typeof createServer> {
   const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId,
     userId,
@@ -86,9 +88,15 @@ function mountApp(workspaceId: number, permissions: string[]): Hono {
     requireWorkspace,
     requirePermission,
   });
-  const app = new Hono();
-    app.route("/", router);
-  return app;
+  const honoApp = new Hono();
+  honoApp.use("*", (_c, next) =>
+    runWithTenantContext(
+      { wsId: workspaceId, userId, role: "member", wsRole: "admin" },
+      () => next(),
+    ),
+  );
+  honoApp.route("/", router);
+  return createServer(getRequestListener(honoApp.fetch));
 }
 
 beforeAll(async () => {
@@ -170,6 +178,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await new Promise<void>((resolve) => appW?.close(() => resolve()));
+  await new Promise<void>((resolve) => appV?.close(() => resolve()));
+  await new Promise<void>((resolve) => appNoPerm?.close(() => resolve()));
   if (rollback) await rollback(); // discards both seeded rows
   if (pool) await pool.end();
 });

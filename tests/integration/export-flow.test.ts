@@ -1,11 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
+import { getRequestListener } from "@hono/node-server";
+import { createServer } from "node:http";
 import request from "supertest";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { todayInOrgTimezone } from "../../server/lib/backdate.js";
 import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
+import { runWithTenantContext } from "@ks-erp/kernel/services/tenant-context";
 
 // Same posture as transactions-flow: peer name resolution is out of scope, so
 // every cross-plugin resolver returns its degraded null (the export then leaves
@@ -47,7 +50,7 @@ vi.mock("@kahitsan/plugin-server-utils", async (importOriginal) => {
 const TEST_ORG = 3;
 const SCHEMAS = ["accounts"];
 
-let app: any;
+let app: ReturnType<typeof createServer>;
 let pool: pg.Pool;
 let rollback: () => Promise<void>;
 
@@ -93,11 +96,19 @@ beforeAll(async () => {
     requireWorkspace,
     requirePermission,
   });
-  app = new Hono() as any;
-    app.route("/", router);
+  const honoApp = new Hono();
+  honoApp.use("*", (_c, next) =>
+    runWithTenantContext(
+      { wsId: TEST_ORG, userId, role: "superuser", wsRole: "admin" },
+      () => next(),
+    ),
+  );
+  honoApp.route("/", router);
+  app = createServer(getRequestListener(honoApp.fetch));
 });
 
 afterAll(async () => {
+  await new Promise<void>((resolve) => app.close(() => resolve()));
   await rollback();
   await pool.end();
 });
