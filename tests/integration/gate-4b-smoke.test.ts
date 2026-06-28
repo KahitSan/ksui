@@ -2,10 +2,9 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { makeDatabaseService, makeDataSurface, runWithTenantContext as sdkRunWithTenantContext } from "@kahitsan/plugin-sdk";
+import { makeDatabaseService, makeDataSurface, runWithTenantContext } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
-import { runWithTenantContext } from "@ks-erp/kernel/services/tenant-context";
 
 // ── Gate-4b cross-subsystem smoke (transactions) ─────────────────────────────
 //
@@ -329,7 +328,7 @@ describe("Gate-4b: roles + consent + transport compose on transactions (real Pos
     try {
       const surface = () => makeDataSurface(makeDatabaseService(pool, ["accounts"]));
       const asW = <T>(fn: () => Promise<T>) =>
-        sdkRunWithTenantContext({ wsId: wsW, userId, role: "member", wsRole: "member" }, fn);
+        runWithTenantContext({ wsId: wsW, userId, role: "member", wsRole: "member" }, fn);
 
       // POSITIVE: W's own row resolves.
       const ownRows = await asW(() =>

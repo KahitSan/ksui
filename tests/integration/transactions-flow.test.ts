@@ -6,7 +6,7 @@ import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { todayInOrgTimezone } from "../../server/lib/backdate.js";
 import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
-import { runWithTenantContext } from "@ks-erp/kernel/services/tenant-context";
+import { runWithTenantContext } from "@kahitsan/plugin-sdk";
 
 // Peer hydration (package / variant / client / account / payee / voucher names
 // resolved over the kernel RPC) is OUT OF SCOPE for this test — this suite is
@@ -35,7 +35,7 @@ const TEST_ORG = 3;
 const SCHEMAS = ["accounts"];
 
 let honoApp: Hono;
-let client: ReturnType<typeof testClient>;
+let client: any;
 let pool: pg.Pool;
 let rollback: () => Promise<void>;
 

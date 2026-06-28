@@ -6,7 +6,7 @@ import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { todayInOrgTimezone } from "../../server/lib/backdate.js";
 import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
-import { runWithTenantContext } from "@ks-erp/kernel/services/tenant-context";
+import { runWithTenantContext } from "@kahitsan/plugin-sdk";
 
 // Same posture as transactions-flow: peer name resolution is out of scope, so
 // every cross-plugin resolver returns its degraded null (the export then leaves
@@ -49,7 +49,7 @@ const TEST_ORG = 3;
 const SCHEMAS = ["accounts"];
 
 let honoApp: Hono;
-let client: ReturnType<typeof testClient>;
+let client: any;
 let pool: pg.Pool;
 let rollback: () => Promise<void>;
 

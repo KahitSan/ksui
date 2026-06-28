@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import pg from "pg";
 import { makeDatabaseService } from "@kahitsan/plugin-sdk";
-import { runWithTenantContext } from "@ks-erp/kernel/services/tenant-context";
+import { runWithTenantContext } from "@kahitsan/plugin-sdk";
 import { makeDataSurface } from "@kahitsan/plugin-sdk";
 
 // ── F3 band leak test (transactions) ─────────────────────────────────────────
