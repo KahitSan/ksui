@@ -16,7 +16,7 @@
 
 import "dotenv/config";
 import { createPluginServer, applyTenantContext } from "@kahitsan/plugin-sdk";
-import { flows } from "./flows.js";
+import { flows, voidFlow, deletePaymentFlow, deleteAttachmentFlow } from "./flows.js";
 import {
   insertTransactionRow,
   insertVisibilityShares,
@@ -26,10 +26,10 @@ import { buildLineItemsRouter } from "./routes-line-items.js";
 
 createPluginServer({
   importMetaUrl: import.meta.url,
-  flows,
+  flows: [...flows, voidFlow, deletePaymentFlow, deleteAttachmentFlow],
   // ── Producer side: transactions.service ──────────────────────────────────
   // Secret-gated POST /_internal/services/:method, identity parsed so each
-  // handler is workspace-scoped via req.workspaceId. These are the methods the
+  // handler is workspace-scoped via (req as any).workspaceId. These are the methods the
   // monolith's transactionsExtensionPoint exposed; packages reads
   // getPackageCapacityUsage to enforce per-package capacity / daily / monthly
   // limits at the cart.
@@ -37,11 +37,11 @@ createPluginServer({
     // findById({ id }) → a workspace-scoped transaction row, or null.
     findById: async (args, { req }) => {
       const id = (args as { id?: unknown })?.id;
-      if (req.workspaceId == null || id == null) return null;
+      if ((req as any).workspaceId == null || id == null) return null;
       const r = await db.query(
         `SELECT id, workspace_id, created_at, updated_at, amount, status, category
            FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-        [id, req.workspaceId]
+        [id, (req as any).workspaceId]
       );
       return r.rows[0] ?? null;
     },
@@ -67,7 +67,7 @@ createPluginServer({
     // object (JSON over the RPC can't carry a Map).
     getAccountBalances: async (args, { req }) => {
       const a = (args ?? {}) as { accountIds?: unknown };
-      const wsId = req.workspaceId;
+      const wsId = (req as any).workspaceId;
       const accountIds = Array.isArray(a.accountIds)
         ? a.accountIds
             .map((v) => (typeof v === "number" ? v : parseInt(String(v), 10)))
@@ -133,7 +133,7 @@ createPluginServer({
     // the RPC can't carry a Map).
     getPackageCapacityUsage: async (args, { req }) => {
       const a = (args ?? {}) as { packageIds?: unknown; at?: unknown };
-      const wsId = req.workspaceId;
+      const wsId = (req as any).workspaceId;
       const packageIds = Array.isArray(a.packageIds)
         ? a.packageIds
             .map((v) => (typeof v === "number" ? v : parseInt(String(v), 10)))
@@ -205,7 +205,7 @@ createPluginServer({
     // is fixed to the salary use case — category/subcategory/description and
     // the director+accountant visibility grants are baked in, NOT
     // caller-controlled, so the cross-plugin surface stays minimal. Salary is
-    // not VATable, so tax is zeroed (non_vat). Workspace-scoped via req.workspaceId;
+    // not VATable, so tax is zeroed (non_vat). Workspace-scoped via (req as any).workspaceId;
     // created_by is the calling user relayed in the signed identity header.
     createSalaryTransaction: async (args, { req }) => {
       const a = (args ?? {}) as {
@@ -215,8 +215,8 @@ createPluginServer({
         notes?: unknown;
         transaction_date?: unknown;
       };
-      const wsId = req.workspaceId;
-      const userId = req.user?.id;
+      const wsId = (req as any).workspaceId;
+      const userId = (req as any).user?.id;
       if (wsId == null || !userId)
         throw new Error("Workspace and user context required");
 
