@@ -18,9 +18,9 @@
   },
   "dependencies": {
     "@kahitsan/ksui": "^0.29.0",
-    "@kahitsan/plugin-sdk": "^0.4.3",
+    "@kahitsan/plugin-sdk": "^0.2.0",
     "dotenv": "^16.5.0",
-    "hono": "^4.12.0",
+    "express": "^5.1.0",
     "multer": "^2.1.1",
     "pg": "^8.16.0"
   },
@@ -31,6 +31,7 @@
     "@babel/plugin-syntax-typescript": "^7.27.1",
     "@changesets/cli": "^2.27.0",
     "@tailwindcss/vite": "^4.2.2",
+    "@types/express": "^5.0.0",
     "@types/multer": "^2.1.0",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.11.11",
