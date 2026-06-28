@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.9.4
+
+### Patch Changes
+
+- e6a9058: Bump @kahitsan/plugin-sdk to 0.4.4
+
 ## 0.9.3
 
 ### Patch Changes
