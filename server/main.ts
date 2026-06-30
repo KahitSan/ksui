@@ -320,11 +320,18 @@ createPluginServer({
         // a failed S3 upload must not roll back the salary). Bypasses the kernel proxy's
         // multipart limitation by accepting file content as base64 in the RPC JSON body.
         if (s3Enabled() && attachments.length > 0) {
+          const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
+          const ALLOWED_MIMES = [
+            "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
+            "application/pdf",
+          ];
           for (const att of attachments) {
             try {
+              if (!ALLOWED_MIMES.includes(att.mime_type)) continue;
+              const buffer = Buffer.from(att.content_base64, "base64");
+              if (buffer.length > MAX_ATTACHMENT_SIZE) continue;
               const filename = crypto.randomUUID() + path.extname(att.file_name).toLowerCase();
               const key = `uploads/transactions/${wsId}/${filename}`;
-              const buffer = Buffer.from(att.content_base64, "base64");
               await s3PutObject(key, buffer, att.mime_type, { acl: "private" });
               const s3Link = s3PublicUrl(key);
               await pool.query(
