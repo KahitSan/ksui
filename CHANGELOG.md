@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.9.5
+
+### Patch Changes
+
+- 3d3687a: createSalaryTransaction RPC now accepts backdate_reason and attachment payloads (base64). TransactionForm and related UI components now import PendingFile from @kahitsan/ksui instead of defining it locally.
+
 ## 0.9.4
 
 ### Patch Changes
