@@ -197,6 +197,11 @@ export { attachmentUrl, isResolvableAttachment } from "./utils/attachments";
 
 export { createObjectUrlResource } from "./utils/object-url-resource";
 export type { ObjectUrlOptions } from "./utils/object-url-resource";
+export {
+  createPendingFile,
+  revokePendingFile,
+} from "./utils/pending-file";
+export type { PendingFile } from "./utils/pending-file";
 
 export { useAccountsIndex, resolveAccount, resolveAccountName } from "./utils/accounts-index";
 
