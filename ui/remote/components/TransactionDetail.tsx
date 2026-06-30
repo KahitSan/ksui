@@ -14,7 +14,8 @@ import ChevronUp from "lucide-solid/icons/chevron-up";
 import CalendarDays from "lucide-solid/icons/calendar-days";
 
 import { formatCurrency, formatDate, formatDateTime } from "../lib/format";
-import { type PendingFile, type Transaction } from "../lib/types";
+import type { PendingFile } from "@kahitsan/ksui";
+import { type Transaction } from "../lib/types";
 import {
   CATEGORY_TONE,
   TONE_CLASSES,

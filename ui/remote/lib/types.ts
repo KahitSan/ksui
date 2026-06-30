@@ -1,29 +1,9 @@
-// Shared domain types for the transactions remote UI, plus the PendingFile
-// helper and its id-generation state. Extracted from index.tsx so every
-// later-extracted component/hook module imports the same definitions instead
-// of re-declaring them. IconComponent is a type-only alias (no JSX), safe here.
+// Shared domain types for the transactions remote UI. Extracted from index.tsx
+// so every later-extracted component/hook module imports the same definitions
+// instead of re-declaring them. IconComponent is a type-only alias (no JSX),
+// safe here. PendingFile is imported from @kahitsan/ksui.
 
 import type { JSX } from "solid-js";
-
-/** A pending file with a stable id for keying and an optional preview URL */
-export interface PendingFile {
-  id: string;
-  file: File;
-  previewUrl: string | null;
-}
-
-let _pendingFileCounter = 0;
-export function createPendingFile(file: File): PendingFile {
-  const isImage = file.type.startsWith("image/");
-  return {
-    id: `pf-${++_pendingFileCounter}-${Date.now()}`,
-    file,
-    previewUrl: isImage ? URL.createObjectURL(file) : null,
-  };
-}
-export function revokePendingFile(pf: PendingFile) {
-  if (pf.previewUrl) URL.revokeObjectURL(pf.previewUrl);
-}
 
 export interface Transaction {
   id: number;
