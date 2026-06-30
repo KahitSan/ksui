@@ -21,6 +21,14 @@ import {
   insertTransactionRow,
   insertVisibilityShares,
 } from "./lib/create-transaction.js";
+import { isBackdated } from "./lib/backdate.js";
+import {
+  s3Enabled,
+  s3PublicUrl,
+  s3PutObject,
+} from "@kahitsan/plugin-server-utils";
+import crypto from "crypto";
+import path from "node:path";
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
 
@@ -205,7 +213,8 @@ createPluginServer({
     },
 
     // createSalaryTransaction({ amount, payee_id, source_account_id, notes,
-    //   transaction_date }) → { id, amount, transaction_date }
+    //   transaction_date, backdate_reason, attachments? }) → { id, amount,
+    //   transaction_date }
     // Producer side of the payroll flow: the timesheets plugin calls this to
     // record a private "Salary - Direct" expense when it marks shifts paid,
     // so timesheets never writes the accounts.* schema it can't see. The shape
@@ -214,6 +223,9 @@ createPluginServer({
     // caller-controlled, so the cross-plugin surface stays minimal. Salary is
     // not VATable, so tax is zeroed (non_vat). Workspace-scoped via req.workspaceId;
     // created_by is the calling user relayed in the signed identity header.
+    // Optional `attachments` is an array of base64-encoded file payloads (bypasses
+    // the kernel proxy's multipart limitation) — each: { file_name, mime_type,
+    // content_base64 }. Uploaded inline with the same S3 helpers the HTTP route uses.
     createSalaryTransaction: async (args, { req }) => { const svcReq = req as unknown as ServiceReq;
       const a = (args ?? {}) as {
         amount?: unknown;
@@ -221,6 +233,8 @@ createPluginServer({
         source_account_id?: unknown;
         notes?: unknown;
         transaction_date?: unknown;
+        backdate_reason?: unknown;
+        attachments?: unknown;
       };
       const wsId = svcReq.workspaceId;
       const userId = svcReq.user?.id;
@@ -252,6 +266,18 @@ createPluginServer({
       if (!transactionDate)
         throw new Error("transaction_date must be YYYY-MM-DD");
       const notes = typeof a.notes === "string" ? a.notes : null;
+      const backdateReason = typeof a.backdate_reason === "string" && a.backdate_reason.trim()
+        ? a.backdate_reason.trim() : null;
+      const backdated = isBackdated(transactionDate);
+      const attachmentsRaw = Array.isArray(a.attachments) ? a.attachments : [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const attachments: Array<{ file_name: string; mime_type: string; content_base64: string }> = [];
+      for (const att of attachmentsRaw) {
+        const o = att as Record<string, unknown>;
+        if (typeof o.file_name === "string" && typeof o.mime_type === "string" && typeof o.content_base64 === "string") {
+          attachments.push({ file_name: o.file_name, mime_type: o.mime_type, content_base64: o.content_base64 });
+        }
+      }
 
       const client = await pool.connect();
       try {
@@ -268,8 +294,8 @@ createPluginServer({
           notes,
           transactionDate,
           isPrivate: true,
-          isBackdated: false,
-          backdateReason: null,
+          isBackdated: backdated,
+          backdateReason,
           createdBy: userId,
           referenceNumber: null,
           taxType: "non_vat",
@@ -291,6 +317,27 @@ createPluginServer({
           sharedWithRoles: ["director", "accountant"],
         });
         await client.query("COMMIT");
+        // Upload base64 attachments after the transaction is committed (best-effort:
+        // a failed S3 upload must not roll back the salary). Bypasses the kernel proxy's
+        // multipart limitation by accepting file content as base64 in the RPC JSON body.
+        if (s3Enabled() && attachments.length > 0) {
+          for (const att of attachments) {
+            try {
+              const filename = crypto.randomUUID() + path.extname(att.file_name).toLowerCase();
+              const key = `uploads/transactions/${wsId}/${filename}`;
+              const buffer = Buffer.from(att.content_base64, "base64");
+              await s3PutObject(key, buffer, att.mime_type, { acl: "private" });
+              const s3Link = s3PublicUrl(key);
+              await pool.query(
+                `INSERT INTO accounts.transaction_attachments (transaction_id, file_name, file_size, mime_type, uploaded_by, s3_link)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [txn.id, att.file_name, buffer.length, att.mime_type, userId, s3Link],
+              );
+            } catch (e) {
+              console.error("[transactions] salary attachment upload failed:", e);
+            }
+          }
+        }
         return { id: txn.id, amount, transaction_date: transactionDate };
       } catch (e) {
         await client.query("ROLLBACK").catch(() => {});

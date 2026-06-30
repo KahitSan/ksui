@@ -16,9 +16,8 @@ import { createMemo, createSignal } from "solid-js";
 import { type SalesLine } from "../components/SalesBodyEditor";
 import { type ClientOption, type VoucherOption } from "@kahitsan/ksui";
 import { todayManila } from "../lib/format";
+import { type PendingFile, revokePendingFile } from "@kahitsan/ksui";
 import {
-  type PendingFile,
-  revokePendingFile,
   type Transaction,
 } from "../lib/types";
 

@@ -48,6 +48,8 @@ import {
   type PendingFile,
   createPendingFile,
   revokePendingFile,
+} from "@kahitsan/ksui";
+import {
   type Transaction,
   type Attachment,
 } from "./lib/types";
