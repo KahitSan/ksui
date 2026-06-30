@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.29.1
+
+### Patch Changes
+
+- 29d5376: Add PendingFile type + createPendingFile / revokePendingFile helpers for pre-upload file state management
+
 ## 0.29.0
 
 ### Minor Changes
