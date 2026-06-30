@@ -270,7 +270,6 @@ createPluginServer({
         ? a.backdate_reason.trim() : null;
       const backdated = isBackdated(transactionDate);
       const attachmentsRaw = Array.isArray(a.attachments) ? a.attachments : [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const attachments: Array<{ file_name: string; mime_type: string; content_base64: string }> = [];
       for (const att of attachmentsRaw) {
         const o = att as Record<string, unknown>;
