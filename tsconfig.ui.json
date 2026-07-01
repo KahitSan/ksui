@@ -10,31 +10,6 @@
     "skipLibCheck": true,
     "types": [],
     "baseUrl": ".",
-    "paths": {
-      "@ks-erp/kernel-base": [
-        "../kserp/kernel-base/index.ts"
-      ],
-      "@ks-erp/kernel-composite": [
-        "../kserp/kernel-composite/index.ts"
-      ],
-      "@ks-erp/kernel-orchestrator": [
-        "../kserp/kernel-orchestrator/index.ts"
-      ],
-      "@ks-erp/kernel-gateway": [
-        "../kserp/kernel-gateway/index.ts"
-      ],
-      "@ks-erp/kernel-theme": [
-        "../kserp/kernel-theme/index.ts"
-      ],
-      "@ks-erp/kernel": [
-        "../kserp/kernel/index.ts"
-      ],
-      "@ks-erp/kernel/*": [
-        "../kserp/kernel/*.ts",
-        "../kserp/kernel/*/index.ts",
-        "../kserp/kernel/*"
-      ]
-    },
     "ignoreDeprecations": "6.0",
     "jsx": "preserve",
     "jsxImportSource": "solid-js"

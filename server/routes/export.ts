@@ -23,7 +23,7 @@
 import { Hono, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
-import { s3Enabled, s3PutObject, s3GetObject, s3DeleteObject } from "@kahitsan/plugin-server-utils";
+import { s3Enabled, s3PutObject, s3GetObject, s3DeleteObject } from "@kahitsan/plugin-sdk";
 import { privacyClause, isValidIsoDate, resolveUserNames } from "./shared.js";
 import { findAccountsByIds, findPayeesByIds, type IdentityHeader } from "../lib/peers.js";
 import { ctxGet } from "../types.js";

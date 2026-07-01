@@ -4,7 +4,7 @@ import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { todayInOrgTimezone } from "../../server/lib/backdate.js";
-import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
+import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-sdk/test";
 import { runWithTenantContext } from "@kahitsan/plugin-sdk";
 
 /** Make an HTTP request against a Hono app and return status + json accessor. */
@@ -41,8 +41,8 @@ vi.mock("../../server/lib/peers.js", () => ({
 // re-fetches it. We don't need a real MinIO in CI — just a put/get pair that
 // round-trips the bytes, with s3Enabled() forced on so POST /export proceeds.
 const s3Store = new Map<string, Buffer>();
-vi.mock("@kahitsan/plugin-server-utils", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@kahitsan/plugin-server-utils")>();
+vi.mock("@kahitsan/plugin-sdk", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@kahitsan/plugin-sdk")>();
   return {
     ...actual,
     s3Enabled: () => true,
