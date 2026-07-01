@@ -15,6 +15,13 @@ type MigrationContext = { client: import("pg").PoolClient };
 const migration = {
   name: "transactions_0003_remove_dead_blob_attachments",
   async up({ client }: MigrationContext) {
+    const colCheck = await client.query(
+      `SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'accounts'
+          AND table_name = 'transaction_attachments'
+          AND column_name = 'file_path'`,
+    );
+    if (colCheck.rows.length === 0) return;
     const res = await client.query(
       `DELETE FROM accounts.transaction_attachments WHERE file_path LIKE 'blob:%'`,
     );

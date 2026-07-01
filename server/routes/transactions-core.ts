@@ -146,6 +146,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
 
         const dataQuery = `
           SELECT t.*,
+            to_char(t.transaction_date, 'YYYY-MM-DD') AS transaction_date,
             (SELECT COUNT(*) FROM accounts.transaction_attachments ta WHERE ta.transaction_id = t.id) AS attachment_count,
             paid.total_paid::numeric(12,2) AS amount_collected,
             (t.amount - paid.total_paid)::numeric(12,2) AS balance,

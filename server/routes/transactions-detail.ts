@@ -39,6 +39,7 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
       try {
         const result = await pool.query(
           `SELECT t.*,
+            to_char(t.transaction_date, 'YYYY-MM-DD') AS transaction_date,
             paid.total_paid::numeric(12,2) AS amount_collected,
             (t.amount - paid.total_paid)::numeric(12,2) AS balance,
             CASE
