@@ -4,7 +4,7 @@ import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { todayInOrgTimezone } from "../../server/lib/backdate.js";
-import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
+import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-sdk/test";
 import { runWithTenantContext } from "@kahitsan/plugin-sdk";
 
 /** Make an HTTP request against a Hono app and return status + json accessor. */

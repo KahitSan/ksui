@@ -4,7 +4,7 @@ import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { makeDatabaseService, makeDataSurface, runWithTenantContext } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
-import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-server-utils/test";
+import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-sdk/test";
 
 // ── Gate-4b cross-subsystem smoke (transactions) ─────────────────────────────
 //

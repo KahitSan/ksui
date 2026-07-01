@@ -12,40 +12,6 @@
       "node"
     ],
     "baseUrl": ".",
-    "paths": {
-      "@ks-erp/kernel-base": [
-        "../kserp/kernel-base/index.ts"
-      ],
-      "@ks-erp/kernel-composite": [
-        "../kserp/kernel-composite/index.ts"
-      ],
-      "@ks-erp/kernel-orchestrator": [
-        "../kserp/kernel-orchestrator/index.ts"
-      ],
-      "@ks-erp/kernel-gateway": [
-        "../kserp/kernel-gateway/index.ts"
-      ],
-      "@ks-erp/kernel-theme": [
-        "../kserp/kernel-theme/index.ts"
-      ],
-      "@ks-erp/kernel": [
-        "../kserp/kernel/index.ts"
-      ],
-      "@ks-erp/kernel/*": [
-        "../kserp/kernel/*.ts",
-        "../kserp/kernel/*/index.ts",
-        "../kserp/kernel/*"
-      ],
-      "@kahitsan/plugin-server-utils": [
-        "../kserp/packages/plugin-server-utils/src/index.ts"
-      ],
-      "@kahitsan/plugin-server-utils/express": [
-        "../kserp/packages/plugin-server-utils/express.d.ts"
-      ],
-      "@kahitsan/plugin-server-utils/test": [
-        "../kserp/packages/plugin-server-utils/src/test/index.ts"
-      ]
-    },
     "ignoreDeprecations": "6.0"
   },
   "include": [
