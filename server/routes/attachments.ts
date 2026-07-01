@@ -23,7 +23,7 @@ import {
   s3DeleteObject,
   s3KeyFromUrl,
   s3GetObject,
-} from "@kahitsan/plugin-server-utils";
+} from "@kahitsan/plugin-sdk";
 
 // How long the browser may cache a streamed attachment. `private` keeps it out of
 // shared caches (it's an authed, per-workspace object); 5 min covers a detail-view
