@@ -1,5 +1,14 @@
 # @kahitsan/kplugin_transactions
 
+## 0.9.8
+
+### Patch Changes
+
+- dba80f2: Fix transactions CSV export progress stream under the Bun runtime. The
+  `/export/:jobId/progress` SSE route used raw Node `res.write()`, which throws
+  under Bun + Hono (`c.res` is a Fetch `Response`); rewritten to use Hono's
+  `streamSSE`. Export now streams progress/done frames and completes.
+
 ## 0.9.7
 
 ### Patch Changes
