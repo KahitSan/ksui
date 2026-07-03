@@ -24,7 +24,7 @@ import {
 } from "../lib/peers.js";
 import { resolveUserNames } from "./shared.js";
 import type { CoreRouteCtx } from "./transactions-core.js";
-import { ctxGet } from "../types.js";
+import { ctxGet, isWorkspaceElevated } from "../types.js";
 
 export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
@@ -65,8 +65,7 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
         const idh = identityHeaderOf(c);
 
         // Privacy check.
-        const isAdmin = ctxGet(c, "wsRole") === "admin" || ctxGet(c, "user")?.role === "superuser";
-        if (txn.is_private && txn.created_by !== ctxGet(c, "user")?.id && !isAdmin) {
+        if (txn.is_private && txn.created_by !== ctxGet(c, "user")?.id && !isWorkspaceElevated(c)) {
           const vis = await pool.query(
             `SELECT 1 FROM accounts.transaction_visibility WHERE transaction_id = $1 AND user_id = $2
              UNION ALL
@@ -87,7 +86,7 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
 
         let shared_with: { user_id: string }[] = [];
         let shared_with_roles: { role_code: string }[] = [];
-        if (txn.is_private && (txn.created_by === ctxGet(c, "user")?.id || isAdmin)) {
+        if (txn.is_private && (txn.created_by === ctxGet(c, "user")?.id || isWorkspaceElevated(c))) {
           shared_with = (
             await pool.query(`SELECT user_id FROM accounts.transaction_visibility WHERE transaction_id = $1`, [txn.id])
           ).rows;

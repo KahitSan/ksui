@@ -28,7 +28,7 @@ import { validateSubcategory } from "../lib/transaction-subcategories.js";
 import { isBackdated } from "../lib/backdate.js";
 import { registerTransactionDetailRoute } from "./transactions-detail.js";
 import { registerTransactionStatusRoutes } from "./transactions-status.js";
-import { ctxGet } from "../types.js";
+import { ctxGet, isWorkspaceElevated } from "../types.js";
 import {
   SORTABLE_COLUMNS,
   VALID_CATEGORIES,
@@ -302,8 +302,8 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
       // Backdate gate (transactions.backdate). Admin/superuser bypass.
       const backdated = isBackdated(String(transaction_date));
       if (backdated) {
-        const isAdmin = ctxGet(c, "user")?.role === "superuser" || ctxGet(c, "wsRole") === "admin";
-        const allowed = isAdmin || (ctxGet(c, "permissions") ?? []).includes("transactions.backdate");
+        const allowed =
+          isWorkspaceElevated(c) || (ctxGet(c, "permissions") ?? []).includes("transactions.backdate");
         if (!allowed) {
           return c.json({ error: "Missing permission: transactions.backdate" }, 403);
         }
@@ -539,8 +539,9 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           const backdated = isBackdated(String(transaction_date));
           const effectiveReason = backdate_reason?.trim() || reason?.trim();
           if (backdated) {
-            const isAdmin = ctxGet(c, "user")?.role === "superuser" || ctxGet(c, "wsRole") === "admin";
-            const allowed = isAdmin || (ctxGet(c, "permissions") ?? []).includes("transactions.backdate");
+            const allowed =
+              isWorkspaceElevated(c) ||
+              (ctxGet(c, "permissions") ?? []).includes("transactions.backdate");
             if (!allowed) {
               return c.json({ error: "Missing permission: transactions.backdate" }, 403);
             }

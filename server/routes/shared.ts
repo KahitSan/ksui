@@ -7,6 +7,7 @@
 
 import type { Context } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
+import { isWorkspaceElevated } from "../types.js";
 
 export const SORTABLE_COLUMNS = [
   "transaction_date",
@@ -51,8 +52,7 @@ export async function resolveUserNames(
 // shared on it, or to an admin/superuser (who bypass entirely). Returns the
 // SQL fragment + the next param index.
 export function privacyClause(c: Context, params: unknown[], startIdx: number): string | null {
-  const isAdmin = c.get("wsRole") === "admin" || c.get("user")?.role === "superuser";
-  if (isAdmin) return null;
+  if (isWorkspaceElevated(c)) return null;
   const userId = c.get("user")?.id ?? "";
   const frag = `(t.is_private = false OR t.created_by = $${startIdx} OR EXISTS (SELECT 1 FROM accounts.transaction_visibility tv WHERE tv.transaction_id = t.id AND tv.user_id = $${startIdx}) OR EXISTS (SELECT 1 FROM accounts.transaction_visibility_role tvr WHERE tvr.transaction_id = t.id AND tvr.role_code = $${startIdx + 1}))`;
   params.push(userId, c.get("wsRole") ?? "");
