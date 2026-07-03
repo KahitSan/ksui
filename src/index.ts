@@ -200,8 +200,9 @@ export type { ObjectUrlOptions } from "./utils/object-url-resource";
 export {
   createPendingFile,
   revokePendingFile,
+  uploadPendingFiles,
 } from "./utils/pending-file";
-export type { PendingFile } from "./utils/pending-file";
+export type { PendingFile, UploadPendingFilesOptions } from "./utils/pending-file";
 
 export { useAccountsIndex, resolveAccount, resolveAccountName } from "./utils/accounts-index";
 
