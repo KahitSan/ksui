@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.9.9
+
+### Patch Changes
+
+- b4ed682: Consolidate the duplicated superuser/workspace-admin bypass check (privacy + backdate gates) into a single import from `@kahitsan/plugin-sdk`'s new `isWorkspaceElevated` export, replacing 6 independent hand-rolled copies.
+
 ## 0.9.8
 
 ### Patch Changes
