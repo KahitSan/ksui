@@ -21,6 +21,7 @@
 // requester can't already see in the list. Voided rows are excluded.
 
 import { Hono, type MiddlewareHandler } from "hono";
+import { streamSSE } from "hono/streaming";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { s3Enabled, s3PutObject, s3GetObject, s3DeleteObject } from "@kahitsan/plugin-sdk";
@@ -406,90 +407,69 @@ export function registerExportRoutes(router: Hono, ctx: ExportRouteCtx): void {
         return c.json({ error: "Not found" }, 404);
       }
 
-      // Hono streaming: c.header() sets headers, c.body() will stream the response
-      c.header("Content-Type", "text/event-stream; charset=utf-8");
-      c.header("Cache-Control", "no-cache, no-transform");
+      // nginx must not buffer an event-stream (streamSSE sets Content-Type +
+      // Cache-Control itself); without this the client sees no frames until close.
       c.header("X-Accel-Buffering", "no");
 
-      let finished = false;
-      let endTimer: NodeJS.Timeout | undefined;
-      const rawRes = (c as any).res || (c as any).raw?.res;
-      const send = (event: string, data: unknown) => {
-        if (rawRes) rawRes.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-      };
-      const stopTimers = () => {
-        clearInterval(timer);
-        if (endTimer) clearTimeout(endTimer);
-      };
-      // Stop polling and emit the terminal frame, but do NOT close the socket
-      // immediately — closing the instant after the final write races the
-      // browser's EventSource parser, which can drop the terminal event and
-      // fire 'error' (then reconnect) instead. The client closes the stream
-      // itself on 'done'/'error' (→ req 'close' → stopTimers); this grace
-      // backstop ends it if the client lingers.
-      const finish = () => {
-        if (finished) return;
-        finished = true;
-        clearInterval(timer);
-        endTimer = setTimeout(() => { if (rawRes) rawRes.end(); }, 1500);
-      };
+      return streamSSE(c, async (stream) => {
+        // onAbort fires when the client disconnects (navigated away, or closed
+        // the stream after 'done'/'error') — stop polling and let the callback
+        // return, which closes the socket.
+        let aborted = false;
+        stream.onAbort(() => { aborted = true; });
 
-      const startedAt = Date.now();
-      const poll = async () => {
-        if (finished) return;
-        try {
-          const r = await pool.query(
-            `SELECT status, progress_done, progress_total, filename, error_message
-               FROM accounts.export_jobs WHERE id = $1 AND workspace_id = $2`,
-            [jobId, ctxGet(c, "workspaceId")],
-          );
-          const job = r.rows[0] as
-            | {
-                status: string;
-                progress_done: number;
-                progress_total: number;
-                filename: string | null;
-                error_message: string | null;
-              }
-            | undefined;
-          if (!job) {
-            send("error", { message: "Export job not found" });
-            finish();
-            return;
-          }
-          send("progress", {
-            done: job.progress_done,
-            total: job.progress_total,
-            status: job.status,
-          });
-          if (job.status === "done") {
-            send("done", {
-              filename: job.filename,
-              downloadUrl: `/api/transactions/export/${jobId}/download`,
+        const startedAt = Date.now();
+        let terminal = false;
+        while (!aborted && !terminal) {
+          try {
+            const r = await pool.query(
+              `SELECT status, progress_done, progress_total, filename, error_message
+                 FROM accounts.export_jobs WHERE id = $1 AND workspace_id = $2`,
+              [jobId, ctxGet(c, "workspaceId")],
+            );
+            const job = r.rows[0] as
+              | {
+                  status: string;
+                  progress_done: number;
+                  progress_total: number;
+                  filename: string | null;
+                  error_message: string | null;
+                }
+              | undefined;
+            if (!job) {
+              await stream.writeSSE({ event: "error", data: JSON.stringify({ message: "Export job not found" }) });
+              terminal = true;
+              break;
+            }
+            await stream.writeSSE({
+              event: "progress",
+              data: JSON.stringify({ done: job.progress_done, total: job.progress_total, status: job.status }),
             });
-            finish();
-          } else if (job.status === "error" || job.status === "expired") {
-            send("error", { message: job.error_message ?? "Export failed" });
-            finish();
-          } else if (Date.now() - startedAt > SSE_MAX_MS) {
-            send("error", { message: "Export timed out — please retry." });
-            finish();
+            if (job.status === "done") {
+              await stream.writeSSE({
+                event: "done",
+                data: JSON.stringify({ filename: job.filename, downloadUrl: `/api/transactions/export/${jobId}/download` }),
+              });
+              terminal = true;
+            } else if (job.status === "error" || job.status === "expired") {
+              await stream.writeSSE({ event: "error", data: JSON.stringify({ message: job.error_message ?? "Export failed" }) });
+              terminal = true;
+            } else if (Date.now() - startedAt > SSE_MAX_MS) {
+              await stream.writeSSE({ event: "error", data: JSON.stringify({ message: "Export timed out — please retry." }) });
+              terminal = true;
+            }
+          } catch (err) {
+            console.error("[transactions] export progress poll error:", err);
+            await stream.writeSSE({ event: "error", data: JSON.stringify({ message: "Export failed" }) });
+            terminal = true;
           }
-        } catch (err) {
-          console.error("[transactions] export progress poll error:", err);
-          send("error", { message: "Export failed" });
-          finish();
+          if (!terminal) await stream.sleep(SSE_POLL_MS);
         }
-      };
-
-      const timer = setInterval(() => void poll(), SSE_POLL_MS);
-      // Client closed the stream (normal path after 'done'/'error', or navigated
-      // away): drop all timers and let the socket go — nothing more to send.
-      ((c as any).raw?.on || (c as any).req?.on)?.call((c as any).raw || (c as any).req, "close", () => {
-        finished = true;
-        stopTimers();
+        // Grace before the callback returns and closes the socket: closing the
+        // instant after the terminal frame races the browser's EventSource
+        // parser, which can drop that event and fire 'error' (then reconnect).
+        if (terminal && !aborted) await stream.sleep(1500);
       });
-      void poll();
     },
   );
 
