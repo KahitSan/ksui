@@ -29,7 +29,6 @@
 //     degradation, consistent with the rest of the plugin.
 
 import { Hono } from "hono";
-import type { Context } from "hono";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {
@@ -38,7 +37,7 @@ import {
   findClientsByIds,
 } from "./lib/peers.js";
 import type { RouterDeps } from "./routes.js";
-import { ctxGet } from "./types.js";
+import { ctxGet, isWorkspaceElevated } from "./types.js";
 
 export function buildLineItemsRouter(deps: RouterDeps): Hono {
   const router = new Hono();
@@ -46,8 +45,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
 
   // Admin/superuser bypass the per-row privacy gate. Mirrors the monolith's
   // canBypassTransactionPrivacy, resolved from the kernel-forwarded identity.
-  const canBypassPrivacy = (c: Context): boolean =>
-    ctxGet(c, "wsRole") === "admin" || ctxGet(c, "user")?.role === "superuser";
+  const canBypassPrivacy = isWorkspaceElevated;
 
   // ── GET /api/transaction-line-items ──────────────────────────────────────
   //
@@ -583,8 +581,8 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           bookedEndAlreadyPassed &&
           customEndsAt.getTime() < bookedEnd.getTime());
       if (requiresBackdate) {
-        const isAdmin = ctxGet(c, "user")?.role === "superuser" || ctxGet(c, "wsRole") === "admin";
-        const allowed = isAdmin || (ctxGet(c, "permissions") ?? []).includes("transactions.backdate");
+        const allowed =
+          isWorkspaceElevated(c) || (ctxGet(c, "permissions") ?? []).includes("transactions.backdate");
         if (!allowed) {
           return c.json({ error: "Missing permission: transactions.backdate" }, 403);
         }
