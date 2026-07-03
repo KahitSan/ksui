@@ -1,7 +1,8 @@
 // Create/edit transaction form lifecycle for the /transactions screen.
 // Extracted verbatim from index.tsx. Owns every form* signal, the
-// isFormBackdated memo, resetForm/populateForm, uploadPendingFiles, and the
-// handleCreate/handleUpdate submit handlers.
+// isFormBackdated memo, resetForm/populateForm, and the
+// handleCreate/handleUpdate submit handlers (attachment upload itself is the
+// shared @kahitsan/ksui uploadPendingFiles, also used by counter + timesheets).
 //
 // The handlers close over nothing from Component(): the cross-cutting
 // callbacks/accessors they need (canBackdate, the category/status filter
@@ -16,7 +17,11 @@ import { createMemo, createSignal } from "solid-js";
 import { type SalesLine } from "../components/SalesBodyEditor";
 import { type ClientOption, type VoucherOption } from "@kahitsan/ksui";
 import { todayManila } from "../lib/format";
-import { type PendingFile, revokePendingFile } from "@kahitsan/ksui";
+import {
+  type PendingFile,
+  revokePendingFile,
+  uploadPendingFiles,
+} from "@kahitsan/ksui";
 import {
   type Transaction,
 } from "../lib/types";
@@ -194,34 +199,6 @@ export function useTransactionForm(deps: TransactionFormDeps) {
     formPendingFiles().forEach(revokePendingFile);
     setFormPendingFiles([]);
     setFormError("");
-  }
-
-  // Upload pending files as real multipart attachments. The plugin server
-  // writes the bytes under UPLOAD_DIR/transactions/<orgId>/ and serves them
-  // back through the kernel's /assets mount — so the stored path survives a
-  // reload (a blob: object URL does not). Field name "file" matches
-  // upload.single("file"). A failure is surfaced inline; the transaction is
-  // already saved. Returns the names that failed.
-  async function uploadPendingFiles(
-    txnId: number,
-    files: PendingFile[]
-  ): Promise<string[]> {
-    const failed: string[] = [];
-    for (const pf of files) {
-      try {
-        const fd = new FormData();
-        fd.append("file", pf.file);
-        const res = await fetch(`/api/transactions/${txnId}/attachments`, {
-          method: "POST",
-          credentials: "include",
-          body: fd,
-        });
-        if (!res.ok) failed.push(pf.file.name);
-      } catch {
-        failed.push(pf.file.name);
-      }
-    }
-    return failed;
   }
 
   async function handleCreate() {
