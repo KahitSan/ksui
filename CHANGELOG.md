@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.9.10
+
+### Patch Changes
+
+- ca51fb2: Consume the shared @kahitsan/ksui `uploadPendingFiles` helper instead of the plugin's own local copy of the attachment-upload loop. No behavior change.
+
 ## 0.9.9
 
 ### Patch Changes
