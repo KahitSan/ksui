@@ -73,6 +73,10 @@ const styles: Record<string, string> = {
 
 export type ButtonIntent = "primary" | "danger" | "secondary";
 export type ButtonVariant = "clip1" | "clip2" | "ghost" | "link";
+/** "md" (default) preserves the original px-4/py-2/text-sm footprint everywhere
+ *  it's already used. "sm" is for dense contexts — e.g. a DataTable row action
+ *  — where the default footprint reads as oversized against compact rows. */
+export type ButtonSize = "sm" | "md";
 
 export interface ButtonProps {
   /** Element / component to render as (defaults to "button"). Intentionally
@@ -83,6 +87,7 @@ export interface ButtonProps {
   as?: any;
   intent?: ButtonIntent;
   variant?: ButtonVariant;
+  size?: ButtonSize;
   noRipple?: boolean;
   noScanline?: boolean;
   noGlow?: boolean;
@@ -164,17 +169,17 @@ interface VariantConfig {
 const buttonVariantConfig: Record<ButtonVariant, VariantConfig> = {
   clip1: {
     effects: ["clip-top-left-bottom-right"],
-    baseClasses: "px-4 py-2 border",
+    baseClasses: "border",
     overrideType: false,
   },
   clip2: {
     effects: ["clip-top-right-bottom-left"],
-    baseClasses: "px-4 py-2 border",
+    baseClasses: "border",
     overrideType: false,
   },
   ghost: {
     effects: [],
-    baseClasses: "px-4 py-2 bg-transparent border-transparent hover:bg-current/10 hover:border-transparent",
+    baseClasses: "bg-transparent border-transparent hover:bg-current/10 hover:border-transparent",
     overrideType: true,
   },
   link: {
@@ -183,6 +188,16 @@ const buttonVariantConfig: Record<ButtonVariant, VariantConfig> = {
       "px-0 py-0 bg-transparent border-transparent underline-offset-4 hover:underline hover:bg-transparent hover:border-transparent",
     overrideType: true,
   },
+};
+
+// Padding/text/gap live here (not in variantConfig) so a variant's padding is
+// never in the same class-string as size's — `cn()` is a plain join with no
+// tailwind-merge dedup, so two conflicting padding utilities would silently
+// race on Tailwind's generated CSS order instead of on usage order. `link` is
+// always unpadded regardless of size (see buttonVariantConfig.link).
+const buttonSizeConfig: Record<ButtonSize, { padding: string; text: string; gap: string }> = {
+  md: { padding: "px-4 py-2", text: "text-sm", gap: "gap-2" },
+  sm: { padding: "px-2.5 py-1", text: "text-xs", gap: "gap-1.5" },
 };
 
 interface Ripple {
@@ -201,6 +216,7 @@ const Button = (props: ButtonProps): JSX.Element => {
       as: "button" as ButtonProps["as"],
       intent: "primary" as ButtonIntent,
       variant: "clip1" as ButtonVariant,
+      size: "md" as ButtonSize,
       noRipple: false,
       noScanline: false,
       noGlow: false,
@@ -214,6 +230,7 @@ const Button = (props: ButtonProps): JSX.Element => {
     "as",
     "intent",
     "variant",
+    "size",
     "noRipple",
     "noScanline",
     "noGlow",
@@ -238,6 +255,7 @@ const Button = (props: ButtonProps): JSX.Element => {
   const variantConfig = createMemo(
     () => buttonVariantConfig[local.variant as ButtonVariant] || buttonVariantConfig.clip1,
   );
+  const sizeConfig = createMemo(() => buttonSizeConfig[local.size as ButtonSize] || buttonSizeConfig.md);
 
   const hasRipple = createMemo(() => {
     if (local.noRipple) return false;
@@ -288,15 +306,22 @@ const Button = (props: ButtonProps): JSX.Element => {
 
   const classes = createMemo(() => {
     const coreClasses =
-      "select-none inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 focus:outline-none text-sm rounded";
+      "select-none inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none rounded";
     const textColor = intentConfig().textColor;
     const backgroundClasses = variantConfig().overrideType
       ? ""
       : `${intentConfig().background} ${intentConfig().hover}`;
     const variantClasses = variantConfig().baseClasses;
+    // link is always unpadded (baseClasses carries its own "px-0 py-0") but
+    // still takes text/gap sizing; every other variant takes padding too.
+    const sizeClasses =
+      local.variant === "link"
+        ? `${sizeConfig().text} ${sizeConfig().gap}`
+        : `${sizeConfig().padding} ${sizeConfig().text} ${sizeConfig().gap}`;
 
     return cn(
       coreClasses,
+      sizeClasses,
       textColor,
       backgroundClasses,
       variantClasses,
