@@ -1,5 +1,12 @@
 # @kahitsan/ksui
 
+## 0.31.0
+
+### Minor Changes
+
+- 5e0ba12: Compact density redesign for `DataTable` (tighter row/header padding, mono uppercase header with a subtle background tint, `nowrap` cells with horizontal scroll instead of text wrapping, and new opt-in `ksui-datatable-td-num` / `-code` / `-badge{,-ok,-warn,-danger}` utility classes). Refined `StatusPill` to a flat borderless chip — dropped the leading dot and forced uppercase, bumped text size for legibility (this removes the `dot` prop). Added a `size?: "sm" | "md"` prop to `Button` for a compact footprint in dense contexts like table row actions; `size` defaults to `"md"`, matching the previous look exactly.
+- fa1b10a: Add `uploadPendingFiles` to `pending-file` utils — the shared best-effort multipart upload to the transactions plugin's `POST /:id/attachments` route, extracted from the three plugin-local copies (transactions, counter, timesheets/payroll) so attachment upload has one canonical implementation.
+
 ## 0.30.0
 
 ### Minor Changes
