@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.9.11
+
+### Patch Changes
+
+- 1aacd95: Bump @kahitsan/ksui to 0.31.0 for the fleet-wide compact DataTable + flat StatusPill redesign (no-skew dependency bump; no behavior change in this plugin).
+
 ## 0.9.10
 
 ### Patch Changes
