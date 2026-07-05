@@ -5,6 +5,14 @@ interface TooltipProps {
   content: JSX.Element;
   /** Where the bubble sits relative to the trigger. Default "top". */
   placement?: "top" | "bottom";
+  /** Horizontal anchor. "center" (default) centers the bubble on the trigger;
+   *  "start" left-aligns it to the trigger's left edge instead — use when the
+   *  trigger sits near a left edge (sidebar, viewport) where a centered bubble
+   *  would slide underneath it. */
+  align?: "center" | "start";
+  /** Wrap long copy inside a fixed-width bubble instead of one nowrap line —
+   *  pairs with `align="start"` for descriptive copy near a screen edge. */
+  wrap?: boolean;
   /** Allow the trigger to be any element; the wrapper is a span. */
   children: JSX.Element;
   /** Extra classes on the wrapper. The wrapper is inline-flex so it sits
@@ -43,6 +51,7 @@ interface TooltipProps {
 export default function Tooltip(props: TooltipProps): JSX.Element {
   const tooltipId = props.id ?? createUniqueId();
   const placement = () => props.placement ?? "top";
+  const align = () => props.align ?? "center";
   return (
     <span
       class={`relative inline-flex group/tt ${props.class ?? ""}`}
@@ -53,7 +62,9 @@ export default function Tooltip(props: TooltipProps): JSX.Element {
       <span
         role="tooltip"
         id={tooltipId}
-        class={`pointer-events-none absolute left-1/2 -translate-x-1/2 px-2 py-1 rounded-md bg-zinc-900 border border-zinc-700/80 text-[11px] text-zinc-100 whitespace-nowrap opacity-0 group-hover/tt:opacity-100 group-focus-within/tt:opacity-100 transition-opacity duration-150 delay-150 z-50 shadow-lg ${
+        class={`pointer-events-none absolute px-2 py-1 rounded-md bg-zinc-900 border border-zinc-700/80 text-[11px] text-zinc-100 opacity-0 group-hover/tt:opacity-100 group-focus-within/tt:opacity-100 transition-opacity duration-150 delay-150 z-50 shadow-lg ${
+          align() === "start" ? "left-0" : "left-1/2 -translate-x-1/2"
+        } ${props.wrap ? "whitespace-normal w-max max-w-[260px]" : "whitespace-nowrap"} ${
           placement() === "bottom" ? "top-full mt-1" : "bottom-full mb-1"
         }`}
       >
