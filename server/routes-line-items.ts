@@ -38,8 +38,8 @@ import {
 } from "./lib/peers.js";
 import type { RouterDeps } from "./routes.js";
 import { ctxGet, isWorkspaceElevated } from "./types.js";
-import { streamSSE } from "hono/streaming";
-import { boardVersion, bumpBoardVersion, subscribeBoard } from "./lib/board-events.js";
+import { bumpBoardVersion } from "./lib/board-events.js";
+import { registerLineItemEventsRoute } from "./routes/line-items-events.js";
 
 export function buildLineItemsRouter(deps: RouterDeps): Hono {
   const router = new Hono();
@@ -59,59 +59,8 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
   // canBypassTransactionPrivacy, resolved from the kernel-forwarded identity.
   const canBypassPrivacy = isWorkspaceElevated;
 
-  // ── GET /api/transaction-line-items/events — board change stream ─────────
-  //
-  // One SSE connection per counter tab. `board-changed` fires on any write in
-  // this plugin for the workspace (see the middleware above); heartbeats keep
-  // the connection alive through nginx. Time-driven decay (a session expiring
-  // by wall clock) never fires an event — the UI keeps a slow poll for that.
-  // Registered before the parameterless list route only for grouping; the
-  // paths are distinct literals so ordering is not load-bearing.
-  router.get(
-    "/api/transaction-line-items/events",
-    requireAuth,
-    requireWorkspace,
-    requirePermission("transactions.view"),
-    (c) => {
-      const wsId = ctxGet(c, "workspaceId");
-      if (!wsId) {
-        return c.json({ error: "No workspace context" }, 403);
-      }
-      // nginx must not buffer an event-stream (streamSSE sets Content-Type +
-      // Cache-Control itself); without this the client sees no frames until close.
-      c.header("X-Accel-Buffering", "no");
-      return streamSSE(c, async (stream) => {
-        let aborted = false;
-        let wake: (() => void) | null = null;
-        stream.onAbort(() => {
-          aborted = true;
-          wake?.();
-        });
-        const unsubscribe = subscribeBoard(wsId, () => wake?.());
-        try {
-          await stream.writeSSE({ event: "hello", data: String(boardVersion(wsId)) });
-          while (!aborted) {
-            const before = boardVersion(wsId);
-            await new Promise<void>((resolve) => {
-              wake = resolve;
-              // Heartbeat cadence: under nginx's default 60s proxy timeout.
-              setTimeout(resolve, 25_000);
-            });
-            wake = null;
-            if (aborted) break;
-            const v = boardVersion(wsId);
-            // Bumps between the two reads coalesce into one event.
-            await stream.writeSSE({
-              event: v !== before ? "board-changed" : "heartbeat",
-              data: String(v),
-            });
-          }
-        } finally {
-          unsubscribe();
-        }
-      });
-    },
-  );
+  // The SSE board-change stream (distinct literal path, ordering not load-bearing).
+  registerLineItemEventsRoute(router, deps);
 
   // ── GET /api/transaction-line-items ──────────────────────────────────────
   //
