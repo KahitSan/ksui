@@ -1,5 +1,12 @@
 # @kahitsan/kplugin_transactions
 
+## 0.9.12
+
+### Patch Changes
+
+- 43ecb1c: Add a workspace-scoped board-change signal: every successful write bumps a version that (a) feeds a new SSE endpoint `GET /api/transaction-line-items/events` so counter terminals refresh instantly on cross-terminal writes, and (b) invalidates a short-TTL in-process cache in front of `getPackageCapacityUsage`, absorbing repeated capacity polls between writes.
+- e377029: Scope the counter-board payment CTEs to matched transactions instead of aggregating the whole workspace history (they were the dominant cost of the top query by total prod DB time), and replace the `/outstanding` per-row LATERAL payments sum with one grouped hash join. Response shapes verified byte-identical across param combos.
+
 ## 0.9.11
 
 ### Patch Changes
