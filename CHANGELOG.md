@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.31.1
+
+### Patch Changes
+
+- d131c62: Tooltip: add optional `align` ("center" | "start") and `wrap` props so a bubble near a screen/sidebar edge can left-align and wrap instead of centering and overflowing under adjacent chrome.
+
 ## 0.31.0
 
 ### Minor Changes
