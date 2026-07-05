@@ -46,6 +46,8 @@ import { registerCoreRoutes, registerCounterPatchRoutes } from "./routes/transac
 import { registerPaymentUpdateRoute, registerPaymentRoutes } from "./routes/payments.js";
 import { registerAttachmentRoutes } from "./routes/attachments.js";
 import { registerExportRoutes } from "./routes/export.js";
+import { bumpBoardVersion } from "./lib/board-events.js";
+import { ctxGet } from "./types.js";
 
 export type RouterDeps = {
   db: PluginDb;
@@ -57,6 +59,16 @@ export type RouterDeps = {
 export function buildRouter(deps: RouterDeps): Hono {
   const router = new Hono();
   const { db: pool, requireAuth, requireWorkspace, requirePermission } = deps;
+
+  // Any successful write through this router changes board/capacity reads —
+  // wake SSE subscribers and expire the capacity cache (lib/board-events.ts).
+  router.use("*", async (c, next) => {
+    await next();
+    if (c.req.method !== "GET" && c.req.method !== "HEAD" && c.res.status < 400) {
+      const wsId = ctxGet(c, "workspaceId");
+      if (wsId != null) bumpBoardVersion(wsId);
+    }
+  });
 
   // ── Subcategory taxonomy (formerly /api/transaction-subcategories) ───────
   // The four subcategory CRUD handlers live in ./routes/subcategories.ts;
