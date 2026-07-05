@@ -66,7 +66,7 @@ const STYLE_ID = "ksui-datatable-style";
 // Full list of overridable vars (default = host value):
 //   --ksui-dt-card-bg      outer card background
 //                          (host `.card-bg`: linear-gradient(135deg,#0f0f0f,#1a1a1a))
-//   --ksui-dt-radius       outer card / control corner radius   (0.5rem)
+//   --ksui-dt-radius       outer card / control corner radius   (0.625rem)
 //   --ksui-dt-border       card / header / footer / control border (zinc-800/50, rgba(39,39,42,0.5))
 //   --ksui-dt-row-border   row divider + expansion-row top border (zinc-800/30, rgba(39,39,42,0.3))
 //   --ksui-dt-control-bg   filter button / menu / select / search / show-more bg (zinc-900, #18181b)
@@ -84,10 +84,21 @@ const STYLE_ID = "ksui-datatable-style";
 //   --ksui-dt-accent       active accent text: active pager num / show-more hover (amber-400, #fbbf24)
 //   --ksui-dt-accent-bg    active pager num bg (amber-600/20, rgba(217,119,6,0.2))
 //   --ksui-dt-accent-border focus/hover accent border: search focus, show-more hover (amber-500/40, rgba(245,158,11,0.4))
+//   --ksui-dt-good         positive-status badge text, e.g. "Active" (emerald-400, #34d399)
+//   --ksui-dt-good-bg      positive-status badge bg (emerald-400/14, rgba(52,211,153,0.14))
+//   --ksui-dt-danger       negative-status badge text, e.g. "Overdue"/"Expired" (red-400, #f87171)
+//   --ksui-dt-danger-bg    negative-status badge bg (red-400/14, rgba(248,113,113,0.14))
+//   --ksui-dt-thead-bg     header-row tint, layered over card-bg to set it apart from data rows (white/3%, rgba(255,255,255,0.03))
+//
+// `.ksui-datatable-td-num` / `.ksui-datatable-th-num` (mono, tabular-nums,
+// right-aligned, nowrap) and `.ksui-datatable-badge` (+ `-ok` / `-warn` /
+// `-danger` modifiers, using the vars above) are opt-in utility classes a
+// consumer passes via a column's `className` — DataTable itself never
+// infers column semantics from data.
 //
 const DATATABLE_CSS = `
-.ksui-datatable{background:var(--ksui-dt-card-bg,linear-gradient(135deg,#0f0f0f 0%,#1a1a1a 100%));border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));border-radius:var(--ksui-dt-radius,0.5rem);color:var(--ksui-dt-fg,#e4e4e7);}
-.ksui-datatable-header{display:flex;flex-wrap:wrap;align-items:center;gap:0.75rem;border-bottom:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));padding:1rem;}
+.ksui-datatable{background:var(--ksui-dt-card-bg,linear-gradient(135deg,#0f0f0f 0%,#1a1a1a 100%));border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));border-radius:var(--ksui-dt-radius,0.625rem);color:var(--ksui-dt-fg,#e4e4e7);box-shadow:0 1px 2px rgba(0,0,0,0.3),0 8px 20px -10px rgba(0,0,0,0.5);}
+.ksui-datatable-header{display:flex;flex-wrap:wrap;align-items:center;gap:0.75rem;border-bottom:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));padding:0.75rem 0.875rem;}
 .ksui-datatable-filters-inline{display:none;flex:1 1 0%;}
 .ksui-datatable-filters-mobile{display:block;flex:1 1 0%;}
 @media (min-width:768px){.ksui-datatable-filters-inline{display:block;}.ksui-datatable-filters-mobile{display:none;}}
@@ -105,9 +116,10 @@ const DATATABLE_CSS = `
 .ksui-datatable-search-input:focus{border-color:var(--ksui-dt-accent-border,rgba(245,158,11,0.4));}
 @media (min-width:640px){.ksui-datatable-search-input{width:18rem;}}
 .ksui-datatable-scroll{overflow-x:auto;transition:opacity 0.15s ease;}
-.ksui-datatable-table{width:100%;text-align:left;font-size:0.875rem;line-height:1.25rem;border-collapse:collapse;}
-.ksui-datatable-thead{border-bottom:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--ksui-dt-muted,#71717a);}
-.ksui-datatable-th{padding:0.75rem 1rem;}
+.ksui-datatable-table{width:100%;text-align:left;font-size:0.78125rem;line-height:1.3;border-collapse:collapse;}
+.ksui-datatable-thead{border-bottom:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-thead-bg,rgba(255,255,255,0.03));font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;font-size:0.65625rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ksui-dt-muted,#71717a);}
+.ksui-datatable-th{padding:0.5625rem 0.875rem;background:var(--ksui-dt-thead-bg,rgba(255,255,255,0.03));white-space:nowrap;}
+.ksui-datatable-th-num{text-align:right;}
 .ksui-datatable-th-sortable{cursor:pointer;transition:color 0.15s ease;}
 .ksui-datatable-th-sortable:hover{color:var(--ksui-dt-text-strong,#d4d4d8);}
 .ksui-datatable-th-inner{display:inline-flex;align-items:center;}
@@ -116,13 +128,19 @@ const DATATABLE_CSS = `
 .ksui-datatable-row:hover{background-color:var(--ksui-dt-row-hover,rgba(39,39,42,0.5));}
 .ksui-datatable-row-clickable{cursor:pointer;}
 .ksui-datatable-row-clickable:active{background-color:var(--ksui-dt-row-active,rgba(39,39,42,0.7));}
-.ksui-datatable-td{padding:0.75rem 1rem;}
+.ksui-datatable-td{padding:0.5rem 0.875rem;vertical-align:middle;white-space:nowrap;}
+.ksui-datatable-td-num{font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;color:var(--ksui-dt-text-strong,#d4d4d8);}
+.ksui-datatable-code{display:block;font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;font-size:0.71875rem;color:var(--ksui-dt-fg,#e4e4e7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34ch;}
+.ksui-datatable-badge{display:inline-block;font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;font-size:0.625rem;padding:0.125rem 0.4375rem;border-radius:0.3125rem;letter-spacing:0.02em;background:var(--ksui-dt-control-bg,#18181b);color:var(--ksui-dt-text,#a1a1aa);}
+.ksui-datatable-badge-ok{background:var(--ksui-dt-good-bg,rgba(52,211,153,0.14));color:var(--ksui-dt-good,#34d399);}
+.ksui-datatable-badge-warn{background:var(--ksui-dt-accent-bg,rgba(217,119,6,0.2));color:var(--ksui-dt-accent,#fbbf24);}
+.ksui-datatable-badge-danger{background:var(--ksui-dt-danger-bg,rgba(248,113,113,0.14));color:var(--ksui-dt-danger,#f87171);}
 .ksui-datatable-expansion-row{border-top:1px solid var(--ksui-dt-row-border,rgba(39,39,42,0.3));background-color:var(--ksui-dt-expansion-bg,rgba(9,9,11,0.4));}
 .ksui-datatable-expansion-td{padding:0;}
-.ksui-datatable-skeleton{height:1.25rem;width:100%;border-radius:0.25rem;background:var(--ksui-dt-skeleton,rgba(39,39,42,0.5));animation:ksuiDatatablePulse 1.5s cubic-bezier(0.4,0,0.6,1) infinite;}
+.ksui-datatable-skeleton{height:1rem;width:100%;border-radius:0.25rem;background:var(--ksui-dt-skeleton,rgba(39,39,42,0.5));animation:ksuiDatatablePulse 1.5s cubic-bezier(0.4,0,0.6,1) infinite;}
 @keyframes ksuiDatatablePulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
 .ksui-datatable-empty{padding:3rem 1rem;text-align:center;color:var(--ksui-dt-muted,#71717a);}
-.ksui-datatable-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));padding:1rem;}
+.ksui-datatable-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));padding:0.625rem 0.875rem;}
 .ksui-datatable-info{font-size:0.75rem;color:var(--ksui-dt-muted,#71717a);}
 .ksui-datatable-showmore{border-radius:0.5rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);padding:0.5rem 1rem;font-size:0.75rem;font-weight:500;color:var(--ksui-dt-text-strong,#d4d4d8);transition:border-color 0.15s ease,color 0.15s ease;cursor:pointer;}
 .ksui-datatable-showmore:hover:not(:disabled){border-color:var(--ksui-dt-accent-border,rgba(245,158,11,0.4));color:var(--ksui-dt-accent,#fbbf24);}

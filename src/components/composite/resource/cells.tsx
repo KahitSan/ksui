@@ -31,7 +31,7 @@ export function renderCell(
     case "status": {
       const active = Boolean(raw);
       const arm = active ? r.active : r.inactive;
-      return <StatusPill label={arm.label} tone={arm.tone} dot solid />;
+      return <StatusPill label={arm.label} tone={arm.tone} solid />;
     }
     case "text":
     default: {
