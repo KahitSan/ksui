@@ -24,6 +24,7 @@ import {
 import { isBackdated } from "./lib/backdate.js";
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
+import { boardVersion, bumpBoardVersion } from "./lib/board-events.js";
 
 /** Local type for the SDK's req object in service handlers — mirrors
  *  ForwardedIdentity fields used by the handler code. */
@@ -31,6 +32,19 @@ interface ServiceReq {
   workspaceId?: number;
   user?: { id: string; role?: string };
 }
+
+type CapacityUsage = { concurrent: number; daily: number; monthly: number; incoming: number };
+
+// Capacity counts are re-aggregated on every CapacityStrip poll and cart
+// interaction even when nothing changed. Entries are valid only while the
+// workspace's board version holds (any write bumps it — see lib/board-events)
+// AND within a short TTL: the `concurrent` bucket also decays by wall clock
+// (sessions expire with no write), so time-based staleness must stay bounded.
+const CAPACITY_TTL_MS = 5_000;
+const capacityCache = new Map<
+  string,
+  { v: number; at: number; data: Record<number, CapacityUsage> }
+>();
 
 createPluginServer({
   importMetaUrl: import.meta.url,
@@ -147,15 +161,21 @@ createPluginServer({
             .map((v) => (typeof v === "number" ? v : parseInt(String(v), 10)))
             .filter((n) => Number.isInteger(n))
         : [];
-      const out: Record<
-        number,
-        { concurrent: number; daily: number; monthly: number; incoming: number }
-      > = {};
+      const out: Record<number, CapacityUsage> = {};
       if (wsId == null || packageIds.length === 0) return out;
       for (const id of packageIds)
         out[id] = { concurrent: 0, daily: 0, monthly: 0, incoming: 0 };
 
       const at = typeof a.at === "string" ? a.at : null;
+      const cacheKey = `${wsId}|${at ?? "now"}|${[...packageIds].sort((x, y) => x - y).join(",")}`;
+      const cached = capacityCache.get(cacheKey);
+      if (
+        cached &&
+        cached.v === boardVersion(wsId) &&
+        Date.now() - cached.at < CAPACITY_TTL_MS
+      ) {
+        return cached.data;
+      }
       const useNow = at === null;
       const concurrentClause = useNow
         ? `(li.status IN ('active', 'expired') AND (li.started_at IS NULL OR li.started_at <= NOW()) AND (li.ends_at IS NULL OR li.ends_at > NOW()))`
@@ -202,6 +222,10 @@ createPluginServer({
           incoming: parseInt(row.incoming, 10) || 0,
         };
       }
+      // Bounded: entries expire in 5s, so the map only grows with DISTINCT
+      // (workspace, ids) shapes queried inside one window — clear as a backstop.
+      if (capacityCache.size > 500) capacityCache.clear();
+      capacityCache.set(cacheKey, { v: boardVersion(wsId), at: Date.now(), data: out });
       return out;
     },
 
@@ -297,6 +321,8 @@ createPluginServer({
           sharedWithRoles: ["director", "accountant"],
         });
         await client.query("COMMIT");
+        // RPC writes bypass the router middleware — bump explicitly.
+        bumpBoardVersion(wsId);
         return { id: txn.id, amount, transaction_date: transactionDate };
       } catch (e) {
         await client.query("ROLLBACK").catch(() => {});

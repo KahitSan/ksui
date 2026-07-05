@@ -38,14 +38,29 @@ import {
 } from "./lib/peers.js";
 import type { RouterDeps } from "./routes.js";
 import { ctxGet, isWorkspaceElevated } from "./types.js";
+import { bumpBoardVersion } from "./lib/board-events.js";
+import { registerLineItemEventsRoute } from "./routes/line-items-events.js";
 
 export function buildLineItemsRouter(deps: RouterDeps): Hono {
   const router = new Hono();
   const { db: pool, requireAuth, requireWorkspace, requirePermission } = deps;
 
+  // Any successful write through this router changes board/capacity reads —
+  // wake SSE subscribers and expire the capacity cache (lib/board-events.ts).
+  router.use("*", async (c, next) => {
+    await next();
+    if (c.req.method !== "GET" && c.req.method !== "HEAD" && c.res.status < 400) {
+      const wsId = ctxGet(c, "workspaceId");
+      if (wsId != null) bumpBoardVersion(wsId);
+    }
+  });
+
   // Admin/superuser bypass the per-row privacy gate. Mirrors the monolith's
   // canBypassTransactionPrivacy, resolved from the kernel-forwarded identity.
   const canBypassPrivacy = isWorkspaceElevated;
+
+  // The SSE board-change stream (distinct literal path, ordering not load-bearing).
+  registerLineItemEventsRoute(router, deps);
 
   // ── GET /api/transaction-line-items ──────────────────────────────────────
   //
@@ -204,7 +219,10 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       try {
         // availment_groups pre-aggregates the cross-day combined-end timestamp
         // once per (transaction_id, client_key) subgroup with >=2 time-bound,
-        // non-voided siblings. payment_count_by_txn pre-counts payment legs.
+        // non-voided siblings. The date filter reads ag.combined_end, so the
+        // filtering happens in `matched`; the payment CTEs are projection-only
+        // and scope to matched transactions instead of aggregating the whole
+        // workspace history (they were the dominant cost at prod volumes).
         // The client pool is resolved via RPC below (clients.* is another
         // plugin's schema — never joined in raw SQL here).
         const result = await pool.query(
@@ -240,12 +258,57 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              -- the unconditional COUNT(*) in a single aggregation. The planner
              -- handles this fine at current transaction volumes.
 
+           ), matched AS (
+             SELECT
+               li.id,
+               li.transaction_id,
+               li.workspace_id,
+               li.package_id,
+               li.package_variant_id,
+               li.description AS line_description,
+               li.quantity,
+               li.unit_price,
+               li.duration_value,
+               li.duration_unit,
+               li.started_at,
+               li.ends_at,
+               li.status AS line_status,
+               li.created_at AS line_created_at,
+               li.updated_at,
+               t.transaction_date,
+               t.amount AS transaction_amount,
+               t.discount_amount,
+               t.notes,
+               t.category,
+               t.client_id,
+               t.voucher_id,
+               t.is_private,
+               t.status AS transaction_status,
+               t.batch_code AS transaction_batch_code,
+               li.client_id AS line_client_id,
+               t.source_account_id,
+               t.destination_account_id,
+               li.customer_group_id,
+               cg.position AS customer_group_position,
+               cg.display_name AS customer_group_display_name,
+               cg.is_payer AS customer_group_is_payer,
+               cg.client_id AS customer_group_client_id
+             FROM accounts.transaction_line_items li
+             JOIN accounts.transactions t
+               ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id
+             LEFT JOIN accounts.transaction_customer_groups cg ON cg.id = li.customer_group_id
+             LEFT JOIN availment_groups ag
+               ON ag.transaction_id = li.transaction_id
+              AND ag.workspace_id = li.workspace_id
+              AND ag.client_key = COALESCE(li.client_id, -1)
+             ${where}
            ), payment_count_by_txn AS (
              SELECT tp.transaction_id,
                     tp.workspace_id,
                     COUNT(*)::int AS payment_count
                FROM accounts.transaction_payments tp
               WHERE tp.workspace_id = $1
+                AND tp.transaction_id IN (SELECT m.transaction_id FROM matched m)
               GROUP BY tp.transaction_id, tp.workspace_id
            ), payment_methods_by_txn AS (
               -- Distinct payment accounts per transaction, ordered by first use.
@@ -263,64 +326,58 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
                    FROM accounts.transaction_payments tp
                   WHERE tp.workspace_id = $1
                     AND tp.financial_account_id IS NOT NULL
+                    AND tp.transaction_id IN (SELECT m.transaction_id FROM matched m)
                   GROUP BY tp.transaction_id, tp.workspace_id, tp.financial_account_id
                ) distinct_accts
               GROUP BY transaction_id, workspace_id
            )
            SELECT
-             li.id,
-             li.transaction_id,
-             li.package_id,
-             li.package_variant_id,
-             li.description AS line_description,
-             li.quantity,
-             li.unit_price,
-             li.duration_value,
-             li.duration_unit,
-             li.started_at,
-             li.ends_at,
-             li.status AS line_status,
-             li.created_at AS line_created_at,
-             li.updated_at,
-             t.transaction_date,
-             t.amount AS transaction_amount,
-             t.discount_amount,
-             t.notes,
-             t.category,
-             t.client_id,
-             t.voucher_id,
-             t.is_private,
-             t.status AS transaction_status,
-             t.batch_code AS transaction_batch_code,
-             li.client_id AS line_client_id,
-             t.source_account_id,
-             t.destination_account_id,
-             li.customer_group_id,
-             cg.position AS customer_group_position,
-             cg.display_name AS customer_group_display_name,
-             cg.is_payer AS customer_group_is_payer,
-             cg.client_id AS customer_group_client_id,
+             m.id,
+             m.transaction_id,
+             m.package_id,
+             m.package_variant_id,
+             m.line_description,
+             m.quantity,
+             m.unit_price,
+             m.duration_value,
+             m.duration_unit,
+             m.started_at,
+             m.ends_at,
+             m.line_status,
+             m.line_created_at,
+             m.updated_at,
+             m.transaction_date,
+             m.transaction_amount,
+             m.discount_amount,
+             m.notes,
+             m.category,
+             m.client_id,
+             m.voucher_id,
+             m.is_private,
+             m.transaction_status,
+             m.transaction_batch_code,
+             m.line_client_id,
+             m.source_account_id,
+             m.destination_account_id,
+             m.customer_group_id,
+             m.customer_group_position,
+             m.customer_group_display_name,
+             m.customer_group_is_payer,
+             m.customer_group_client_id,
              COALESCE(pc.payment_count, 0) AS payment_count,
              COALESCE(pm.payment_account_ids, '{}') AS payment_account_ids
-           FROM accounts.transaction_line_items li
-           JOIN accounts.transactions t ON t.id = li.transaction_id
-           LEFT JOIN accounts.transaction_customer_groups cg ON cg.id = li.customer_group_id
-           LEFT JOIN availment_groups ag
-             ON ag.transaction_id = li.transaction_id
-            AND ag.workspace_id = li.workspace_id
-            AND ag.client_key = COALESCE(li.client_id, -1)
+           FROM matched m
            LEFT JOIN payment_count_by_txn pc
-             ON pc.transaction_id = li.transaction_id
-            AND pc.workspace_id = li.workspace_id
+             ON pc.transaction_id = m.transaction_id
+            AND pc.workspace_id = m.workspace_id
            LEFT JOIN payment_methods_by_txn pm
-             ON pm.transaction_id = li.transaction_id
-            AND pm.workspace_id = li.workspace_id
-           ${where}
+             ON pm.transaction_id = m.transaction_id
+            AND pm.workspace_id = m.workspace_id
            ORDER BY
-             CASE WHEN li.status = 'active' AND li.ends_at IS NOT NULL THEN 0 ELSE 1 END,
-             li.ends_at ASC NULLS LAST,
-             t.transaction_date DESC,
-             li.id DESC`,
+             CASE WHEN m.line_status = 'active' AND m.ends_at IS NOT NULL THEN 0 ELSE 1 END,
+             m.ends_at ASC NULLS LAST,
+             m.transaction_date DESC,
+             m.id DESC`,
           params,
         );
 

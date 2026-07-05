@@ -42,21 +42,26 @@ export function registerChargeRoutes(router: Hono, ctx: ChargeRouteCtx): void {
           "t.category = 'sale'",
           "t.status != 'voided'",
           "t.amount > 0",
-          "t.amount > paid.total_paid",
+          "t.amount > COALESCE(paid.total_paid, 0)",
         ];
         const priv = privacyClause(c, params, 2);
         if (priv) conditions.push(priv);
+        // One grouped pass over the workspace's payments hash-joined to sales —
+        // the previous per-row LATERAL re-aggregated payments once per sale
+        // transaction (thousands of probes to return a handful of rows).
         const result = await pool.query(
           `SELECT t.id, t.amount, t.transaction_date, t.client_id, t.destination_account_id,
                   t.batch_code AS transaction_batch_code,
-                  paid.total_paid::numeric(12,2) AS amount_collected,
-                  (t.amount - paid.total_paid)::numeric(12,2) AS balance
+                  COALESCE(paid.total_paid, 0)::numeric(12,2) AS amount_collected,
+                  (t.amount - COALESCE(paid.total_paid, 0))::numeric(12,2) AS balance
              FROM accounts.transactions t
-             LEFT JOIN LATERAL (
-               SELECT COALESCE(SUM(tp.amount), 0)::numeric(12,2) AS total_paid
+             LEFT JOIN (
+               SELECT tp.transaction_id,
+                      COALESCE(SUM(tp.amount), 0)::numeric(12,2) AS total_paid
                  FROM accounts.transaction_payments tp
-                WHERE tp.transaction_id = t.id
-             ) paid ON true
+                WHERE tp.workspace_id = $1
+                GROUP BY tp.transaction_id
+             ) paid ON paid.transaction_id = t.id
             WHERE ${conditions.join(" AND ")}
             ORDER BY t.transaction_date DESC, t.id DESC`,
           params,
