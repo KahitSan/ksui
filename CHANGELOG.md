@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.9.13
+
+### Patch Changes
+
+- a3b5d97: Drop the eyebrow line from the page header (kernel's PageShell no longer renders it). Bump `@kahitsan/ksui` to 0.31.1.
+
 ## 0.9.12
 
 ### Patch Changes
