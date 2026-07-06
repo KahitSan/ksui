@@ -25,7 +25,7 @@
 // voucher over RPC and compute the discount, but we DO NOT increment usage as
 // part of the charge transaction — see chargeFlow's best-effort note.
 
-import { tryCallPlugin, type PluginUnavailableError } from "@kahitsan/plugin-sdk";
+import { tryCallPlugin, type PluginUnavailableError, type PluginDb } from "@kahitsan/plugin-sdk";
 
 export type IdentityHeader = string | undefined;
 
@@ -216,14 +216,23 @@ export interface PayeeRow {
   kind: string | null;
 }
 
-/** Resolve payee display rows by id via the payees plugin. Null when the payees
- *  plugin isn't loaded (graceful degradation — see findAccountsByIds). */
+/** Resolve payee display rows by id. Payees is folded IN-PROCESS (public.payees
+ *  is this plugin's own table now), so this is a direct workspace-scoped query
+ *  rather than the former cross-process `tryCallPlugin("payees", …)` RPC — no
+ *  peer to be absent, so it always resolves (no graceful-degradation null). The
+ *  explicit `workspace_id = $2` is the primary gate; RLS on the pool is the
+ *  second wall. */
 export async function findPayeesByIds(
+  db: PluginDb,
   ids: number[],
-  identityHeader: IdentityHeader,
-): Promise<PayeeRow[] | null> {
+  workspaceId: number,
+): Promise<PayeeRow[]> {
   if (ids.length === 0) return [];
-  return tryCallPlugin<PayeeRow[]>("payees", "findByIds", { ids }, { identityHeader });
+  const res = await db.query(
+    `SELECT id, name, kind FROM payees WHERE id = ANY($1::int[]) AND workspace_id = $2`,
+    [ids, workspaceId],
+  );
+  return res.rows as PayeeRow[];
 }
 
 // Re-export for callers that want to distinguish unavailable from other errors.

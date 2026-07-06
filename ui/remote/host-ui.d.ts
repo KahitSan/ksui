@@ -11,6 +11,11 @@ declare module "@kserp/host-ui" {
   // Kernel-specific hooks
   export function useActiveWorkspace(): any;
   export function useCan(permission: string): any;
+  /** Resolve a route setting (U3): user_pref ?? workspace_default ?? fallback,
+   *  where fallback is the plugin_default the route declares. Returns an accessor
+   *  so a page can size itself (e.g. pageLength) from the live preference. Used by
+   *  the folded-in Payees page. */
+  export function useRouteSetting<T>(routePath: string, key: string, fallback: T): () => T;
   export function usePermissions(): {
     has: (code: string) => boolean;
     hasAny: (...codes: string[]) => boolean;

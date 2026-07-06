@@ -231,8 +231,8 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
         // Resolve payee name.
         let payee: string | null = null;
         if (txn.payee_id != null) {
-          const payees = await findPayeesByIds([txn.payee_id], idh);
-          payee = payees?.[0]?.name ?? null;
+          const payees = await findPayeesByIds(pool, [txn.payee_id], ctxGet(c, "workspaceId"));
+          payee = payees[0]?.name ?? null;
         }
 
         // Resolve user names (created_by / updated_by).

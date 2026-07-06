@@ -192,7 +192,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
 
         const payeeIds = [...new Set(result.rows.map((r: { payee_id: number | null }) => r.payee_id).filter((v: number | null): v is number => v != null))];
         const payeeMap = payeeIds.length > 0
-          ? new Map((await findPayeesByIds(payeeIds, idh))?.map((p: { id: number; name: string }) => [p.id, p.name]) ?? [])
+          ? new Map((await findPayeesByIds(pool, payeeIds, ctxGet(c, "workspaceId"))).map((p: { id: number; name: string }) => [p.id, p.name]))
           : new Map<number, string>();
 
         const userIds = new Set<string>();
@@ -688,8 +688,8 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           // Enrich response with payee name and user names.
           let payee: string | null = null;
           if (updated.payee_id != null) {
-            const payees = await findPayeesByIds([updated.payee_id], identityHeaderOf(c));
-            payee = payees?.[0]?.name ?? null;
+            const payees = await findPayeesByIds(pool, [updated.payee_id], ctxGet(c, "workspaceId"));
+            payee = payees[0]?.name ?? null;
           }
           const updUserIds = new Set<string>();
           if (updated.created_by) updUserIds.add(updated.created_by);

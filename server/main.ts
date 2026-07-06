@@ -24,6 +24,7 @@ import {
 import { isBackdated } from "./lib/backdate.js";
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
+import { buildPayeesRouter } from "./routes-payees.js";
 import { boardVersion, bumpBoardVersion } from "./lib/board-events.js";
 
 /** Local type for the SDK's req object in service handlers — mirrors
@@ -332,10 +333,11 @@ createPluginServer({
       }
     },
   }),
-  // Line-items router first: the kernel proxies /api/transaction-line-items/*
-  // here (manifest additionalBasePaths) WITHOUT stripping the prefix, so its
-  // routes are written at the full prefix and must match before the primary "/"
-  // router.
+  // Full-prefix routers FIRST: the kernel proxies /api/transaction-line-items/*
+  // and /api/payees/* here (manifest additionalBasePaths) WITHOUT stripping the
+  // prefix, so their routes are written at the full prefix and must match before
+  // the primary "/" router's "/:id" capture. payees was folded in from the
+  // retired standalone plugin — same process, own `/api/payees` root.
   routers: [
     ({ db, requireAuth, requireWorkspace, requirePermission }) =>
       buildLineItemsRouter({
@@ -344,6 +346,8 @@ createPluginServer({
         requireWorkspace,
         requirePermission,
       }),
+    ({ db, requireAuth, requireWorkspace, requirePermission }) =>
+      buildPayeesRouter({ db, requireAuth, requireWorkspace, requirePermission }),
     ({ db, requireAuth, requireWorkspace, requirePermission }) =>
       buildRouter({ db, requireAuth, requireWorkspace, requirePermission }),
   ],

@@ -268,7 +268,9 @@ async function buildDetailedCsv(
 
   const [accounts, payees, userMap] = await Promise.all([
     accountIds.length ? findAccountsByIds(accountIds, identityHeader) : Promise.resolve([]),
-    payeeIds.length ? findPayeesByIds(payeeIds, identityHeader) : Promise.resolve([]),
+    payeeIds.length
+      ? findPayeesByIds(pool, payeeIds, Number(filters.workspaceId))
+      : Promise.resolve([]),
     resolveUserNames(pool, userIds),
   ]);
   const accountName = new Map((accounts ?? []).map((a) => [a.id, a.name]));
