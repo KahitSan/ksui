@@ -27,6 +27,7 @@ import X from "lucide-solid/icons/x";
 import Pencil from "lucide-solid/icons/pencil";
 import Ban from "lucide-solid/icons/ban";
 
+import PayeesPage from "./PayeesPage";
 import TransactionForm from "./components/TransactionForm";
 import {
   TransactionDetail,
@@ -77,7 +78,18 @@ import {
   type FetchResult,
 } from "@kahitsan/ksui";
 
-export function Component() {
+// This plugin now serves TWO host routes from ONE bundle (the multi-route model):
+// `/transactions` and the folded-in `/payees`. The host passes the matched
+// `routeBase` so this single exported Component dispatches to the right page.
+export function Component(props: { routeBase?: string }) {
+  return (
+    <Show when={props.routeBase === "payees"} fallback={<TransactionsPage />}>
+      <PayeesPage />
+    </Show>
+  );
+}
+
+function TransactionsPage() {
   const { activeWorkspace } = useActiveWorkspace();
   const perms = usePermissions();
   const canAccess = () => perms.has("transactions.view");

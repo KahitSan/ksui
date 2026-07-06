@@ -2,12 +2,26 @@
   "name": "transactions",
   "version": "0.1.0",
   "basePath": "/api/transactions",
-  "additionalBasePaths": ["/api/transaction-line-items"],
-  "port": 4020,
+  "additionalBasePaths": ["/api/transaction-line-items", "/api/payees"],
+  "port": 4620,
   "capabilityKey": "transactions",
   "label": "Transactions",
   "uiRouteBase": "transactions",
   "nav": { "label": "Transactions", "section": "bookkeeping", "icon": "receipt" },
+  "routes": [
+    {
+      "uiRouteBase": "transactions",
+      "capabilityKey": "transactions",
+      "label": "Transactions",
+      "nav": { "label": "Transactions", "section": "bookkeeping", "icon": "receipt" }
+    },
+    {
+      "uiRouteBase": "payees",
+      "capabilityKey": "payees",
+      "label": "Payees",
+      "nav": { "label": "Payees", "section": "bookkeeping", "icon": "users" }
+    }
+  ],
   "schemas": ["accounts"],
   "dependencies": [],
   "tier": "composite",
@@ -29,7 +43,12 @@
     "transactions.create",
     "transactions.edit",
     "transactions.delete",
-    "transactions.backdate"
+    "transactions.backdate",
+    "payees.view",
+    "payees.create",
+    "payees.edit",
+    "payees.delete",
+    "payees.restore"
   ],
   "exposes": {
     "transactions:capacity": {
