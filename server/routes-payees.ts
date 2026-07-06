@@ -17,12 +17,12 @@ import { Types, defineResource, statusFilter, buildResourceRouter } from "@kahit
 const KINDS = ["vendor", "customer", "both"] as const;
 type Kind = (typeof KINDS)[number];
 
-/** A payee's kind — exported so the unit test pins the spec's allow-list. */
-export function isKind(v: unknown): v is Kind {
+/** Type guard pinning the payee `kind` allow-list (used by the list filter + create coercion). */
+function isKind(v: unknown): v is Kind {
   return typeof v === "string" && (KINDS as readonly string[]).includes(v);
 }
 
-export const payeesResource: DefinedResource = defineResource({
+const payeesResource: DefinedResource = defineResource({
   name: "payee",
   table: "payees",
   schema: {
