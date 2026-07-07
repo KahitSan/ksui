@@ -21,6 +21,7 @@
 import { Hono, type MiddlewareHandler } from "hono";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { insertTransactionRow, insertVisibilityShares } from "../lib/create-transaction.js";
+import { syncTransferFee } from "../lib/sync-transfer-fee.js";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { findAccountsByIds, findPayeesByIds } from "../lib/peers.js";
@@ -413,6 +414,12 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
             sharedWith: shared_with,
             sharedWithRoles: shared_with_roles,
           });
+          await dbClient.query(
+            `UPDATE accounts.transactions
+                SET transfer_fee_transaction_id = $1
+              WHERE id = $2 AND workspace_id = $3`,
+            [transferFeeTransactionId, txn.id, ctxGet(c, "workspaceId")],
+          );
         }
 
         await dbClient.query("COMMIT");
@@ -473,6 +480,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
         pdc_status,
         payee_id,
         reason,
+        transfer_fee_amount,
       } = await c.req.json() ?? {};
 
       // Reject an unrecognized tax_type up front so a typo doesn't silently
@@ -669,12 +677,24 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
             params.push(null);
           }
         }
-        if (sets.length === 0) {
+        const feeTouched = transfer_fee_amount !== undefined;
+        let parsedRequestedFee: number | null = null;
+        if (feeTouched && transfer_fee_amount !== null && String(transfer_fee_amount) !== "") {
+          const raw = parseFloat(String(transfer_fee_amount));
+          if (!Number.isFinite(raw) || raw <= 0) {
+            return c.json({ error: "transfer_fee_amount must be greater than 0" }, 400);
+          }
+          parsedRequestedFee = raw;
+        }
+
+        if (sets.length === 0 && !feeTouched) {
           return c.json({ error: "No fields to update" }, 400);
         }
-        sets.push(`updated_at = NOW()`);
-        sets.push(`updated_by = $${idx++}`);
-        params.push(ctxGet(c, "user")?.id ?? null);
+        if (sets.length > 0) {
+          sets.push(`updated_at = NOW()`);
+          sets.push(`updated_by = $${idx++}`);
+          params.push(ctxGet(c, "user")?.id ?? null);
+        }
         params.push(id, ctxGet(c, "workspaceId"));
 
         let dbClient: import("pg").PoolClient | null = null;
@@ -682,10 +702,41 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           dbClient = await pool.connect();
           await dbClient.query("BEGIN");
           await applyTenantContext(dbClient);
-          const result = await dbClient.query(
-            `UPDATE accounts.transactions SET ${sets.join(", ")} WHERE id = $${idx++} AND workspace_id = $${idx} RETURNING *`,
-            params,
-          );
+          const result = sets.length > 0
+            ? await dbClient.query(
+                `UPDATE accounts.transactions SET ${sets.join(", ")} WHERE id = $${idx++} AND workspace_id = $${idx} RETURNING *`,
+                params,
+              )
+            : await dbClient.query(
+                `SELECT * FROM accounts.transactions WHERE id = $${idx++} AND workspace_id = $${idx}`,
+                params,
+              );
+          if (feeTouched) {
+            const updatedRow = result.rows[0];
+            const rawDate = updatedRow.transaction_date;
+            const isoDate =
+              rawDate instanceof Date
+                ? rawDate.toISOString().slice(0, 10)
+                : String(rawDate).slice(0, 10);
+            const feeSync = await syncTransferFee(dbClient, {
+              transferId: id,
+              workspaceId: ctxGet(c, "workspaceId"),
+              userId: ctxGet(c, "user")?.id ?? "",
+              effectiveCategory: updatedRow.category,
+              effectiveDescription: String(updatedRow.description ?? ""),
+              effectiveSourceAccountId: updatedRow.source_account_id ?? null,
+              effectiveTransactionDate: isoDate,
+              effectiveIsPrivate: !!updatedRow.is_private,
+              effectiveIsBackdated: !!updatedRow.is_backdated,
+              effectiveBackdateReason: updatedRow.backdate_reason ?? null,
+              existingFeeId: (existingRow.transfer_fee_transaction_id as number | null) ?? null,
+              requestedFeeAmount: parsedRequestedFee,
+            });
+            if (!feeSync.ok) {
+              await dbClient.query("ROLLBACK");
+              return c.json({ error: feeSync.error }, feeSync.status);
+            }
+          }
           // Append an audit row when a reason is supplied.
           if (reason && String(reason).trim()) {
             await dbClient.query(

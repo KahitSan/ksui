@@ -59,6 +59,8 @@ export interface Transaction {
   balance?: string | null;
   payment_status?: "paid" | "partial" | "unpaid" | "voided" | "forfeited" | null;
   payments?: TransactionPayment[];
+  transfer_fee_transaction_id?: number | null;
+  transfer_fee_amount?: string | null;
 }
 
 interface TransactionPayment {

@@ -160,8 +160,14 @@ export function useTransactionForm(deps: TransactionFormDeps) {
     setFormDueDate(dueDatePart);
     setFormChequeNumber(t.cheque_number || "");
     setFormPdcStatus(t.pdc_status || "issued");
-    setFormTransferFeeEnabled(false);
-    setFormTransferFeeAmount("");
+    const feeAmountRaw = t.transfer_fee_amount;
+    const hasFee =
+      t.category === "business" &&
+      feeAmountRaw != null &&
+      String(feeAmountRaw) !== "" &&
+      parseFloat(String(feeAmountRaw)) > 0;
+    setFormTransferFeeEnabled(hasFee);
+    setFormTransferFeeAmount(hasFee ? String(feeAmountRaw) : "");
     setFormSubcategory(t.subcategory || "");
     const seededSale: SalesLine[] = (t.line_items ?? []).map((li) => ({
       key: `${li.package_id ?? 0}:${li.package_variant_id ?? 0}`,
@@ -420,6 +426,10 @@ export function useTransactionForm(deps: TransactionFormDeps) {
         cheque_number: isPayable ? formChequeNumber().trim() || null : null,
         pdc_status:
           isPayable && formChequeNumber().trim() ? formPdcStatus() : null,
+        transfer_fee_amount:
+          formCategory() === "business" && formTransferFeeEnabled()
+            ? formTransferFeeAmount()
+            : null,
       };
       if (isSaleWithItems) {
         body.items = formSaleItems().map((line) => ({
