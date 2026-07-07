@@ -32,12 +32,12 @@ import { ctxGet, isWorkspaceElevated } from "../types.js";
 import {
   SORTABLE_COLUMNS,
   VALID_CATEGORIES,
-  VALID_STATUSES,
   VALID_TAX_TYPES,
   isValidIsoDate,
-  escapeLike,
   resolveUserNames,
   privacyClause,
+  applyTransactionListFilters,
+  parseTransactionListQuery,
 } from "./shared.js";
 
 export type CoreRouteCtx = {
@@ -57,14 +57,8 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
     requireWorkspace,
     requirePermission("transactions.view"),
     async (c) => {
-      const search = (c.req.query("search") as string | undefined)?.trim();
       const category = c.req.query("category") as string | undefined;
-      const subcategory = c.req.query("subcategory") as string | undefined;
-      const status = c.req.query("status") as string | undefined;
-      const accountId = c.req.query("accountId") as string | undefined;
-      const createdBy = c.req.query("createdBy") as string | undefined;
-      const dateFrom = c.req.query("dateFrom") as string | undefined;
-      const dateTo = c.req.query("dateTo") as string | undefined;
+      const filters = parseTransactionListQuery(c);
       const sortBy = c.req.query("sortBy") as string | undefined;
       const sortDir = (c.req.query("sortDir") as string)?.toUpperCase() === "ASC" ? "ASC" : "DESC";
       const page = Math.max(1, parseInt(c.req.query("page") as string) || 1);
@@ -74,71 +68,24 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
       try {
         const conditions: string[] = ["t.workspace_id = $1"];
         const params: unknown[] = [ctxGet(c, "workspaceId")];
-        let idx = 2;
 
-        const priv = privacyClause(c, params, idx);
-        if (priv) {
-          conditions.push(priv);
-          idx += 2;
-        }
+        const priv = privacyClause(c, params, params.length + 1);
+        if (priv) conditions.push(priv);
 
+        // category is list-specific (multi-value from the query); grouped-by-date
+        // pins 'sale' instead. Everything after it is the shared filter set.
         if (category) {
           const cats = category.split(",").filter((c) => VALID_CATEGORIES.includes(c));
           if (cats.length === 1) {
-            conditions.push(`t.category = $${idx++}`);
             params.push(cats[0]);
+            conditions.push(`t.category = $${params.length}`);
           } else if (cats.length > 1 && cats.length < VALID_CATEGORIES.length) {
-            conditions.push(`t.category = ANY($${idx++})`);
             params.push(cats);
+            conditions.push(`t.category = ANY($${params.length})`);
           }
         }
 
-        if (subcategory && subcategory.trim() !== "") {
-          const parts = subcategory.split(",").map((p) => p.trim()).filter(Boolean);
-          if (parts.length === 1) {
-            conditions.push(`t.subcategory = $${idx++}`);
-            params.push(parts[0]);
-          } else if (parts.length > 1) {
-            conditions.push(`t.subcategory = ANY($${idx++})`);
-            params.push(parts);
-          }
-        }
-
-        if (status && VALID_STATUSES.includes(status)) {
-          conditions.push(`t.status = $${idx++}`);
-          params.push(status);
-        } else if (!status || status === "" || status === "active") {
-          conditions.push(`t.status != 'voided'`);
-        }
-
-        if (accountId) {
-          const aid = parseInt(accountId);
-          if (!isNaN(aid)) {
-            conditions.push(
-              `(t.source_account_id = $${idx} OR t.destination_account_id = $${idx} OR EXISTS (SELECT 1 FROM accounts.transaction_payments tp WHERE tp.transaction_id = t.id AND tp.financial_account_id = $${idx}))`,
-            );
-            params.push(aid);
-            idx++;
-          }
-        }
-
-        if (createdBy && createdBy.trim() !== "") {
-          conditions.push(`t.created_by = $${idx++}`);
-          params.push(createdBy.trim());
-        }
-        if (dateFrom) {
-          conditions.push(`t.transaction_date >= $${idx++}`);
-          params.push(dateFrom);
-        }
-        if (dateTo) {
-          conditions.push(`t.transaction_date <= $${idx++}`);
-          params.push(dateTo);
-        }
-        if (search) {
-          conditions.push(`(t.description ILIKE $${idx} ESCAPE '\\' OR t.notes ILIKE $${idx} ESCAPE '\\')`);
-          params.push(`%${escapeLike(search)}%`);
-          idx++;
-        }
+        applyTransactionListFilters(conditions, params, filters);
 
         const whereClause = `WHERE ${conditions.join(" AND ")}`;
         const sortColumn = SORTABLE_COLUMNS.includes(sortBy || "") ? sortBy : "transaction_date";
@@ -165,7 +112,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           ) paid ON true
           ${whereClause}
           ${orderClause}
-          LIMIT $${idx++} OFFSET $${idx++}`;
+          LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
         params.push(limit, offset);
         const result = await pool.query(dataQuery, params);
 

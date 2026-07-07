@@ -2,7 +2,7 @@
 //
 // The literal-segment GET reads that power the filter dropdowns and the
 // dashboard charts: /subscriptions (+ renew), /creators, /subcategory-counts,
-// /summary, /cashflow, /by-hour. Extracted verbatim from routes.ts so the
+// /grouped-by-date, /summary, /cashflow, /by-hour. Extracted verbatim from routes.ts so the
 // per-resource route modules can share one source of truth. registerAnalyticsRoutes
 // mounts them onto the passed router under the same paths and middleware chain;
 // the call site in buildRouter registers them in the same position as before —
@@ -16,7 +16,7 @@
 import { Hono, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { listSubscriptions, renewSubscription, RenewError } from "../lib/subscriptions.js";
-import { privacyClause } from "./shared.js";
+import { privacyClause, applyTransactionListFilters, parseTransactionListQuery } from "./shared.js";
 import { ctxGet } from "../types.js";
 
 export type AnalyticsRouteCtx = {
@@ -132,6 +132,80 @@ export function registerAnalyticsRoutes(router: Hono, ctx: AnalyticsRouteCtx): v
         return c.json({ counts: result.rows });
       } catch (err) {
         console.error("[transactions] subcategory-counts error:", err);
+        return c.json({ error: "Internal server error" }, 500);
+      }
+    },
+  );
+
+  // GET /grouped-by-date -- one synthetic row per day for the "group sales by
+  // day" table view. Sales only (category='sale') so its per-day count/total
+  // match the day-drilldown, which fetches /api/transactions?category=sale.
+  // Filters come from the shared applyTransactionListFilters so grouping a
+  // filtered view stays byte-identical to the list route (the per-day counts must
+  // match the day-drilldown). transaction_date is a stored `date` → to_char with
+  // no timezone cast (see the timezone discipline rule). Registered before "/:id"
+  // so the literal segment wins the Hono route match — otherwise it falls through
+  // to GET /:id and "grouped-by-date" is parsed as an integer id.
+  //
+  // Query params: page, limit, search, status, subcategory, accountId,
+  // createdBy, dateFrom, dateTo (all optional; same semantics as the list).
+  // Response: { data: Array<{ date, count, total, currency }>, total } where
+  // total is the distinct-day count (for pagination).
+  router.get(
+    "/grouped-by-date",
+    requireAuth,
+    requireWorkspace,
+    requirePermission("transactions.view"),
+    async (c) => {
+      const page = Math.max(1, parseInt(c.req.query("page") as string, 10) || 1);
+      const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") as string, 10) || 25), 200);
+      const offset = (page - 1) * limit;
+
+      try {
+        const params: unknown[] = [ctxGet(c, "workspaceId")];
+        const conditions = ["t.workspace_id = $1", "t.category = 'sale'"];
+
+        const priv = privacyClause(c, params, params.length + 1);
+        if (priv) conditions.push(priv);
+
+        applyTransactionListFilters(conditions, params, parseTransactionListQuery(c));
+
+        const whereClause = `WHERE ${conditions.join(" AND ")}`;
+
+        const countResult = await pool.query(
+          `SELECT COUNT(DISTINCT t.transaction_date)::int AS total
+             FROM accounts.transactions t ${whereClause}`,
+          params,
+        );
+        const total = Number(countResult.rows[0].total);
+
+        params.push(limit, offset);
+        const dataResult = await pool.query(
+          `SELECT to_char(t.transaction_date, 'YYYY-MM-DD') AS date,
+                  COUNT(*)::int AS count,
+                  COALESCE(SUM(t.amount), 0) AS total,
+                  MIN(t.currency) AS currency
+             FROM accounts.transactions t
+            ${whereClause}
+            GROUP BY t.transaction_date
+            ORDER BY t.transaction_date DESC
+            LIMIT $${params.length - 1} OFFSET $${params.length}`,
+          params,
+        );
+
+        return c.json({
+          data: (
+            dataResult.rows as { date: string; count: number; total: string; currency: string | null }[]
+          ).map((r) => ({
+            date: r.date,
+            count: Number(r.count),
+            total: r.total,
+            currency: r.currency ?? "PHP",
+          })),
+          total,
+        });
+      } catch (err) {
+        console.error("[transactions] grouped-by-date error:", err);
         return c.json({ error: "Internal server error" }, 500);
       }
     },
