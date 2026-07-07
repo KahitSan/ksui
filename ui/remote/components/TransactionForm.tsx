@@ -738,6 +738,9 @@ export default function TransactionForm(props: TransactionFormProps) {
               setDestAccount={props.setDestAccount}
               sourceLabel={catConfig().accountLabel}
               destLabel={catConfig().secondAccountLabel!}
+              amount={props.amount}
+              feeAmount={props.transferFeeAmount}
+              feeEnabled={props.transferFeeEnabled && props.allowTransferFee}
             />
           </Show>
 

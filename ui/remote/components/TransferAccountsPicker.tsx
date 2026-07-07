@@ -4,6 +4,7 @@ import Plus from "lucide-solid/icons/plus";
 import { FormField, AccountAvatar } from "@kahitsan/ksui";
 import AccountPicker from "./AccountPicker";
 import { type FinancialAccount } from "../lib/types";
+import { formatCurrency } from "../lib/format";
 
 export interface TransferAccountsPickerProps {
   accounts: FinancialAccount[];
@@ -13,12 +14,16 @@ export interface TransferAccountsPickerProps {
   setDestAccount: (v: string) => void;
   sourceLabel: string;
   destLabel: string;
+  amount: string;
+  feeAmount: string;
+  feeEnabled: boolean;
 }
 
 interface AccountTileProps {
   role: "from" | "to";
   account: FinancialAccount | undefined;
   emptyHint: string;
+  delta: number;
   onEditRequest: () => void;
   tileTestId: string;
   clipClass: string;
@@ -83,9 +88,29 @@ function AccountTile(p: AccountTileProps): JSX.Element {
           }
         >
           {(a) => (
-            <span class="truncate text-sm font-semibold text-zinc-100">
-              {a.name}
-            </span>
+            <>
+              <span class="truncate text-sm font-semibold text-zinc-100">
+                {a.name}
+              </span>
+              <Show when={a.balance != null}>
+                <span class="flex items-baseline gap-1 text-[11px] tabular-nums text-zinc-400">
+                  <span class="truncate">{formatCurrency(a.balance!)}</span>
+                  <Show when={p.delta !== 0}>
+                    <span
+                      class="whitespace-nowrap font-semibold"
+                      classList={{
+                        "text-red-400": p.delta < 0,
+                        "text-emerald-400": p.delta > 0,
+                      }}
+                      data-testid={`transactions-form-transfer-delta-${p.role}`}
+                    >
+                      ({p.delta > 0 ? "+" : ""}
+                      {formatCurrency(p.delta)})
+                    </span>
+                  </Show>
+                </span>
+              </Show>
+            </>
           )}
         </Show>
       </div>
@@ -110,6 +135,18 @@ export default function TransferAccountsPicker(
 
   const bothFilled = () => !!props.sourceAccount && !!props.destAccount;
 
+  const amountNum = () => {
+    const n = parseFloat(props.amount);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const feeNum = () => {
+    if (!props.feeEnabled) return 0;
+    const n = parseFloat(props.feeAmount);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const sourceDelta = () => -(amountNum() + feeNum());
+  const destDelta = () => amountNum();
+
   return (
     <div class="space-y-3">
       <div class="flex items-stretch gap-2 max-sm:flex-col sm:flex-row">
@@ -117,6 +154,7 @@ export default function TransferAccountsPicker(
           role="from"
           account={sourceMeta()}
           emptyHint="Select source"
+          delta={sourceDelta()}
           onEditRequest={() => props.setSourceAccount("")}
           tileTestId="transactions-form-transfer-tile-from"
           clipClass="ks-hud-clip-top-right-bottom-left"
@@ -206,6 +244,7 @@ export default function TransferAccountsPicker(
           emptyHint={
             props.sourceAccount ? "Select destination" : "Destination"
           }
+          delta={destDelta()}
           onEditRequest={() => props.setDestAccount("")}
           tileTestId="transactions-form-transfer-tile-to"
           clipClass="ks-hud-clip-top-left-bottom-right"
