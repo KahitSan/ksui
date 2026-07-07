@@ -32,3 +32,22 @@
  * source too (resolves through node_modules — the kernel symlink for us, the
  * npm-installed copy for a third-party plugin). */
 @source "../../node_modules/@kahitsan/ksui/src";
+
+/* Slide+fade reveal for the transfer destination picker — appears after the
+ * user picks a source so a first-time user sees the flow direction. */
+@keyframes fin-slide-fade-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Money-flow indicator between transfer FROM and TO tiles. The dashed line
+ * travels toward the arrowhead so a first-time user reads the direction as
+ * motion. Uses stroke-dashoffset (SMIL-cheap, no layout thrash). */
+.fin-flow-dash {
+  stroke-dasharray: 4 4;
+  animation: fin-flow-march 0.9s linear infinite;
+}
+@keyframes fin-flow-march {
+  from { stroke-dashoffset: 16; }
+  to   { stroke-dashoffset: 0; }
+}

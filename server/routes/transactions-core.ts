@@ -21,6 +21,7 @@
 import { Hono, type MiddlewareHandler } from "hono";
 import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { insertTransactionRow, insertVisibilityShares } from "../lib/create-transaction.js";
+import { syncTransferFee } from "../lib/sync-transfer-fee.js";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { findAccountsByIds, findPayeesByIds } from "../lib/peers.js";
@@ -46,6 +47,8 @@ export type CoreRouteCtx = {
   requireWorkspace: MiddlewareHandler;
   requirePermission: (...codes: string[]) => MiddlewareHandler;
 };
+
+const TRANSFER_FEE_SUBCATEGORY = "Other expense";
 
 export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
@@ -213,6 +216,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
         pdc_status,
         payee_id,
         client_id,
+        transfer_fee_amount,
       } = await c.req.json() ?? {};
 
       if (!category || !VALID_CATEGORIES.includes(category)) {
@@ -236,6 +240,19 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
       // eslint-disable-next-line sonarjs/no-inverted-boolean-check -- !(x>0) also rejects NaN (non-numeric amount); `<=0` would let NaN through, changing validation.
       if (!amount || !(parsedAmount > 0)) {
         return c.json({ error: "amount must be greater than 0" }, 400);
+      }
+      let parsedTransferFeeAmount: number | null = null;
+      if (transfer_fee_amount !== undefined && transfer_fee_amount !== null) {
+        if (category !== "business") {
+          return c.json({ error: "transfer_fee_amount is only valid for transfers" }, 400);
+        }
+        parsedTransferFeeAmount = parseFloat(String(transfer_fee_amount));
+        if (!Number.isFinite(parsedTransferFeeAmount) || parsedTransferFeeAmount <= 0) {
+          return c.json({ error: "transfer_fee_amount must be greater than 0" }, 400);
+        }
+        if (!source_account_id || !Number.isFinite(Number(source_account_id))) {
+          return c.json({ error: "transfer_fee_amount requires a source_account_id" }, 400);
+        }
       }
       if (!description || !String(description).trim()) {
         return c.json({ error: "description is required" }, 400);
@@ -360,8 +377,61 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           sharedWithRoles: shared_with_roles,
         });
 
+        let transferFeeTransactionId: number | null = null;
+        if (parsedTransferFeeAmount != null) {
+          const transferFeeTxn = await insertTransactionRow(dbClient, {
+            workspaceId: ctxGet(c, "workspaceId"),
+            category: "expense",
+            subcategory: TRANSFER_FEE_SUBCATEGORY,
+            sourceAccountId: source_account_id || null,
+            destinationAccountId: null,
+            amount: parsedTransferFeeAmount,
+            description: `Transfer fee — ${String(description).trim()}`,
+            notes: null,
+            transactionDate: transaction_date,
+            isPrivate: is_private || false,
+            isBackdated: backdated,
+            backdateReason: backdated ? backdate_reason?.trim() : null,
+            createdBy: ctxGet(c, "user").id,
+            referenceNumber: reference_number?.trim() || null,
+            taxType: "non_vat",
+            taxRate: 12,
+            taxAmount: 0,
+            subtotal: parsedTransferFeeAmount,
+            payableKind: null,
+            dueDate: null,
+            chequeNumber: null,
+            pdcStatus: null,
+            hasEwt: false,
+            ewtRate: null,
+            ewtAmount: null,
+            clientId: null,
+            payeeId: null,
+          });
+          transferFeeTransactionId = transferFeeTxn.id as number;
+          await insertVisibilityShares(dbClient, transferFeeTransactionId, {
+            isPrivate: is_private,
+            sharedWith: shared_with,
+            sharedWithRoles: shared_with_roles,
+          });
+          await dbClient.query(
+            `UPDATE accounts.transactions
+                SET transfer_fee_transaction_id = $1
+              WHERE id = $2 AND workspace_id = $3`,
+            [transferFeeTransactionId, txn.id, ctxGet(c, "workspaceId")],
+          );
+        }
+
         await dbClient.query("COMMIT");
-        return c.json(txn, 201);
+        return c.json(
+          {
+            ...txn,
+            transfer_fee_transaction_id: transferFeeTransactionId,
+            created_categories:
+              parsedTransferFeeAmount != null ? [category, "expense"] : [category],
+          },
+          201,
+        );
       } catch (err) {
         if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
         console.error("[transactions] create error:", err);
@@ -410,6 +480,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
         pdc_status,
         payee_id,
         reason,
+        transfer_fee_amount,
       } = await c.req.json() ?? {};
 
       // Reject an unrecognized tax_type up front so a typo doesn't silently
@@ -606,12 +677,24 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
             params.push(null);
           }
         }
-        if (sets.length === 0) {
+        const feeTouched = transfer_fee_amount !== undefined;
+        let parsedRequestedFee: number | null = null;
+        if (feeTouched && transfer_fee_amount !== null && String(transfer_fee_amount) !== "") {
+          const raw = parseFloat(String(transfer_fee_amount));
+          if (!Number.isFinite(raw) || raw <= 0) {
+            return c.json({ error: "transfer_fee_amount must be greater than 0" }, 400);
+          }
+          parsedRequestedFee = raw;
+        }
+
+        if (sets.length === 0 && !feeTouched) {
           return c.json({ error: "No fields to update" }, 400);
         }
-        sets.push(`updated_at = NOW()`);
-        sets.push(`updated_by = $${idx++}`);
-        params.push(ctxGet(c, "user")?.id ?? null);
+        if (sets.length > 0) {
+          sets.push(`updated_at = NOW()`);
+          sets.push(`updated_by = $${idx++}`);
+          params.push(ctxGet(c, "user")?.id ?? null);
+        }
         params.push(id, ctxGet(c, "workspaceId"));
 
         let dbClient: import("pg").PoolClient | null = null;
@@ -619,10 +702,50 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           dbClient = await pool.connect();
           await dbClient.query("BEGIN");
           await applyTenantContext(dbClient);
-          const result = await dbClient.query(
-            `UPDATE accounts.transactions SET ${sets.join(", ")} WHERE id = $${idx++} AND workspace_id = $${idx} RETURNING *`,
-            params,
-          );
+          const result = sets.length > 0
+            ? await dbClient.query(
+                `UPDATE accounts.transactions SET ${sets.join(", ")} WHERE id = $${idx++} AND workspace_id = $${idx} RETURNING *`,
+                params,
+              )
+            : await dbClient.query(
+                `SELECT * FROM accounts.transactions WHERE id = $${idx++} AND workspace_id = $${idx}`,
+                params,
+              );
+          if (feeTouched) {
+            const updatedRow = result.rows[0];
+            const rawDate = updatedRow.transaction_date;
+            // pg's default DATE parser returns midnight in the process's LOCAL zone.
+            // toISOString() shifts to UTC and can roll to the prior day when the
+            // process is in a non-UTC zone (e.g. PHT +8), silently backdating the
+            // synced fee row. Use local Y/M/D components to preserve the stored date.
+            const isoDate = ((): string => {
+              if (rawDate instanceof Date) {
+                const y = rawDate.getFullYear();
+                const m = String(rawDate.getMonth() + 1).padStart(2, "0");
+                const d = String(rawDate.getDate()).padStart(2, "0");
+                return `${y}-${m}-${d}`;
+              }
+              return String(rawDate).slice(0, 10);
+            })();
+            const feeSync = await syncTransferFee(dbClient, {
+              transferId: id,
+              workspaceId: ctxGet(c, "workspaceId"),
+              userId: ctxGet(c, "user")?.id ?? "",
+              effectiveCategory: updatedRow.category,
+              effectiveDescription: String(updatedRow.description ?? ""),
+              effectiveSourceAccountId: updatedRow.source_account_id ?? null,
+              effectiveTransactionDate: isoDate,
+              effectiveIsPrivate: !!updatedRow.is_private,
+              effectiveIsBackdated: !!updatedRow.is_backdated,
+              effectiveBackdateReason: updatedRow.backdate_reason ?? null,
+              existingFeeId: (existingRow.transfer_fee_transaction_id as number | null) ?? null,
+              requestedFeeAmount: parsedRequestedFee,
+            });
+            if (!feeSync.ok) {
+              await dbClient.query("ROLLBACK");
+              return c.json({ error: feeSync.error }, feeSync.status);
+            }
+          }
           // Append an audit row when a reason is supplied.
           if (reason && String(reason).trim()) {
             await dbClient.query(

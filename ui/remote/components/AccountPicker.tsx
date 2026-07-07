@@ -1,4 +1,5 @@
 import { createEffect, Show, For } from "solid-js";
+import { AccountAvatar } from "@kahitsan/ksui";
 import { type FinancialAccount } from "../lib/types";
 
 export default function AccountPicker(props: {
@@ -101,12 +102,10 @@ export default function AccountPicker(props: {
                     !selected(),
                 }}
               >
-                <span
-                  class="h-2 w-2 rounded-full shrink-0"
-                  classList={{
-                    "bg-amber-400": selected(),
-                    "bg-zinc-600 group-hover:bg-zinc-500": !selected(),
-                  }}
+                <AccountAvatar
+                  account={a}
+                  size={24}
+                  iconClass={selected() ? "text-amber-300" : "text-zinc-400"}
                 />
                 <span class="truncate">{a.name}</span>
               </button>

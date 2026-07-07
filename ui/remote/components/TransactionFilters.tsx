@@ -16,10 +16,10 @@ import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import Check from "lucide-solid/icons/check";
 import Filter from "lucide-solid/icons/filter";
-import CalendarDays from "lucide-solid/icons/calendar-days";
 import ArrowDownLeft from "lucide-solid/icons/arrow-down-left";
 import ArrowUpRight from "lucide-solid/icons/arrow-up-right";
 import ArrowRightLeft from "lucide-solid/icons/arrow-right-left";
+import CalendarDays from "lucide-solid/icons/calendar-days";
 import Tag from "lucide-solid/icons/tag";
 import Wallet from "lucide-solid/icons/wallet";
 import CircleDot from "lucide-solid/icons/circle-dot";
@@ -37,7 +37,7 @@ interface IconLike {
 }
 
 const CATEGORY_DEFS: { id: string; label: string; icon: IconLike }[] = [
-  { id: "sale", label: "Revenue", icon: ArrowDownLeft },
+  { id: "sale", label: "Income", icon: ArrowDownLeft },
   { id: "expense", label: "Expense", icon: ArrowUpRight },
   { id: "payable", label: "Payable", icon: CalendarDays },
   { id: "business", label: "Transfer", icon: ArrowRightLeft },

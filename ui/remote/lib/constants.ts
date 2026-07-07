@@ -15,7 +15,7 @@ export const CATEGORY_STYLES: Record<string, { label: string; class: string }> =
       class: "border-red-400/40 text-red-400 bg-red-500/20",
     },
     sale: {
-      label: "Sale",
+      label: "Income",
       class: "border-emerald-400/40 text-emerald-400 bg-emerald-500/20",
     },
     business: {
@@ -118,9 +118,9 @@ export const CATEGORY_FORM: Record<
     showPayee: true,
   },
   sale: {
-    label: "Sale",
-    hint: "Money coming in -- payment from a customer or client",
-    descPlaceholder: 'What was sold? e.g. "Day pass - Walk-in"',
+    label: "Income",
+    hint: "Money coming in -- payment received from a customer, client, or other source",
+    descPlaceholder: 'What came in? e.g. "Day pass - Walk-in"',
     accountLabel: "Received in",
     accountHint: "Where did the payment go?",
     showSecondAccount: false,

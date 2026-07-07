@@ -42,6 +42,7 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
             to_char(t.transaction_date, 'YYYY-MM-DD') AS transaction_date,
             paid.total_paid::numeric(12,2) AS amount_collected,
             (t.amount - paid.total_paid)::numeric(12,2) AS balance,
+            fee.amount::numeric(12,2) AS transfer_fee_amount,
             CASE
               WHEN t.category != 'sale' THEN NULL
               WHEN t.status = 'voided' THEN 'voided'
@@ -56,6 +57,9 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
             SELECT COALESCE(SUM(tp.amount), 0)::numeric(12,2) AS total_paid
               FROM accounts.transaction_payments tp WHERE tp.transaction_id = t.id
           ) paid ON true
+          LEFT JOIN accounts.transactions fee
+            ON fee.id = t.transfer_fee_transaction_id
+           AND fee.workspace_id = t.workspace_id
           WHERE t.id = $1 AND t.workspace_id = $2`,
           [c.req.param("id"), ctxGet(c, "workspaceId")],
         );

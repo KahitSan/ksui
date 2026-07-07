@@ -12,6 +12,7 @@ import Pencil from "lucide-solid/icons/pencil";
 import Ban from "lucide-solid/icons/ban";
 
 import TransactionForm from "./components/TransactionForm";
+import TransactionCreateModal from "./components/TransactionCreateModal";
 import {
   TransactionDetail,
   TransactionDetailSkeleton,
@@ -189,6 +190,10 @@ export default function TransactionsPage() {
     setFormChequeNumber,
     formPdcStatus,
     setFormPdcStatus,
+    formTransferFeeEnabled,
+    setFormTransferFeeEnabled,
+    formTransferFeeAmount,
+    setFormTransferFeeAmount,
     formSubcategory,
     setFormSubcategory,
     formPendingFiles,
@@ -207,7 +212,6 @@ export default function TransactionsPage() {
     isFormBackdated,
     resetForm,
     populateForm,
-    handleCreate,
   } = form;
 
   function closeCreate() {
@@ -587,98 +591,16 @@ export default function TransactionsPage() {
         <ExportTransactionsModal onClose={() => setExportOpen(false)} />
       </Show>
 
-      {/* Create Modal */}
       <Show when={createOpen()}>
-        <Modal variant="sheet" onClose={() => closeCreate()}>
-          <div
-            class="sm:w-[42rem] lg:w-[48rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh]"
-            data-testid="transactions-create-modal"
-          >
-            <div class="px-5 sm:px-6 pt-5 pb-4 border-b border-zinc-800/60 flex items-center justify-between shrink-0">
-              <div>
-                <p class="text-[10px] tracking-[0.3em] uppercase text-amber-400 font-semibold mb-0.5">
-                  New entry
-                </p>
-                <h2 class="text-lg font-bold text-zinc-100">
-                  Record transaction
-                </h2>
-              </div>
-              <button
-                onClick={() => closeCreate()}
-                class="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors ks-hud-clip-button cursor-pointer"
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <TransactionForm
-              error={formError()}
-              saving={formSaving()}
-              category={formCategory()}
-              setCategory={setFormCategory}
-              subcategory={formSubcategory()}
-              setSubcategory={setFormSubcategory}
-              sourceAccount={formSourceAccount()}
-              setSourceAccount={setFormSourceAccount}
-              destAccount={formDestAccount()}
-              setDestAccount={setFormDestAccount}
-              amount={formAmount()}
-              setAmount={setFormAmount}
-              description={formDescription()}
-              setDescription={setFormDescription}
-              notes={formNotes()}
-              setNotes={setFormNotes}
-              date={formDate()}
-              setDate={setFormDate}
-              isPrivate={formPrivate()}
-              setIsPrivate={setFormPrivate}
-              sharedWith={formSharedWith()}
-              setSharedWith={setFormSharedWith}
-              sharedRoleCodes={formSharedWithRoles()}
-              setSharedRoleCodes={setFormSharedWithRoles}
-              backdateReason={formBackdateReason()}
-              setBackdateReason={setFormBackdateReason}
-              payee={formPayee()}
-              setPayee={setFormPayee}
-              payeeId={formPayeeId()}
-              setPayeeId={setFormPayeeId}
-              refNumber={formRefNumber()}
-              setRefNumber={setFormRefNumber}
-              taxType={formTaxType()}
-              setTaxType={setFormTaxType}
-              hasEwt={formHasEwt()}
-              setHasEwt={setFormHasEwt}
-              ewtRate={formEwtRate()}
-              setEwtRate={setFormEwtRate}
-              payableKind={formPayableKind()}
-              setPayableKind={setFormPayableKind}
-              dueDate={formDueDate()}
-              setDueDate={setFormDueDate}
-              chequeNumber={formChequeNumber()}
-              setChequeNumber={setFormChequeNumber}
-              pdcStatus={formPdcStatus()}
-              setPdcStatus={setFormPdcStatus}
-              pendingFiles={formPendingFiles()}
-              setPendingFiles={setFormPendingFiles}
-              accounts={accounts()}
-              orgMembers={orgMembers()}
-              shareableRoles={shareableRoles()}
-              isAdmin={isAdmin()}
-              canShare={canShare()}
-              isBackdated={isFormBackdated()}
-              saleItems={formSaleItems()}
-              setSaleItems={setFormSaleItems}
-              saleClient={formSaleClient()}
-              setSaleClient={setFormSaleClient}
-              saleVoucher={formSaleVoucher()}
-              setSaleVoucher={setFormSaleVoucher}
-              saleManualDiscount={formSaleDiscount()}
-              setSaleManualDiscount={setFormSaleDiscount}
-              onSubmit={handleCreate}
-              submitLabel="Create Transaction"
-            />
-          </div>
-        </Modal>
+        <TransactionCreateModal
+          form={form}
+          accounts={accounts()}
+          orgMembers={orgMembers()}
+          shareableRoles={shareableRoles()}
+          isAdmin={isAdmin()}
+          canShare={canShare()}
+          onClose={() => closeCreate()}
+        />
       </Show>
 
       {/* Detail Modal */}
@@ -880,6 +802,11 @@ export default function TransactionsPage() {
                   setChequeNumber={setFormChequeNumber}
                   pdcStatus={formPdcStatus()}
                   setPdcStatus={setFormPdcStatus}
+                  transferFeeEnabled={formTransferFeeEnabled()}
+                  setTransferFeeEnabled={setFormTransferFeeEnabled}
+                  transferFeeAmount={formTransferFeeAmount()}
+                  setTransferFeeAmount={setFormTransferFeeAmount}
+                  allowTransferFee={true}
                   pendingFiles={formPendingFiles()}
                   setPendingFiles={setFormPendingFiles}
                   accounts={accounts()}

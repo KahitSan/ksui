@@ -128,6 +128,7 @@ afterAll(async () => {
 // layer, in order, against the same rolled-back transaction.
 describe("transactions flow: list → create → list → detail → void (real Postgres)", () => {
   const desc = `integ-flow-${Date.now()}`;
+  const transferDesc = `integ-transfer-fee-${Date.now()}`;
   let newId: number;
 
   it("lists existing transactions for the active org", async () => {
@@ -150,6 +151,58 @@ describe("transactions flow: list → create → list → detail → void (real 
     expect(res.status).toBe(201);
     expect(typeof body.id).toBe("number");
     newId = body.id;
+  });
+
+  it("creates a transfer with a separate fee expense in the same workspace", async () => {
+    const res = await request(honoApp, "POST", "/", {
+      category: "business",
+      source_account_id: 1,
+      destination_account_id: 2,
+      amount: "500.00",
+      transfer_fee_amount: "15.00",
+      description: transferDesc,
+      transaction_date: todayInOrgTimezone(),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(201);
+    expect(body.category).toBe("business");
+    expect(body.transfer_fee_transaction_id).toEqual(expect.any(Number));
+    expect(body.created_categories).toEqual(["business", "expense"]);
+
+    const listRes = await request(
+      honoApp,
+      "GET",
+      `/?search=${encodeURIComponent(transferDesc)}`,
+    );
+    const listBody = await listRes.json();
+    expect(listRes.status).toBe(200);
+    const matchingRows = (listBody.data as Array<{
+      id: number;
+      category: string;
+      subcategory: string | null;
+      amount: string;
+      source_account_id: number | null;
+      description: string;
+    }>).filter((row) => row.description.includes(transferDesc));
+    const transferRow = matchingRows.find((row) => row.id === body.id);
+    const feeRow = matchingRows.find(
+      (row) => row.id === body.transfer_fee_transaction_id,
+    );
+    expect(transferRow).toBeTruthy();
+    expect(transferRow).toMatchObject({
+      category: "business",
+      source_account_id: 1,
+      description: transferDesc,
+    });
+    expect(parseFloat(transferRow!.amount)).toBe(500);
+    expect(feeRow).toBeTruthy();
+    expect(feeRow).toMatchObject({
+      category: "expense",
+      subcategory: "Other expense",
+      source_account_id: 1,
+      description: `Transfer fee — ${transferDesc}`,
+    });
+    expect(parseFloat(feeRow!.amount)).toBe(15);
   });
 
   it("the new transaction appears in the org-scoped list", async () => {

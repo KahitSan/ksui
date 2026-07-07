@@ -21,6 +21,8 @@ import Paperclip from "lucide-solid/icons/paperclip";
 import AccountPicker from "./AccountPicker";
 import FormAdvancedSection from "./FormAdvancedSection";
 import SalesBodyEditor, { type SalesLine } from "./SalesBodyEditor";
+import TransferFeeChip from "./TransferFeeChip";
+import TransferAccountsPicker from "./TransferAccountsPicker";
 import Store from "lucide-solid/icons/store";
 
 // Payee data-wiring for the generic ComboBox engine. Search/create hit the
@@ -159,6 +161,11 @@ export interface TransactionFormProps {
   setChequeNumber: (v: string) => void;
   pdcStatus: string;
   setPdcStatus: (v: string) => void;
+  transferFeeEnabled: boolean;
+  setTransferFeeEnabled: (v: boolean) => void;
+  transferFeeAmount: string;
+  setTransferFeeAmount: (v: string) => void;
+  allowTransferFee: boolean;
   pendingFiles: PendingFile[];
   setPendingFiles: (v: PendingFile[]) => void;
   existingAttachments?: Attachment[];
@@ -236,6 +243,17 @@ export default function TransactionForm(props: TransactionFormProps) {
   // SearchableSelect mount so the loading-state placeholder shows while the
   // per-workspace options are still in flight.
   const subcategoryOptionsReady = () => subcategoryOptions() !== undefined;
+  const categoryOptions = () =>
+    props.category === "payable"
+      ? ["sale", "expense", "business", "payable"]
+      : ["sale", "expense", "business"];
+
+  createEffect(() => {
+    if (props.category !== "business" && props.transferFeeEnabled) {
+      props.setTransferFeeEnabled(false);
+      props.setTransferFeeAmount("");
+    }
+  });
 
   function addFiles(files: File[]) {
     const existing = new Set(
@@ -344,8 +362,14 @@ export default function TransactionForm(props: TransactionFormProps) {
             <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-2">
               Type
             </div>
-            <div class="grid grid-cols-4 gap-2">
-              <For each={["expense", "sale", "payable", "business"]}>
+            <div
+              class="grid gap-2"
+              classList={{
+                "grid-cols-3": categoryOptions().length === 3,
+                "grid-cols-4": categoryOptions().length === 4,
+              }}
+            >
+              <For each={categoryOptions()}>
                 {(cat) => {
                   const cfg = CATEGORY_FORM[cat];
                   const tone = CATEGORY_TONE[cat];
@@ -359,17 +383,21 @@ export default function TransactionForm(props: TransactionFormProps) {
                         props.setCategory(cat);
                         props.setSourceAccount("");
                         props.setDestAccount("");
+                        if (cat !== "business") {
+                          props.setTransferFeeEnabled(false);
+                          props.setTransferFeeAmount("");
+                        }
                       }}
-                      class="flex flex-col items-center justify-center gap-1.5 py-4 border transition-all ks-hud-clip-button cursor-pointer active:opacity-80"
+                      class="flex min-h-[42px] items-center justify-center gap-2 px-3 py-2 border text-sm transition-colors ks-hud-clip-button cursor-pointer active:opacity-80"
                       classList={{
                         [`${tc.bg} ${tc.border} ${tc.text}`]:
                           props.category === cat,
-                        "border-zinc-800/60 text-zinc-500 hover:text-zinc-200 hover:border-zinc-700":
+                        "border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700 hover:text-zinc-200":
                           props.category !== cat,
                       }}
                     >
-                      <Ico size={20} />
-                      <span class="text-xs font-medium">{cfg.label}</span>
+                      <Ico size={16} />
+                      <span class="font-medium">{cfg.label}</span>
                     </button>
                   );
                 }}
@@ -395,8 +423,8 @@ export default function TransactionForm(props: TransactionFormProps) {
             when={!(props.category === "sale" && props.saleItems.length > 0)}
           >
             <FormField label="Amount *">
-              <div class="flex items-center gap-3 px-4 py-3 border bg-zinc-900/60 border-zinc-800/60 ks-hud-clip-button focus-within:border-amber-500/50 transition-colors">
-                <span class="text-3xl font-bold text-zinc-500 tabular-nums">
+              <div class="flex items-stretch gap-2 px-4 py-3 border bg-zinc-900/60 border-zinc-800/60 ks-hud-clip-button focus-within:border-amber-500/50 transition-colors">
+                <span class="self-center text-3xl font-bold text-zinc-500 tabular-nums">
                   ₱
                 </span>
                 <input
@@ -406,12 +434,59 @@ export default function TransactionForm(props: TransactionFormProps) {
                   data-testid="transactions-form-amount"
                   value={props.amount}
                   onInput={(e) => props.setAmount(e.currentTarget.value)}
-                  class="flex-1 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
+                  class="min-w-0 flex-1 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
                   placeholder="0.00"
                   required
                 />
+                <Show
+                  when={props.category === "business" && props.allowTransferFee}
+                >
+                  <TransferFeeChip
+                    enabled={props.transferFeeEnabled}
+                    onToggle={() => {
+                      const next = !props.transferFeeEnabled;
+                      props.setTransferFeeEnabled(next);
+                      if (!next) props.setTransferFeeAmount("");
+                    }}
+                  />
+                </Show>
               </div>
             </FormField>
+            <Show
+              when={
+                props.category === "business" &&
+                props.allowTransferFee &&
+                props.transferFeeEnabled
+              }
+            >
+              <div
+                class="animate-[fin-slide-fade-down_0.28s_ease-out]"
+                data-testid="transactions-form-transfer-fee-field"
+              >
+                <FormField label="Transfer fee *">
+                  <div class="flex items-center gap-2 px-3 py-2 border bg-zinc-950/50 border-blue-500/30 ks-hud-clip-button focus-within:border-blue-500/60 transition-colors">
+                    <span class="text-lg font-bold text-zinc-500 tabular-nums">
+                      ₱
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      data-testid="transactions-form-transfer-fee-amount"
+                      value={props.transferFeeAmount}
+                      onInput={(e) =>
+                        props.setTransferFeeAmount(e.currentTarget.value)
+                      }
+                      class="min-w-0 flex-1 bg-transparent text-lg font-semibold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <p class="mt-1 text-[10px] text-zinc-600">
+                    Saved as a separate expense from the source account.
+                  </p>
+                </FormField>
+              </div>
+            </Show>
           </Show>
 
           <FormField label="Date *">
@@ -655,27 +730,18 @@ export default function TransactionForm(props: TransactionFormProps) {
               </FormField>
             }
           >
-            <div class="grid grid-cols-1 gap-4">
-              <FormField label={catConfig().accountLabel}>
-                <AccountPicker
-                  accounts={props.accounts}
-                  ariaLabel={catConfig().accountLabel}
-                  value={props.sourceAccount}
-                  onChange={(v) => props.setSourceAccount(v)}
-                  excludeId={props.destAccount}
-                />
-              </FormField>
-              <FormField label={catConfig().secondAccountLabel!}>
-                <AccountPicker
-                  accounts={props.accounts}
-                  ariaLabel={catConfig().secondAccountLabel!}
-                  value={props.destAccount}
-                  onChange={(v) => props.setDestAccount(v)}
-                  excludeId={props.sourceAccount}
-                  autoDefault={false}
-                />
-              </FormField>
-            </div>
+            <TransferAccountsPicker
+              accounts={props.accounts}
+              sourceAccount={props.sourceAccount}
+              setSourceAccount={props.setSourceAccount}
+              destAccount={props.destAccount}
+              setDestAccount={props.setDestAccount}
+              sourceLabel={catConfig().accountLabel}
+              destLabel={catConfig().secondAccountLabel!}
+              amount={props.amount}
+              feeAmount={props.transferFeeAmount}
+              feeEnabled={props.transferFeeEnabled && props.allowTransferFee}
+            />
           </Show>
 
           <FormField label="Notes">
