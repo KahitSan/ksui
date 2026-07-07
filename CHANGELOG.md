@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 1.0.2
+
+### Patch Changes
+
+- 01c8683: Refine the transaction recording form, move transfer fee entry next to the amount, render assigned account icons, classify transfer fee rows as other expense, and link the transfer to its fee expense so editing either one keeps them in sync (edit form pre-fills the fee, changes propagate on save, removing the fee deletes the linked row).
+
 ## 1.0.1
 
 ### Patch Changes
