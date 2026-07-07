@@ -189,6 +189,10 @@ export default function TransactionsPage() {
     setFormChequeNumber,
     formPdcStatus,
     setFormPdcStatus,
+    formTransferFeeEnabled,
+    setFormTransferFeeEnabled,
+    formTransferFeeAmount,
+    setFormTransferFeeAmount,
     formSubcategory,
     setFormSubcategory,
     formPendingFiles,
@@ -658,6 +662,11 @@ export default function TransactionsPage() {
               setChequeNumber={setFormChequeNumber}
               pdcStatus={formPdcStatus()}
               setPdcStatus={setFormPdcStatus}
+              transferFeeEnabled={formTransferFeeEnabled()}
+              setTransferFeeEnabled={setFormTransferFeeEnabled}
+              transferFeeAmount={formTransferFeeAmount()}
+              setTransferFeeAmount={setFormTransferFeeAmount}
+              allowTransferFee={true}
               pendingFiles={formPendingFiles()}
               setPendingFiles={setFormPendingFiles}
               accounts={accounts()}
@@ -880,6 +889,11 @@ export default function TransactionsPage() {
                   setChequeNumber={setFormChequeNumber}
                   pdcStatus={formPdcStatus()}
                   setPdcStatus={setFormPdcStatus}
+                  transferFeeEnabled={formTransferFeeEnabled()}
+                  setTransferFeeEnabled={setFormTransferFeeEnabled}
+                  transferFeeAmount={formTransferFeeAmount()}
+                  setTransferFeeAmount={setFormTransferFeeAmount}
+                  allowTransferFee={false}
                   pendingFiles={formPendingFiles()}
                   setPendingFiles={setFormPendingFiles}
                   accounts={accounts()}

@@ -213,6 +213,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
         pdc_status,
         payee_id,
         client_id,
+        transfer_fee_amount,
       } = await c.req.json() ?? {};
 
       if (!category || !VALID_CATEGORIES.includes(category)) {
@@ -236,6 +237,19 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
       // eslint-disable-next-line sonarjs/no-inverted-boolean-check -- !(x>0) also rejects NaN (non-numeric amount); `<=0` would let NaN through, changing validation.
       if (!amount || !(parsedAmount > 0)) {
         return c.json({ error: "amount must be greater than 0" }, 400);
+      }
+      let parsedTransferFeeAmount: number | null = null;
+      if (transfer_fee_amount !== undefined && transfer_fee_amount !== null) {
+        if (category !== "business") {
+          return c.json({ error: "transfer_fee_amount is only valid for transfers" }, 400);
+        }
+        parsedTransferFeeAmount = parseFloat(String(transfer_fee_amount));
+        if (!(parsedTransferFeeAmount > 0)) {
+          return c.json({ error: "transfer_fee_amount must be greater than 0" }, 400);
+        }
+        if (!source_account_id || !Number.isFinite(Number(source_account_id))) {
+          return c.json({ error: "transfer_fee_amount requires a source_account_id" }, 400);
+        }
       }
       if (!description || !String(description).trim()) {
         return c.json({ error: "description is required" }, 400);
@@ -360,8 +374,55 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           sharedWithRoles: shared_with_roles,
         });
 
+        let transferFeeTransactionId: number | null = null;
+        if (parsedTransferFeeAmount != null) {
+          const transferFeeTxn = await insertTransactionRow(dbClient, {
+            workspaceId: ctxGet(c, "workspaceId"),
+            category: "expense",
+            subcategory: null,
+            sourceAccountId: source_account_id || null,
+            destinationAccountId: null,
+            amount: parsedTransferFeeAmount,
+            description: `Transfer fee — ${String(description).trim()}`,
+            notes: null,
+            transactionDate: transaction_date,
+            isPrivate: is_private || false,
+            isBackdated: backdated,
+            backdateReason: backdated ? backdate_reason?.trim() : null,
+            createdBy: ctxGet(c, "user").id,
+            referenceNumber: reference_number?.trim() || null,
+            taxType: "non_vat",
+            taxRate: 12,
+            taxAmount: 0,
+            subtotal: parsedTransferFeeAmount,
+            payableKind: null,
+            dueDate: null,
+            chequeNumber: null,
+            pdcStatus: null,
+            hasEwt: false,
+            ewtRate: null,
+            ewtAmount: null,
+            clientId: null,
+            payeeId: null,
+          });
+          transferFeeTransactionId = transferFeeTxn.id as number;
+          await insertVisibilityShares(dbClient, transferFeeTransactionId, {
+            isPrivate: is_private,
+            sharedWith: shared_with,
+            sharedWithRoles: shared_with_roles,
+          });
+        }
+
         await dbClient.query("COMMIT");
-        return c.json(txn, 201);
+        return c.json(
+          {
+            ...txn,
+            transfer_fee_transaction_id: transferFeeTransactionId,
+            created_categories:
+              parsedTransferFeeAmount != null ? [category, "expense"] : [category],
+          },
+          201,
+        );
       } catch (err) {
         if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
         console.error("[transactions] create error:", err);

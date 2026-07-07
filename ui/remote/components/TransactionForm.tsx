@@ -159,6 +159,11 @@ export interface TransactionFormProps {
   setChequeNumber: (v: string) => void;
   pdcStatus: string;
   setPdcStatus: (v: string) => void;
+  transferFeeEnabled: boolean;
+  setTransferFeeEnabled: (v: boolean) => void;
+  transferFeeAmount: string;
+  setTransferFeeAmount: (v: string) => void;
+  allowTransferFee: boolean;
   pendingFiles: PendingFile[];
   setPendingFiles: (v: PendingFile[]) => void;
   existingAttachments?: Attachment[];
@@ -236,6 +241,17 @@ export default function TransactionForm(props: TransactionFormProps) {
   // SearchableSelect mount so the loading-state placeholder shows while the
   // per-workspace options are still in flight.
   const subcategoryOptionsReady = () => subcategoryOptions() !== undefined;
+  const categoryOptions = () =>
+    props.category === "payable"
+      ? ["sale", "expense", "business", "payable"]
+      : ["sale", "expense", "business"];
+
+  createEffect(() => {
+    if (props.category !== "business" && props.transferFeeEnabled) {
+      props.setTransferFeeEnabled(false);
+      props.setTransferFeeAmount("");
+    }
+  });
 
   function addFiles(files: File[]) {
     const existing = new Set(
@@ -344,8 +360,14 @@ export default function TransactionForm(props: TransactionFormProps) {
             <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-2">
               Type
             </div>
-            <div class="grid grid-cols-4 gap-2">
-              <For each={["expense", "sale", "payable", "business"]}>
+            <div
+              class="grid gap-1.5 rounded-xl border border-zinc-800/60 bg-zinc-950/40 p-1"
+              classList={{
+                "grid-cols-3": categoryOptions().length === 3,
+                "grid-cols-4": categoryOptions().length === 4,
+              }}
+            >
+              <For each={categoryOptions()}>
                 {(cat) => {
                   const cfg = CATEGORY_FORM[cat];
                   const tone = CATEGORY_TONE[cat];
@@ -359,8 +381,12 @@ export default function TransactionForm(props: TransactionFormProps) {
                         props.setCategory(cat);
                         props.setSourceAccount("");
                         props.setDestAccount("");
+                        if (cat !== "business") {
+                          props.setTransferFeeEnabled(false);
+                          props.setTransferFeeAmount("");
+                        }
                       }}
-                      class="flex flex-col items-center justify-center gap-1.5 py-4 border transition-all ks-hud-clip-button cursor-pointer active:opacity-80"
+                      class="flex min-h-[42px] items-center justify-center gap-2 px-3 py-2 border text-sm transition-all ks-hud-clip-button cursor-pointer active:opacity-80"
                       classList={{
                         [`${tc.bg} ${tc.border} ${tc.text}`]:
                           props.category === cat,
@@ -368,8 +394,8 @@ export default function TransactionForm(props: TransactionFormProps) {
                           props.category !== cat,
                       }}
                     >
-                      <Ico size={20} />
-                      <span class="text-xs font-medium">{cfg.label}</span>
+                      <Ico size={16} />
+                      <span class="font-medium">{cfg.label}</span>
                     </button>
                   );
                 }}
@@ -394,24 +420,85 @@ export default function TransactionForm(props: TransactionFormProps) {
           <Show
             when={!(props.category === "sale" && props.saleItems.length > 0)}
           >
-            <FormField label="Amount *">
-              <div class="flex items-center gap-3 px-4 py-3 border bg-zinc-900/60 border-zinc-800/60 ks-hud-clip-button focus-within:border-amber-500/50 transition-colors">
-                <span class="text-3xl font-bold text-zinc-500 tabular-nums">
-                  ₱
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  data-testid="transactions-form-amount"
-                  value={props.amount}
-                  onInput={(e) => props.setAmount(e.currentTarget.value)}
-                  class="flex-1 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
-                  placeholder="0.00"
-                  required
-                />
-              </div>
-            </FormField>
+            <div class="space-y-2">
+              <FormField label="Amount *">
+                <div class="flex items-center gap-3 px-4 py-3 border bg-zinc-900/60 border-zinc-800/60 ks-hud-clip-button focus-within:border-amber-500/50 transition-colors">
+                  <span class="text-3xl font-bold text-zinc-500 tabular-nums">
+                    ₱
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    data-testid="transactions-form-amount"
+                    value={props.amount}
+                    onInput={(e) => props.setAmount(e.currentTarget.value)}
+                    class="flex-1 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+              </FormField>
+              <Show when={props.category === "business" && props.allowTransferFee}>
+                <div class="rounded-lg border border-zinc-800/70 bg-zinc-900/40 p-2.5">
+                  <Show
+                    when={props.transferFeeEnabled}
+                    fallback={
+                      <button
+                        type="button"
+                        class="flex w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left text-sm text-blue-300 transition-colors hover:bg-blue-500/10 hover:text-blue-200"
+                        onClick={() => props.setTransferFeeEnabled(true)}
+                      >
+                        <span>
+                          <span class="font-semibold">Add transfer fee</span>
+                          <span class="ml-2 text-xs text-zinc-500">
+                            InstaPay, bank, or cash-out charge
+                          </span>
+                        </span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-blue-400">
+                          Add
+                        </span>
+                      </button>
+                    }
+                  >
+                    <div class="grid grid-cols-[1fr_auto] items-end gap-2">
+                      <FormField label="Fee amount *">
+                        <div class="flex items-center gap-2 px-3 py-2 border bg-zinc-950/50 border-blue-500/30 ks-hud-clip-button focus-within:border-blue-500/60 transition-colors">
+                          <span class="text-lg font-bold text-zinc-500 tabular-nums">
+                            ₱
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            data-testid="transactions-form-transfer-fee-amount"
+                            value={props.transferFeeAmount}
+                            onInput={(e) =>
+                              props.setTransferFeeAmount(e.currentTarget.value)
+                            }
+                            class="min-w-0 flex-1 bg-transparent text-lg font-semibold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </FormField>
+                      <button
+                        type="button"
+                        class="mb-0.5 rounded-md border border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-200"
+                        onClick={() => {
+                          props.setTransferFeeEnabled(false);
+                          props.setTransferFeeAmount("");
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <p class="mt-2 text-[10px] text-zinc-600">
+                      Saves a separate expense from the source account.
+                    </p>
+                  </Show>
+                </div>
+              </Show>
+            </div>
           </Show>
 
           <FormField label="Date *">

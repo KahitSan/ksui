@@ -102,6 +102,9 @@ export interface FinancialAccount {
   id: number;
   name: string;
   type: string;
+  icon?: string | null;
+  color?: string | null;
+  s3_link?: string | null;
   is_active: boolean;
   balance?: number | string;
 }

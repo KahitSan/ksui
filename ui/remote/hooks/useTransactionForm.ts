@@ -77,6 +77,9 @@ export function useTransactionForm(deps: TransactionFormDeps) {
   const [formDueDate, setFormDueDate] = createSignal("");
   const [formChequeNumber, setFormChequeNumber] = createSignal("");
   const [formPdcStatus, setFormPdcStatus] = createSignal("issued");
+  const [formTransferFeeEnabled, setFormTransferFeeEnabled] =
+    createSignal(false);
+  const [formTransferFeeAmount, setFormTransferFeeAmount] = createSignal("");
   const [formSubcategory, setFormSubcategory] = createSignal("");
   const [formPendingFiles, setFormPendingFiles] = createSignal<PendingFile[]>(
     []
@@ -115,6 +118,8 @@ export function useTransactionForm(deps: TransactionFormDeps) {
     setFormDueDate("");
     setFormChequeNumber("");
     setFormPdcStatus("issued");
+    setFormTransferFeeEnabled(false);
+    setFormTransferFeeAmount("");
     setFormSubcategory("");
     setFormSaleItems([]);
     setFormSaleClient(null);
@@ -155,6 +160,8 @@ export function useTransactionForm(deps: TransactionFormDeps) {
     setFormDueDate(dueDatePart);
     setFormChequeNumber(t.cheque_number || "");
     setFormPdcStatus(t.pdc_status || "issued");
+    setFormTransferFeeEnabled(false);
+    setFormTransferFeeAmount("");
     setFormSubcategory(t.subcategory || "");
     const seededSale: SalesLine[] = (t.line_items ?? []).map((li) => ({
       key: `${li.package_id ?? 0}:${li.package_variant_id ?? 0}`,
@@ -209,11 +216,22 @@ export function useTransactionForm(deps: TransactionFormDeps) {
     const isSaleWithItems =
       formCategory() === "sale" && formSaleItems().length > 0;
     const createAmt = parseFloat(formAmount());
+    const transferFeeAmount = parseFloat(formTransferFeeAmount());
     if (
       !isSaleWithItems &&
       (!formAmount() || !Number.isFinite(createAmt) || createAmt <= 0)
     ) {
       setFormError("Amount must be greater than 0");
+      return;
+    }
+    if (
+      formCategory() === "business" &&
+      formTransferFeeEnabled() &&
+      (!formTransferFeeAmount() ||
+        !Number.isFinite(transferFeeAmount) ||
+        transferFeeAmount <= 0)
+    ) {
+      setFormError("Transfer fee amount must be greater than 0");
       return;
     }
     if (isFormBackdated() && !canBackdate()) {
@@ -301,6 +319,10 @@ export function useTransactionForm(deps: TransactionFormDeps) {
             cheque_number: isPayable ? formChequeNumber().trim() || null : null,
             pdc_status:
               isPayable && formChequeNumber().trim() ? formPdcStatus() : null,
+            transfer_fee_amount:
+              formCategory() === "business" && formTransferFeeEnabled()
+                ? formTransferFeeAmount()
+                : null,
             client_id: formSaleClient()?.id ?? null,
           }),
         });
@@ -328,8 +350,12 @@ export function useTransactionForm(deps: TransactionFormDeps) {
         closeCreate();
       }
       const cats = activeCategories();
-      const createdCat = created.category ?? "sale";
-      if (cats.size > 0 && !cats.has(createdCat))
+      const createdCats = Array.isArray(created.created_categories)
+        ? created.created_categories.filter(
+            (cat: unknown): cat is string => typeof cat === "string"
+          )
+        : [created.category ?? "sale"];
+      if (cats.size > 0 && createdCats.some((cat: string) => !cats.has(cat)))
         setActiveCategories(new Set<string>());
       if (statusFilter() === "voided") setStatusFilter("active");
       resetAndRefetch();
@@ -510,6 +536,10 @@ export function useTransactionForm(deps: TransactionFormDeps) {
     setFormChequeNumber,
     formPdcStatus,
     setFormPdcStatus,
+    formTransferFeeEnabled,
+    setFormTransferFeeEnabled,
+    formTransferFeeAmount,
+    setFormTransferFeeAmount,
     formSubcategory,
     setFormSubcategory,
     formPendingFiles,
