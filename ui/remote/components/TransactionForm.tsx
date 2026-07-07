@@ -363,7 +363,7 @@ export default function TransactionForm(props: TransactionFormProps) {
               Type
             </div>
             <div
-              class="grid gap-1.5 rounded-xl border border-zinc-800/60 bg-zinc-950/40 p-1"
+              class="grid gap-2"
               classList={{
                 "grid-cols-3": categoryOptions().length === 3,
                 "grid-cols-4": categoryOptions().length === 4,
@@ -388,11 +388,11 @@ export default function TransactionForm(props: TransactionFormProps) {
                           props.setTransferFeeAmount("");
                         }
                       }}
-                      class="flex min-h-[42px] items-center justify-center gap-2 px-3 py-2 border text-sm transition-all ks-hud-clip-button cursor-pointer active:opacity-80"
+                      class="flex min-h-[42px] items-center justify-center gap-2 px-3 py-2 border text-sm transition-colors ks-hud-clip-button cursor-pointer active:opacity-80"
                       classList={{
                         [`${tc.bg} ${tc.border} ${tc.text}`]:
                           props.category === cat,
-                        "border-zinc-800/60 text-zinc-500 hover:text-zinc-200 hover:border-zinc-700":
+                        "border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700 hover:text-zinc-200":
                           props.category !== cat,
                       }}
                     >

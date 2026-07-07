@@ -598,21 +598,16 @@ export default function TransactionsPage() {
             class="sm:w-[42rem] lg:w-[48rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh]"
             data-testid="transactions-create-modal"
           >
-            <div class="px-5 sm:px-6 pt-5 pb-4 border-b border-zinc-800/60 flex items-center justify-between shrink-0">
-              <div>
-                <p class="text-[10px] tracking-[0.3em] uppercase text-amber-400 font-semibold mb-0.5">
-                  New entry
-                </p>
-                <h2 class="text-lg font-bold text-zinc-100">
-                  Record transaction
-                </h2>
-              </div>
+            <div class="px-5 sm:px-6 py-3 border-b border-zinc-800/60 flex items-center justify-between shrink-0">
+              <h2 class="text-base font-semibold text-zinc-100">
+                Record transaction
+              </h2>
               <button
                 onClick={() => closeCreate()}
-                class="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors ks-hud-clip-button cursor-pointer"
+                class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors ks-hud-clip-button cursor-pointer"
                 aria-label="Close"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
             <TransactionForm

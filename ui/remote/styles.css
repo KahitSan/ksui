@@ -40,13 +40,26 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Money-flow direction hint between transfer FROM and TO tiles: three dots
- * pulse in sequence so the eye reads left→right (or top→bottom on stacked
- * mobile). Pure animation, no layout effect. */
-@keyframes fin-flow-dot {
-  0%, 60%, 100% { opacity: 0.2; }
-  30% { opacity: 1; }
+/* Money-flow arrow between transfer FROM and TO tiles. Arrow shape via
+ * clip-path; the gradient "flows" left→right on desktop / top→bottom on
+ * mobile so the eye reads the direction as motion. */
+.fin-flow-arrow {
+  clip-path: polygon(0 30%, 62% 30%, 62% 0%, 100% 50%, 62% 100%, 62% 70%, 0 70%);
+  background: linear-gradient(90deg, rgba(59,130,246,0.55) 0%, rgba(59,130,246,0.9) 45%, rgba(251,191,36,0.9) 100%);
+  background-size: 200% 100%;
+  animation: fin-flow-slide 1.6s linear infinite;
 }
-.fin-flow-dot-1 { animation: fin-flow-dot 1.2s ease-in-out infinite; }
-.fin-flow-dot-2 { animation: fin-flow-dot 1.2s ease-in-out infinite; animation-delay: 0.2s; }
-.fin-flow-dot-3 { animation: fin-flow-dot 1.2s ease-in-out infinite; animation-delay: 0.4s; }
+.fin-flow-arrow-vertical {
+  clip-path: polygon(30% 0, 30% 62%, 0 62%, 50% 100%, 100% 62%, 70% 62%, 70% 0);
+  background: linear-gradient(180deg, rgba(59,130,246,0.55) 0%, rgba(59,130,246,0.9) 45%, rgba(251,191,36,0.9) 100%);
+  background-size: 100% 200%;
+  animation: fin-flow-slide-v 1.6s linear infinite;
+}
+@keyframes fin-flow-slide {
+  from { background-position: 100% 0; }
+  to   { background-position: 0 0; }
+}
+@keyframes fin-flow-slide-v {
+  from { background-position: 0 100%; }
+  to   { background-position: 0 0; }
+}
