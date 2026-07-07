@@ -15,16 +15,19 @@
 // and its two feature routers (line-items first, then the primary router).
 
 import "dotenv/config";
-import { createPluginServer, applyTenantContext } from "@kahitsan/plugin-sdk";
+import { createPluginServer, applyTenantContext, buildResourceServices } from "@kahitsan/plugin-sdk";
 import { flows } from "./flows.js";
+import { flows as accountFlows } from "./flows-accounts.js";
 import {
   insertTransactionRow,
   insertVisibilityShares,
 } from "./lib/create-transaction.js";
 import { isBackdated } from "./lib/backdate.js";
+import { computeAccountBalances } from "./lib/account-balances.js";
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
 import { buildPayeesRouter } from "./routes-payees.js";
+import { buildRouter as buildAccountsRouter, accountsResource } from "./routes-accounts.js";
 import { boardVersion, bumpBoardVersion } from "./lib/board-events.js";
 
 /** Local type for the SDK's req object in service handlers — mirrors
@@ -49,7 +52,9 @@ const capacityCache = new Map<
 
 createPluginServer({
   importMetaUrl: import.meta.url,
-  flows,
+  flows: [...flows, ...accountFlows],
+  // A1: opt into the kernel object store for account logos (ctx.assets).
+  assets: true,
   // ── Producer side: transactions.service ──────────────────────────────────
   // Secret-gated POST /_internal/services/:method, identity parsed so each
   // handler is workspace-scoped via req.workspaceId. These are the methods the
@@ -57,6 +62,10 @@ createPluginServer({
   // getPackageCapacityUsage to enforce per-package capacity / daily / monthly
   // limits at the cart.
   services: ({ db, pool }) => ({
+    // Folded-in from the standalone financial-accounts plugin: resource-backed
+    // findByIds so peers (subscriptions, packages) can resolve account display
+    // names without importing this plugin's tables directly.
+    ...buildResourceServices(accountsResource, { db }),
     // findById({ id }) → a workspace-scoped transaction row, or null.
     findById: async (args, { req }) => { const svcReq = req as unknown as ServiceReq;
       const id = (args as { id?: unknown })?.id;
@@ -96,53 +105,8 @@ createPluginServer({
             .map((v) => (typeof v === "number" ? v : parseInt(String(v), 10)))
             .filter((n) => Number.isInteger(n))
         : [];
-      const out: Record<number, { balance: number }> = {};
-      if (wsId == null || accountIds.length === 0) return out;
-      for (const id of accountIds) out[id] = { balance: 0 };
-
-      const r = await db.query<{ account_id: number; balance: string }>(
-        `WITH ids AS (SELECT UNNEST($2::int[]) AS account_id),
-              leg_sums AS (
-                SELECT tp.financial_account_id AS account_id,
-                       SUM(tp.amount) AS amt
-                  FROM accounts.transaction_payments tp
-                  JOIN accounts.transactions t ON t.id = tp.transaction_id
-                 WHERE tp.workspace_id = $1
-                   AND t.workspace_id = $1
-                   AND tp.financial_account_id = ANY($2::int[])
-                   AND t.status <> 'voided'
-                   AND t.category = 'sale'
-                 GROUP BY tp.financial_account_id
-              ),
-              legacy_sums AS (
-                SELECT i.account_id,
-                       SUM(CASE WHEN t.destination_account_id = i.account_id THEN t.amount ELSE 0 END)
-                     - SUM(CASE WHEN t.source_account_id = i.account_id THEN t.amount ELSE 0 END) AS amt
-                  FROM ids i
-                  JOIN accounts.transactions t
-                    ON (t.source_account_id = i.account_id OR t.destination_account_id = i.account_id)
-                 WHERE t.workspace_id = $1
-                   AND t.status <> 'voided'
-                   AND (
-                     t.category <> 'sale'
-                     OR NOT EXISTS (
-                       SELECT 1 FROM accounts.transaction_payments tp2
-                        WHERE tp2.transaction_id = t.id
-                     )
-                   )
-                 GROUP BY i.account_id
-              )
-         SELECT i.account_id,
-                (COALESCE(ls.amt, 0) + COALESCE(lg.amt, 0))::text AS balance
-           FROM ids i
-           LEFT JOIN leg_sums ls ON ls.account_id = i.account_id
-           LEFT JOIN legacy_sums lg ON lg.account_id = i.account_id`,
-        [wsId, accountIds]
-      );
-      for (const row of r.rows) {
-        out[row.account_id] = { balance: parseFloat(row.balance) || 0 };
-      }
-      return out;
+      if (wsId == null) return {} as Record<number, { balance: number }>;
+      return computeAccountBalances(db, wsId, accountIds);
     },
 
     // getPackageCapacityUsage({ packageIds, at? }) →
@@ -348,6 +312,17 @@ createPluginServer({
       }),
     ({ db, requireAuth, requireWorkspace, requirePermission }) =>
       buildPayeesRouter({ db, requireAuth, requireWorkspace, requirePermission }),
+    // Folded-in accounts router — serves `/api/financial-accounts/*` for the
+    // renamed `finance` plugin. The URL namespace stays the same for API
+    // stability across external consumers of the standalone-era endpoints.
+    ({ db, requireAuth, requireWorkspace, requirePermission, assets }) =>
+      buildAccountsRouter({
+        db,
+        requireAuth,
+        requireWorkspace,
+        requirePermission,
+        assets,
+      }),
     ({ db, requireAuth, requireWorkspace, requirePermission }) =>
       buildRouter({ db, requireAuth, requireWorkspace, requirePermission }),
   ],

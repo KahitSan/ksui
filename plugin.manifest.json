@@ -1,11 +1,15 @@
 {
-  "name": "transactions",
-  "version": "0.1.0",
+  "name": "finance",
+  "version": "0.11.0",
   "basePath": "/api/transactions",
-  "additionalBasePaths": ["/api/transaction-line-items", "/api/payees"],
-  "port": 4620,
-  "capabilityKey": "transactions",
-  "label": "Transactions",
+  "additionalBasePaths": [
+    "/api/transaction-line-items",
+    "/api/payees",
+    "/api/financial-accounts"
+  ],
+  "port": 5220,
+  "capabilityKey": "finance",
+  "label": "Finance",
   "uiRouteBase": "transactions",
   "nav": { "label": "Transactions", "section": "bookkeeping", "icon": "receipt" },
   "routes": [
@@ -20,6 +24,12 @@
       "capabilityKey": "payees",
       "label": "Payees",
       "nav": { "label": "Payees", "section": "bookkeeping", "icon": "users" }
+    },
+    {
+      "uiRouteBase": "financial-accounts",
+      "capabilityKey": "financial_accounts",
+      "label": "Accounts",
+      "nav": { "label": "Accounts", "section": "bookkeeping", "icon": "wallet" }
     },
     {
       "uiRouteBase": "analytics",
@@ -37,9 +47,10 @@
     "service:findByCode@vouchers",
     "service:findById@vouchers"
   ],
-  "ciCoMounts": ["clients", "packages", "vouchers", "financial-accounts"],
+  "ciCoMounts": ["clients", "packages", "vouchers"],
   "provides": [
     "service:findById",
+    "service:findByIds",
     "service:getAccountBalances",
     "service:getPackageCapacityUsage",
     "service:createSalaryTransaction"
@@ -55,23 +66,35 @@
     "payees.edit",
     "payees.delete",
     "payees.restore",
+    "financial_accounts.view",
+    "financial_accounts.create",
+    "financial_accounts.edit",
+    "financial_accounts.delete",
     "analytics.view"
   ],
   "exposes": {
-    "transactions:capacity": {
+    "finance:capacity": {
       "methods": ["getPackageCapacityUsage"],
       "risk": "low",
       "mode": "read",
       "visibility": "public",
       "grants": ["transactions.view"]
     },
-    "transactions:read": {
+    "finance:read": {
       "methods": ["findById"],
       "routes": ["GET /api/transactions"],
       "risk": "low",
       "mode": "read",
       "visibility": "public",
       "grants": ["transactions.view"]
+    },
+    "finance:accounts:read": {
+      "methods": ["findByIds"],
+      "routes": ["GET /api/financial-accounts"],
+      "risk": "low",
+      "mode": "read",
+      "visibility": "public",
+      "grants": ["financial_accounts.view"]
     }
   }
 }
