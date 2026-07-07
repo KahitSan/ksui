@@ -138,11 +138,65 @@ export default function TransferAccountsPicker(
           }
         >
           <div
-            class="flex shrink-0 items-center justify-center self-center max-sm:h-6 max-sm:w-full sm:h-9 sm:w-14"
+            class="shrink-0 self-center max-sm:py-1 sm:px-1"
             aria-hidden="true"
           >
-            <div class="max-sm:hidden sm:block h-4 w-full fin-flow-arrow" />
-            <div class="max-sm:block sm:hidden h-6 w-4 fin-flow-arrow-vertical" />
+            <svg
+              viewBox="0 0 56 14"
+              class="max-sm:hidden sm:block h-3.5 w-14"
+            >
+              <defs>
+                <linearGradient
+                  id="fin-flow-h"
+                  gradientUnits="userSpaceOnUse"
+                  x1="0"
+                  y1="7"
+                  x2="56"
+                  y2="7"
+                >
+                  <stop offset="0" stop-color="#3b82f6" />
+                  <stop offset="1" stop-color="#f59e0b" />
+                </linearGradient>
+              </defs>
+              <line
+                x1="0"
+                y1="7"
+                x2="44"
+                y2="7"
+                stroke="url(#fin-flow-h)"
+                stroke-width="2"
+                class="fin-flow-dash"
+              />
+              <path d="M44 1 L56 7 L44 13 Z" fill="#f59e0b" />
+            </svg>
+            <svg
+              viewBox="0 0 14 40"
+              class="max-sm:block sm:hidden h-10 w-3.5"
+            >
+              <defs>
+                <linearGradient
+                  id="fin-flow-v"
+                  gradientUnits="userSpaceOnUse"
+                  x1="7"
+                  y1="0"
+                  x2="7"
+                  y2="40"
+                >
+                  <stop offset="0" stop-color="#3b82f6" />
+                  <stop offset="1" stop-color="#f59e0b" />
+                </linearGradient>
+              </defs>
+              <line
+                x1="7"
+                y1="0"
+                x2="7"
+                y2="30"
+                stroke="url(#fin-flow-v)"
+                stroke-width="2"
+                class="fin-flow-dash"
+              />
+              <path d="M1 30 L13 30 L7 40 Z" fill="#f59e0b" />
+            </svg>
           </div>
         </Show>
 
