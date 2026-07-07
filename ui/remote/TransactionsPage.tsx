@@ -212,7 +212,6 @@ export default function TransactionsPage() {
     isFormBackdated,
     resetForm,
     populateForm,
-    handleCreate,
   } = form;
 
   function closeCreate() {
