@@ -714,10 +714,19 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           if (feeTouched) {
             const updatedRow = result.rows[0];
             const rawDate = updatedRow.transaction_date;
-            const isoDate =
-              rawDate instanceof Date
-                ? rawDate.toISOString().slice(0, 10)
-                : String(rawDate).slice(0, 10);
+            // pg's default DATE parser returns midnight in the process's LOCAL zone.
+            // toISOString() shifts to UTC and can roll to the prior day when the
+            // process is in a non-UTC zone (e.g. PHT +8), silently backdating the
+            // synced fee row. Use local Y/M/D components to preserve the stored date.
+            const isoDate = ((): string => {
+              if (rawDate instanceof Date) {
+                const y = rawDate.getFullYear();
+                const m = String(rawDate.getMonth() + 1).padStart(2, "0");
+                const d = String(rawDate.getDate()).padStart(2, "0");
+                return `${y}-${m}-${d}`;
+              }
+              return String(rawDate).slice(0, 10);
+            })();
             const feeSync = await syncTransferFee(dbClient, {
               transferId: id,
               workspaceId: ctxGet(c, "workspaceId"),
