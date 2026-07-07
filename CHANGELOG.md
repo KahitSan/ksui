@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 0.12.0
+
+### Minor Changes
+
+- dd3ef8e: Add `POST /:id/forfeit` to write off a sale's remaining balance (no-show / past refund window). Writes the transaction's `amount` down to what was actually collected, settles any still-active line items, and records an audit trail — already-collected payments are left untouched.
+
 ## 0.11.0
 
 ### Minor Changes
