@@ -1,4 +1,4 @@
-# kplugin_transactions
+# kplugin_finance
 
 A ksERP plugin for **the general ledger — every income and expense recorded**.
 
@@ -36,7 +36,7 @@ and it spawns the plugin.
 **1. Get the kernel checked out next to this plugin.**
 
 ```bash
-cd ..   # if you're inside kplugin_transactions/
+cd ..   # if you're inside kplugin_finance/
 git clone git@github.com:llupRisinglll/kserp.git
 cd kserp
 npm ci
@@ -49,7 +49,7 @@ The plugin imports a few things from the kernel (`@ks-erp/kernel/...`).
 **2. Share the kernel's `node_modules` with the plugin.**
 
 ```bash
-ln -s ../kserp/node_modules ../kplugin_transactions/node_modules
+ln -s ../kserp/node_modules ../kplugin_finance/node_modules
 ```
 
 Rather than installing every dep (`express`, `pg`, `tsx`, the kernel package)
@@ -59,7 +59,7 @@ twice, the plugin uses the kernel's. The deploy script does the same.
 
 ```bash
 cd ../kserp
-KSERP_PLUGINS=../kplugin_transactions npm run dev
+KSERP_PLUGINS=../kplugin_finance npm run dev
 ```
 
 `KSERP_PLUGINS` is a comma- or path-separated list of plugin directories.

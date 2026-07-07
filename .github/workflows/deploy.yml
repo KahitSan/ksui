@@ -11,12 +11,12 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-plugin-transactions
+  group: deploy-plugin-finance
   cancel-in-progress: true
 
 jobs:
   deploy:
     uses: KahitSan/kplugin-workflows/.github/workflows/plugin-deploy.yml@main
     with:
-      plugin-name: transactions
+      plugin-name: finance
     secrets: inherit
