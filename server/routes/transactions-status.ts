@@ -4,7 +4,8 @@
 //
 // registerTransactionStatusRoutes mounts, IN THIS EXACT ORDER to preserve
 // Express matching: DELETE /:id (soft-delete → status='voided'),
-// POST /:id/void, POST /:id/unvoid, PUT /:id/visibility (replace per-user/
+// POST /:id/void, POST /:id/unvoid, POST /:id/forfeit (write off the
+// remaining balance), PUT /:id/visibility (replace per-user/
 // per-role share grants), GET /:id/line-items, and
 // POST /:id/line-items/:lineItemId/void.
 //
@@ -151,6 +152,126 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
       } catch (err) {
         if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
         console.error("[transactions] unvoid error:", err);
+        return c.json({ error: "Internal server error" }, 500);
+      } finally {
+        if (dbClient) dbClient.release();
+      }
+    },
+  );
+
+  // ── Forfeit (write off the remaining balance) ────────────────────────────
+  router.post(
+    "/:id/forfeit",
+    requireAuth,
+    requireWorkspace,
+    requirePermission("transactions.delete"),
+    async (c) => {
+      const { reason } = await c.req.json() ?? {};
+      if (!reason || !String(reason).trim()) {
+        return c.json({ error: "reason is required" }, 400);
+      }
+      let dbClient: import("pg").PoolClient | null = null;
+      try {
+        dbClient = await pool.connect();
+        await dbClient.query("BEGIN");
+        await applyTenantContext(dbClient);
+        const txnId = c.req.param("id");
+        const workspaceId = ctxGet(c, "workspaceId");
+        // Lock the row + resolve the live balance inside the transaction so a
+        // concurrent payment can't race the forfeit into writing off more
+        // than is actually still owed.
+        const current = await dbClient.query<{
+          amount: string;
+          tax_type: string;
+          status: string;
+          forfeited_at: Date | null;
+          paid: string;
+        }>(
+          `SELECT t.amount, t.tax_type, t.status, t.forfeited_at,
+                  COALESCE((SELECT SUM(tp.amount) FROM accounts.transaction_payments tp
+                             WHERE tp.transaction_id = t.id AND tp.workspace_id = t.workspace_id), 0)::numeric(12,2) AS paid
+             FROM accounts.transactions t
+            WHERE t.id = $1 AND t.workspace_id = $2
+            FOR UPDATE`,
+          [txnId, workspaceId],
+        );
+        if (current.rows.length === 0) {
+          await dbClient.query("ROLLBACK");
+          return c.json({ error: "Not found" }, 404);
+        }
+        const row = current.rows[0];
+        if (row.status === "voided") {
+          await dbClient.query("ROLLBACK");
+          return c.json({ error: "Cannot forfeit a voided transaction" }, 400);
+        }
+        if (row.forfeited_at) {
+          await dbClient.query("ROLLBACK");
+          return c.json({ error: "Already forfeited" }, 409);
+        }
+        const paid = Number(row.paid);
+        const balance = Number(row.amount) - paid;
+        if (balance <= 0) {
+          await dbClient.query("ROLLBACK");
+          return c.json({ error: "No balance to forfeit" }, 400);
+        }
+        // Write the headline amount down to what was actually collected —
+        // the forfeited portion was never earned, so leaving `amount` at the
+        // original sale price would overstate revenue on the transactions
+        // list / analytics even though the balance no longer shows as due.
+        // subtotal/tax_amount are recomputed from the new amount using the
+        // same vat_inclusive/vat_exclusive formula the edit route uses, so
+        // the VAT breakdown stays internally consistent.
+        let subtotal: number;
+        let taxAmount: number;
+        if (row.tax_type === "vat_inclusive") {
+          subtotal = Math.round((paid / 1.12) * 100) / 100;
+          taxAmount = Math.round((paid - subtotal) * 100) / 100;
+        } else if (row.tax_type === "vat_exclusive") {
+          subtotal = paid;
+          taxAmount = Math.round(paid * 0.12 * 100) / 100;
+        } else {
+          subtotal = paid;
+          taxAmount = 0;
+        }
+        const result = await dbClient.query<{
+          id: number;
+          amount: string;
+          forfeited_at: Date;
+          forfeited_amount: string;
+          forfeited_by: string;
+          forfeited_reason: string;
+          updated_at: Date;
+        }>(
+          `UPDATE accounts.transactions
+              SET amount = $3, subtotal = $4, tax_amount = $5,
+                  forfeited_at = NOW(), forfeited_amount = $6, forfeited_by = $7,
+                  forfeited_reason = $8, updated_at = NOW()
+            WHERE id = $1 AND workspace_id = $2
+            RETURNING id, amount, forfeited_at, forfeited_amount, forfeited_by, forfeited_reason, updated_at`,
+          [txnId, workspaceId, paid, subtotal, taxAmount, balance, ctxGet(c, "user")?.id ?? "", String(reason).trim()],
+        );
+        await dbClient.query(
+          `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
+             VALUES ($1, $2, $3, $4, 'forfeit')`,
+          [txnId, workspaceId, ctxGet(c, "user")?.id ?? "", String(reason).trim()],
+        );
+        // Forfeiting means the customer is gone for good — settle every
+        // still-active/expired line on the receipt (mirrors the Settle
+        // route's as_is default) so the board moves it to Done instead of
+        // leaving a live countdown running for a session nobody is coming
+        // back to, which would otherwise let staff re-trigger forfeit and
+        // hit the already-forfeited guard with no visible board change.
+        await dbClient.query(
+          `UPDATE accounts.transaction_line_items
+              SET status = 'completed', ends_at = NOW(), updated_at = NOW()
+            WHERE transaction_id = $1 AND workspace_id = $2 AND status IN ('active', 'expired')`,
+          [txnId, workspaceId],
+        );
+        await dbClient.query("COMMIT");
+        return c.json(result.rows[0]);
+      } catch (err) {
+        if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
+        console.error("[transactions] forfeit error:", err);
         return c.json({ error: "Internal server error" }, 500);
       } finally {
         if (dbClient) dbClient.release();

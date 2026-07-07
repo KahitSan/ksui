@@ -57,7 +57,7 @@ export interface Transaction {
   line_items?: TransactionLineItem[];
   amount_collected?: string | null;
   balance?: string | null;
-  payment_status?: "paid" | "partial" | "unpaid" | "voided" | null;
+  payment_status?: "paid" | "partial" | "unpaid" | "voided" | "forfeited" | null;
   payments?: TransactionPayment[];
 }
 
