@@ -1,5 +1,6 @@
 import { Show, type JSX } from "solid-js";
-import ChevronRight from "lucide-solid/icons/chevron-right";
+import ArrowRightLeft from "lucide-solid/icons/arrow-right-left";
+import Plus from "lucide-solid/icons/plus";
 import { FormField, AccountAvatar } from "@kahitsan/ksui";
 import AccountPicker from "./AccountPicker";
 import { type FinancialAccount } from "../lib/types";
@@ -14,63 +15,121 @@ export interface TransferAccountsPickerProps {
   destLabel: string;
 }
 
-interface StepColumnProps {
-  stepNumber: 1 | 2;
-  header: string;
+interface AccountTileProps {
+  role: "from" | "to";
   account: FinancialAccount | undefined;
-  active: boolean;
-  pulsing: boolean;
-  onChange: () => void;
-  changeTestId: string;
-  stepTestId: string;
-  avatarIconClass: string;
-  nameClass: string;
+  emptyHint: string;
+  onEditRequest: () => void;
+  editTestId: string;
+  tileTestId: string;
 }
 
-function StepColumn(p: StepColumnProps): JSX.Element {
+function AccountTile(p: AccountTileProps): JSX.Element {
+  const isFilled = () => !!p.account;
   return (
-    <div
-      class="flex flex-1 min-w-0 flex-col gap-1.5 rounded-md px-3 py-2 transition-colors"
+    <button
+      type="button"
+      data-testid={p.tileTestId}
+      onClick={p.onEditRequest}
+      class="group flex flex-1 min-w-0 flex-col items-start gap-2 rounded-xl border px-4 py-3 text-left transition-all cursor-pointer"
       classList={{
-        "bg-blue-500/15": p.active,
-        "bg-zinc-900/60": !p.active,
+        "border-blue-500/50 bg-blue-500/10 hover:bg-blue-500/15":
+          isFilled() && p.role === "from",
+        "border-emerald-500/50 bg-emerald-500/10 hover:bg-emerald-500/15":
+          isFilled() && p.role === "to",
+        "border-dashed border-zinc-700 bg-zinc-900/40 hover:border-amber-500/50 hover:bg-zinc-900/60 animate-pulse":
+          !isFilled(),
       }}
-      data-testid={p.stepTestId}
+      aria-label={
+        isFilled()
+          ? `${p.role === "from" ? "Source" : "Destination"} account: ${p.account!.name} (tap to change)`
+          : `Select ${p.role === "from" ? "source" : "destination"} account`
+      }
     >
-      <div
-        class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider"
+      <span
+        class="text-[10px] font-semibold uppercase tracking-widest"
         classList={{
-          "text-blue-300": p.active,
-          "text-amber-400 animate-pulse": p.pulsing,
-          "text-zinc-600": !p.active && !p.pulsing,
+          "text-blue-300": isFilled() && p.role === "from",
+          "text-emerald-300": isFilled() && p.role === "to",
+          "text-zinc-500": !isFilled(),
         }}
       >
-        <span class="text-zinc-500">{p.stepNumber}.</span>
-        <span class="truncate">{p.header}</span>
-      </div>
-      <Show when={p.account} keyed>
+        {p.role === "from" ? "From" : "To"}
+      </span>
+      <Show
+        when={p.account}
+        keyed
+        fallback={
+          <div class="flex items-center gap-2 text-zinc-500">
+            <span class="flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-zinc-700 bg-zinc-950/50">
+              <Plus size={14} />
+            </span>
+            <span class="text-sm font-medium">{p.emptyHint}</span>
+          </div>
+        }
+      >
         {(a) => (
-          <div class="flex items-center justify-between gap-2 min-w-0">
-            <div class="flex min-w-0 items-center gap-1.5">
+          <div class="flex w-full items-center gap-2.5 min-w-0">
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-full ring-1"
+              classList={{
+                "bg-blue-500/20 ring-blue-500/40": p.role === "from",
+                "bg-emerald-500/20 ring-emerald-500/40": p.role === "to",
+              }}
+            >
               <AccountAvatar
                 account={a}
-                size={20}
-                iconClass={p.avatarIconClass}
+                size={18}
+                iconClass={
+                  p.role === "from" ? "text-blue-200" : "text-emerald-200"
+                }
               />
-              <span class={`truncate text-sm normal-case tracking-normal ${p.nameClass}`}>
+            </span>
+            <div class="flex min-w-0 flex-col">
+              <span class="truncate text-sm font-semibold text-zinc-100">
                 {a.name}
               </span>
+              <span
+                data-testid={p.editTestId}
+                class="text-[10px] font-semibold uppercase tracking-wider text-amber-400 group-hover:text-amber-300"
+              >
+                Tap to change
+              </span>
             </div>
-            <button
-              type="button"
-              data-testid={p.changeTestId}
-              onClick={p.onChange}
-              class="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-amber-400 hover:text-amber-300 cursor-pointer"
-            >
-              Change
-            </button>
           </div>
         )}
+      </Show>
+    </button>
+  );
+}
+
+function FlowArrow(props: { active: boolean; canSwap: boolean; onSwap: () => void }) {
+  return (
+    <div class="flex flex-col items-center justify-center gap-1 self-center max-sm:flex-row max-sm:py-1 sm:px-1">
+      <Show
+        when={props.canSwap}
+        fallback={
+          <div
+            class="flex items-center gap-1 text-blue-400 max-sm:flex-row sm:flex-col"
+            classList={{ "opacity-40": !props.active }}
+            aria-hidden="true"
+          >
+            <span class="fin-flow-dot-1 h-1.5 w-1.5 rounded-full bg-current" />
+            <span class="fin-flow-dot-2 h-1.5 w-1.5 rounded-full bg-current" />
+            <span class="fin-flow-dot-3 h-1.5 w-1.5 rounded-full bg-current" />
+          </div>
+        }
+      >
+        <button
+          type="button"
+          data-testid="transactions-form-transfer-swap"
+          onClick={props.onSwap}
+          class="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-300 transition-colors hover:border-amber-500/60 hover:text-amber-300 cursor-pointer max-sm:rotate-90"
+          aria-label="Swap source and destination"
+          title="Swap source and destination"
+        >
+          <ArrowRightLeft size={14} />
+        </button>
       </Show>
     </div>
   );
@@ -84,54 +143,46 @@ export default function TransferAccountsPicker(
   const destMeta = () =>
     props.accounts.find((a) => a.id.toString() === props.destAccount);
 
+  const swap = () => {
+    const s = props.sourceAccount;
+    const d = props.destAccount;
+    props.setSourceAccount(d);
+    props.setDestAccount(s);
+  };
+
   return (
     <div class="space-y-3">
-      <div class="flex items-stretch gap-2 rounded-lg border border-zinc-800/60 bg-zinc-950/40 p-1.5">
-        <StepColumn
-          stepNumber={1}
-          header={props.sourceAccount ? "From" : "Choose source"}
+      <div class="flex items-stretch gap-2 max-sm:flex-col sm:flex-row">
+        <AccountTile
+          role="from"
           account={sourceMeta()}
-          active={!!props.sourceAccount}
-          pulsing={!props.sourceAccount}
-          onChange={() => {
-            props.setSourceAccount("");
-            props.setDestAccount("");
-          }}
-          changeTestId="transactions-form-transfer-source-change"
-          stepTestId="transactions-form-transfer-step-1"
-          avatarIconClass="text-blue-300"
-          nameClass="text-zinc-100"
+          emptyHint="Select source"
+          onEditRequest={() => props.setSourceAccount("")}
+          editTestId="transactions-form-transfer-source-change"
+          tileTestId="transactions-form-transfer-tile-from"
         />
-        <ChevronRight
-          size={14}
-          class="shrink-0 self-center text-zinc-600"
-          classList={{
-            "text-blue-400 animate-pulse":
-              !!props.sourceAccount && !props.destAccount,
-          }}
+        <FlowArrow
+          active={!!props.sourceAccount || !!props.destAccount}
+          canSwap={!!props.sourceAccount && !!props.destAccount}
+          onSwap={swap}
         />
-        <StepColumn
-          stepNumber={2}
-          header={
-            props.destAccount
-              ? "To"
-              : props.sourceAccount
-                ? "Choose destination"
-                : "Destination"
-          }
+        <AccountTile
+          role="to"
           account={destMeta()}
-          active={!!props.destAccount}
-          pulsing={!!props.sourceAccount && !props.destAccount}
-          onChange={() => props.setDestAccount("")}
-          changeTestId="transactions-form-transfer-dest-change"
-          stepTestId="transactions-form-transfer-step-2"
-          avatarIconClass="text-blue-200"
-          nameClass="text-blue-100"
+          emptyHint={
+            props.sourceAccount ? "Select destination" : "Destination"
+          }
+          onEditRequest={() => props.setDestAccount("")}
+          editTestId="transactions-form-transfer-dest-change"
+          tileTestId="transactions-form-transfer-tile-to"
         />
       </div>
 
       <Show when={!props.sourceAccount}>
-        <div data-testid="transactions-form-transfer-source-picker">
+        <div
+          class="animate-[fin-slide-fade-down_0.28s_ease-out]"
+          data-testid="transactions-form-transfer-source-picker"
+        >
           <FormField label={props.sourceLabel}>
             <AccountPicker
               accounts={props.accounts}

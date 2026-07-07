@@ -39,3 +39,14 @@
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Money-flow direction hint between transfer FROM and TO tiles: three dots
+ * pulse in sequence so the eye reads left→right (or top→bottom on stacked
+ * mobile). Pure animation, no layout effect. */
+@keyframes fin-flow-dot {
+  0%, 60%, 100% { opacity: 0.2; }
+  30% { opacity: 1; }
+}
+.fin-flow-dot-1 { animation: fin-flow-dot 1.2s ease-in-out infinite; }
+.fin-flow-dot-2 { animation: fin-flow-dot 1.2s ease-in-out infinite; animation-delay: 0.2s; }
+.fin-flow-dot-3 { animation: fin-flow-dot 1.2s ease-in-out infinite; animation-delay: 0.4s; }
