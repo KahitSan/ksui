@@ -189,7 +189,7 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
         }>(
           `SELECT t.amount, t.tax_type, t.status, t.forfeited_at,
                   COALESCE((SELECT SUM(tp.amount) FROM accounts.transaction_payments tp
-                             WHERE tp.transaction_id = t.id), 0)::numeric(12,2) AS paid
+                             WHERE tp.transaction_id = t.id AND tp.workspace_id = t.workspace_id), 0)::numeric(12,2) AS paid
              FROM accounts.transactions t
             WHERE t.id = $1 AND t.workspace_id = $2
             FOR UPDATE`,

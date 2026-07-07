@@ -158,6 +158,7 @@ describe("transactions forfeit: create → part-pay → forfeit → outstanding 
       [newId, TEST_ORG],
     );
     activeLineId = insert.rows[0].id;
+    expect(activeLineId).toBeGreaterThan(0);
   });
 
   it("rejects a forfeit with no reason", async () => {
