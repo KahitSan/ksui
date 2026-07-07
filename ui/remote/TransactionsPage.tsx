@@ -910,7 +910,7 @@ export default function TransactionsPage() {
                   setTransferFeeEnabled={setFormTransferFeeEnabled}
                   transferFeeAmount={formTransferFeeAmount()}
                   setTransferFeeAmount={setFormTransferFeeAmount}
-                  allowTransferFee={false}
+                  allowTransferFee={true}
                   pendingFiles={formPendingFiles()}
                   setPendingFiles={setFormPendingFiles}
                   accounts={accounts()}
