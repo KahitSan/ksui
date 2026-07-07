@@ -247,7 +247,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           return c.json({ error: "transfer_fee_amount is only valid for transfers" }, 400);
         }
         parsedTransferFeeAmount = parseFloat(String(transfer_fee_amount));
-        if (!(parsedTransferFeeAmount > 0)) {
+        if (!Number.isFinite(parsedTransferFeeAmount) || parsedTransferFeeAmount <= 0) {
           return c.json({ error: "transfer_fee_amount must be greater than 0" }, 400);
         }
         if (!source_account_id || !Number.isFinite(Number(source_account_id))) {

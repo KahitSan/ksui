@@ -12,6 +12,7 @@ import Pencil from "lucide-solid/icons/pencil";
 import Ban from "lucide-solid/icons/ban";
 
 import TransactionForm from "./components/TransactionForm";
+import TransactionCreateModal from "./components/TransactionCreateModal";
 import {
   TransactionDetail,
   TransactionDetailSkeleton,
@@ -56,7 +57,6 @@ import {
   Modal,
   DataTable,
   Button,
-  Tooltip,
   confirm,
   type FetchParams,
   type FetchResult,
@@ -592,119 +592,16 @@ export default function TransactionsPage() {
         <ExportTransactionsModal onClose={() => setExportOpen(false)} />
       </Show>
 
-      {/* Create Modal */}
       <Show when={createOpen()}>
-        <Modal variant="sheet" onClose={() => closeCreate()}>
-          <div
-            class="sm:w-[42rem] lg:w-[48rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh]"
-            data-testid="transactions-create-modal"
-          >
-            <div class="px-5 sm:px-6 py-3 border-b border-zinc-800/60 flex items-center justify-between gap-3 shrink-0">
-              <div class="flex items-center gap-2 min-w-0">
-                <h2 class="text-base font-semibold text-zinc-100 truncate">
-                  Record transaction
-                </h2>
-                <Tooltip
-                  content="Log a sale, expense, transfer between your own accounts, or a payable. Transfers can carry a fee saved as a separate expense from the source account."
-                  placement="bottom"
-                  align="start"
-                  wrap
-                >
-                  <button
-                    type="button"
-                    aria-label="About recording a transaction"
-                    class="ks-interactive inline-flex items-center justify-center w-5 h-5 rounded border border-zinc-700/60 bg-zinc-800/60 text-zinc-500 hover:text-zinc-200 hover:border-zinc-600 transition-colors shrink-0"
-                  >
-                    <span
-                      class="font-serif italic text-[11px] leading-none"
-                      aria-hidden="true"
-                    >
-                      i
-                    </span>
-                  </button>
-                </Tooltip>
-              </div>
-              <button
-                onClick={() => closeCreate()}
-                class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors ks-hud-clip-button cursor-pointer shrink-0"
-                aria-label="Close"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <TransactionForm
-              error={formError()}
-              saving={formSaving()}
-              category={formCategory()}
-              setCategory={setFormCategory}
-              subcategory={formSubcategory()}
-              setSubcategory={setFormSubcategory}
-              sourceAccount={formSourceAccount()}
-              setSourceAccount={setFormSourceAccount}
-              destAccount={formDestAccount()}
-              setDestAccount={setFormDestAccount}
-              amount={formAmount()}
-              setAmount={setFormAmount}
-              description={formDescription()}
-              setDescription={setFormDescription}
-              notes={formNotes()}
-              setNotes={setFormNotes}
-              date={formDate()}
-              setDate={setFormDate}
-              isPrivate={formPrivate()}
-              setIsPrivate={setFormPrivate}
-              sharedWith={formSharedWith()}
-              setSharedWith={setFormSharedWith}
-              sharedRoleCodes={formSharedWithRoles()}
-              setSharedRoleCodes={setFormSharedWithRoles}
-              backdateReason={formBackdateReason()}
-              setBackdateReason={setFormBackdateReason}
-              payee={formPayee()}
-              setPayee={setFormPayee}
-              payeeId={formPayeeId()}
-              setPayeeId={setFormPayeeId}
-              refNumber={formRefNumber()}
-              setRefNumber={setFormRefNumber}
-              taxType={formTaxType()}
-              setTaxType={setFormTaxType}
-              hasEwt={formHasEwt()}
-              setHasEwt={setFormHasEwt}
-              ewtRate={formEwtRate()}
-              setEwtRate={setFormEwtRate}
-              payableKind={formPayableKind()}
-              setPayableKind={setFormPayableKind}
-              dueDate={formDueDate()}
-              setDueDate={setFormDueDate}
-              chequeNumber={formChequeNumber()}
-              setChequeNumber={setFormChequeNumber}
-              pdcStatus={formPdcStatus()}
-              setPdcStatus={setFormPdcStatus}
-              transferFeeEnabled={formTransferFeeEnabled()}
-              setTransferFeeEnabled={setFormTransferFeeEnabled}
-              transferFeeAmount={formTransferFeeAmount()}
-              setTransferFeeAmount={setFormTransferFeeAmount}
-              allowTransferFee={true}
-              pendingFiles={formPendingFiles()}
-              setPendingFiles={setFormPendingFiles}
-              accounts={accounts()}
-              orgMembers={orgMembers()}
-              shareableRoles={shareableRoles()}
-              isAdmin={isAdmin()}
-              canShare={canShare()}
-              isBackdated={isFormBackdated()}
-              saleItems={formSaleItems()}
-              setSaleItems={setFormSaleItems}
-              saleClient={formSaleClient()}
-              setSaleClient={setFormSaleClient}
-              saleVoucher={formSaleVoucher()}
-              setSaleVoucher={setFormSaleVoucher}
-              saleManualDiscount={formSaleDiscount()}
-              setSaleManualDiscount={setFormSaleDiscount}
-              onSubmit={handleCreate}
-              submitLabel="Create Transaction"
-            />
-          </div>
-        </Modal>
+        <TransactionCreateModal
+          form={form}
+          accounts={accounts()}
+          orgMembers={orgMembers()}
+          shareableRoles={shareableRoles()}
+          isAdmin={isAdmin()}
+          canShare={canShare()}
+          onClose={() => closeCreate()}
+        />
       </Show>
 
       {/* Detail Modal */}

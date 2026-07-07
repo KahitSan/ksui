@@ -54,6 +54,8 @@ export async function syncTransferFee(
   if (!f.effectiveSourceAccountId) {
     return { ok: false, status: 400, error: "transfer_fee_amount requires a source_account_id" };
   }
+  // `dropFee` above guaranteed non-null; local narrows the type for the amount uses below.
+  const feeAmount: number = f.requestedFeeAmount as number;
   const feeDescription = `Transfer fee — ${f.effectiveDescription}`;
 
   if (f.existingFeeId != null) {
@@ -64,7 +66,7 @@ export async function syncTransferFee(
               backdate_reason = $7, updated_at = NOW(), updated_by = $8
         WHERE id = $9 AND workspace_id = $10`,
       [
-        f.requestedFeeAmount,
+        feeAmount,
         f.effectiveSourceAccountId,
         feeDescription,
         f.effectiveTransactionDate,
@@ -85,7 +87,7 @@ export async function syncTransferFee(
     subcategory: TRANSFER_FEE_SUBCATEGORY,
     sourceAccountId: f.effectiveSourceAccountId,
     destinationAccountId: null,
-    amount: f.requestedFeeAmount,
+    amount: feeAmount,
     description: feeDescription,
     notes: null,
     transactionDate: f.effectiveTransactionDate,
@@ -97,7 +99,7 @@ export async function syncTransferFee(
     taxType: "non_vat",
     taxRate: 12,
     taxAmount: 0,
-    subtotal: f.requestedFeeAmount,
+    subtotal: feeAmount,
     payableKind: null,
     dueDate: null,
     chequeNumber: null,
