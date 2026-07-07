@@ -682,12 +682,17 @@ function mountLogoRaw(app: Hono, deps: RouterDeps): void {
  * routes (and the generated `GET /:id` is suppressed via `get: false`).
  */
 export function buildRouter(deps: RouterDeps): Hono {
+  const inner = new Hono();
+  mountList(inner, deps);
+  mountGet(inner, deps);
+  mountLogoUpload(inner, deps);
+  mountLogoDelete(inner, deps);
+  mountLogoRaw(inner, deps);
+  inner.route("/", buildResourceRouter(accountsResource, deps));
+  // Kernel proxies `/api/financial-accounts` here WITHOUT stripping the
+  // prefix (additionalBasePaths mount, matches payees), so nest under the full
+  // prefix so escape-hatch `/` + `/:id` route matches survive the merged mount.
   const app = new Hono();
-  mountList(app, deps);
-  mountGet(app, deps);
-  mountLogoUpload(app, deps);
-  mountLogoDelete(app, deps);
-  mountLogoRaw(app, deps);
-  app.route("/", buildResourceRouter(accountsResource, deps));
+  app.route("/api/financial-accounts", inner);
   return app;
 }
