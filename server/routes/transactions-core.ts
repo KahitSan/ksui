@@ -47,6 +47,8 @@ export type CoreRouteCtx = {
   requirePermission: (...codes: string[]) => MiddlewareHandler;
 };
 
+const TRANSFER_FEE_SUBCATEGORY = "Other expense";
+
 export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
@@ -379,7 +381,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           const transferFeeTxn = await insertTransactionRow(dbClient, {
             workspaceId: ctxGet(c, "workspaceId"),
             category: "expense",
-            subcategory: null,
+            subcategory: TRANSFER_FEE_SUBCATEGORY,
             sourceAccountId: source_account_id || null,
             destinationAccountId: null,
             amount: parsedTransferFeeAmount,

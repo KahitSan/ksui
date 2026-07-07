@@ -179,6 +179,7 @@ describe("transactions flow: list → create → list → detail → void (real 
     const matchingRows = (listBody.data as Array<{
       id: number;
       category: string;
+      subcategory: string | null;
       amount: string;
       source_account_id: number | null;
       description: string;
@@ -197,6 +198,7 @@ describe("transactions flow: list → create → list → detail → void (real 
     expect(feeRow).toBeTruthy();
     expect(feeRow).toMatchObject({
       category: "expense",
+      subcategory: "Other expense",
       source_account_id: 1,
       description: `Transfer fee — ${transferDesc}`,
     });
