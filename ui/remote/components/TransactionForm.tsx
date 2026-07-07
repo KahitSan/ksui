@@ -443,24 +443,50 @@ export default function TransactionForm(props: TransactionFormProps) {
                 >
                   <TransferFeeChip
                     enabled={props.transferFeeEnabled}
-                    setEnabled={props.setTransferFeeEnabled}
-                    amount={props.transferFeeAmount}
-                    setAmount={props.setTransferFeeAmount}
+                    onToggle={() => {
+                      const next = !props.transferFeeEnabled;
+                      props.setTransferFeeEnabled(next);
+                      if (!next) props.setTransferFeeAmount("");
+                    }}
                   />
                 </Show>
               </div>
-              <Show
-                when={
-                  props.category === "business" &&
-                  props.allowTransferFee &&
-                  props.transferFeeEnabled
-                }
-              >
-                <p class="mt-1 text-[10px] text-zinc-600">
-                  Saved as a separate expense from the source account.
-                </p>
-              </Show>
             </FormField>
+            <Show
+              when={
+                props.category === "business" &&
+                props.allowTransferFee &&
+                props.transferFeeEnabled
+              }
+            >
+              <div
+                class="animate-[fin-slide-fade-down_0.28s_ease-out]"
+                data-testid="transactions-form-transfer-fee-field"
+              >
+                <FormField label="Transfer fee *">
+                  <div class="flex items-center gap-2 px-3 py-2 border bg-zinc-950/50 border-blue-500/30 ks-hud-clip-button focus-within:border-blue-500/60 transition-colors">
+                    <span class="text-lg font-bold text-zinc-500 tabular-nums">
+                      ₱
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      data-testid="transactions-form-transfer-fee-amount"
+                      value={props.transferFeeAmount}
+                      onInput={(e) =>
+                        props.setTransferFeeAmount(e.currentTarget.value)
+                      }
+                      class="min-w-0 flex-1 bg-transparent text-lg font-semibold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <p class="mt-1 text-[10px] text-zinc-600">
+                    Saved as a separate expense from the source account.
+                  </p>
+                </FormField>
+              </div>
+            </Show>
           </Show>
 
           <FormField label="Date *">
