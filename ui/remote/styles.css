@@ -32,3 +32,10 @@
  * source too (resolves through node_modules — the kernel symlink for us, the
  * npm-installed copy for a third-party plugin). */
 @source "../../node_modules/@kahitsan/ksui/src";
+
+/* Slide+fade reveal for the transfer destination picker — appears after the
+ * user picks a source so a first-time user sees the flow direction. */
+@keyframes fin-slide-fade-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -21,6 +21,8 @@ import Paperclip from "lucide-solid/icons/paperclip";
 import AccountPicker from "./AccountPicker";
 import FormAdvancedSection from "./FormAdvancedSection";
 import SalesBodyEditor, { type SalesLine } from "./SalesBodyEditor";
+import TransferFeeChip from "./TransferFeeChip";
+import TransferAccountsPicker from "./TransferAccountsPicker";
 import Store from "lucide-solid/icons/store";
 
 // Payee data-wiring for the generic ComboBox engine. Search/create hit the
@@ -420,85 +422,45 @@ export default function TransactionForm(props: TransactionFormProps) {
           <Show
             when={!(props.category === "sale" && props.saleItems.length > 0)}
           >
-            <div class="space-y-2">
-              <FormField label="Amount *">
-                <div class="flex items-center gap-3 px-4 py-3 border bg-zinc-900/60 border-zinc-800/60 ks-hud-clip-button focus-within:border-amber-500/50 transition-colors">
-                  <span class="text-3xl font-bold text-zinc-500 tabular-nums">
-                    ₱
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    data-testid="transactions-form-amount"
-                    value={props.amount}
-                    onInput={(e) => props.setAmount(e.currentTarget.value)}
-                    class="flex-1 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
-                    placeholder="0.00"
-                    required
+            <FormField label="Amount *">
+              <div class="flex items-stretch gap-2 px-4 py-3 border bg-zinc-900/60 border-zinc-800/60 ks-hud-clip-button focus-within:border-amber-500/50 transition-colors">
+                <span class="self-center text-3xl font-bold text-zinc-500 tabular-nums">
+                  ₱
+                </span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  data-testid="transactions-form-amount"
+                  value={props.amount}
+                  onInput={(e) => props.setAmount(e.currentTarget.value)}
+                  class="min-w-0 flex-1 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
+                  placeholder="0.00"
+                  required
+                />
+                <Show
+                  when={props.category === "business" && props.allowTransferFee}
+                >
+                  <TransferFeeChip
+                    enabled={props.transferFeeEnabled}
+                    setEnabled={props.setTransferFeeEnabled}
+                    amount={props.transferFeeAmount}
+                    setAmount={props.setTransferFeeAmount}
                   />
-                </div>
-              </FormField>
-              <Show when={props.category === "business" && props.allowTransferFee}>
-                <div class="rounded-lg border border-zinc-800/70 bg-zinc-900/40 p-2.5">
-                  <Show
-                    when={props.transferFeeEnabled}
-                    fallback={
-                      <button
-                        type="button"
-                        class="flex w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left text-sm text-blue-300 transition-colors hover:bg-blue-500/10 hover:text-blue-200"
-                        onClick={() => props.setTransferFeeEnabled(true)}
-                      >
-                        <span>
-                          <span class="font-semibold">Add transfer fee</span>
-                          <span class="ml-2 text-xs text-zinc-500">
-                            InstaPay, bank, or cash-out charge
-                          </span>
-                        </span>
-                        <span class="text-xs font-semibold uppercase tracking-wider text-blue-400">
-                          Add
-                        </span>
-                      </button>
-                    }
-                  >
-                    <div class="grid grid-cols-[1fr_auto] items-end gap-2">
-                      <FormField label="Fee amount *">
-                        <div class="flex items-center gap-2 px-3 py-2 border bg-zinc-950/50 border-blue-500/30 ks-hud-clip-button focus-within:border-blue-500/60 transition-colors">
-                          <span class="text-lg font-bold text-zinc-500 tabular-nums">
-                            ₱
-                          </span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            data-testid="transactions-form-transfer-fee-amount"
-                            value={props.transferFeeAmount}
-                            onInput={(e) =>
-                              props.setTransferFeeAmount(e.currentTarget.value)
-                            }
-                            class="min-w-0 flex-1 bg-transparent text-lg font-semibold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
-                            placeholder="0.00"
-                          />
-                        </div>
-                      </FormField>
-                      <button
-                        type="button"
-                        class="mb-0.5 rounded-md border border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-200"
-                        onClick={() => {
-                          props.setTransferFeeEnabled(false);
-                          props.setTransferFeeAmount("");
-                        }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <p class="mt-2 text-[10px] text-zinc-600">
-                      Saves a separate expense from the source account.
-                    </p>
-                  </Show>
-                </div>
+                </Show>
+              </div>
+              <Show
+                when={
+                  props.category === "business" &&
+                  props.allowTransferFee &&
+                  props.transferFeeEnabled
+                }
+              >
+                <p class="mt-1 text-[10px] text-zinc-600">
+                  Saved as a separate expense from the source account.
+                </p>
               </Show>
-            </div>
+            </FormField>
           </Show>
 
           <FormField label="Date *">
@@ -742,27 +704,15 @@ export default function TransactionForm(props: TransactionFormProps) {
               </FormField>
             }
           >
-            <div class="grid grid-cols-1 gap-4">
-              <FormField label={catConfig().accountLabel}>
-                <AccountPicker
-                  accounts={props.accounts}
-                  ariaLabel={catConfig().accountLabel}
-                  value={props.sourceAccount}
-                  onChange={(v) => props.setSourceAccount(v)}
-                  excludeId={props.destAccount}
-                />
-              </FormField>
-              <FormField label={catConfig().secondAccountLabel!}>
-                <AccountPicker
-                  accounts={props.accounts}
-                  ariaLabel={catConfig().secondAccountLabel!}
-                  value={props.destAccount}
-                  onChange={(v) => props.setDestAccount(v)}
-                  excludeId={props.sourceAccount}
-                  autoDefault={false}
-                />
-              </FormField>
-            </div>
+            <TransferAccountsPicker
+              accounts={props.accounts}
+              sourceAccount={props.sourceAccount}
+              setSourceAccount={props.setSourceAccount}
+              destAccount={props.destAccount}
+              setDestAccount={props.setDestAccount}
+              sourceLabel={catConfig().accountLabel}
+              destLabel={catConfig().secondAccountLabel!}
+            />
           </Show>
 
           <FormField label="Notes">
