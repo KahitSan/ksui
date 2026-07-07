@@ -20,6 +20,12 @@
       "capabilityKey": "payees",
       "label": "Payees",
       "nav": { "label": "Payees", "section": "bookkeeping", "icon": "users" }
+    },
+    {
+      "uiRouteBase": "analytics",
+      "capabilityKey": "analytics",
+      "label": "Finance Analytics",
+      "nav": { "label": "Analytics", "section": "bookkeeping", "icon": "activity", "order": 0 }
     }
   ],
   "schemas": ["accounts"],
@@ -31,7 +37,7 @@
     "service:findByCode@vouchers",
     "service:findById@vouchers"
   ],
-  "ciCoMounts": ["clients", "packages", "vouchers"],
+  "ciCoMounts": ["clients", "packages", "vouchers", "financial-accounts"],
   "provides": [
     "service:findById",
     "service:getAccountBalances",
@@ -48,7 +54,8 @@
     "payees.create",
     "payees.edit",
     "payees.delete",
-    "payees.restore"
+    "payees.restore",
+    "analytics.view"
   ],
   "exposes": {
     "transactions:capacity": {

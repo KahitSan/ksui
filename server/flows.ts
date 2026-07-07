@@ -7,6 +7,7 @@ import {
   type ExecFlow,
   type FlowContext,
 } from "@kahitsan/plugin-sdk/flow";
+import { analyticsFlows } from "./flows-analytics.js";
 
 // EXECUTABLE flows (Vision §9): the same objects the kernel renders (JSON.stringify
 // drops the functions → structure-only) are what the UI dispatches via runFlow.
@@ -478,4 +479,7 @@ export const flows: FlowDefinition[] = [
     n_trg_redl.to(n_redl);
     n_redl.to(n_done);
   }),
+  // Folded-in Analytics dashboard flows (analytics.board/filter/rightrail/retry/
+  // share/workspace_switch + the executable retryFlow) — one bundle, one process.
+  ...analyticsFlows,
 ];
