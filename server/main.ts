@@ -27,7 +27,7 @@ import { computeAccountBalances } from "./lib/account-balances.js";
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
 import { buildPayeesRouter } from "./routes-payees.js";
-import { buildRouter as buildAccountsRouter, accountsResource } from "./routes-accounts.js";
+import { buildPrefixedRouter as buildAccountsRouter, accountsResource } from "./routes-accounts.js";
 import { boardVersion, bumpBoardVersion } from "./lib/board-events.js";
 
 /** Local type for the SDK's req object in service handlers — mirrors

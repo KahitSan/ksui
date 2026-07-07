@@ -62,7 +62,6 @@ import ArchiveRestore from "lucide-solid/icons/archive-restore";
 import Pencil from "lucide-solid/icons/pencil";
 import EllipsisVertical from "lucide-solid/icons/ellipsis-vertical";
 import Eye from "lucide-solid/icons/eye";
-import AlertTriangle from "lucide-solid/icons/triangle-alert";
 
 export default function AccountsPage() {
   const { activeWorkspace } = useActiveWorkspace();

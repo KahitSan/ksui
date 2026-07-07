@@ -684,18 +684,30 @@ function mountLogoRaw(app: Hono, deps: RouterDeps): void {
  * balance-enriched list `/` and the static `/:id/logo` win over the generated
  * routes (and the generated `GET /:id` is suppressed via `get: false`).
  */
+/**
+ * BARE accounts router — routes at `/`, `/:id`, `/:id/logo{,/raw}`. Kept
+ * prefix-free so unit tests can hit `request("/")` directly. Production mounts
+ * the {@link buildPrefixedRouter} wrapper because the kernel proxies
+ * additionalBasePaths WITHOUT stripping the prefix.
+ */
 export function buildRouter(deps: RouterDeps): Hono {
-  const inner = new Hono();
-  mountList(inner, deps);
-  mountGet(inner, deps);
-  mountLogoUpload(inner, deps);
-  mountLogoDelete(inner, deps);
-  mountLogoRaw(inner, deps);
-  inner.route("/", buildResourceRouter(accountsResource, deps));
-  // Kernel proxies `/api/financial-accounts` here WITHOUT stripping the
-  // prefix (additionalBasePaths mount, matches payees), so nest under the full
-  // prefix so escape-hatch `/` + `/:id` route matches survive the merged mount.
   const app = new Hono();
-  app.route("/api/financial-accounts", inner);
+  mountList(app, deps);
+  mountGet(app, deps);
+  mountLogoUpload(app, deps);
+  mountLogoDelete(app, deps);
+  mountLogoRaw(app, deps);
+  app.route("/", buildResourceRouter(accountsResource, deps));
+  return app;
+}
+
+/**
+ * Full-prefix router mounted by the plugin's `main.ts`. Matches the
+ * payees/line-items convention so the merged Hono app in the SDK's
+ * `createPluginServer` preserves each escape-hatch route's matched path.
+ */
+export function buildPrefixedRouter(deps: RouterDeps): Hono {
+  const app = new Hono();
+  app.route("/api/financial-accounts", buildRouter(deps));
   return app;
 }
