@@ -45,6 +45,7 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
             CASE
               WHEN t.category != 'sale' THEN NULL
               WHEN t.status = 'voided' THEN 'voided'
+              WHEN t.forfeited_at IS NOT NULL THEN 'forfeited'
               WHEN t.amount = 0 THEN 'paid'
               WHEN paid.total_paid >= t.amount THEN 'paid'
               WHEN paid.total_paid > 0 THEN 'partial'

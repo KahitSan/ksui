@@ -287,6 +287,11 @@ export function TransactionDetail(props: {
                   Unpaid
                 </span>
               </Show>
+              <Show when={t.payment_status === "forfeited"}>
+                <span class="rounded-full border border-zinc-600/60 bg-zinc-800/60 px-2 py-0.5 text-[10px] text-zinc-300 normal-case tracking-normal">
+                  Forfeited
+                </span>
+              </Show>
             </div>
             <Show
               when={
