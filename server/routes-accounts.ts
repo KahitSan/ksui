@@ -365,12 +365,15 @@ function mountList(app: Hono, deps: RouterDeps): void {
         }
 
         if (search && search.trim()) {
+          // Escape LIKE metachars so a `%`/`_` in user search input can't turn
+          // into unintended wildcards (Lens 12 hard rule).
+          const escaped = search.trim().replace(/([\\%_])/g, "\\$1");
           conditions.push(
-            `(name ILIKE $${params.length + 1} OR description ILIKE $${
+            `(name ILIKE $${params.length + 1} ESCAPE '\\' OR description ILIKE $${
               params.length + 1
-            })`
+            } ESCAPE '\\')`
           );
-          params.push(`%${search.trim()}%`);
+          params.push(`%${escaped}%`);
         }
 
         const where = conditions.length ? conditions.join(" AND ") : undefined;

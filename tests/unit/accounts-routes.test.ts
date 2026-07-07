@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
 import type { QueryResult, QueryResultRow } from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { buildRouter, VALID_ICONS } from "../../server/routes.js";
+import { buildRouter, VALID_ICONS } from "../../server/routes-accounts.js";
 import { stubMiddleware } from "@kahitsan/plugin-sdk/test";
 import { runWithTenantContext } from "@kahitsan/plugin-sdk";
 
@@ -96,7 +96,7 @@ describe("VALID_ICONS", () => {
   it("is a non-empty readonly array of strings", () => {
     expect(Array.isArray(VALID_ICONS)).toBe(true);
     expect(VALID_ICONS.length).toBeGreaterThan(0);
-    expect(VALID_ICONS.every((i) => typeof i === "string")).toBe(true);
+    expect(VALID_ICONS.every((i: string) => typeof i === "string")).toBe(true);
   });
 
   it("contains the expected icon slugs", () => {

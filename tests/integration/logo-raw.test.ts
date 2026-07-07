@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import pg from "pg";
 import type { PluginDb, PluginAssets } from "@kahitsan/plugin-sdk";
 import { makeDataSurface } from "@kahitsan/plugin-sdk";
-import { buildRouter } from "../../server/routes.js";
+import { buildRouter } from "../../server/routes-accounts.js";
 import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-sdk/test";
 import { runWithTenantContext } from "@kahitsan/plugin-sdk";
 

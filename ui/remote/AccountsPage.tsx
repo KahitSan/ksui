@@ -45,6 +45,10 @@ import {
 import { AccountForm } from "./components/AccountForm";
 import { AccountDetail } from "./components/AccountDetail";
 import {
+  RenameAccountDialog,
+  ArchiveAccountDialog,
+} from "./components/AccountsPageDialogs";
+import {
   type FinancialAccount,
   TYPE_LABELS,
   capitalRowFigures,
@@ -595,6 +599,7 @@ export default function AccountsPage() {
                     }
                   }}
                   title="Actions"
+                  aria-label="Row actions"
                 >
                   <EllipsisVertical size={16} />
                 </button>
@@ -768,6 +773,7 @@ export default function AccountsPage() {
                   resetForm();
                 }}
                 class="text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                aria-label="Close"
               >
                 <X size={20} />
               </button>
@@ -821,6 +827,7 @@ export default function AccountsPage() {
                       onClick={startEdit}
                       class="text-zinc-500 hover:text-amber-400 cursor-pointer p-1"
                       title="Edit"
+                      aria-label="Edit account"
                     >
                       <Pencil size={16} />
                     </button>
@@ -832,6 +839,7 @@ export default function AccountsPage() {
                         onClick={() => requestArchive(account())}
                         class="text-zinc-500 hover:text-red-400 cursor-pointer p-1"
                         title="Archive"
+                        aria-label="Archive account"
                       >
                         <Archive size={16} />
                       </button>
@@ -841,6 +849,7 @@ export default function AccountsPage() {
                         onClick={() => handleRestore(account().id)}
                         class="text-zinc-500 hover:text-emerald-400 cursor-pointer p-1"
                         title="Restore"
+                        aria-label="Restore account"
                       >
                         <ArchiveRestore size={16} />
                       </button>
@@ -853,6 +862,7 @@ export default function AccountsPage() {
                       setEditing(false);
                     }}
                     class="text-zinc-500 hover:text-zinc-300 cursor-pointer p-1"
+                    aria-label="Close"
                   >
                     <X size={20} />
                   </button>
@@ -894,125 +904,22 @@ export default function AccountsPage() {
           )}
         </Show>
 
-        {/* Rename Modal */}
-        <Show when={renameTarget()}>
-          {(_target) => (
-            <Modal onClose={() => setRenameTarget(null)} size="sm">
-              <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-zinc-100">
-                  Rename Account
-                </h2>
-                <button
-                  onClick={() => setRenameTarget(null)}
-                  class="text-zinc-500 hover:text-zinc-300 cursor-pointer"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleRename();
-                }}
-                class="space-y-4"
-              >
-                <Show when={renameError()}>
-                  <div class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-                    {renameError()}
-                  </div>
-                </Show>
-                <div>
-                  <label class="block text-xs text-zinc-500 mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={renameName()}
-                    onInput={(e) => setRenameName(e.target.value)}
-                    class="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
-                    autofocus
-                    required
-                  />
-                </div>
-                <div class="flex justify-end gap-3">
-                  <Button
-                    intent="secondary"
-                    variant="ghost"
-                    onClick={() => setRenameTarget(null)}
-                    disabled={renameSaving()}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    intent="primary"
-                    variant="clip1"
-                    disabled={renameSaving()}
-                    onClick={handleRename}
-                  >
-                    {renameSaving() ? "Saving..." : "Rename"}
-                  </Button>
-                </div>
-              </form>
-            </Modal>
-          )}
-        </Show>
+        <RenameAccountDialog
+          target={renameTarget}
+          name={renameName}
+          setName={setRenameName}
+          error={renameError}
+          saving={renameSaving}
+          onClose={() => setRenameTarget(null)}
+          onSubmit={handleRename}
+        />
 
-        {/* Archive Confirmation Modal */}
-        <Show when={confirmTarget()}>
-          {(target) => (
-            <Modal
-              onClose={() => !confirmBusy() && setConfirmTarget(null)}
-              size="md"
-              tone="danger"
-            >
-              <div class="flex items-start gap-3 mb-4">
-                <AlertTriangle
-                  size={22}
-                  class="text-red-400 flex-shrink-0 mt-0.5"
-                />
-                <div>
-                  <h2 class="text-lg font-semibold text-white">
-                    Archive this account?
-                  </h2>
-                  <p class="text-xs text-zinc-400 mt-1">
-                    The account will be hidden from the active list. You can
-                    restore it later from the archived tab.
-                  </p>
-                </div>
-              </div>
-
-              <div class="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 mb-4 text-sm">
-                <p class="text-white font-medium">{target().name}</p>
-                <p class="text-zinc-500 text-xs mt-0.5">
-                  {TYPE_LABELS[target().type]?.label || target().type}
-                  {target().balance !== undefined && target().balance !== null
-                    ? ` · ${formatCurrency(target().balance!)}`
-                    : ""}
-                </p>
-              </div>
-
-              <div class="flex gap-2">
-                <Button
-                  intent="secondary"
-                  variant="clip2"
-                  disabled={confirmBusy()}
-                  onClick={() => setConfirmTarget(null)}
-                  class="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  intent="danger"
-                  variant="clip1"
-                  data-testid="accounts-confirm-archive-btn"
-                  disabled={confirmBusy()}
-                  onClick={confirmArchive}
-                  class="flex-1"
-                >
-                  {confirmBusy() ? "Archiving..." : "Archive"}
-                </Button>
-              </div>
-            </Modal>
-          )}
-        </Show>
+        <ArchiveAccountDialog
+          target={confirmTarget}
+          busy={confirmBusy}
+          onClose={() => setConfirmTarget(null)}
+          onConfirm={confirmArchive}
+        />
       </PermissionGate>
     </>
   );

@@ -1,15 +1,17 @@
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 
-// Per-account computed balance, workspace-scoped. Mirrors the monolith's
-// financial-accounts ACCOUNT_BALANCE_SQL — split across two mutually-exclusive
-// halves so a sale is never counted twice:
-//   (a) Sales WITH recorded payment legs (accounts.transaction_payments) —
-//       each leg credits its financial_account_id its `amount`. Handles split
-//       payments cleanly.
-//   (b) Everything else routed via source_account_id / destination_account_id.
-//       Excludes sales already covered by (a) via NOT EXISTS.
-// Voided transactions are excluded on both sides. Returned as a plain object
-// keyed by account id.
+/**
+ * Per-account computed balance, workspace-scoped. Mirrors the monolith's
+ * financial-accounts ACCOUNT_BALANCE_SQL — split across two mutually-exclusive
+ * halves so a sale is never counted twice:
+ *   (a) Sales WITH recorded payment legs (accounts.transaction_payments) —
+ *       each leg credits its financial_account_id its `amount`. Handles split
+ *       payments cleanly.
+ *   (b) Everything else routed via source_account_id / destination_account_id.
+ *       Excludes sales already covered by (a) via NOT EXISTS.
+ * Voided transactions are excluded on both sides. Returned as a plain object
+ * keyed by account id.
+ */
 export async function computeAccountBalances(
   db: PluginDb,
   workspaceId: number,

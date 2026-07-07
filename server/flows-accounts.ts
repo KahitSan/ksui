@@ -8,14 +8,15 @@ import {
   type FlowContext,
 } from "@kahitsan/plugin-sdk/flow"; // /flow subpath: the bundle that actually exports the flow DSL + types
 
-// EXECUTABLE flows (Vision §9): the same objects the kernel renders
-// (JSON.stringify drops the request/when/effect functions → structure-only) are
-// what the UI dispatches via runFlow. One source — the diagram cannot drift from
-// the behaviour. The UI passes the POST/PUT body + :id in ctx.state and supplies
-// the success/error side-effects via ctx.ui. Logo upload (create/edit) is a
-// UI-form-state orchestration that stays in the UI effect closure; these flows
-// drive the primary commit + post-commit branch.
-
+/**
+ * EXECUTABLE flows (Vision §9): the same objects the kernel renders
+ * (JSON.stringify drops the request/when/effect functions → structure-only) are
+ * what the UI dispatches via runFlow. One source — the diagram cannot drift from
+ * the behaviour. The UI passes the POST/PUT body + :id in ctx.state and supplies
+ * the success/error side-effects via ctx.ui. Logo upload (create/edit) is a
+ * UI-form-state orchestration that stays in the UI effect closure; these flows
+ * drive the primary commit + post-commit branch.
+ */
 export const createFlow: ExecFlow = {
   id: "accounts.create.exec",
   title: "Create Account",

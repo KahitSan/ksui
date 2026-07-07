@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
-import { buildRouter } from "../../server/routes.js";
+import { buildRouter } from "../../server/routes-accounts.js";
 import {
   withRollbackDb,
   stubMiddleware,
