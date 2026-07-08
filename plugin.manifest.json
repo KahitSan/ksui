@@ -54,6 +54,7 @@
     "service:findByIds",
     "service:getAccountBalances",
     "service:getPackageCapacityUsage",
+    "service:hasClientAvailedPackage",
     "service:createSalaryTransaction"
   ],
   "permissions": [
@@ -75,7 +76,7 @@
   ],
   "exposes": {
     "finance:capacity": {
-      "methods": ["getPackageCapacityUsage"],
+      "methods": ["getPackageCapacityUsage", "hasClientAvailedPackage"],
       "risk": "low",
       "mode": "read",
       "visibility": "public",

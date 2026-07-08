@@ -11,7 +11,8 @@
 // the health probe, the /_ui bundle, parseIdentity + the RLS withTenantContext
 // wall, and listen — lives in `createPluginServer`. This file declares only
 // what's unique to transactions: the cross-plugin RPC services it EXPOSES
-// (findById, getAccountBalances, getPackageCapacityUsage, createSalaryTransaction)
+// (findById, getAccountBalances, getPackageCapacityUsage,
+// hasClientAvailedPackage, createSalaryTransaction)
 // and its two feature routers (line-items first, then the primary router).
 
 import "dotenv/config";
@@ -23,6 +24,10 @@ import {
   insertVisibilityShares,
 } from "./lib/create-transaction.js";
 import { isBackdated } from "./lib/backdate.js";
+import {
+  hasClientAvailedPackage as hasClientAvailedPackageQuery,
+  parseAvailedPackageChecks,
+} from "./lib/has-client-availed-package.js";
 import { computeAccountBalances } from "./lib/account-balances.js";
 import { buildRouter } from "./routes.js";
 import { buildLineItemsRouter } from "./routes-line-items.js";
@@ -192,6 +197,26 @@ createPluginServer({
       if (capacityCache.size > 500) capacityCache.clear();
       capacityCache.set(cacheKey, { v: boardVersion(wsId), at: Date.now(), data: out });
       return out;
+    },
+
+    // hasClientAvailedPackage({ clientId, checks }) →
+    //   { [checkKey]: boolean }
+    // Batched eligibility check for packages' `client_availed_package_before`
+    // condition: for each check, did this client have an active/completed line
+    // item against one of `packageIds` (a lineage's era ids, resolved by the
+    // CALLER since packages owns lineage_slug, not this plugin) dated before
+    // `beforeDate`? Packages can't read accounts.* directly (its DB role can't
+    // see it, per the tiered isolation model), so it batches every conditional
+    // row in the active list into one round trip instead of one call per row.
+    hasClientAvailedPackage: async (args, { req }) => { const svcReq = req as unknown as ServiceReq;
+      const wsId = svcReq.workspaceId;
+      const a = (args ?? {}) as { clientId?: unknown; checks?: unknown };
+      const clientId =
+        typeof a.clientId === "number" ? a.clientId : parseInt(String(a.clientId), 10);
+      if (wsId == null || !Number.isInteger(clientId)) return {};
+      const checks = parseAvailedPackageChecks(a.checks);
+      if (checks.length === 0) return {};
+      return hasClientAvailedPackageQuery(db, wsId, clientId, checks);
     },
 
     // createSalaryTransaction({ amount, payee_id, source_account_id, notes,
