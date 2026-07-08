@@ -11,7 +11,6 @@ import X from "lucide-solid/icons/x";
 import Pencil from "lucide-solid/icons/pencil";
 import Ban from "lucide-solid/icons/ban";
 
-import TransactionForm from "./components/TransactionForm";
 import TransactionCreateModal from "./components/TransactionCreateModal";
 import {
   TransactionDetail,
@@ -58,6 +57,7 @@ import {
   DataTable,
   Button,
   confirm,
+  TransactionForm,
   type FetchParams,
   type FetchResult,
 } from "@kahitsan/ksui";

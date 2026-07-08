@@ -14,8 +14,7 @@
 // follow-up, same failed-upload messaging.
 
 import { createMemo, createSignal } from "solid-js";
-import { type SalesLine } from "../components/SalesBodyEditor";
-import { type ClientOption, type VoucherOption } from "@kahitsan/ksui";
+import { type SalesLine, type ClientOption, type VoucherOption } from "@kahitsan/ksui";
 import { todayManila } from "../lib/format";
 import {
   type PendingFile,
