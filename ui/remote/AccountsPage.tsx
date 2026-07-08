@@ -44,6 +44,7 @@ import {
 } from "../../server/flows-accounts.js";
 import { AccountForm } from "./components/AccountForm";
 import { AccountDetail } from "./components/AccountDetail";
+import { TransactionDetailSkeleton } from "./components/TransactionDetail";
 import {
   RenameAccountDialog,
   ArchiveAccountDialog,
@@ -102,6 +103,7 @@ export default function AccountsPage() {
     | { refetch: () => void; resetAndRefetch: () => void }
     | undefined;
 
+  const [detailId, setDetailId] = createSignal<number | null>(null);
   const [detailAccount, setDetailAccount] =
     createSignal<FinancialAccount | null>(null);
   const [editing, setEditing] = createSignal(false);
@@ -207,18 +209,31 @@ export default function AccountsPage() {
     return (await res.json()) as FinancialAccount;
   }
 
+  function closeDetail() {
+    setDetailId(null);
+    setDetailAccount(null);
+    setEditing(false);
+  }
+
   async function openDetail(id: number) {
+    setDetailId(id);
+    if (detailAccount()?.id !== id) setDetailAccount(null);
+    setEditing(false);
     try {
       const res = await fetch(`/api/financial-accounts/${id}`, {
         credentials: "include",
         headers: wsHeaders(),
       });
-      if (res.ok) {
-        setDetailAccount((await res.json()) as FinancialAccount);
-        setEditing(false);
+      if (!res.ok) {
+        if (detailId() === id) closeDetail();
+        return;
       }
+      const data = (await res.json()) as FinancialAccount;
+      // ignore a response for an id the user has since closed/reopened elsewhere
+      if (detailId() !== id) return;
+      setDetailAccount(data);
     } catch {
-      /* ignore */
+      if (detailId() === id) closeDetail();
     }
   }
 
@@ -274,6 +289,7 @@ export default function AccountsPage() {
 
             if (logoError) {
               populateForm(finalAccount);
+              setDetailId(finalAccount.id);
               setDetailAccount(finalAccount);
               setEditing(true);
               setFormError(logoError);
@@ -441,7 +457,7 @@ export default function AccountsPage() {
         },
         ui: {
           refresh: () => {
-            if (detailAccount()?.id === target.id) setDetailAccount(null);
+            if (detailId() === target.id) closeDetail();
             setConfirmTarget(null);
             refetchFn?.refetch();
           },
@@ -802,105 +818,120 @@ export default function AccountsPage() {
           </Modal>
         </Show>
 
-        {/* Detail Modal */}
-        <Show when={detailAccount()}>
-          {(account) => (
-            <Modal
-              onClose={() => {
-                setDetailAccount(null);
-                setEditing(false);
-              }}
-              size="lg"
+        {/* Detail Modal — opens instantly on click; setDetailId gates the Show
+            before the fetch resolves, so the modal never waits on the network. */}
+        <Show when={detailId() !== null}>
+          <Modal onClose={() => closeDetail()} size="lg">
+            <div
+              data-testid="accounts-detail-modal"
+              class="flex items-center justify-between mb-6"
             >
-              <div
-                data-testid="accounts-detail-modal"
-                class="flex items-center justify-between mb-6"
-              >
-                <h2 class="text-lg font-semibold text-zinc-100">
-                  {editing() ? "Edit Account" : account().name}
-                </h2>
-                <div class="flex items-center gap-2">
-                  <Show when={!editing() && isAdmin()}>
-                    <button
-                      data-testid="accounts-edit-btn"
-                      onClick={startEdit}
-                      class="text-zinc-500 hover:text-amber-400 cursor-pointer p-1"
-                      title="Edit"
-                      aria-label="Edit account"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                  </Show>
-                  <Show when={!editing() && isAdmin()}>
-                    {account().is_active ? (
-                      <button
-                        data-testid="accounts-archive-btn"
-                        onClick={() => requestArchive(account())}
-                        class="text-zinc-500 hover:text-red-400 cursor-pointer p-1"
-                        title="Archive"
-                        aria-label="Archive account"
-                      >
-                        <Archive size={16} />
-                      </button>
-                    ) : (
-                      <button
-                        data-testid="accounts-restore-btn"
-                        onClick={() => handleRestore(account().id)}
-                        class="text-zinc-500 hover:text-emerald-400 cursor-pointer p-1"
-                        title="Restore"
-                        aria-label="Restore account"
-                      >
-                        <ArchiveRestore size={16} />
-                      </button>
-                    )}
-                  </Show>
-                  <button
-                    data-testid="accounts-detail-close"
-                    onClick={() => {
-                      setDetailAccount(null);
-                      setEditing(false);
-                    }}
-                    class="text-zinc-500 hover:text-zinc-300 cursor-pointer p-1"
-                    aria-label="Close"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-              </div>
-
               <Show
-                when={editing()}
+                when={detailAccount()}
                 fallback={
-                  <AccountDetail account={account()} wsHeaders={wsHeaders} />
+                  <>
+                    <div class="h-6 w-40 animate-pulse rounded bg-white/5" />
+                    <button
+                      data-testid="accounts-detail-close"
+                      onClick={() => closeDetail()}
+                      class="text-zinc-500 hover:text-zinc-300 cursor-pointer p-1"
+                      aria-label="Close"
+                    >
+                      <X size={20} />
+                    </button>
+                  </>
                 }
               >
-                <AccountForm
-                  error={formError()}
-                  saving={formSaving()}
-                  name={formName()}
-                  setName={setFormName}
-                  type={formType()}
-                  setType={setFormType}
-                  description={formDescription()}
-                  setDescription={setFormDescription}
-                  icon={formIcon()}
-                  setIcon={setFormIcon}
-                  color={formColor()}
-                  setColor={setFormColor}
-                  accountId={account().id}
-                  logoBlob={formLogoBlob()}
-                  setLogoBlob={setFormLogoBlob}
-                  logoExistingS3={formLogoExistingS3()}
-                  logoClear={formLogoClear()}
-                  setLogoClear={setFormLogoClear}
-                  wsHeaders={wsHeaders}
-                  onSubmit={handleUpdate}
-                  submitLabel="Save Changes"
-                  onCancel={() => setEditing(false)}
-                />
+                {(account) => (
+                  <>
+                    <h2 class="text-lg font-semibold text-zinc-100">
+                      {editing() ? "Edit Account" : account().name}
+                    </h2>
+                    <div class="flex items-center gap-2">
+                      <Show when={!editing() && isAdmin()}>
+                        <button
+                          data-testid="accounts-edit-btn"
+                          onClick={startEdit}
+                          class="text-zinc-500 hover:text-amber-400 cursor-pointer p-1"
+                          title="Edit"
+                          aria-label="Edit account"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      </Show>
+                      <Show when={!editing() && isAdmin()}>
+                        {account().is_active ? (
+                          <button
+                            data-testid="accounts-archive-btn"
+                            onClick={() => requestArchive(account())}
+                            class="text-zinc-500 hover:text-red-400 cursor-pointer p-1"
+                            title="Archive"
+                            aria-label="Archive account"
+                          >
+                            <Archive size={16} />
+                          </button>
+                        ) : (
+                          <button
+                            data-testid="accounts-restore-btn"
+                            onClick={() => handleRestore(account().id)}
+                            class="text-zinc-500 hover:text-emerald-400 cursor-pointer p-1"
+                            title="Restore"
+                            aria-label="Restore account"
+                          >
+                            <ArchiveRestore size={16} />
+                          </button>
+                        )}
+                      </Show>
+                      <button
+                        data-testid="accounts-detail-close"
+                        onClick={() => closeDetail()}
+                        class="text-zinc-500 hover:text-zinc-300 cursor-pointer p-1"
+                        aria-label="Close"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+                  </>
+                )}
               </Show>
-            </Modal>
-          )}
+            </div>
+
+            <Show when={detailAccount()} fallback={<TransactionDetailSkeleton />}>
+              {(account) => (
+                <Show
+                  when={editing()}
+                  fallback={
+                    <AccountDetail account={account()} wsHeaders={wsHeaders} />
+                  }
+                >
+                  <AccountForm
+                    error={formError()}
+                    saving={formSaving()}
+                    name={formName()}
+                    setName={setFormName}
+                    type={formType()}
+                    setType={setFormType}
+                    description={formDescription()}
+                    setDescription={setFormDescription}
+                    icon={formIcon()}
+                    setIcon={setFormIcon}
+                    color={formColor()}
+                    setColor={setFormColor}
+                    accountId={account().id}
+                    logoBlob={formLogoBlob()}
+                    setLogoBlob={setFormLogoBlob}
+                    logoExistingS3={formLogoExistingS3()}
+                    logoClear={formLogoClear()}
+                    setLogoClear={setFormLogoClear}
+                    wsHeaders={wsHeaders}
+                    onSubmit={handleUpdate}
+                    submitLabel="Save Changes"
+                    onCancel={() => setEditing(false)}
+                  />
+                </Show>
+              )}
+            </Show>
+          </Modal>
         </Show>
 
         <RenameAccountDialog
