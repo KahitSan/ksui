@@ -1,5 +1,15 @@
 # @kahitsan/kplugin_transactions
 
+## 1.1.0
+
+### Minor Changes
+
+- daa362b: Adopt the pages-map remote contract: the host now dispatches /transactions, /payees, /financial-accounts and /analytics from the exported `pages` map instead of an in-plugin Switch on routeBase, so an unmapped route fails loud instead of silently rendering the transactions page. Requires a kernel with the pages-map remote contract.
+
+### Patch Changes
+
+- c31f371: Declare the two peer service calls the code already makes (`service:findPackagesByIds@packages`, `service:validate@vouchers`) in the manifest `requires`, so they survive the kernel's fail-closed RPC gate.
+
 ## 1.0.3
 
 ### Patch Changes
