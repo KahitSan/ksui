@@ -1,6 +1,5 @@
 {
   "name": "finance",
-  "version": "0.11.0",
   "basePath": "/api/transactions",
   "additionalBasePaths": [
     "/api/transaction-line-items",
