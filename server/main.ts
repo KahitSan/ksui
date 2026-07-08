@@ -199,15 +199,17 @@ createPluginServer({
       return out;
     },
 
-    // hasClientAvailedPackage({ clientId, checks }) →
-    //   { [checkKey]: boolean }
-    // Batched eligibility check for packages' `client_availed_package_before`
-    // condition: for each check, did this client have an active/completed line
-    // item against one of `packageIds` (a lineage's era ids, resolved by the
-    // CALLER since packages owns lineage_slug, not this plugin) dated before
-    // `beforeDate`? Packages can't read accounts.* directly (its DB role can't
-    // see it, per the tiered isolation model), so it batches every conditional
-    // row in the active list into one round trip instead of one call per row.
+    /**
+     * hasClientAvailedPackage({ clientId, checks }) → { [checkKey]: boolean }
+     *
+     * Batched eligibility check for packages' `client_availed_package_before`
+     * condition: for each check, did this client have an active/completed line
+     * item against one of `packageIds` (a lineage's era ids, resolved by the
+     * CALLER since packages owns lineage_slug, not this plugin) dated before
+     * `beforeDate`? Packages can't read accounts.* directly (its DB role can't
+     * see it, per the tiered isolation model), so it batches every conditional
+     * row in the active list into one round trip instead of one call per row.
+     */
     hasClientAvailedPackage: async (args, { req }) => { const svcReq = req as unknown as ServiceReq;
       const wsId = svcReq.workspaceId;
       const a = (args ?? {}) as { clientId?: unknown; checks?: unknown };

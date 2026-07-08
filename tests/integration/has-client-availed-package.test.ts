@@ -34,6 +34,16 @@ let ready = false;
 let userId = "";
 
 beforeAll(async () => {
+  // clients.clients / packages.packages live in OTHER plugins' schemas — a
+  // bare CI database (this plugin's own migrations only create accounts.*)
+  // doesn't have them, so probe before inserting or the suite 42P01s instead
+  // of skipping cleanly.
+  const schemaCheck = await pool.query<{ clients_ok: string | null; packages_ok: string | null }>(
+    `SELECT to_regclass('clients.clients')::text AS clients_ok,
+            to_regclass('packages.packages')::text AS packages_ok`,
+  );
+  if (!schemaCheck.rows[0]?.clients_ok || !schemaCheck.rows[0]?.packages_ok) return;
+
   const ws = await pool.query<{ id: number }>(`SELECT id FROM workspaces ORDER BY id LIMIT 2`);
   if (ws.rows.length < 2) return;
   wsA = ws.rows[0].id;

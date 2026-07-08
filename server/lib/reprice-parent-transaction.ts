@@ -6,7 +6,7 @@ import type { PoolClient } from "pg";
 import { findVoucherById, type IdentityHeader } from "./peers.js";
 import { computeVoucherDiscount, toNumberOrZero, type VoucherForDiscount } from "./voucher-discount.js";
 
-export interface ParentTransactionRow {
+interface ParentTransactionRow {
   id: number;
   subtotal: string | null;
   amount: string;
@@ -14,7 +14,7 @@ export interface ParentTransactionRow {
   voucher_id: number | null;
 }
 
-export interface CustomerGroupRow {
+interface CustomerGroupRow {
   id: number;
   subtotal: string;
   discount_amount: string;
