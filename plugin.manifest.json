@@ -44,8 +44,10 @@
   "requires": [
     "service:findByIds@clients",
     "service:findVariantsByIds@packages",
+    "service:findPackagesByIds@packages",
     "service:findByCode@vouchers",
-    "service:findById@vouchers"
+    "service:findById@vouchers",
+    "service:validate@vouchers"
   ],
   "ciCoMounts": ["clients", "packages", "vouchers"],
   "provides": [
