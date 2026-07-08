@@ -191,6 +191,14 @@ export type {
 } from "./components/composite/resource/ResourcePage";
 export * from "./components/composite/resource/spec";
 
+// Builder layer over ResourceUiSpec: defineRoute/defineForm compose a frozen
+// RouteSpec/FormSpec out of small helpers (col, Cell.*, table, action, field.*,
+// setting.*), and routeToResourceSpec lowers it to the exact ResourceUiSpec a
+// hand-authored spec would produce — ResourcePage stays the one render engine.
+export * from "./components/composite/resource/route-spec";
+export * from "./components/composite/resource/form-spec";
+export { routeToResourceSpec } from "./components/composite/resource/route-adapter";
+
 // U6 — declarative file/media field for the spec-driven form runtime. Value is an
 // opaque asset handle; host injects onUpload + presignUrl (storage-agnostic).
 export { default as FileField, type FileFieldProps, type AssetHandle, type FileFieldStatus } from "./components/composite/FileField";
