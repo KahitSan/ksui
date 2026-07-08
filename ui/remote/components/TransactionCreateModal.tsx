@@ -1,6 +1,5 @@
 import X from "lucide-solid/icons/x";
-import { Modal, Tooltip } from "@kahitsan/ksui";
-import TransactionForm from "./TransactionForm";
+import { Modal, Tooltip, TransactionForm } from "@kahitsan/ksui";
 import { type useTransactionForm } from "../hooks/useTransactionForm";
 import {
   type FinancialAccount,
