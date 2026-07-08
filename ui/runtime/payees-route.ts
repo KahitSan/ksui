@@ -1,9 +1,7 @@
-// The payees page authored via the Phase-3 RouteSpec builders — the new authoring
-// surface that compiles DOWN (via ./adapter) to the SAME ResourceUiSpec the
-// hand-authored payees-ui.ts produces. payees-ui.ts is kept as the golden fixture
-// the migration test asserts byte-equality against (tests/unit/route-spec.test.ts).
-import { Cell, action, col, defineRoute, setting, table } from "./route-spec.js";
-import { defineForm, field } from "./form-spec.js";
+// The payees page authored via the ksui RouteSpec builders, compiled down to a
+// ResourceUiSpec by ksui's routeToResourceSpec (the lowering-parity tests live
+// in ksui alongside the builders).
+import { Cell, action, col, defineRoute, setting, table, defineForm, field } from "@kahitsan/ksui";
 
 const KIND_LABELS = { vendor: "Vendor", customer: "Customer", both: "Both" } as const;
 

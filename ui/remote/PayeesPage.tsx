@@ -1,9 +1,9 @@
-// Payees page — folded IN from the retired standalone payees plugin. Rendered by
-// this bundle's dispatching Component when the host route is `/payees`. It is the
-// data-shaped projection of the payees resource, drawn by the generic
-// config-driven `ResourcePage` from `@kahitsan/ksui`; the spec is authored via
-// the defineRoute builders in ../runtime and compiled by ../runtime/adapter.
-import { ResourcePage, type ResourcePageHost } from "@kahitsan/ksui";
+// Payees page — folded IN from the retired standalone payees plugin. Rendered
+// when the host route is `/payees`. It is the data-shaped projection of the
+// payees resource, drawn by the generic config-driven `ResourcePage` from
+// `@kahitsan/ksui`; the spec is authored via ksui's defineRoute builders and
+// compiled by ksui's routeToResourceSpec.
+import { ResourcePage, routeToResourceSpec, type ResourcePageHost } from "@kahitsan/ksui";
 import {
   PageShell,
   PageShareButton,
@@ -12,7 +12,6 @@ import {
   useRouteSetting,
 } from "@kserp/host-ui";
 import { payeesRoute } from "../runtime/payees-route";
-import { routeToResourceSpec } from "../runtime/adapter";
 
 // The host route path this page renders at (uiRouteBase), used to resolve the
 // per-user/per-workspace route settings (U3).
