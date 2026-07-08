@@ -35,6 +35,7 @@ import {
   findPackagesByIds,
   findVariantsByIds,
   findClientsByIds,
+  findVoucherById,
 } from "./lib/peers.js";
 import type { RouterDeps } from "./routes.js";
 import { ctxGet, isWorkspaceElevated } from "./types.js";
@@ -281,6 +282,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
                li.updated_at,
                t.transaction_date,
                t.amount AS transaction_amount,
+               t.subtotal AS transaction_subtotal,
                t.discount_amount,
                t.notes,
                t.category,
@@ -296,7 +298,10 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
                cg.position AS customer_group_position,
                cg.display_name AS customer_group_display_name,
                cg.is_payer AS customer_group_is_payer,
-               cg.client_id AS customer_group_client_id
+               cg.client_id AS customer_group_client_id,
+               cg.subtotal AS customer_group_subtotal,
+               cg.voucher_id AS customer_group_voucher_id,
+               cg.discount_amount AS customer_group_discount_amount
              FROM accounts.transaction_line_items li
              JOIN accounts.transactions t
                ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id
@@ -352,6 +357,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              m.updated_at,
              m.transaction_date,
              m.transaction_amount,
+             m.transaction_subtotal,
              m.discount_amount,
              m.notes,
              m.category,
@@ -368,6 +374,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              m.customer_group_display_name,
              m.customer_group_is_payer,
              m.customer_group_client_id,
+             m.customer_group_subtotal,
+             m.customer_group_voucher_id,
+             m.customer_group_discount_amount,
              COALESCE(pc.payment_count, 0) AS payment_count,
              COALESCE(pm.payment_account_ids, '{}') AS payment_account_ids
            FROM matched m
@@ -443,6 +452,28 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         const variantById = new Map((variants ?? []).map((v) => [v.id, v]));
         const clientNameById = new Map<number, string>((clients ?? []).map((c) => [c.id, c.name]));
 
+        // Effective voucher per row, matching repriceParentForCostIncrease's
+        // precedence: a customer-group row's OWN voucher_id wins whenever the
+        // line belongs to a group (even if it's null — that's "no discount"),
+        // otherwise the transaction-level voucher_id applies. The counter
+        // Extend modal mirrors this against the effective subtotal/discount to
+        // preview the post-extend charge without drifting from the server.
+        const effectiveVoucherIds = [
+          ...new Set(
+            result.rows
+              .map((r) =>
+                r.customer_group_id != null
+                  ? (r.customer_group_voucher_id as number | null)
+                  : (r.voucher_id as number | null),
+              )
+              .filter((id): id is number => id != null),
+          ),
+        ];
+        const voucherEntries = await Promise.all(
+          effectiveVoucherIds.map(async (id) => [id, await findVoucherById(id, idh)] as const),
+        );
+        const voucherById = new Map(voucherEntries);
+
         // Build the per-transaction client pool, in pool order. The counter UI
         // expects `{ id, name_raw }`; the RPC returns `name`, so we map it.
         const poolByTxn = new Map<number, Array<{ id: number; name_raw: string | null }>>();
@@ -455,6 +486,12 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         const rows = result.rows.map((r) => {
           const variant =
             r.package_variant_id != null ? variantById.get(r.package_variant_id) : undefined;
+          const effectiveVoucherId =
+            r.customer_group_id != null
+              ? (r.customer_group_voucher_id as number | null)
+              : (r.voucher_id as number | null);
+          const effectiveVoucher =
+            effectiveVoucherId != null ? (voucherById.get(effectiveVoucherId) ?? null) : null;
           return {
             ...r,
             package_name: r.package_id != null ? (packageNameById.get(r.package_id) ?? null) : null,
@@ -477,6 +514,13 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
             voucher_code: null,
             source_account_name: null,
             destination_account_name: null,
+            effective_voucher: effectiveVoucher
+              ? {
+                  type: effectiveVoucher.type,
+                  value: effectiveVoucher.value,
+                  max_discount_amount: effectiveVoucher.max_discount_amount ?? null,
+                }
+              : null,
           };
         });
 
