@@ -35,17 +35,15 @@ import {
   findPackagesByIds,
   findVariantsByIds,
   findClientsByIds,
-  findVoucherById,
 } from "./lib/peers.js";
 import type { RouterDeps } from "./routes.js";
 import { ctxGet, isWorkspaceElevated } from "./types.js";
 import { bumpBoardVersion } from "./lib/board-events.js";
 import { registerLineItemEventsRoute } from "./routes/line-items-events.js";
 import {
-  computeVoucherDiscount,
-  toNumberOrZero,
-  type VoucherForDiscount,
-} from "./lib/voucher-discount.js";
+  lockParentForReprice,
+  repriceParentForCostIncrease,
+} from "./lib/reprice-parent-transaction.js";
 
 export function buildLineItemsRouter(deps: RouterDeps): Hono {
   const router = new Hono();
@@ -758,6 +756,21 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           return c.json({ error: "charge-overage is only valid for overdue line items" }, 409);
         }
 
+        // Parent transaction's voucher/subtotal must be re-priced against the
+        // NEW subtotal after the overage charge — locked FOR UPDATE alongside
+        // the source line so a concurrent charge-overage can't race the
+        // discount math.
+        const locked = await lockParentForReprice(
+          client,
+          ctxGet(c, "workspaceId"),
+          src.transaction_id,
+          src.customer_group_id,
+        );
+        if (locked == null) {
+          await client.query("ROLLBACK");
+          return c.json({ error: "Parent transaction not found in this workspace" }, 404);
+        }
+
         const variants = await findVariantsByIds([package_variant_id], idh);
         const variant = variants?.[0];
         if (variant == null) {
@@ -808,21 +821,20 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           ],
         );
 
-        await client.query(
-          `UPDATE accounts.transactions
-              SET amount = amount + $1, subtotal = COALESCE(subtotal, amount) + $1, updated_at = NOW(), updated_by = $2
-            WHERE id = $3 AND workspace_id = $4`,
-          [extensionCost, ctxGet(c, "user").id, src.transaction_id, ctxGet(c, "workspaceId")],
+        // Re-apply the attached voucher (group-level takes precedence when a
+        // customer group is set, matching how run-charge.ts prices it) against
+        // the NEW subtotal, instead of blindly adding the raw overage cost —
+        // otherwise a voucher-discounted booking silently loses its discount
+        // on every overage charge.
+        await repriceParentForCostIncrease(
+          client,
+          idh,
+          ctxGet(c, "workspaceId"),
+          ctxGet(c, "user").id,
+          src.transaction_id,
+          extensionCost,
+          locked,
         );
-
-        if (src.customer_group_id != null) {
-          await client.query(
-            `UPDATE accounts.transaction_customer_groups
-                SET subtotal = subtotal + $1
-              WHERE id = $2 AND workspace_id = $3`,
-            [extensionCost, src.customer_group_id, ctxGet(c, "workspaceId")],
-          );
-        }
 
         await client.query("COMMIT");
         return c.json({
@@ -904,36 +916,15 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         // Parent transaction's voucher/subtotal must be re-priced against the
         // NEW subtotal after the extension — locked FOR UPDATE alongside the
         // source line so a concurrent extend can't race the discount math.
-        const txnRes = await client.query(
-          `SELECT id, subtotal, amount, discount_amount, voucher_id
-             FROM accounts.transactions
-            WHERE id = $1 AND workspace_id = $2
-            FOR UPDATE`,
-          [src.transaction_id, ctxGet(c, "workspaceId")],
+        const locked = await lockParentForReprice(
+          client,
+          ctxGet(c, "workspaceId"),
+          src.transaction_id,
+          src.customer_group_id,
         );
-        if (txnRes.rows.length === 0) {
+        if (locked == null) {
           await client.query("ROLLBACK");
           return c.json({ error: "Parent transaction not found in this workspace" }, 404);
-        }
-        const parentTxn = txnRes.rows[0] as {
-          id: number;
-          subtotal: string | null;
-          amount: string;
-          discount_amount: string;
-          voucher_id: number | null;
-        };
-
-        let cgRow: { id: number; subtotal: string; discount_amount: string; voucher_id: number | null } | null =
-          null;
-        if (src.customer_group_id != null) {
-          const cgRes = await client.query(
-            `SELECT id, subtotal, discount_amount, voucher_id
-               FROM accounts.transaction_customer_groups
-              WHERE id = $1 AND workspace_id = $2
-              FOR UPDATE`,
-            [src.customer_group_id, ctxGet(c, "workspaceId")],
-          );
-          cgRow = cgRes.rows[0] ?? null;
         }
 
         // Variant must belong to the same workspace (resolved over RPC), but NOT
@@ -998,54 +989,14 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         // the NEW subtotal, instead of blindly adding the raw extension cost —
         // otherwise a voucher-discounted booking silently loses its discount on
         // every extend.
-        const newParentSubtotal = toNumberOrZero(parentTxn.subtotal ?? parentTxn.amount) + extensionCost;
-        const oldParentDiscount = toNumberOrZero(parentTxn.discount_amount);
-        let newParentDiscount = oldParentDiscount;
-
-        if (cgRow != null) {
-          const oldCgSubtotal = toNumberOrZero(cgRow.subtotal);
-          const oldCgDiscount = toNumberOrZero(cgRow.discount_amount);
-          const newCgSubtotal = oldCgSubtotal + extensionCost;
-          let newCgDiscount = oldCgDiscount;
-          if (cgRow.voucher_id != null) {
-            const voucher = await findVoucherById(cgRow.voucher_id, idh);
-            if (voucher != null) {
-              newCgDiscount = computeVoucherDiscount(
-                newCgSubtotal,
-                voucher as unknown as VoucherForDiscount,
-              ).discountAmount;
-            }
-          }
-          newParentDiscount = oldParentDiscount + (newCgDiscount - oldCgDiscount);
-          await client.query(
-            `UPDATE accounts.transaction_customer_groups
-                SET subtotal = $1, discount_amount = $2
-              WHERE id = $3 AND workspace_id = $4`,
-            [newCgSubtotal, newCgDiscount, cgRow.id, ctxGet(c, "workspaceId")],
-          );
-        } else if (parentTxn.voucher_id != null) {
-          const voucher = await findVoucherById(parentTxn.voucher_id, idh);
-          if (voucher != null) {
-            newParentDiscount = computeVoucherDiscount(
-              newParentSubtotal,
-              voucher as unknown as VoucherForDiscount,
-            ).discountAmount;
-          }
-        }
-
-        const newParentAmount = Math.max(0, newParentSubtotal - newParentDiscount);
-        await client.query(
-          `UPDATE accounts.transactions
-              SET amount = $1, subtotal = $2, discount_amount = $3, updated_at = NOW(), updated_by = $4
-            WHERE id = $5 AND workspace_id = $6`,
-          [
-            newParentAmount,
-            newParentSubtotal,
-            newParentDiscount,
-            ctxGet(c, "user").id,
-            src.transaction_id,
-            ctxGet(c, "workspaceId"),
-          ],
+        await repriceParentForCostIncrease(
+          client,
+          idh,
+          ctxGet(c, "workspaceId"),
+          ctxGet(c, "user").id,
+          src.transaction_id,
+          extensionCost,
+          locked,
         );
 
         await client.query("COMMIT");
