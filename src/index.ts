@@ -109,6 +109,35 @@ export {
 export { default as PaymentAccountPicker } from "./components/composite/PaymentAccountPicker";
 export type { PaymentAccountOption } from "./components/composite/PaymentAccountPicker";
 
+// AccountRadioPicker: a static grid/radiogroup of account buttons fed by an
+// already-fetched accounts prop (vs. PaymentAccountPicker's self-fetching
+// dropdown) -- the payment-source picker used inside TransactionForm.
+export { default as AccountRadioPicker } from "./components/composite/AccountRadioPicker";
+export type { AccountRadioPickerProps } from "./components/composite/AccountRadioPicker";
+
+// TransactionForm: the full transaction create/edit form (category picker,
+// SalesBodyEditor, amount/date/payee/attachments, advanced tax/EWT/sharing
+// fields). `simpleMode` hides the Type picker + advanced toggle for a caller
+// that locks `category` to one value. Lifted verbatim from kplugin_finance so
+// any plugin recording a transaction against the shared /api/transactions
+// endpoint can reuse the same form instead of forking it.
+export { default as TransactionForm } from "./components/composite/TransactionForm";
+export type {
+  TransactionFormProps,
+  TransactionAccount,
+  TransactionOrgMember,
+  TransactionShareableRole,
+  TransactionAttachment,
+} from "./components/composite/TransactionForm";
+export { default as FormAdvancedSection } from "./components/composite/FormAdvancedSection";
+export type { FormAdvancedSectionProps } from "./components/composite/FormAdvancedSection";
+export { default as SalesBodyEditor } from "./components/composite/SalesBodyEditor";
+export type { SalesLine, SalesBodyEditorProps } from "./components/composite/SalesBodyEditor";
+export { default as TransferFeeChip } from "./components/composite/TransferFeeChip";
+export type { TransferFeeChipProps } from "./components/composite/TransferFeeChip";
+export { default as TransferAccountsPicker } from "./components/composite/TransferAccountsPicker";
+export type { TransferAccountsPickerProps } from "./components/composite/TransferAccountsPicker";
+
 // LiveTimer wraps ProgressBar with timer state and elapsed-time display.
 export { default as LiveTimer, type LiveTimerProps } from "./components/composite/LiveTimer";
 
