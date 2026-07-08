@@ -33,6 +33,25 @@ declare module "@kserp/host-ui" {
     permission?: string;
   }) => any;
 
+  // Host router (remotes render inside the host's Router tree)
+  export type PluginRoute = {
+    routeBase: () => string;
+    subPath: () => string[];
+    query: () => Record<string, string | undefined>;
+  };
+  export function usePluginRoute(): PluginRoute;
+  export function usePluginNavigate(): (to: string, opts?: { replace?: boolean }) => void;
+  export const Link: (props: {
+    href: string;
+    class?: string;
+    title?: string;
+    "data-testid"?: string;
+    "aria-label"?: string;
+    "aria-haspopup"?: boolean | "dialog" | "menu" | "listbox" | "tree" | "grid";
+    onClick?: (e: MouseEvent) => void;
+    children?: any;
+  }) => any;
+
   // Local wrapper types
   export interface SearchableOption {
     value: string | number;
