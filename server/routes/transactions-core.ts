@@ -34,6 +34,8 @@ import {
   SORTABLE_COLUMNS,
   VALID_CATEGORIES,
   VALID_TAX_TYPES,
+  TRANSACTION_COLS,
+  MAX_NUMERIC_12_2,
   isValidIsoDate,
   resolveUserNames,
   privacyClause,
@@ -240,6 +242,9 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
       // eslint-disable-next-line sonarjs/no-inverted-boolean-check -- !(x>0) also rejects NaN (non-numeric amount); `<=0` would let NaN through, changing validation.
       if (!amount || !(parsedAmount > 0)) {
         return c.json({ error: "amount must be greater than 0" }, 400);
+      }
+      if (parsedAmount > MAX_NUMERIC_12_2) {
+        return c.json({ error: `amount must not exceed ${MAX_NUMERIC_12_2}` }, 400);
       }
       let parsedTransferFeeAmount: number | null = null;
       if (transfer_fee_amount !== undefined && transfer_fee_amount !== null) {
@@ -491,7 +496,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
 
       try {
         const existing = await pool.query(
-          `SELECT * FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
+          `SELECT ${TRANSACTION_COLS.join(", ")} FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
           [id, ctxGet(c, "workspaceId")],
         );
         if (existing.rows.length === 0) {
@@ -533,6 +538,9 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           // eslint-disable-next-line sonarjs/no-inverted-boolean-check -- !(x>0) also rejects NaN (non-numeric amount); `<=0` would let NaN through, changing validation.
           if (!(parsed > 0)) {
             return c.json({ error: "amount must be greater than 0" }, 400);
+          }
+          if (parsed > MAX_NUMERIC_12_2) {
+            return c.json({ error: `amount must not exceed ${MAX_NUMERIC_12_2}` }, 400);
           }
           sets.push(`amount = $${idx++}`);
           params.push(parsed);
@@ -704,11 +712,11 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           await applyTenantContext(dbClient);
           const result = sets.length > 0
             ? await dbClient.query(
-                `UPDATE accounts.transactions SET ${sets.join(", ")} WHERE id = $${idx++} AND workspace_id = $${idx} RETURNING *`,
+                `UPDATE accounts.transactions SET ${sets.join(", ")} WHERE id = $${idx++} AND workspace_id = $${idx} RETURNING ${TRANSACTION_COLS.join(", ")}`,
                 params,
               )
             : await dbClient.query(
-                `SELECT * FROM accounts.transactions WHERE id = $${idx++} AND workspace_id = $${idx}`,
+                `SELECT ${TRANSACTION_COLS.join(", ")} FROM accounts.transactions WHERE id = $${idx++} AND workspace_id = $${idx}`,
                 params,
               );
           if (feeTouched) {
