@@ -31,21 +31,46 @@ recognized as exclusions.
   palette array itself is exempt — the rest of the file's surface/text
   literals (e.g. the `text-zinc-300` fallback-initial styling) still need
   tokens.
-- FlowGraph/FlowRunner: **not yet exempted.** A first pass at both files
-  (grepped 2026-07-09) shows their literals are mostly per-STATUS coloring
-  (`.ksui-fg-edge.info` / `.success` / `.danger` / `.muted`) — that's rule 3
-  semantic-intent territory (`--ks-info`/`--ks-success`/`--ks-danger` +
-  neutral), not a data-viz palette, and gets tokenized like any other status
-  color. Only a genuinely distinct-per-node-KIND hue table (if one exists
-  once the status-colored rules are converted) earns a line-range entry here
-  — add it with the specific line range once that audit is done, during the
-  actual conversion pass, not as a blanket file exemption now.
+- `src/components/base/DatePicker.tsx:132` — the toggle-switch knob is
+  intentionally solid white (`background:#ffffff`) regardless of theme, like
+  a native OS switch: it must read against both the off-track
+  (`--ks-border-strong`) and on-track (`--ks-primary`, color-mixed) colors in
+  both light and dark themes. Wrapping it in a text/fg token (e.g. `--ks-fg`)
+  would turn it near-black in the light theme and make it disappear against
+  the light-mode track — a real regression, not a styling preference.
+- FlowGraph: **no exception needed.** Audited 2026-07-09 — every literal was
+  per-STATUS coloring (`.ksui-fg-edge.info` / `.success` / `.danger` /
+  `.muted`, plus the matching `.ksui-fg-card.*` border/chip pairs) or a
+  neutral canvas/border/text tone on a white-alpha base. All converted to
+  `--ks-info`/`--ks-success`/`--ks-danger`/`--ks-*-bg` (rule 3) or
+  `color-mix(...)` on `--ks-fg`/`--ks-bg`/`--ks-surface-raised` (rule 1). No
+  distinct-per-node-KIND hue table exists in this file — `KIND_ICON` maps
+  kind to a lucide glyph only, never a color.
 - Pure-transparency utilities (`transparent`, `currentColor`) are never
   flagged — they carry no color of their own to derive from a token.
 - Truly-fixed data-viz series hues that don't map to the `--ks-chart-1..N`
   fixed-order categorical tokens (§1.2) — prefer the chart tokens first; only
   list an entry here if a series genuinely can't use them (e.g. it must match
   an external system's fixed brand color).
+
+- `src/components/base/ThemeToggle.tsx:24` — thumb box-shadow
+  `0 1px 3px rgba(0,0,0,0.3)` doesn't match any `--ks-shadow-*` token as a
+  whole value (rule 5); the bg-color on this same line is tokenized.
+- `src/components/base/ThemeToggle.tsx:25` — active-thumb box-shadow
+  `0 1px 3px rgba(0,0,0,0.15)` doesn't match any `--ks-shadow-*` token as a
+  whole value (rule 5); the bg-color on this same line is tokenized.
+- `src/components/base/StatusIndicator.tsx:17-43` — the five per-tone
+  `glow` box-shadow values (`shadow-[0_0_10px_rgba(...)]`) are colored glow
+  effects keyed to each tone's hue at a fixed alpha; none matches a whole
+  `--ks-shadow-*` token (those are neutral black elevation shadows), so rule
+  5 keeps them literal. The `dot`/`text` colors in the same table are
+  tokenized.
+- `src/components/base/ImageViewer.tsx:29-31` — the fullscreen image's own
+  box-shadow and the close-button's translucent-white background/hover are
+  chrome that sits on top of the displayed photo itself (not an app
+  surface), documented in the file's own header comment; converting them to
+  theme tokens would make the close button fade against a light theme's
+  photo-viewer backdrop instead of staying a fixed overlay control.
 
 ## Entries requiring per-literal justification when added
 
