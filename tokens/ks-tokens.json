@@ -1,0 +1,77 @@
+{
+  "tokens": [
+    { "cssVar": "--ks-bg", "darkValue": "#0a0a0a", "lightValue": "#f7f9fb", "description": "Page background (base layer)" },
+    { "cssVar": "--ks-bg-gradient-to", "darkValue": "#1a1a1a", "lightValue": "#f7f9fb", "description": "Page bg gradient stop (kahitsan-web style dark gradient)" },
+    { "cssVar": "--ks-surface", "darkValue": "#0f0f0f", "lightValue": "#f2f4f6", "description": "Card / panel background" },
+    { "cssVar": "--ks-surface-raised", "darkValue": "#1a1a1a", "lightValue": "#ffffff", "description": "Elevated surface (dropdown, popover)" },
+    { "cssVar": "--ks-surface-sunken", "darkValue": "#141414", "lightValue": "#eef1f3", "description": "Inset surface (input wells, code blocks)" },
+    { "cssVar": "--ks-overlay", "darkValue": "rgba(0,0,0,0.7)", "lightValue": "rgba(15,23,32,0.45)", "description": "Modal/dialog backdrop scrim" },
+    { "cssVar": "--ks-overlay-surface", "darkValue": "#18181b", "lightValue": "#ffffff", "description": "Modal/dialog panel background" },
+
+    { "cssVar": "--ks-fg", "darkValue": "#ffffff", "lightValue": "#191c1e", "description": "Primary text" },
+    { "cssVar": "--ks-fg-muted", "darkValue": "#a1a1aa", "lightValue": "#5f5e5e", "description": "Secondary text" },
+    { "cssVar": "--ks-fg-subtle", "darkValue": "#71717a", "lightValue": "#8a8a8a", "description": "Tertiary / placeholder / disabled text" },
+    { "cssVar": "--ks-fg-on-primary", "darkValue": "#0a0a0a", "lightValue": "#0a0a0a", "description": "Text on top of --ks-primary fills" },
+    { "cssVar": "--ks-fg-on-accent", "darkValue": "#0a0a0a", "lightValue": "#ffffff", "description": "Text on top of --ks-accent fills" },
+
+    { "cssVar": "--ks-border", "darkValue": "rgba(39,39,42,0.5)", "lightValue": "rgba(203,213,225,0.7)", "description": "Default hairline border" },
+    { "cssVar": "--ks-border-strong", "darkValue": "#3f3f46", "lightValue": "#cbd5e1", "description": "Emphasized border (focus-adjacent, active card)" },
+    { "cssVar": "--ks-border-subtle", "darkValue": "rgba(39,39,42,0.25)", "lightValue": "rgba(226,232,240,0.6)", "description": "Barely-visible divider" },
+
+    { "cssVar": "--ks-primary", "darkValue": "#c9a961", "lightValue": "#c9a961", "description": "Brand gold, primary CTA" },
+    { "cssVar": "--ks-primary-hover", "darkValue": "#d4b876", "lightValue": "#b6944e", "description": "Primary hover state" },
+    { "cssVar": "--ks-primary-active", "darkValue": "#b6944e", "lightValue": "#a3813d", "description": "Primary pressed state" },
+    { "cssVar": "--ks-accent", "darkValue": "#fbbf24", "lightValue": "#785a00", "description": "Secondary accent (amber text accent)" },
+    { "cssVar": "--ks-accent-hover", "darkValue": "#fcd34d", "lightValue": "#8f6c00", "description": "Accent hover state" },
+
+    { "cssVar": "--ks-success", "darkValue": "#10b981", "lightValue": "#059669", "description": "Success fill/icon" },
+    { "cssVar": "--ks-success-bg", "darkValue": "rgba(16,185,129,0.12)", "lightValue": "rgba(5,150,105,0.1)", "description": "Success chip/toast background" },
+    { "cssVar": "--ks-success-fg", "darkValue": "#34d399", "lightValue": "#047857", "description": "Success text-on-bg" },
+
+    { "cssVar": "--ks-warning", "darkValue": "#f59e0b", "lightValue": "#d97706", "description": "Warning fill/icon" },
+    { "cssVar": "--ks-warning-bg", "darkValue": "rgba(245,158,11,0.12)", "lightValue": "rgba(217,119,6,0.1)", "description": "Warning chip/toast background" },
+    { "cssVar": "--ks-warning-fg", "darkValue": "#fbbf24", "lightValue": "#92400e", "description": "Warning text-on-bg" },
+
+    { "cssVar": "--ks-danger", "darkValue": "#ef4444", "lightValue": "#dc2626", "description": "Danger fill/icon" },
+    { "cssVar": "--ks-danger-bg", "darkValue": "rgba(239,68,68,0.12)", "lightValue": "rgba(220,38,38,0.1)", "description": "Danger chip/toast background" },
+    { "cssVar": "--ks-danger-fg", "darkValue": "#f87171", "lightValue": "#b91c1c", "description": "Danger text-on-bg" },
+
+    { "cssVar": "--ks-info", "darkValue": "#38bdf8", "lightValue": "#0284c7", "description": "Info fill/icon" },
+    { "cssVar": "--ks-info-bg", "darkValue": "rgba(56,189,248,0.12)", "lightValue": "rgba(2,132,199,0.1)", "description": "Info chip/toast background" },
+    { "cssVar": "--ks-info-fg", "darkValue": "#7dd3fc", "lightValue": "#075985", "description": "Info text-on-bg" },
+
+    { "cssVar": "--ks-table-header-bg", "darkValue": "#18181b", "lightValue": "#eef1f3", "description": "Table header row background" },
+    { "cssVar": "--ks-table-row-bg", "darkValue": "#0f0f0f", "lightValue": "#ffffff", "description": "Table body row background" },
+    { "cssVar": "--ks-table-row-alt-bg", "darkValue": "#141416", "lightValue": "#f7f9fb", "description": "Zebra-stripe alternate row" },
+    { "cssVar": "--ks-table-row-hover-bg", "darkValue": "rgba(201,169,97,0.06)", "lightValue": "rgba(201,169,97,0.08)", "description": "Row hover" },
+    { "cssVar": "--ks-table-border", "darkValue": "rgba(39,39,42,0.5)", "lightValue": "rgba(226,232,240,0.9)", "description": "Cell/row divider" },
+
+    { "cssVar": "--ks-input-bg", "darkValue": "#18181b", "lightValue": "#ffffff", "description": "Text input / select background" },
+    { "cssVar": "--ks-input-border", "darkValue": "#3f3f46", "lightValue": "#cbd5e1", "description": "Input default border" },
+    { "cssVar": "--ks-input-border-focus", "darkValue": "#c9a961", "lightValue": "#c9a961", "description": "Input focused border" },
+    { "cssVar": "--ks-input-placeholder", "darkValue": "#71717a", "lightValue": "#94a3b8", "description": "Placeholder text" },
+    { "cssVar": "--ks-input-disabled-bg", "darkValue": "#0f0f0f", "lightValue": "#f1f5f9", "description": "Disabled input background" },
+
+    { "cssVar": "--ks-chart-1", "darkValue": "#c9a961", "lightValue": "#c9a961", "description": "Fixed-order categorical series, index 1" },
+    { "cssVar": "--ks-chart-2", "darkValue": "#38bdf8", "lightValue": "#38bdf8", "description": "Fixed-order categorical series, index 2" },
+    { "cssVar": "--ks-chart-3", "darkValue": "#10b981", "lightValue": "#10b981", "description": "Fixed-order categorical series, index 3" },
+    { "cssVar": "--ks-chart-4", "darkValue": "#f59e0b", "lightValue": "#f59e0b", "description": "Fixed-order categorical series, index 4" },
+    { "cssVar": "--ks-chart-5", "darkValue": "#ef4444", "lightValue": "#ef4444", "description": "Fixed-order categorical series, index 5" },
+    { "cssVar": "--ks-chart-6", "darkValue": "#a78bfa", "lightValue": "#a78bfa", "description": "Fixed-order categorical series, index 6" },
+    { "cssVar": "--ks-chart-7", "darkValue": "#f472b6", "lightValue": "#f472b6", "description": "Fixed-order categorical series, index 7" },
+    { "cssVar": "--ks-chart-8", "darkValue": "#71717a", "lightValue": "#71717a", "description": "Fixed-order categorical series, index 8" },
+
+    { "cssVar": "--ks-focus-ring", "darkValue": "#c9a961", "lightValue": "#c9a961", "description": "Focus outline color" },
+    { "cssVar": "--ks-focus-ring-offset", "darkValue": "#0a0a0a", "lightValue": "#f7f9fb", "description": "Focus ring offset color (matches surface under it)" },
+    { "cssVar": "--ks-shadow-sm", "darkValue": "0 1px 2px rgba(0,0,0,0.4)", "lightValue": "0 1px 2px rgba(15,23,32,0.08)", "description": "Small elevation shadow" },
+    { "cssVar": "--ks-shadow-md", "darkValue": "0 4px 12px rgba(0,0,0,0.5)", "lightValue": "0 4px 12px rgba(15,23,32,0.1)", "description": "Medium elevation shadow (cards)" },
+    { "cssVar": "--ks-shadow-lg", "darkValue": "0 12px 32px rgba(0,0,0,0.6)", "lightValue": "0 12px 32px rgba(15,23,32,0.14)", "description": "Large elevation shadow (modals)" },
+    { "cssVar": "--ks-radius", "darkValue": "0.5rem", "lightValue": "0.5rem", "description": "Base corner radius" },
+    { "cssVar": "--ks-radius-sm", "darkValue": "0.25rem", "lightValue": "0.25rem", "description": "Small radius (chips, badges)" },
+    { "cssVar": "--ks-radius-lg", "darkValue": "0.75rem", "lightValue": "0.75rem", "description": "Large radius (modals, cards)" },
+    { "cssVar": "--ks-spacing", "darkValue": "1", "lightValue": "1", "description": "Base spacing unit multiplier (unitless)" },
+    { "cssVar": "--ks-motion", "darkValue": "200ms", "lightValue": "200ms", "description": "Base transition duration" },
+    { "cssVar": "--ks-motion-fast", "darkValue": "100ms", "lightValue": "100ms", "description": "Fast transition (hover states)" },
+    { "cssVar": "--ks-motion-slow", "darkValue": "300ms", "lightValue": "300ms", "description": "Slow transition (modal enter/exit)" }
+  ]
+}
