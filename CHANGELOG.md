@@ -1,5 +1,18 @@
 # @kahitsan/kplugin_transactions
 
+## 1.2.0
+
+### Minor Changes
+
+- afd850e: Expose a `hasClientAvailedPackage` RPC service (batched by lineage's package ids + a before-date) so packages can evaluate its `client_availed_package_before` eligibility condition over the consent-gated gateway instead of querying `accounts.*` directly.
+
+### Patch Changes
+
+- 2e5e321: Open the financial-accounts detail modal instantly on click instead of waiting on the fetch — it now renders a skeleton (matching the transaction detail pattern) while the account loads, and ignores a stale response for an id the user has since closed or switched away from.
+- 128829f: Remove the vestigial `version` field from `plugin.manifest.json`; `package.json` is the single version source of truth (the kernel already reads it for cache-busting and release tagging). Requires the paired kserp kernel change tolerating a manifest with no `version`.
+- b8b28aa: `GET /api/transaction-line-items` now returns each row's effective voucher discount inputs (`transaction_subtotal`, `customer_group_subtotal`, `customer_group_voucher_id`, `customer_group_discount_amount`, `effective_voucher`) so the Counter Extend modal can preview the post-extend discounted total without drifting from the `/extend` route's own pricing.
+- 2544908: Fix `POST /api/transaction-line-items/:id/extend` and `POST /api/transaction-line-items/:id/charge-overage` silently dropping the parent transaction's voucher discount: both now re-apply the attached voucher (transaction-level or per-customer-group) against the new subtotal instead of adding the raw cost increase to `amount` untouched.
+
 ## 1.1.0
 
 ### Minor Changes
