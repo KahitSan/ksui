@@ -16,7 +16,7 @@
 
 /* Page background */
 .page-bg {
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  background: linear-gradient(135deg, var(--ks-bg, #0a0a0a) 0%, var(--ks-bg-gradient-to, #1a1a1a) 100%);
 }
 .light .page-bg {
   background: #f7f9fb;
@@ -24,7 +24,7 @@
 
 /* Card background */
 .card-bg {
-  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+  background: linear-gradient(135deg, var(--ks-surface, #0f0f0f) 0%, var(--ks-surface-raised, #1a1a1a) 100%);
 }
 .light .card-bg {
   background: #f2f4f6;
@@ -33,15 +33,15 @@
 
 /* Card background (solid, for text overlays on dividers) */
 .card-bg-solid {
-  background: #0f0f0f;
+  background: var(--ks-surface, #0f0f0f);
 }
 .light .card-bg-solid {
   background: #f2f4f6;
 }
 
-/* Gradient text */
+/* Gradient text — #e5d4a1 has no §1.2 token match (a lighter gradient stop unique to this element), left literal */
 .gradient-text {
-  background: linear-gradient(135deg, #c9a961, #e5d4a1);
+  background: linear-gradient(135deg, var(--ks-primary, #c9a961), #e5d4a1);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -282,7 +282,7 @@
  * matches the brand's primary CTA in both dark and light modes.
  */
 .ks-nav-active {
-  color: #fbbf24 !important;
+  color: var(--ks-accent, #fbbf24) !important;
   background-color: rgba(217, 119, 6, 0.2) !important;
   border-color: rgba(217, 119, 6, 0.6) !important;
   --ks-effect-color: rgba(201, 169, 97, 0.4) !important;
