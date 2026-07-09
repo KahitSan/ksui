@@ -2,8 +2,13 @@ import { For, type JSX } from "solid-js";
 
 /** One choice in the segmented row. A bare string uses the value as the label
  *  and is rendered capitalized; an object lets the caller supply an explicit
- *  label that is NOT capitalized (for buckets or other non-status toggles). */
-export type SegmentedFilterOption = string | { value: string; label: string };
+ *  label that is NOT capitalized (for buckets or other non-status toggles).
+ *  `disabled` mutes the segment and pulls it out of roving arrow-key nav;
+ *  `disabledNote` (shown only when disabled) explains why via title + sr-only
+ *  text, since a muted, unclickable control is otherwise unexplained. */
+export type SegmentedFilterOption =
+  | string
+  | { value: string; label: string; disabled?: boolean; disabledNote?: string };
 
 interface SegmentedFilterProps {
   /** The available segments, left to right. */
@@ -29,19 +34,28 @@ interface SegmentedFilterProps {
 export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Element {
   const buttonRefs: (HTMLButtonElement | undefined)[] = [];
   const optionOf = (o: SegmentedFilterOption) =>
-    typeof o === "string" ? { value: o, label: o, capitalize: true } : { ...o, capitalize: false };
+    typeof o === "string"
+      ? { value: o, label: o, capitalize: true, disabled: false, disabledNote: undefined as string | undefined }
+      : { disabled: false, disabledNote: undefined as string | undefined, ...o, capitalize: false };
 
   const currentIndex = () => {
     const i = props.options.findIndex((o) => optionOf(o).value === props.value);
     return i >= 0 ? i : 0;
   };
 
-  const selectByIndex = (idx: number) => {
+  // Roving nav must skip disabled segments while preserving the requested
+  // direction (Home/End pass direction 1 since idx is already the boundary);
+  // a full lap finding no enabled option is the only way this doesn't move.
+  const selectByIndex = (idx: number, direction: 1 | -1 = 1) => {
     const list = props.options;
     if (list.length === 0) return;
-    const wrapped = ((idx % list.length) + list.length) % list.length;
-    props.onChange(optionOf(list[wrapped]).value);
-    buttonRefs[wrapped]?.focus();
+    for (let step = 0, cursor = idx; step < list.length; step++, cursor += direction) {
+      const wrapped = ((cursor % list.length) + list.length) % list.length;
+      if (optionOf(list[wrapped]).disabled) continue;
+      props.onChange(optionOf(list[wrapped]).value);
+      buttonRefs[wrapped]?.focus();
+      return;
+    }
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -49,20 +63,20 @@ export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Elemen
       case "ArrowRight":
       case "ArrowDown":
         e.preventDefault();
-        selectByIndex(currentIndex() + 1);
+        selectByIndex(currentIndex() + 1, 1);
         break;
       case "ArrowLeft":
       case "ArrowUp":
         e.preventDefault();
-        selectByIndex(currentIndex() - 1);
+        selectByIndex(currentIndex() - 1, -1);
         break;
       case "Home":
         e.preventDefault();
-        selectByIndex(0);
+        selectByIndex(0, 1);
         break;
       case "End":
         e.preventDefault();
-        selectByIndex(props.options.length - 1);
+        selectByIndex(props.options.length - 1, -1);
         break;
     }
   };
@@ -78,25 +92,46 @@ export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Elemen
         {(o, i) => {
           const opt = optionOf(o);
           const selected = () => props.value === opt.value;
-          const isTabStop = () => selected() || (!props.value && i() === 0);
+          // Default tab stop falls to the first enabled option when nothing
+          // is selected yet, so an all-disabled-first row is still reachable.
+          const firstEnabledIndex = () => {
+            const idx = props.options.findIndex((candidate) => !optionOf(candidate).disabled);
+            return idx >= 0 ? idx : 0;
+          };
+          const isTabStop = () => selected() || (!props.value && i() === firstEnabledIndex());
+          const noteId = `${props.testIdPrefix ?? "segmented"}-${opt.value}-note`;
           return (
             <button
               ref={(el) => (buttonRefs[i()] = el)}
               type="button"
               role="radio"
               aria-checked={selected()}
-              tabIndex={isTabStop() ? 0 : -1}
+              aria-disabled={opt.disabled}
+              aria-describedby={opt.disabled && opt.disabledNote ? noteId : undefined}
+              title={opt.disabled ? opt.disabledNote : undefined}
+              tabIndex={opt.disabled ? -1 : isTabStop() ? 0 : -1}
               data-testid={props.testIdPrefix ? `${props.testIdPrefix}-${opt.value}` : undefined}
-              onClick={() => props.onChange(opt.value)}
-              class="px-3 py-1.5 text-xs transition-colors cursor-pointer"
+              onClick={() => {
+                if (opt.disabled) return;
+                props.onChange(opt.value);
+              }}
+              class="px-3 py-1.5 text-xs transition-colors"
               classList={{
                 capitalize: opt.capitalize,
-                "bg-[var(--ks-accent,#fbbf24)]/20 text-[var(--ks-accent,#fbbf24)]": selected(),
+                "cursor-not-allowed": opt.disabled,
+                "cursor-pointer": !opt.disabled,
+                "bg-[var(--ks-accent,#fbbf24)]/20 text-[var(--ks-accent,#fbbf24)]": selected() && !opt.disabled,
+                "text-[var(--ks-fg-subtle,#71717a)]": opt.disabled,
                 "text-[var(--ks-fg-muted,#a1a1aa)] hover:text-[var(--ks-fg,#ffffff)] hover:bg-[var(--ks-surface-raised,#1a1a1a)]":
-                  !selected(),
+                  !selected() && !opt.disabled,
               }}
             >
               {opt.label}
+              {opt.disabled && opt.disabledNote ? (
+                <span id={noteId} class="sr-only">
+                  {opt.disabledNote}
+                </span>
+              ) : null}
             </button>
           );
         }}
