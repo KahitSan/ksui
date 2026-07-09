@@ -67,9 +67,11 @@ const EXPECTED_APPEARANCE: Record<(typeof VARIANT_KEYS)[number], "dark" | "light
   "high-contrast": "dark",
 };
 
-// Relative-luminance WCAG contrast ratio (same formula the manifest's
-// high-contrast values were tuned against — see the gate script referenced
-// in the PR description) — cheap enough to assert inline, not just eyeball.
+/**
+ * Relative-luminance WCAG contrast ratio (same formula the manifest's
+ * high-contrast values were tuned against — see the gate script referenced
+ * in the PR description) — cheap enough to assert inline, not just eyeball.
+ */
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
   const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
