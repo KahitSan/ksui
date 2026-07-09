@@ -24,11 +24,11 @@ import ArrowDownLeft from "lucide-solid/icons/arrow-down-left";
 import ArrowUpRight from "lucide-solid/icons/arrow-up-right";
 import ArrowRightLeft from "lucide-solid/icons/arrow-right-left";
 
-import AccountRadioPicker from "./AccountRadioPicker";
 import FormAdvancedSection from "./FormAdvancedSection";
 import SalesBodyEditor, { type SalesLine } from "./SalesBodyEditor";
 import TransferFeeChip from "./TransferFeeChip";
-import TransferAccountsPicker from "./TransferAccountsPicker";
+import TransactionAccountFields from "./TransactionAccountFields";
+import TransactionPayableFields from "./TransactionPayableFields";
 import ComboBox from "./ComboBox";
 import type { ClientOption, PayeeOption, PayeeKind } from "./picker-types";
 import VoucherPicker, { type VoucherOption } from "./VoucherPicker";
@@ -43,7 +43,6 @@ import ExistingAttachmentTile, {
 import FormField from "../base/FormField";
 import DatePicker from "../base/DatePicker";
 import Button from "../base/Button";
-import SegmentedFilter from "../base/SegmentedFilter";
 import {
   type PendingFile,
   createPendingFile,
@@ -157,22 +156,6 @@ const TONE_CLASSES: Record<
     border: "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_30%,transparent)]",
   },
 };
-
-const PAYABLE_KIND_OPTIONS: { id: string; label: string }[] = [
-  { id: "subscription", label: "Subscription" },
-  { id: "utility", label: "Utility" },
-  { id: "rent", label: "Rent / Lease" },
-  { id: "loan", label: "Loan" },
-  { id: "tax", label: "Tax" },
-  { id: "other", label: "Other" },
-];
-
-const PDC_OPTIONS: { id: string; label: string; dot: string }[] = [
-  { id: "issued", label: "PDC issued", dot: "bg-[var(--ks-accent,#fbbf24)]" },
-  { id: "presented", label: "PDC presented", dot: "bg-[var(--ks-info,#38bdf8)]" },
-  { id: "cleared", label: "PDC cleared", dot: "bg-[var(--ks-success-fg,#34d399)]" },
-  { id: "bounced", label: "PDC bounced", dot: "bg-[var(--ks-danger-fg,#f87171)]" },
-];
 
 const CATEGORY_FORM: Record<
   string,
@@ -764,111 +747,34 @@ export default function TransactionForm(props: TransactionFormProps) {
           </Show>
 
           <Show when={props.category === "payable"}>
-            <div class="rounded-lg border border-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_20%,transparent)] bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_5%,transparent)] p-3 space-y-3">
-              <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[var(--ks-accent,#fbbf24)] font-semibold">
-                <CalendarDays size={12} />
-                <span>Payable details</span>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FormField label="Kind *">
-                  <select
-                    value={props.payableKind}
-                    onChange={(e) =>
-                      props.setPayableKind(e.currentTarget.value)
-                    }
-                    class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button cursor-pointer focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
-                  >
-                    <For each={PAYABLE_KIND_OPTIONS}>
-                      {(opt) => <option value={opt.id}>{opt.label}</option>}
-                    </For>
-                  </select>
-                </FormField>
-                <FormField label="Due date">
-                  <DatePicker
-                    value={props.dueDate}
-                    onChange={(d: string | null) => props.setDueDate(d || "")}
-                  />
-                  <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
-                    When payment is owed. Past-due payables show in the Payables
-                    tab.
-                  </p>
-                </FormField>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FormField label="Cheque number">
-                  <input
-                    type="text"
-                    value={props.chequeNumber}
-                    onInput={(e) =>
-                      props.setChequeNumber(e.currentTarget.value)
-                    }
-                    class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
-                    placeholder="e.g. 0004429-007"
-                  />
-                  <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
-                    For post-dated cheques (PDC). Leave blank for direct
-                    payments.
-                  </p>
-                </FormField>
-                <Show when={props.chequeNumber.trim()}>
-                  <FormField label="PDC status">
-                    <SegmentedFilter
-                      options={PDC_OPTIONS.map((opt) => ({
-                        value: opt.id,
-                        label: opt.label.replace("PDC ", ""),
-                      }))}
-                      value={props.pdcStatus}
-                      onChange={props.setPdcStatus}
-                    />
-                  </FormField>
-                </Show>
-              </div>
-            </div>
-          </Show>
-
-          <Show
-            when={catConfig().showSecondAccount}
-            fallback={
-              <FormField label={catConfig().accountLabel}>
-                <AccountRadioPicker
-                  accounts={props.accounts}
-                  ariaLabel={catConfig().accountLabel}
-                  value={
-                    props.category === "sale"
-                      ? props.destAccount
-                      : props.sourceAccount
-                  }
-                  onChange={(v) => {
-                    if (props.category === "sale") {
-                      props.setDestAccount(v);
-                      props.setSourceAccount("");
-                    } else {
-                      props.setSourceAccount(v);
-                      props.setDestAccount("");
-                    }
-                  }}
-                />
-                <Show when={catConfig().accountHint}>
-                  <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
-                    {catConfig().accountHint}
-                  </p>
-                </Show>
-              </FormField>
-            }
-          >
-            <TransferAccountsPicker
-              accounts={props.accounts}
-              sourceAccount={props.sourceAccount}
-              setSourceAccount={props.setSourceAccount}
-              destAccount={props.destAccount}
-              setDestAccount={props.setDestAccount}
-              sourceLabel={catConfig().accountLabel}
-              destLabel={catConfig().secondAccountLabel!}
-              amount={props.amount}
-              feeAmount={props.transferFeeAmount}
-              feeEnabled={props.transferFeeEnabled && props.allowTransferFee}
+            <TransactionPayableFields
+              payableKind={props.payableKind}
+              setPayableKind={props.setPayableKind}
+              dueDate={props.dueDate}
+              setDueDate={props.setDueDate}
+              chequeNumber={props.chequeNumber}
+              setChequeNumber={props.setChequeNumber}
+              pdcStatus={props.pdcStatus}
+              setPdcStatus={props.setPdcStatus}
             />
           </Show>
+
+          <TransactionAccountFields
+            category={props.category}
+            accounts={props.accounts}
+            accountLabel={catConfig().accountLabel}
+            accountHint={catConfig().accountHint}
+            showSecondAccount={catConfig().showSecondAccount}
+            secondAccountLabel={catConfig().secondAccountLabel}
+            sourceAccount={props.sourceAccount}
+            setSourceAccount={props.setSourceAccount}
+            destAccount={props.destAccount}
+            setDestAccount={props.setDestAccount}
+            amount={props.amount}
+            transferFeeAmount={props.transferFeeAmount}
+            transferFeeEnabled={props.transferFeeEnabled}
+            allowTransferFee={props.allowTransferFee}
+          />
 
           <FormField label="Notes">
             <MentionTextarea
