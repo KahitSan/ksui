@@ -76,7 +76,7 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
     );
   });
 
-  const defaultBadge = () => "bg-zinc-800 text-[var(--ks-fg-muted,#a1a1aa)] border border-transparent";
+  const defaultBadge = () => "bg-[var(--ks-surface-raised,#1a1a1a)] text-[var(--ks-fg-muted,#a1a1aa)] border border-transparent";
   const badgeClass = () => props.badgeClass?.(props.value) ?? defaultBadge();
 
   const emptyStateMessage = () => {
@@ -164,7 +164,7 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
         aria-expanded={open()}
         disabled={props.disabled || busy()}
         onClick={() => !props.disabled && setOpen((o) => !o)}
-        class={`text-xs font-medium px-1.5 py-0.5 rounded cursor-pointer transition-colors hover:ring-1 hover:ring-amber-500/40 ${badgeClass()} ${
+        class={`text-xs font-medium px-1.5 py-0.5 rounded cursor-pointer transition-colors hover:ring-1 hover:ring-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_40%,transparent)] ${badgeClass()} ${
           props.disabled ? "cursor-not-allowed opacity-60" : ""
         }`}
         title={props.disabled ? "" : (props.title ?? "Click to change")}
@@ -176,18 +176,18 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
           <div
             ref={popupRef}
             role="listbox"
-            class="z-[100] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[100] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
           >
             <Show when={showSearch()}>
-              <div class="px-2 py-1.5 border-b border-zinc-800">
+              <div class="px-2 py-1.5 border-b border-[var(--ks-border,rgba(39,39,42,0.5))]">
                 <input
                   ref={searchRef}
                   type="text"
                   value={query()}
                   onInput={(e) => setQuery(e.currentTarget.value)}
                   placeholder={props.searchPlaceholder ?? "Search…"}
-                  class="w-full px-2 py-1 text-xs bg-zinc-950 border border-zinc-800 rounded text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50"
+                  class="w-full px-2 py-1 text-xs bg-[var(--ks-surface-sunken,#141414)] border border-[var(--ks-border,rgba(39,39,42,0.5))] rounded text-[var(--ks-fg,#ffffff)] placeholder:text-[var(--ks-input-placeholder,#71717a)] focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_50%,transparent)]"
                 />
               </div>
             </Show>
@@ -203,8 +203,8 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
                       role="option"
                       aria-selected={opt.value === props.value}
                       onClick={() => handleSelect(opt.value)}
-                      class={`w-full text-left px-3 py-2 text-xs hover:bg-amber-500/10 transition-colors flex items-center justify-between gap-2 ${
-                        opt.value === props.value ? "text-[var(--ks-accent,#fbbf24)]" : "text-zinc-200"
+                      class={`w-full text-left px-3 py-2 text-xs hover:bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_10%,transparent)] transition-colors flex items-center justify-between gap-2 ${
+                        opt.value === props.value ? "text-[var(--ks-accent,#fbbf24)]" : "text-[var(--ks-fg,#ffffff)]"
                       }`}
                     >
                       <span class="flex flex-col">

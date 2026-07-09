@@ -11,7 +11,7 @@ interface ChartLegendProps {
   label: string;
   /** Pre-formatted value string (e.g. a currency string). */
   value: string;
-  /** Optional Tailwind text color class for the value. Defaults to text-zinc-100. */
+  /** Optional Tailwind text color class for the value. Defaults to var(--ks-fg). */
   valueColor?: string;
 }
 
@@ -24,7 +24,7 @@ export default function ChartLegend(props: ChartLegendProps) {
           {props.label}
         </span>
         <span
-          class={`text-xs font-bold tabular-nums leading-tight ${props.valueColor || "text-zinc-100"}`}
+          class={`text-xs font-bold tabular-nums leading-tight ${props.valueColor || "text-[var(--ks-fg,#ffffff)]"}`}
         >
           {props.value}
         </span>

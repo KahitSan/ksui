@@ -46,7 +46,7 @@ interface TooltipProps {
 //     prefers describedby on the focusable trigger itself; since the
 //     trigger is `props.children` (any element) and Solid has no
 //     cloneElement, the trigger-level wiring lives with the caller in
-//     specific cases that need it. See #627 for the broader sweep that
+//     specific cases that need it. See issue 627 for the broader sweep that
 //     introduces a directive-based wiring API.
 export default function Tooltip(props: TooltipProps): JSX.Element {
   const tooltipId = props.id ?? createUniqueId();
@@ -62,7 +62,7 @@ export default function Tooltip(props: TooltipProps): JSX.Element {
       <span
         role="tooltip"
         id={tooltipId}
-        class={`pointer-events-none absolute px-2 py-1 rounded-md bg-[var(--ks-overlay-surface,#18181b)] border border-zinc-700/80 text-[11px] text-zinc-100 opacity-0 group-hover/tt:opacity-100 group-focus-within/tt:opacity-100 transition-opacity duration-150 delay-150 z-50 shadow-lg ${
+        class={`pointer-events-none absolute px-2 py-1 rounded-md bg-[var(--ks-overlay-surface,#18181b)] border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_80%,transparent)] text-[11px] text-[var(--ks-fg,#ffffff)] opacity-0 group-hover/tt:opacity-100 group-focus-within/tt:opacity-100 transition-opacity duration-150 delay-150 z-50 shadow-lg ${
           align() === "start" ? "left-0" : "left-1/2 -translate-x-1/2"
         } ${props.wrap ? "whitespace-normal w-max max-w-[260px]" : "whitespace-nowrap"} ${
           placement() === "bottom" ? "top-full mt-1" : "bottom-full mb-1"

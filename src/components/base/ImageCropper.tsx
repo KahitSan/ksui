@@ -226,11 +226,10 @@ export default function ImageCropper(props: ImageCropperProps) {
               onPointerCancel={handlePointerUp}
             >
               <img src={imageUrl()} alt="" draggable={false} class="absolute inset-0 w-full h-full pointer-events-none" />
-              {/* bg-black/60 (0.6 alpha) intentionally not tokenized — --ks-overlay's dark default is 0.7, a byte mismatch would regress the mask's visible darkness */}
-              <div class="absolute bg-black/60 pointer-events-none" style={maskTop()} />
-              <div class="absolute bg-black/60 pointer-events-none" style={maskBottom()} />
-              <div class="absolute bg-black/60 pointer-events-none" style={maskLeft()} />
-              <div class="absolute bg-black/60 pointer-events-none" style={maskRight()} />
+              <div class="absolute bg-[color-mix(in_srgb,var(--ks-overlay,rgba(0,0,0,0.7))_60%,transparent)] pointer-events-none" style={maskTop()} />
+              <div class="absolute bg-[color-mix(in_srgb,var(--ks-overlay,rgba(0,0,0,0.7))_60%,transparent)] pointer-events-none" style={maskBottom()} />
+              <div class="absolute bg-[color-mix(in_srgb,var(--ks-overlay,rgba(0,0,0,0.7))_60%,transparent)] pointer-events-none" style={maskLeft()} />
+              <div class="absolute bg-[color-mix(in_srgb,var(--ks-overlay,rgba(0,0,0,0.7))_60%,transparent)] pointer-events-none" style={maskRight()} />
               <div class="absolute border-2 border-[var(--ks-accent,#fbbf24)] cursor-move" style={selectionStyle()} onPointerDown={handlePointerDown("move")}>
                 <span class="absolute inset-0 ring-1 ring-[var(--ks-accent,#fbbf24)]/30 pointer-events-none" />
                 <span class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-[var(--ks-accent,#fbbf24)] rounded-sm cursor-nwse-resize" onPointerDown={handlePointerDown("tl")} />

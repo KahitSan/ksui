@@ -55,9 +55,9 @@ function statusColor(status?: DropdownItemStatus): string {
     case "open":
       return "var(--ks-success, #10b981)";
     case "closed":
-      return "#6B7280";
+      return "var(--ks-fg-muted, #a1a1aa)";
     default:
-      return "#6B7280";
+      return "var(--ks-fg-muted, #a1a1aa)";
   }
 }
 
@@ -96,13 +96,13 @@ export default function Dropdown(props: DropdownProps): JSX.Element {
       <button
         onClick={() => !props.disabled && setIsOpen(!isOpen())}
         disabled={props.disabled}
-        class={`flex items-center gap-3 px-4 py-3 bg-zinc-900/50 border border-[var(--ks-border,rgba(39,39,42,0.5))] rounded-lg hover:bg-zinc-900/70 transition-all backdrop-blur-sm select-none ${
+        class={`flex items-center gap-3 px-4 py-3 bg-[color-mix(in_srgb,var(--ks-surface,#0f0f0f)_50%,transparent)] border border-[var(--ks-border,rgba(39,39,42,0.5))] rounded-lg hover:bg-[color-mix(in_srgb,var(--ks-surface,#0f0f0f)_70%,transparent)] transition-all backdrop-blur-sm select-none ${
           props.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
         }`}
         style={{ "min-width": props.minWidth ?? "280px" }}
       >
         <Show when={props.icon}>
-          {(Icon) => <Dynamic component={Icon()} size={18} class="text-amber-500" />}
+          {(Icon) => <Dynamic component={Icon()} size={18} class="text-[var(--ks-accent,#fbbf24)]" />}
         </Show>
         <div class="flex-1 text-left">
           <div class="font-semibold text-[var(--ks-fg,#ffffff)]">
@@ -116,14 +116,14 @@ export default function Dropdown(props: DropdownProps): JSX.Element {
       </button>
 
       <Show when={isOpen()}>
-        <div class="absolute top-full left-0 mt-2 w-full bg-zinc-900/95 border border-[var(--ks-border,rgba(39,39,42,0.5))] rounded-lg backdrop-blur-xl z-50 shadow-xl select-none">
+        <div class="absolute top-full left-0 mt-2 w-full bg-[color-mix(in_srgb,var(--ks-surface,#0f0f0f)_95%,transparent)] border border-[var(--ks-border,rgba(39,39,42,0.5))] rounded-lg backdrop-blur-xl z-50 shadow-xl select-none">
           <For each={props.items}>
             {(item) => (
               <button
                 onClick={() => handleSelect(item)}
                 disabled={item.disabled}
-                class={`w-full px-4 py-3 flex items-center gap-3 hover:bg-zinc-800/50 transition-all first:rounded-t-lg last:rounded-b-lg select-none ${
-                  currentSelection()?.id === item.id ? "bg-zinc-800/30" : ""
+                class={`w-full px-4 py-3 flex items-center gap-3 hover:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] transition-all first:rounded-t-lg last:rounded-b-lg select-none ${
+                  currentSelection()?.id === item.id ? "bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_30%,transparent)]" : ""
                 } ${item.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
               >
                 <div class="flex items-center gap-2 flex-shrink-0">
@@ -138,14 +138,14 @@ export default function Dropdown(props: DropdownProps): JSX.Element {
                       </Show>
                     }
                   >
-                    {(Icon) => <Dynamic component={Icon()} size={16} class="text-amber-500" />}
+                    {(Icon) => <Dynamic component={Icon()} size={16} class="text-[var(--ks-accent,#fbbf24)]" />}
                   </Show>
                 </div>
                 <div class="flex-1 text-left min-w-0">
                   <div class="font-medium text-[var(--ks-fg,#ffffff)] flex items-center gap-2">
                     {item.label}
                     <Show when={item.badge}>
-                      <span class="px-2 py-0.5 text-xs font-medium bg-zinc-700/50 text-[var(--ks-fg-muted,#a1a1aa)] rounded flex-shrink-0">
+                      <span class="px-2 py-0.5 text-xs font-medium bg-[color-mix(in_srgb,var(--ks-surface-sunken,#141414)_50%,transparent)] text-[var(--ks-fg-muted,#a1a1aa)] rounded flex-shrink-0">
                         {item.badge}
                       </span>
                     </Show>

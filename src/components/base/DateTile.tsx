@@ -47,13 +47,13 @@ export default function DateTile(props: DateTileProps): JSX.Element {
       style={{ width: "60px", height: "68px", flex: "0 0 auto" }}
       class={`${interactive() ? "cursor-pointer" : ""} flex flex-col rounded-md overflow-hidden border transition-colors`}
       classList={{
-        "border-amber-500/25 bg-zinc-800/40": on(),
-        "border-zinc-800/60 bg-zinc-900/40 opacity-50 hover:opacity-80": !on(),
+        "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_25%,transparent)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_40%,transparent)]": on(),
+        "border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] bg-[color-mix(in_srgb,var(--ks-surface,#0f0f0f)_40%,transparent)] opacity-50 hover:opacity-80": !on(),
       }}
     >
       <div
         style={{ height: "18px" }}
-        class="flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.15em] bg-zinc-800/70 text-[var(--ks-fg-subtle,#71717a)]"
+        class="flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.15em] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_70%,transparent)] text-[var(--ks-fg-subtle,#71717a)]"
       >
         {props.topLabel ?? ""}
       </div>
@@ -61,7 +61,7 @@ export default function DateTile(props: DateTileProps): JSX.Element {
         <div
           class="text-xl font-semibold leading-none tabular-nums"
           classList={{
-            "text-amber-400/90": on(),
+            "text-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_90%,transparent)]": on(),
             "text-[var(--ks-fg-subtle,#71717a)]": !on(),
           }}
         >

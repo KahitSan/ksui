@@ -60,69 +60,78 @@ interface ColorInfo {
   shimmer: string;
 }
 
+// Caller picks a color by name (e.g. class="text-red-400"); each name maps to
+// the closest §1.2 token by role — the 4 semantic tokens for their matching
+// hue, the neutral fg-muted token for the 3 near-identical grays, and the
+// nearest chart-series hue for the two colors with no semantic/neutral token
+// (orange, purple) since ksui has no dedicated token for those hues. Every
+// effect string below is written out literally (not built from a template at
+// runtime) because the theming rollout's check-token-fallbacks.mjs gate
+// statically greps source text for the color-mix CSS function with a literal
+// --ks-* var name.
 const COLOR_MAP: Record<string, ColorInfo> = {
   red: {
-    fill: "rgba(255, 68, 68, 0.2)",
-    indicator: "#FF4444",
-    stripe: "rgba(255, 68, 68, 0.4)",
-    overflow: "rgba(255, 68, 68, 0.4)",
-    shimmer: "rgba(255, 68, 68, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-danger, #ef4444) 20%, transparent)",
+    indicator: "var(--ks-danger, #ef4444)",
+    stripe: "color-mix(in srgb, var(--ks-danger, #ef4444) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-danger, #ef4444) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-danger, #ef4444) 30%, transparent)",
   },
   green: {
-    fill: "rgba(0, 204, 136, 0.2)",
-    indicator: "#00CC88",
-    stripe: "rgba(0, 204, 136, 0.4)",
-    overflow: "rgba(0, 204, 136, 0.4)",
-    shimmer: "rgba(0, 204, 136, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-success, #10b981) 20%, transparent)",
+    indicator: "var(--ks-success, #10b981)",
+    stripe: "color-mix(in srgb, var(--ks-success, #10b981) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-success, #10b981) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-success, #10b981) 30%, transparent)",
   },
   blue: {
-    fill: "rgba(74, 158, 255, 0.2)",
-    indicator: "#4A9EFF",
-    stripe: "rgba(74, 158, 255, 0.4)",
-    overflow: "rgba(74, 158, 255, 0.4)",
-    shimmer: "rgba(74, 158, 255, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-info, #38bdf8) 20%, transparent)",
+    indicator: "var(--ks-info, #38bdf8)",
+    stripe: "color-mix(in srgb, var(--ks-info, #38bdf8) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-info, #38bdf8) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-info, #38bdf8) 30%, transparent)",
   },
   amber: {
-    fill: "rgba(245, 158, 11, 0.2)",
-    indicator: "#F59E0B",
-    stripe: "rgba(245, 158, 11, 0.4)",
-    overflow: "rgba(245, 158, 11, 0.4)",
-    shimmer: "rgba(245, 158, 11, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-warning, #f59e0b) 20%, transparent)",
+    indicator: "var(--ks-warning, #f59e0b)",
+    stripe: "color-mix(in srgb, var(--ks-warning, #f59e0b) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-warning, #f59e0b) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-warning, #f59e0b) 30%, transparent)",
   },
   orange: {
-    fill: "rgba(255, 136, 51, 0.2)",
-    indicator: "#FF8833",
-    stripe: "rgba(255, 136, 51, 0.4)",
-    overflow: "rgba(255, 136, 51, 0.4)",
-    shimmer: "rgba(255, 136, 51, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-chart-4, #f59e0b) 20%, transparent)",
+    indicator: "var(--ks-chart-4, #f59e0b)",
+    stripe: "color-mix(in srgb, var(--ks-chart-4, #f59e0b) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-chart-4, #f59e0b) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-chart-4, #f59e0b) 30%, transparent)",
   },
   purple: {
-    fill: "rgba(168, 85, 247, 0.2)",
-    indicator: "#A855F7",
-    stripe: "rgba(168, 85, 247, 0.4)",
-    overflow: "rgba(168, 85, 247, 0.4)",
-    shimmer: "rgba(168, 85, 247, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-chart-6, #a78bfa) 20%, transparent)",
+    indicator: "var(--ks-chart-6, #a78bfa)",
+    stripe: "color-mix(in srgb, var(--ks-chart-6, #a78bfa) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-chart-6, #a78bfa) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-chart-6, #a78bfa) 30%, transparent)",
   },
   slate: {
-    fill: "rgba(148, 163, 184, 0.2)",
-    indicator: "#94A3B8",
-    stripe: "rgba(148, 163, 184, 0.4)",
-    overflow: "rgba(148, 163, 184, 0.4)",
-    shimmer: "rgba(148, 163, 184, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 20%, transparent)",
+    indicator: "var(--ks-fg-muted, #a1a1aa)",
+    stripe: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 30%, transparent)",
   },
   gray: {
-    fill: "rgba(156, 163, 175, 0.2)",
-    indicator: "#9CA3AF",
-    stripe: "rgba(156, 163, 175, 0.4)",
-    overflow: "rgba(156, 163, 175, 0.4)",
-    shimmer: "rgba(156, 163, 175, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 20%, transparent)",
+    indicator: "var(--ks-fg-muted, #a1a1aa)",
+    stripe: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 30%, transparent)",
   },
   zinc: {
-    fill: "rgba(161, 161, 170, 0.2)",
-    indicator: "#A1A1AA",
-    stripe: "rgba(161, 161, 170, 0.4)",
-    overflow: "rgba(161, 161, 170, 0.4)",
-    shimmer: "rgba(161, 161, 170, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 20%, transparent)",
+    indicator: "var(--ks-fg-muted, #a1a1aa)",
+    stripe: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 30%, transparent)",
   },
 };
 

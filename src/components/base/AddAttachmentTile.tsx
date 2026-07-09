@@ -53,7 +53,7 @@ export default function AddAttachmentTile(props: Props) {
           setOpen(!open());
         }}
         disabled={props.uploading}
-        class="w-24 h-24 flex flex-col items-center justify-center gap-1 border border-dashed border-[var(--ks-border-strong,#3f3f46)] bg-zinc-800/30 text-[var(--ks-fg-muted,#a1a1aa)] hover:bg-zinc-800/60 hover:border-amber-500/40 hover:text-[var(--ks-accent,#fbbf24)] active:bg-zinc-800/80 transition-colors ks-hud-clip-top-left-bottom-right cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        class="w-24 h-24 flex flex-col items-center justify-center gap-1 border border-dashed border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_30%,transparent)] text-[var(--ks-fg-muted,#a1a1aa)] hover:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_60%,transparent)] hover:border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_40%,transparent)] hover:text-[var(--ks-accent,#fbbf24)] active:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_80%,transparent)] transition-colors ks-hud-clip-top-left-bottom-right cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label="Add attachment"
       >
         <Plus size={22} />
@@ -64,11 +64,11 @@ export default function AddAttachmentTile(props: Props) {
           <div
             ref={menu}
             style={{ top: `${pos().top}px`, left: `${pos().left}px` }}
-            class="fixed z-[60] min-w-[160px] rounded-lg border border-zinc-600 bg-zinc-800 shadow-2xl p-1 ks-hud-clip-top-left-bottom-right"
+            class="fixed z-[60] min-w-[160px] rounded-lg border border-[var(--ks-border-strong,#3f3f46)] bg-[var(--ks-surface-raised,#1a1a1a)] shadow-2xl p-1 ks-hud-clip-top-left-bottom-right"
           >
             <button
               type="button"
-              class="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 rounded cursor-pointer"
+              class="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--ks-fg,#ffffff)] hover:bg-[var(--ks-surface-sunken,#141414)] rounded cursor-pointer"
               onClick={() => {
                 setOpen(false);
                 props.onPickCamera();
@@ -79,7 +79,7 @@ export default function AddAttachmentTile(props: Props) {
             </button>
             <button
               type="button"
-              class="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 rounded cursor-pointer"
+              class="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--ks-fg,#ffffff)] hover:bg-[var(--ks-surface-sunken,#141414)] rounded cursor-pointer"
               onClick={() => {
                 setOpen(false);
                 props.onPickFile();

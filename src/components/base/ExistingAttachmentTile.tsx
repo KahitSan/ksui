@@ -64,7 +64,7 @@ export default function ExistingAttachmentTile(props: Props) {
         when={resolvable()}
         fallback={
           <div
-            class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[var(--ks-border-strong,#3f3f46)] bg-zinc-900/40 px-2 text-center text-[var(--ks-fg-subtle,#71717a)]"
+            class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_40%,transparent)] px-2 text-center text-[var(--ks-fg-subtle,#71717a)]"
             title={
               loading()
                 ? `${props.attachment.file_name} (loading)`
@@ -73,7 +73,7 @@ export default function ExistingAttachmentTile(props: Props) {
           >
             <Show
               when={loading()}
-              fallback={<TriangleAlert size={18} class="text-amber-500/70" />}
+              fallback={<TriangleAlert size={18} class="text-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_70%,transparent)]" />}
             >
               <Loader2 size={18} class="animate-spin text-[var(--ks-fg-subtle,#71717a)]" />
             </Show>
@@ -90,7 +90,7 @@ export default function ExistingAttachmentTile(props: Props) {
             <a
               href={url()}
               download={props.attachment.file_name}
-              class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-[var(--ks-border-strong,#3f3f46)] bg-zinc-800/50 px-2 text-xs text-zinc-300 hover:border-amber-500/30"
+              class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] px-2 text-xs text-[var(--ks-fg-muted,#a1a1aa)] hover:border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_30%,transparent)]"
             >
               <FallbackIcon />
               <span class="truncate max-w-full text-[10px]">{props.attachment.file_name}</span>
@@ -100,7 +100,7 @@ export default function ExistingAttachmentTile(props: Props) {
           <button
             type="button"
             onClick={() => setViewerOpen(true)}
-            class="block rounded-lg border border-[var(--ks-border-strong,#3f3f46)] overflow-hidden hover:border-amber-500/30 cursor-pointer"
+            class="block rounded-lg border border-[var(--ks-border-strong,#3f3f46)] overflow-hidden hover:border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_30%,transparent)] cursor-pointer"
           >
             <img src={url()} alt={props.attachment.file_name} class="w-24 h-24 object-cover" />
           </button>
@@ -119,7 +119,7 @@ export default function ExistingAttachmentTile(props: Props) {
             });
             if (ok) await props.onDelete!(props.attachment.id);
           }}
-          class="absolute -top-2 -right-2 flex w-7 h-7 items-center justify-center rounded-full bg-red-600/90 border border-red-400/60 text-[var(--ks-fg,#ffffff)] cursor-pointer hover:bg-red-500 active:bg-red-700 shadow-lg"
+          class="absolute -top-2 -right-2 flex w-7 h-7 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_90%,transparent)] border border-[color-mix(in_srgb,var(--ks-danger,#ef4444)_60%,transparent)] text-[var(--ks-fg,#ffffff)] cursor-pointer hover:bg-[var(--ks-danger,#ef4444)] active:bg-[var(--ks-danger,#ef4444)] shadow-lg"
         >
           <X size={12} />
         </button>
