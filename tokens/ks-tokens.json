@@ -72,6 +72,10 @@
     { "cssVar": "--ks-spacing", "darkValue": "1", "lightValue": "1", "description": "Base spacing unit multiplier (unitless)" },
     { "cssVar": "--ks-motion", "darkValue": "200ms", "lightValue": "200ms", "description": "Base transition duration" },
     { "cssVar": "--ks-motion-fast", "darkValue": "100ms", "lightValue": "100ms", "description": "Fast transition (hover states)" },
-    { "cssVar": "--ks-motion-slow", "darkValue": "300ms", "lightValue": "300ms", "description": "Slow transition (modal enter/exit)" }
+    { "cssVar": "--ks-motion-slow", "darkValue": "300ms", "lightValue": "300ms", "description": "Slow transition (modal enter/exit)" },
+
+    { "cssVar": "--ks-font-body", "darkValue": "\"Inter\", system-ui, sans-serif", "lightValue": "\"Inter\", system-ui, sans-serif", "description": "Body text font stack (no ksui component sets this literal today — kernel THEME-SPEC-V2 §3.1 default, variant-independent)" },
+    { "cssVar": "--ks-font-heading", "darkValue": "\"Space Grotesk\", \"Inter\", system-ui, sans-serif", "lightValue": "\"Space Grotesk\", \"Inter\", system-ui, sans-serif", "description": "Heading font stack (no ksui component sets this literal today — kernel THEME-SPEC-V2 §3.1 default, variant-independent)" },
+    { "cssVar": "--ks-font-mono", "darkValue": "ui-monospace,\"SF Mono\",\"Cascadia Code\",Menlo,Consolas,monospace", "lightValue": "ui-monospace,\"SF Mono\",\"Cascadia Code\",Menlo,Consolas,monospace", "description": "Monospace font stack — DataTable's own current literal (differs from the kernel's Space Mono default; fallback-byte-match rule preserves DataTable's existing render, not the spec ideal)" }
   ]
 }

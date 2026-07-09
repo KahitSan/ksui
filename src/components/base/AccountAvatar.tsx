@@ -64,6 +64,7 @@ export function buildInitialsSvg(name: string): string {
     `<circle cx="50" cy="50" r="50" fill="${color}"/>`,
     `<text x="50" y="50" text-anchor="middle" dominant-baseline="central" ` +
       `fill="white" font-size="${fontSize}" font-weight="bold" ` +
+      // rendered via <img src="data:...">, an isolated document — var(--ks-font-*) cannot resolve here, so left literal
       `font-family="system-ui,-apple-system,sans-serif">${initials}</text>`,
     "</svg>",
   ].join("");
