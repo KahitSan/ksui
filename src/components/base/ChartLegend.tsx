@@ -11,7 +11,7 @@ interface ChartLegendProps {
   label: string;
   /** Pre-formatted value string (e.g. a currency string). */
   value: string;
-  /** Optional Tailwind text color class for the value. Defaults to text-zinc-100. */
+  /** Optional Tailwind text color class for the value. Defaults to var(--ks-fg). */
   valueColor?: string;
 }
 
@@ -20,11 +20,11 @@ export default function ChartLegend(props: ChartLegendProps) {
     <div class="flex items-center gap-2">
       <span class={`w-2 h-2 rounded-sm ${props.dot}`} />
       <div class="flex flex-col">
-        <span class="text-[9px] uppercase tracking-widest text-zinc-500 font-medium leading-tight">
+        <span class="text-[9px] uppercase tracking-widest text-[var(--ks-fg-subtle,#71717a)] font-medium leading-tight">
           {props.label}
         </span>
         <span
-          class={`text-xs font-bold tabular-nums leading-tight ${props.valueColor || "text-zinc-100"}`}
+          class={`text-xs font-bold tabular-nums leading-tight ${props.valueColor || "text-[var(--ks-fg,#ffffff)]"}`}
         >
           {props.value}
         </span>

@@ -16,28 +16,84 @@ interface SegmentedFilterProps {
   testIdPrefix?: string;
   /** Extra classes on the outer bordered row. */
   class?: string;
+  /** Accessible label for the radiogroup wrapper (WAI-ARIA radiogroup pattern). */
+  ariaLabel?: string;
 }
 
 // A rounded bordered row of segment buttons with one active at a time.
 // Presentational only and domain free: the caller passes the segment values
 // and the active value, so there are no status literals baked in here.
+// Semantics follow the WAI-ARIA radiogroup pattern (role="radiogroup" +
+// role="radio"/aria-checked per segment + roving tabindex + arrow-key nav) so
+// this reads as a single control, not a strip of unrelated buttons.
 export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Element {
+  const buttonRefs: (HTMLButtonElement | undefined)[] = [];
   const optionOf = (o: SegmentedFilterOption) =>
     typeof o === "string" ? { value: o, label: o, capitalize: true } : { ...o, capitalize: false };
+
+  const currentIndex = () => {
+    const i = props.options.findIndex((o) => optionOf(o).value === props.value);
+    return i >= 0 ? i : 0;
+  };
+
+  const selectByIndex = (idx: number) => {
+    const list = props.options;
+    if (list.length === 0) return;
+    const wrapped = ((idx % list.length) + list.length) % list.length;
+    props.onChange(optionOf(list[wrapped]).value);
+    buttonRefs[wrapped]?.focus();
+  };
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    switch (e.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        e.preventDefault();
+        selectByIndex(currentIndex() + 1);
+        break;
+      case "ArrowLeft":
+      case "ArrowUp":
+        e.preventDefault();
+        selectByIndex(currentIndex() - 1);
+        break;
+      case "Home":
+        e.preventDefault();
+        selectByIndex(0);
+        break;
+      case "End":
+        e.preventDefault();
+        selectByIndex(props.options.length - 1);
+        break;
+    }
+  };
+
   return (
-    <div class={`flex rounded-lg border border-zinc-800/50 overflow-hidden ${props.class ?? ""}`}>
+    <div
+      role="radiogroup"
+      aria-label={props.ariaLabel}
+      class={`flex rounded-lg border border-[var(--ks-border,rgba(39,39,42,0.5))] overflow-hidden ${props.class ?? ""}`}
+      onKeyDown={onKeyDown}
+    >
       <For each={props.options}>
-        {(o) => {
+        {(o, i) => {
           const opt = optionOf(o);
+          const selected = () => props.value === opt.value;
+          const isTabStop = () => selected() || (!props.value && i() === 0);
           return (
             <button
+              ref={(el) => (buttonRefs[i()] = el)}
+              type="button"
+              role="radio"
+              aria-checked={selected()}
+              tabIndex={isTabStop() ? 0 : -1}
               data-testid={props.testIdPrefix ? `${props.testIdPrefix}-${opt.value}` : undefined}
               onClick={() => props.onChange(opt.value)}
               class="px-3 py-1.5 text-xs transition-colors cursor-pointer"
               classList={{
                 capitalize: opt.capitalize,
-                "bg-amber-500/20 text-amber-400": props.value === opt.value,
-                "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50": props.value !== opt.value,
+                "bg-[var(--ks-accent,#fbbf24)]/20 text-[var(--ks-accent,#fbbf24)]": selected(),
+                "text-[var(--ks-fg-muted,#a1a1aa)] hover:text-[var(--ks-fg,#ffffff)] hover:bg-[var(--ks-surface-raised,#1a1a1a)]":
+                  !selected(),
               }}
             >
               {opt.label}

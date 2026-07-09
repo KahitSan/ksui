@@ -34,6 +34,8 @@ interface RadioCardGroupProps<T> {
    * default amber-active styling per call site.
    */
   itemClass?: string;
+  /** Disables the whole group: no tab stop, clicks suppressed, aria-disabled. */
+  disabled?: boolean;
 }
 
 // A controlled, keyboard-navigable group of radio cards. The reusable part is
@@ -57,6 +59,7 @@ export default function RadioCardGroup<T>(props: RadioCardGroupProps<T>): JSX.El
   };
 
   const selectByIndex = (idx: number) => {
+    if (props.disabled) return;
     const list = props.options;
     if (list.length === 0) return;
     const wrapped = ((idx % list.length) + list.length) % list.length;
@@ -100,8 +103,8 @@ export default function RadioCardGroup<T>(props: RadioCardGroupProps<T>): JSX.El
       <span
         class="h-2 w-2 rounded-full shrink-0"
         classList={{
-          "bg-amber-400": selected,
-          "bg-zinc-600 group-hover:bg-zinc-500": !selected,
+          "bg-[var(--ks-accent,#fbbf24)]": selected,
+          "bg-[var(--ks-fg-subtle,#71717a)] group-hover:bg-[var(--ks-fg-muted,#a1a1aa)]": !selected,
         }}
       />
       <span class="truncate">{label(option)}</span>
@@ -112,6 +115,7 @@ export default function RadioCardGroup<T>(props: RadioCardGroupProps<T>): JSX.El
     <div
       role="radiogroup"
       aria-label={props.ariaLabel}
+      aria-disabled={props.disabled}
       tabIndex={-1}
       class={`${gridClass()} ${props.class ?? ""}`}
       onKeyDown={onKeyDown}
@@ -120,19 +124,22 @@ export default function RadioCardGroup<T>(props: RadioCardGroupProps<T>): JSX.El
         {(option, i) => {
           const k = keyAt(option);
           const selected = () => props.value === k;
-          const isTabStop = () => selected() || (!props.value && i() === 0);
+          const isTabStop = () => !props.disabled && (selected() || (!props.value && i() === 0));
           return (
             <button
               ref={(el) => (buttonRefs[i()] = el)}
               type="button"
               role="radio"
               aria-checked={selected()}
+              aria-disabled={props.disabled}
               tabIndex={isTabStop() ? 0 : -1}
-              onClick={() => props.onChange(k)}
+              onClick={() => !props.disabled && props.onChange(k)}
               class={`group flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm transition-colors cursor-pointer ${props.itemClass ?? ""}`}
               classList={{
-                "border-amber-500/50 bg-amber-600/10 text-amber-300": selected(),
-                "border-zinc-700 bg-zinc-800/50 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800":
+                "opacity-50 pointer-events-none cursor-not-allowed": !!props.disabled,
+                "border-[var(--ks-accent,#fbbf24)]/50 bg-[var(--ks-accent,#fbbf24)]/10 text-[var(--ks-accent,#fbbf24)]":
+                  selected(),
+                "border-[var(--ks-border-strong,#3f3f46)] bg-[var(--ks-surface-raised,#1a1a1a)] text-[var(--ks-fg-muted,#a1a1aa)] hover:border-[var(--ks-fg-subtle,#71717a)] hover:bg-[var(--ks-surface-sunken,#141414)]":
                   !selected(),
               }}
             >

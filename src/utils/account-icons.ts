@@ -74,17 +74,39 @@ export function getAccountIcon(account: { icon?: string | null; type: string }):
   return DEFAULT_BY_TYPE[account.type] ?? Banknote;
 }
 
+// bank has no exact-hue token (blue-400/500 family isn't in §1.2), so it
+// drifts to the nearest semantic bucket (--ks-info, sky). e_wallet/capital's
+// bg (amber-500) and border (amber-400) are each an EXACT hex match to
+// --ks-warning and --ks-accent respectively, so those keep zero-regression
+// color-mix rather than sharing one base. Same for cash: bg is an exact
+// --ks-success match, border an exact --ks-success-fg match.
 const DEFAULT_TONE_BY_TYPE: Record<string, { text: string; bg: string; border: string }> = {
-  bank: { text: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-400/40" },
-  e_wallet: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-400/40" },
-  cash: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-400/40" },
-  capital: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-400/40" },
+  bank: {
+    text: "text-[var(--ks-info,#38bdf8)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-info,#38bdf8)_10%,transparent)]",
+    border: "border-[color-mix(in_srgb,var(--ks-info,#38bdf8)_40%,transparent)]",
+  },
+  e_wallet: {
+    text: "text-[var(--ks-accent,#fbbf24)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_10%,transparent)]",
+    border: "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_40%,transparent)]",
+  },
+  cash: {
+    text: "text-[var(--ks-success-fg,#34d399)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-success,#10b981)_10%,transparent)]",
+    border: "border-[color-mix(in_srgb,var(--ks-success-fg,#34d399)_40%,transparent)]",
+  },
+  capital: {
+    text: "text-[var(--ks-accent,#fbbf24)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_10%,transparent)]",
+    border: "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_40%,transparent)]",
+  },
 };
 
 const FALLBACK_TONE = {
-  text: "text-zinc-300",
-  bg: "bg-zinc-700/30",
-  border: "border-zinc-700/60",
+  text: "text-[var(--ks-fg-muted,#a1a1aa)]",
+  bg: "bg-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_30%,transparent)]",
+  border: "border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_60%,transparent)]",
 };
 
 // Per-type accent tone for an account chip, or the account's own custom color.

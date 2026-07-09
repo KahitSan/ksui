@@ -10,8 +10,8 @@
 export default function DetailRow(props: { label: string; value: string | null | undefined }) {
   return (
     <div>
-      <span class="text-xs text-zinc-500 block">{props.label}</span>
-      <span class="text-sm text-zinc-200">{props.value || "—"}</span>
+      <span class="text-xs text-[var(--ks-fg-subtle,#71717a)] block">{props.label}</span>
+      <span class="text-sm text-[var(--ks-fg,#ffffff)]">{props.value || "—"}</span>
     </div>
   );
 }

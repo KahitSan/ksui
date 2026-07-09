@@ -197,12 +197,12 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
             ? "Ask an admin to grant access to a financial account before charging."
             : undefined
         }
-        class="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-zinc-800/30 border border-zinc-700/50 hover:border-amber-500/40 hover:bg-amber-500/5 transition-colors text-sm text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+        class="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_30%,transparent)] border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)] hover:border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_5%,transparent)] transition-colors text-sm text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
         aria-haspopup="listbox"
         aria-expanded={open()}
       >
         <Show when={loading()} fallback={null}>
-          <Loader2 size={14} class="animate-spin text-zinc-500 shrink-0" aria-hidden="true" />
+          <Loader2 size={14} class="animate-spin text-[var(--ks-fg-subtle,#71717a)] shrink-0" aria-hidden="true" />
         </Show>
         <Show when={!loading()}>
           <Show
@@ -212,13 +212,13 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
                 when={noAccounts()}
                 fallback={
                   <>
-                    <Banknote size={16} class="shrink-0 text-zinc-400" aria-hidden="true" />
-                    <span class="text-zinc-500 italic">Choose payment account</span>
+                    <Banknote size={16} class="shrink-0 text-[var(--ks-fg-muted,#a1a1aa)]" aria-hidden="true" />
+                    <span class="text-[var(--ks-fg-subtle,#71717a)] italic">Choose payment account</span>
                   </>
                 }
               >
-                <Banknote size={16} class="shrink-0 text-zinc-500" aria-hidden="true" />
-                <span class="text-zinc-500 italic">No accessible accounts</span>
+                <Banknote size={16} class="shrink-0 text-[var(--ks-fg-subtle,#71717a)]" aria-hidden="true" />
+                <span class="text-[var(--ks-fg-subtle,#71717a)] italic">No accessible accounts</span>
               </Show>
             }
           >
@@ -226,8 +226,8 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
               <>
                 <AccountAvatar account={acct()} size={28} />
                 <span class="flex-1 min-w-0">
-                  <span class="block truncate text-zinc-100 font-medium">{acct().name}</span>
-                  <span class="block truncate text-[11px] text-zinc-500">
+                  <span class="block truncate text-[var(--ks-fg,#ffffff)] font-medium">{acct().name}</span>
+                  <span class="block truncate text-[11px] text-[var(--ks-fg-subtle,#71717a)]">
                     {TYPE_LABELS[acct().type] ?? acct().type}
                   </span>
                 </span>
@@ -242,33 +242,33 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
           <div
             ref={popupRef}
             data-testid="payment-account-picker-popup"
-            class="z-[100] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[100] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
           >
-            <div class="px-3 py-2 border-b border-zinc-800 flex items-center gap-2">
-              <Banknote size={14} class="text-zinc-500 shrink-0" aria-hidden="true" />
-              <span class="text-xs uppercase tracking-widest text-zinc-500 font-bold">
+            <div class="px-3 py-2 border-b border-[var(--ks-border,rgba(39,39,42,0.5))] flex items-center gap-2">
+              <Banknote size={14} class="text-[var(--ks-fg-subtle,#71717a)] shrink-0" aria-hidden="true" />
+              <span class="text-xs uppercase tracking-widest text-[var(--ks-fg-subtle,#71717a)] font-bold">
                 Payment account
               </span>
               <Show when={loading()}>
-                <Loader2 size={14} class="animate-spin text-zinc-500 ml-auto shrink-0" />
+                <Loader2 size={14} class="animate-spin text-[var(--ks-fg-subtle,#71717a)] ml-auto shrink-0" />
               </Show>
             </div>
             <div class="flex-1 overflow-y-auto">
               <Show when={error()}>
-                <div role="status" class="px-3 py-2 text-xs text-red-400">
+                <div role="status" class="px-3 py-2 text-xs text-[var(--ks-danger-fg,#f87171)]">
                   {error()}
                 </div>
               </Show>
               <Show when={!loading() && !error() && accounts().length === 0}>
-                <div role="status" class="px-3 py-4 text-xs text-zinc-500 text-center">
+                <div role="status" class="px-3 py-4 text-xs text-[var(--ks-fg-subtle,#71717a)] text-center">
                   No accessible accounts. Ask an admin to grant access.
                 </div>
               </Show>
               <For each={sections()}>
                 {([type, list]) => (
                   <div>
-                    <div class="px-3 pt-3 pb-1 text-[10px] uppercase tracking-widest text-zinc-600 font-semibold">
+                    <div class="px-3 pt-3 pb-1 text-[10px] uppercase tracking-widest text-[var(--ks-fg-subtle,#71717a)] font-semibold">
                       {TYPE_LABELS[type] ?? type}
                     </div>
                     <ul
@@ -285,14 +285,14 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
                                 type="button"
                                 data-testid={`payment-account-picker-result-${a.id}`}
                                 onClick={() => select(a)}
-                                class="w-full text-left px-3 py-2 hover:bg-amber-500/10 transition-colors flex items-center gap-2 cursor-pointer"
+                                class="w-full text-left px-3 py-2 hover:bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_10%,transparent)] transition-colors flex items-center gap-2 cursor-pointer"
                               >
                                 <AccountAvatar account={a} size={28} />
-                                <span class="flex-1 min-w-0 text-sm text-zinc-100 truncate">
+                                <span class="flex-1 min-w-0 text-sm text-[var(--ks-fg,#ffffff)] truncate">
                                   {a.name}
                                 </span>
                                 <Show when={selected()}>
-                                  <span class="text-amber-400 shrink-0">✓</span>
+                                  <span class="text-[var(--ks-accent,#fbbf24)] shrink-0">✓</span>
                                 </Show>
                               </button>
                             </li>

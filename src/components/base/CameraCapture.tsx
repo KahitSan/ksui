@@ -75,19 +75,19 @@ export default function CameraCapture(props: Props) {
   return (
     <div
       data-testid="camera-capture-modal"
-      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--ks-overlay,rgba(0,0,0,0.7))] backdrop-blur-sm p-4"
     >
-      <div class="card-bg rounded-xl border border-amber-500/30 overflow-hidden max-w-lg w-full shadow-2xl">
-        <div class="flex items-center justify-between p-3 border-b border-zinc-800/50">
+      <div class="card-bg rounded-xl border border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_30%,transparent)] overflow-hidden max-w-lg w-full shadow-2xl">
+        <div class="flex items-center justify-between p-3 border-b border-[var(--ks-border,rgba(39,39,42,0.5))]">
           <span
-            class="text-sm text-zinc-200 font-medium flex items-center gap-2"
+            class="text-sm text-[var(--ks-fg,#ffffff)] font-medium flex items-center gap-2"
             data-testid="camera-capture-title"
           >
             <Camera size={16} /> Camera
           </span>
           <button
             onClick={() => props.onClose()}
-            class="text-zinc-500 hover:text-zinc-300 cursor-pointer"
+            class="text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-fg-muted,#a1a1aa)] cursor-pointer"
             aria-label="Close camera"
           >
             <X size={18} />
@@ -96,7 +96,7 @@ export default function CameraCapture(props: Props) {
 
         <Show when={error()}>
           <div class="p-6 text-center">
-            <p class="text-sm text-red-400 mb-3">{error()}</p>
+            <p class="text-sm text-[var(--ks-danger-fg,#f87171)] mb-3">{error()}</p>
             <Button intent="secondary" variant="ghost" onClick={() => props.onClose()}>
               Close
             </Button>
@@ -104,7 +104,7 @@ export default function CameraCapture(props: Props) {
         </Show>
 
         <Show when={!error()}>
-          <div class="relative bg-black aspect-video">
+          <div class="relative bg-[var(--ks-surface,#0f0f0f)] aspect-video">
             <Show when={!captured()}>
               <video ref={videoRef} autoplay playsinline muted class="w-full h-full object-cover" />
             </Show>
@@ -131,7 +131,7 @@ export default function CameraCapture(props: Props) {
               <button
                 type="button"
                 onClick={takePhoto}
-                class="w-14 h-14 rounded-full border-4 border-zinc-400 bg-zinc-200 hover:bg-white active:scale-95 transition-all cursor-pointer"
+                class="w-14 h-14 rounded-full border-4 border-[var(--ks-border-strong,#3f3f46)] bg-[var(--ks-fg,#ffffff)] hover:bg-[var(--ks-fg,#ffffff)] active:scale-95 transition-all cursor-pointer"
                 title="Take photo"
                 aria-label="Take photo"
               />

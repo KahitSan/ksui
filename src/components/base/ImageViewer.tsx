@@ -16,24 +16,20 @@
 import { onCleanup, onMount } from "solid-js";
 import X from "lucide-solid/icons/x";
 import { lockPullToRefresh, unlockPullToRefresh } from "../../utils/dom";
+import { injectCSS } from "../../utils/inject-css";
 
 const STYLE_ID = "ksui-image-viewer-style";
-
-function ensureStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
+// The backdrop scrim maps to --ks-overlay (§6a); the img/close-button chrome
+// stays a fixed dark treatment since it sits on top of the photo itself, not
+// a themeable app surface.
+const STYLE_CSS = `
 .ksui-imgviewer{position:fixed;inset:0;z-index:60;background:transparent;padding:0;margin:0;max-width:none;max-height:none;width:100vw;height:100vh;border:0;}
 .ksui-imgviewer[open]{display:flex;align-items:center;justify-content:center;}
-.ksui-imgviewer::backdrop{background:rgba(0,0,0,0.92);backdrop-filter:blur(2px);}
+.ksui-imgviewer::backdrop{background:var(--ks-overlay, rgba(0,0,0,0.7));backdrop-filter:blur(2px);}
 .ksui-imgviewer-img{max-width:96vw;max-height:96vh;object-fit:contain;border-radius:0.25rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.8);}
 .ksui-imgviewer-close{position:absolute;top:1rem;right:1rem;display:flex;width:2.5rem;height:2.5rem;align-items:center;justify-content:center;border-radius:9999px;background:rgba(255,255,255,0.12);color:#fff;border:0;cursor:pointer;}
 .ksui-imgviewer-close:hover{background:rgba(255,255,255,0.22);}
 `;
-  document.head.appendChild(style);
-}
 
 interface Props {
   /** Image URL to display (typically a blob: object URL or a public link). */
@@ -45,7 +41,7 @@ interface Props {
 }
 
 export default function ImageViewer(props: Props) {
-  ensureStyle();
+  injectCSS(STYLE_ID, STYLE_CSS);
   let dialogEl: HTMLDialogElement | undefined;
 
   lockPullToRefresh();

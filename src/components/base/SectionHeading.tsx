@@ -75,23 +75,23 @@ export default function SectionHeading(props: SectionHeadingProps): JSX.Element 
       <Show when={props.kicker}>
         <div
           class={`text-xs font-bold tracking-[0.3em] uppercase mb-2 ${
-            props.kickerClass ?? "text-amber-500"
+            props.kickerClass ?? "text-[var(--ks-accent,#fbbf24)]"
           }`}
         >
           {props.kicker}
         </div>
       </Show>
 
-      <Title class={`${TITLE_SIZE[level()]} ${props.titleClass ?? "text-white"}`}>
+      <Title class={`${TITLE_SIZE[level()]} ${props.titleClass ?? "text-[var(--ks-fg,#ffffff)]"}`}>
         {props.title}
       </Title>
 
       <Show when={props.accent}>
-        <div class={`w-20 h-1 mt-4 rounded-full ${props.accentClass ?? "bg-amber-500"}`} />
+        <div class={`w-20 h-1 mt-4 rounded-full ${props.accentClass ?? "bg-[var(--ks-accent,#fbbf24)]"}`} />
       </Show>
 
       <Show when={props.subtitle}>
-        <p class={`mt-4 text-base md:text-lg max-w-2xl ${props.subtitleClass ?? "text-zinc-400"}`}>
+        <p class={`mt-4 text-base md:text-lg max-w-2xl ${props.subtitleClass ?? "text-[var(--ks-fg-muted,#a1a1aa)]"}`}>
           {props.subtitle}
         </p>
       </Show>

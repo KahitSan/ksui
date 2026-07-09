@@ -42,6 +42,7 @@ import {
   normalizeDate,
   type ParsedDate,
 } from "../../utils/parse-date";
+import { injectCSS } from "../../utils/inject-css";
 
 // ---------------------------------------------------------------------------
 // Injected CSS
@@ -52,107 +53,101 @@ import {
 // retint container restyles both. Picker-only tones use `--ksui-dp-*`. Fallback
 // after each `var(...)` = the host DatePicker's exact Tailwind value.
 //
-//   --ksui-dt-control-bg   popover + trigger + input bg (zinc-900, #18181b)
-//   --ksui-dt-border       borders / dividers (zinc-800/50, rgba(39,39,42,0.5))
-//   --ksui-dt-fg           primary white-ish text (white, #ffffff)
-//   --ksui-dt-text         secondary text (zinc-400, #a1a1aa)
-//   --ksui-dt-muted        placeholder / day-header / hint (zinc-500, #71717a)
-//   --ksui-dt-faint        "to" separator (zinc-600, #52525b)
-//   --ksui-dt-accent       active accent text (amber-400, #fbbf24)
-//   --ksui-dt-accent-border focus ring (amber-500/50, rgba(245,158,11,0.5))
-//   --ksui-dp-trigger-active-bg active trigger bg (amber-600/10, rgba(217,119,6,0.1))
-//   --ksui-dp-trigger-active-border active trigger border (amber-500/40, rgba(245,158,11,0.4))
-//   --ksui-dp-trigger-active-text active trigger text (amber-400, #fbbf24)
-//   --ksui-dp-row-hover    day-cell / nav hover bg (zinc-800/50, rgba(39,39,42,0.5))
-//   --ksui-dp-cell-text    in-month day text (zinc-300, #d4d4d8)
-//   --ksui-dp-cell-out     out-of-month day text (zinc-700, #3f3f46)
-//   --ksui-dp-sel-bg       selected single-day bg (amber-600/30, rgba(217,119,6,0.3))
-//   --ksui-dp-range-end-bg range start/end bg (amber-600/40, rgba(217,119,6,0.4))
-//   --ksui-dp-range-mid-bg in-range bg (amber-500/15, rgba(245,158,11,0.15))
-//   --ksui-dp-preview-bg   preview/hover bg (amber-500/10, rgba(245,158,11,0.1))
-//   --ksui-dp-accent-soft  range/in-range/preview text (amber-300, #fcd34d)
-//   --ksui-dp-input-bg     popover text-input bg (zinc-800/50, rgba(39,39,42,0.5))
-//   --ksui-dp-input-border popover text-input border (zinc-700/50, rgba(63,63,70,0.5))
-//   --ksui-dp-toggle-off   off switch bg (zinc-700, #3f3f46)
-//   --ksui-dp-toggle-on    on switch bg (amber-500/80, rgba(245,158,11,0.8))
-//   --ksui-dp-danger       clear-hover / time-error text (red-400, #f87171)
-//   --ksui-dp-danger-border time-input invalid border (red-500/50, rgba(239,68,68,0.5))
+// Every `--ksui-*` fallback below now resolves through a `--ks-*` design
+// token (THEME-SPEC §1.2) rather than a bare Tailwind literal, so a themed
+// host restyles the picker without any ksui code change.
+//
+//   --ksui-dt-control-bg   popover + trigger + input bg -> --ks-input-bg
+//   --ksui-dt-border       borders / dividers -> --ks-border
+//   --ksui-dt-fg           primary text -> --ks-fg
+//   --ksui-dt-text         secondary text -> --ks-fg-muted
+//   --ksui-dt-muted        placeholder / day-header / hint -> --ks-fg-subtle
+//   --ksui-dt-faint        "to" separator -> --ks-fg-subtle
+//   --ksui-dt-accent       active accent text -> --ks-accent
+//   --ksui-dt-accent-border focus ring -> --ks-focus-ring (color-mix)
+//   --ksui-dp-trigger-active-bg / -border / -text -> --ks-primary / --ks-accent
+//   --ksui-dp-row-hover    day-cell / nav hover bg -> --ks-border
+//   --ksui-dp-cell-text    in-month day text -> --ks-fg
+//   --ksui-dp-cell-out     out-of-month day text -> --ks-border-strong
+//   --ksui-dp-sel-bg / -range-end-bg / -range-mid-bg / -preview-bg -> --ks-primary (color-mix)
+//   --ksui-dp-accent-soft  range/in-range/preview text -> --ks-accent-hover
+//   --ksui-dp-input-bg     popover text-input bg -> --ks-border (color-mix)
+//   --ksui-dp-input-border popover text-input border -> --ks-border-strong (color-mix)
+//   --ksui-dp-toggle-off   off switch bg -> --ks-border-strong
+//   --ksui-dp-toggle-on    on switch bg -> --ks-primary (color-mix)
+//   --ksui-dp-danger       clear-hover / time-error text -> --ks-danger-fg
+//   --ksui-dp-danger-border time-input invalid border -> --ks-danger (color-mix)
 //
 const STYLE_ID = "ksui-datepicker-style";
 
 const DATEPICKER_CSS = `
 .ksui-datepicker{position:relative;display:flex;align-items:center;gap:0.25rem;}
-.ksui-datepicker-trigger{display:inline-flex;cursor:pointer;align-items:center;gap:0.5rem;border-radius:0.5rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);padding:0.5rem 0.75rem;font-size:0.75rem;line-height:1rem;color:var(--ksui-dt-text,#a1a1aa);transition:color 0.15s ease,background-color 0.15s ease,border-color 0.15s ease;}
-.ksui-datepicker-trigger:hover:not(:disabled){color:var(--ksui-dt-fg,#ffffff);}
+.ksui-datepicker-trigger{display:inline-flex;cursor:pointer;align-items:center;gap:0.5rem;border-radius:0.5rem;border:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));background:var(--ksui-dt-control-bg,var(--ks-input-bg,#18181b));padding:0.5rem 0.75rem;font-size:0.75rem;line-height:1rem;color:var(--ksui-dt-text,var(--ks-fg-muted,#a1a1aa));transition:color 0.15s ease,background-color 0.15s ease,border-color 0.15s ease;}
+.ksui-datepicker-trigger:hover:not(:disabled){color:var(--ksui-dt-fg,var(--ks-fg,#ffffff));}
 .ksui-datepicker-trigger:disabled{cursor:not-allowed;opacity:0.5;}
-.ksui-datepicker-trigger-active{border-color:var(--ksui-dp-trigger-active-border,rgba(245,158,11,0.4));background:var(--ksui-dp-trigger-active-bg,rgba(217,119,6,0.1));color:var(--ksui-dp-trigger-active-text,#fbbf24);}
-.ksui-datepicker-clear-btn{border-radius:0.25rem;padding:0.25rem;color:var(--ksui-dt-muted,#71717a);background:transparent;border:0;cursor:pointer;display:inline-flex;transition:color 0.15s ease,background-color 0.15s ease;}
-.ksui-datepicker-clear-btn:hover{background:var(--ksui-dp-row-hover,rgba(39,39,42,0.5));color:var(--ksui-dt-fg,#ffffff);}
-.ksui-datepicker-popover{position:fixed;z-index:60;overflow-y:auto;border-radius:0.75rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);}
+.ksui-datepicker-trigger-active{border-color:var(--ksui-dp-trigger-active-border,color-mix(in srgb, var(--ks-primary, #c9a961) 40%, transparent));background:var(--ksui-dp-trigger-active-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 10%, transparent));color:var(--ksui-dp-trigger-active-text,var(--ks-accent,#fbbf24));}
+.ksui-datepicker-clear-btn{border-radius:0.25rem;padding:0.25rem;color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));background:transparent;border:0;cursor:pointer;display:inline-flex;transition:color 0.15s ease,background-color 0.15s ease;}
+.ksui-datepicker-clear-btn:hover{background:var(--ksui-dp-row-hover,var(--ks-border,rgba(39,39,42,0.5)));color:var(--ksui-dt-fg,var(--ks-fg,#ffffff));}
+.ksui-datepicker-popover{position:fixed;z-index:60;overflow-y:auto;border-radius:0.75rem;border:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));background:var(--ksui-dt-control-bg,var(--ks-input-bg,#18181b));box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);}
 .ksui-datepicker-section{padding:0.75rem;}
-.ksui-datepicker-section-bordered{border-bottom:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));padding:0.75rem;}
-.ksui-datepicker-input{width:100%;border-radius:0.5rem;border:1px solid var(--ksui-dp-input-border,rgba(63,63,70,0.5));background:var(--ksui-dp-input-bg,rgba(39,39,42,0.5));padding:0.5rem 0.75rem;font-size:0.875rem;line-height:1.25rem;color:var(--ksui-dt-fg,#ffffff);outline:none;transition:border-color 0.15s ease;}
-.ksui-datepicker-input::placeholder{color:var(--ksui-dt-muted,#71717a);}
-.ksui-datepicker-input:focus{border-color:var(--ksui-dt-accent-border,rgba(245,158,11,0.5));}
+.ksui-datepicker-section-bordered{border-bottom:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));padding:0.75rem;}
+.ksui-datepicker-input{width:100%;border-radius:0.5rem;border:1px solid var(--ksui-dp-input-border,color-mix(in srgb, var(--ks-border-strong, #3f3f46) 50%, transparent));background:var(--ksui-dp-input-bg,var(--ks-border,rgba(39,39,42,0.5)));padding:0.5rem 0.75rem;font-size:0.875rem;line-height:1.25rem;color:var(--ksui-dt-fg,var(--ks-fg,#ffffff));outline:none;transition:border-color 0.15s ease;}
+.ksui-datepicker-input::placeholder{color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));}
+.ksui-datepicker-input:focus{border-color:var(--ksui-dt-accent-border,color-mix(in srgb, var(--ks-focus-ring, #c9a961) 50%, transparent));}
 .ksui-datepicker-range-row{display:flex;align-items:center;gap:0.5rem;}
 .ksui-datepicker-range-input{flex:1 1 0%;}
-.ksui-datepicker-range-input-active{border-color:var(--ksui-dt-accent-border,rgba(245,158,11,0.5));}
-.ksui-datepicker-range-sep{font-size:0.75rem;color:var(--ksui-dt-faint,#52525b);}
+.ksui-datepicker-range-input-active{border-color:var(--ksui-dt-accent-border,color-mix(in srgb, var(--ks-focus-ring, #c9a961) 50%, transparent));}
+.ksui-datepicker-range-sep{font-size:0.75rem;color:var(--ksui-dt-faint,var(--ks-fg-subtle,#71717a));}
 .ksui-datepicker-preview{margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;font-size:0.75rem;}
-.ksui-datepicker-preview-chip{border-radius:0.25rem;background:var(--ksui-dp-preview-bg,rgba(245,158,11,0.1));padding:0.125rem 0.5rem;color:var(--ksui-dt-accent,#fbbf24);}
-.ksui-datepicker-preview-hint{color:var(--ksui-dt-muted,#71717a);}
-.ksui-datepicker-quick{display:flex;gap:0.375rem;border-bottom:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));padding:0.5rem 0.75rem;}
-.ksui-datepicker-quick-btn{border-radius:0.375rem;padding:0.25rem 0.5rem;font-size:0.75rem;color:var(--ksui-dt-text,#a1a1aa);background:transparent;border:0;cursor:pointer;transition:background-color 0.15s ease,color 0.15s ease;}
-.ksui-datepicker-quick-btn:hover{background:var(--ksui-dp-row-hover,rgba(39,39,42,0.5));color:var(--ksui-dt-fg,#ffffff);}
-.ksui-datepicker-quick-btn-active{background:var(--ksui-dp-range-mid-bg,rgba(245,158,11,0.2));color:var(--ksui-dt-accent,#fbbf24);}
-.ksui-datepicker-quick-btn-active:hover{background:var(--ksui-dp-range-mid-bg,rgba(245,158,11,0.2));color:var(--ksui-dt-accent,#fbbf24);}
+.ksui-datepicker-preview-chip{border-radius:0.25rem;background:var(--ksui-dp-preview-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 10%, transparent));padding:0.125rem 0.5rem;color:var(--ksui-dt-accent,var(--ks-accent,#fbbf24));}
+.ksui-datepicker-preview-hint{color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));}
+.ksui-datepicker-quick{display:flex;gap:0.375rem;border-bottom:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));padding:0.5rem 0.75rem;}
+.ksui-datepicker-quick-btn{border-radius:0.375rem;padding:0.25rem 0.5rem;font-size:0.75rem;color:var(--ksui-dt-text,var(--ks-fg-muted,#a1a1aa));background:transparent;border:0;cursor:pointer;transition:background-color 0.15s ease,color 0.15s ease;}
+.ksui-datepicker-quick-btn:hover{background:var(--ksui-dp-row-hover,var(--ks-border,rgba(39,39,42,0.5)));color:var(--ksui-dt-fg,var(--ks-fg,#ffffff));}
+.ksui-datepicker-quick-btn-active{background:var(--ksui-dp-range-mid-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 20%, transparent));color:var(--ksui-dt-accent,var(--ks-accent,#fbbf24));}
+.ksui-datepicker-quick-btn-active:hover{background:var(--ksui-dp-range-mid-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 20%, transparent));color:var(--ksui-dt-accent,var(--ks-accent,#fbbf24));}
 .ksui-datepicker-nav{margin-bottom:0.5rem;display:flex;align-items:center;justify-content:space-between;}
-.ksui-datepicker-nav-btn{border-radius:0.25rem;padding:0.25rem;color:var(--ksui-dt-text,#a1a1aa);background:transparent;border:0;cursor:pointer;display:inline-flex;transition:background-color 0.15s ease,color 0.15s ease;}
-.ksui-datepicker-nav-btn:hover{background:var(--ksui-dp-row-hover,rgba(39,39,42,0.5));color:var(--ksui-dt-fg,#ffffff);}
-.ksui-datepicker-month-label{font-size:0.875rem;font-weight:500;color:var(--ksui-dt-fg,#e4e4e7);}
-.ksui-datepicker-dow{margin-bottom:0.25rem;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;font-size:0.75rem;color:var(--ksui-dt-muted,#71717a);}
+.ksui-datepicker-nav-btn{border-radius:0.25rem;padding:0.25rem;color:var(--ksui-dt-text,var(--ks-fg-muted,#a1a1aa));background:transparent;border:0;cursor:pointer;display:inline-flex;transition:background-color 0.15s ease,color 0.15s ease;}
+.ksui-datepicker-nav-btn:hover{background:var(--ksui-dp-row-hover,var(--ks-border,rgba(39,39,42,0.5)));color:var(--ksui-dt-fg,var(--ks-fg,#ffffff));}
+.ksui-datepicker-month-label{font-size:0.875rem;font-weight:500;color:var(--ksui-dt-fg,var(--ks-fg,#ffffff));}
+.ksui-datepicker-dow{margin-bottom:0.25rem;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;font-size:0.75rem;color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));}
 .ksui-datepicker-dow span{padding:0.25rem 0;}
 .ksui-datepicker-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;}
-.ksui-datepicker-cell{border-radius:0.25rem;padding:0.375rem 0;text-align:center;font-size:0.75rem;color:var(--ksui-dp-cell-text,#d4d4d8);background:transparent;border:0;cursor:pointer;transition:background-color 0.15s ease,color 0.15s ease;}
-.ksui-datepicker-cell:hover{background:var(--ksui-dp-row-hover,rgba(39,39,42,0.5));color:var(--ksui-dt-fg,#ffffff);}
-.ksui-datepicker-cell-out{color:var(--ksui-dp-cell-out,#3f3f46);}
-.ksui-datepicker-cell-out:hover{background:var(--ksui-dp-preview-bg,rgba(39,39,42,0.5));color:var(--ksui-dt-muted,#71717a);}
-.ksui-datepicker-cell-today{font-weight:500;color:var(--ksui-dt-accent,#fbbf24);}
-.ksui-datepicker-cell-selected{background:var(--ksui-dp-sel-bg,rgba(217,119,6,0.3));font-weight:500;color:var(--ksui-dt-accent,#fbbf24);}
-.ksui-datepicker-cell-selected:hover{background:var(--ksui-dp-sel-bg,rgba(217,119,6,0.3));color:var(--ksui-dt-accent,#fbbf24);}
-.ksui-datepicker-cell-preview{background:var(--ksui-dp-preview-bg,rgba(245,158,11,0.1));font-weight:500;color:var(--ksui-dp-accent-soft,#fcd34d);}
-.ksui-datepicker-cell-range-end{background:var(--ksui-dp-range-end-bg,rgba(217,119,6,0.4));font-weight:500;color:var(--ksui-dp-accent-soft,#fcd34d);}
-.ksui-datepicker-cell-range-end:hover{background:var(--ksui-dp-range-end-bg,rgba(217,119,6,0.4));color:var(--ksui-dp-accent-soft,#fcd34d);}
-.ksui-datepicker-cell-in-range{background:var(--ksui-dp-range-mid-bg,rgba(245,158,11,0.15));color:var(--ksui-dp-accent-soft,#fcd34d);}
-.ksui-datepicker-cell-in-range:hover{background:var(--ksui-dp-range-mid-bg,rgba(245,158,11,0.15));color:var(--ksui-dp-accent-soft,#fcd34d);}
-.ksui-datepicker-cell-range-preview{background:var(--ksui-dp-preview-bg,rgba(245,158,11,0.1));color:var(--ksui-dp-accent-soft,#fcd34d);}
-.ksui-datepicker-toggle-row{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));padding:0.5rem 0.75rem;font-size:0.75rem;color:var(--ksui-dt-fg,#d4d4d8);}
-.ksui-datepicker-switch{position:relative;height:1rem;width:1.75rem;border-radius:9999px;padding:0.125rem;border:0;cursor:pointer;background:var(--ksui-dp-toggle-off,#3f3f46);transition:background-color 0.15s ease;}
-.ksui-datepicker-switch-on{background:var(--ksui-dp-toggle-on,rgba(245,158,11,0.8));}
+.ksui-datepicker-cell{border-radius:0.25rem;padding:0.375rem 0;text-align:center;font-size:0.75rem;color:var(--ksui-dp-cell-text,var(--ks-fg,#ffffff));background:transparent;border:0;cursor:pointer;transition:background-color 0.15s ease,color 0.15s ease;}
+.ksui-datepicker-cell:hover{background:var(--ksui-dp-row-hover,var(--ks-border,rgba(39,39,42,0.5)));color:var(--ksui-dt-fg,var(--ks-fg,#ffffff));}
+.ksui-datepicker-cell-out{color:var(--ksui-dp-cell-out,var(--ks-border-strong,#3f3f46));}
+.ksui-datepicker-cell-out:hover{background:var(--ksui-dp-preview-bg,var(--ks-border,rgba(39,39,42,0.5)));color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));}
+.ksui-datepicker-cell-today{font-weight:500;color:var(--ksui-dt-accent,var(--ks-accent,#fbbf24));}
+.ksui-datepicker-cell-selected{background:var(--ksui-dp-sel-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 30%, transparent));font-weight:500;color:var(--ksui-dt-accent,var(--ks-accent,#fbbf24));}
+.ksui-datepicker-cell-selected:hover{background:var(--ksui-dp-sel-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 30%, transparent));color:var(--ksui-dt-accent,var(--ks-accent,#fbbf24));}
+.ksui-datepicker-cell-preview{background:var(--ksui-dp-preview-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 10%, transparent));font-weight:500;color:var(--ksui-dp-accent-soft,var(--ks-accent-hover,#fcd34d));}
+.ksui-datepicker-cell-range-end{background:var(--ksui-dp-range-end-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 40%, transparent));font-weight:500;color:var(--ksui-dp-accent-soft,var(--ks-accent-hover,#fcd34d));}
+.ksui-datepicker-cell-range-end:hover{background:var(--ksui-dp-range-end-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 40%, transparent));color:var(--ksui-dp-accent-soft,var(--ks-accent-hover,#fcd34d));}
+.ksui-datepicker-cell-in-range{background:var(--ksui-dp-range-mid-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 15%, transparent));color:var(--ksui-dp-accent-soft,var(--ks-accent-hover,#fcd34d));}
+.ksui-datepicker-cell-in-range:hover{background:var(--ksui-dp-range-mid-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 15%, transparent));color:var(--ksui-dp-accent-soft,var(--ks-accent-hover,#fcd34d));}
+.ksui-datepicker-cell-range-preview{background:var(--ksui-dp-preview-bg,color-mix(in srgb, var(--ks-primary, #c9a961) 10%, transparent));color:var(--ksui-dp-accent-soft,var(--ks-accent-hover,#fcd34d));}
+.ksui-datepicker-toggle-row{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));padding:0.5rem 0.75rem;font-size:0.75rem;color:var(--ksui-dt-fg,var(--ks-fg,#ffffff));}
+.ksui-datepicker-switch{position:relative;height:1rem;width:1.75rem;border-radius:9999px;padding:0.125rem;border:0;cursor:pointer;background:var(--ksui-dp-toggle-off,var(--ks-border-strong,#3f3f46));transition:background-color 0.15s ease;}
+.ksui-datepicker-switch-on{background:var(--ksui-dp-toggle-on,color-mix(in srgb, var(--ks-primary, #c9a961) 80%, transparent));}
 .ksui-datepicker-switch-knob{display:block;height:0.75rem;width:0.75rem;border-radius:9999px;background:#ffffff;transition:transform 0.15s ease;transform:translateX(0);}
 .ksui-datepicker-switch-on .ksui-datepicker-switch-knob{transform:translateX(0.75rem);}
-.ksui-datepicker-time-row{border-top:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));padding:0.5rem 0.75rem;}
+.ksui-datepicker-time-row{border-top:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));padding:0.5rem 0.75rem;}
 .ksui-datepicker-time-inner{display:flex;align-items:center;gap:0.5rem;}
-.ksui-datepicker-time-icon{color:var(--ksui-dt-muted,#71717a);display:inline-flex;}
-.ksui-datepicker-time-input{flex:1 1 0%;border-radius:0.25rem;border:1px solid var(--ksui-dp-input-border,rgba(63,63,70,0.5));background:var(--ksui-dp-input-bg,rgba(39,39,42,0.5));padding:0.25rem 0.5rem;font-size:0.75rem;color:var(--ksui-dt-fg,#ffffff);outline:none;transition:border-color 0.15s ease;}
-.ksui-datepicker-time-input::placeholder{color:var(--ksui-dt-muted,#71717a);}
-.ksui-datepicker-time-input:focus{border-color:var(--ksui-dt-accent-border,rgba(245,158,11,0.5));}
-.ksui-datepicker-time-input-invalid{border-color:var(--ksui-dp-danger-border,rgba(239,68,68,0.5));}
-.ksui-datepicker-time-clear{border-radius:0.25rem;padding:0.125rem;color:var(--ksui-dt-muted,#71717a);background:transparent;border:0;cursor:pointer;display:inline-flex;}
-.ksui-datepicker-time-clear:hover{color:var(--ksui-dt-fg,#ffffff);}
-.ksui-datepicker-time-error{margin-top:0.25rem;font-size:0.75rem;color:var(--ksui-dp-danger,#f87171);}
-.ksui-datepicker-footer{display:flex;align-items:center;justify-content:flex-end;border-top:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));padding:0.5rem 0.75rem;}
-.ksui-datepicker-footer-clear{font-size:0.75rem;color:var(--ksui-dt-muted,#71717a);background:transparent;border:0;cursor:pointer;transition:color 0.15s ease;}
-.ksui-datepicker-footer-clear:hover{color:var(--ksui-dp-danger,#f87171);}
+.ksui-datepicker-time-icon{color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));display:inline-flex;}
+.ksui-datepicker-time-input{flex:1 1 0%;border-radius:0.25rem;border:1px solid var(--ksui-dp-input-border,color-mix(in srgb, var(--ks-border-strong, #3f3f46) 50%, transparent));background:var(--ksui-dp-input-bg,var(--ks-border,rgba(39,39,42,0.5)));padding:0.25rem 0.5rem;font-size:0.75rem;color:var(--ksui-dt-fg,var(--ks-fg,#ffffff));outline:none;transition:border-color 0.15s ease;}
+.ksui-datepicker-time-input::placeholder{color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));}
+.ksui-datepicker-time-input:focus{border-color:var(--ksui-dt-accent-border,color-mix(in srgb, var(--ks-focus-ring, #c9a961) 50%, transparent));}
+.ksui-datepicker-time-input-invalid{border-color:var(--ksui-dp-danger-border,color-mix(in srgb, var(--ks-danger, #ef4444) 50%, transparent));}
+.ksui-datepicker-time-clear{border-radius:0.25rem;padding:0.125rem;color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));background:transparent;border:0;cursor:pointer;display:inline-flex;}
+.ksui-datepicker-time-clear:hover{color:var(--ksui-dt-fg,var(--ks-fg,#ffffff));}
+.ksui-datepicker-time-error{margin-top:0.25rem;font-size:0.75rem;color:var(--ksui-dp-danger,var(--ks-danger-fg,#f87171));}
+.ksui-datepicker-footer{display:flex;align-items:center;justify-content:flex-end;border-top:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));padding:0.5rem 0.75rem;}
+.ksui-datepicker-footer-clear{font-size:0.75rem;color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));background:transparent;border:0;cursor:pointer;transition:color 0.15s ease;}
+.ksui-datepicker-footer-clear:hover{color:var(--ksui-dp-danger,var(--ks-danger-fg,#f87171));}
 `;
 
 function ensureDatePickerStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const el = document.createElement("style");
-  el.id = STYLE_ID;
-  el.textContent = DATEPICKER_CSS;
-  document.head.appendChild(el);
+  injectCSS(STYLE_ID, DATEPICKER_CSS);
 }
 
 // ---------------------------------------------------------------------------

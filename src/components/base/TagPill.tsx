@@ -14,7 +14,7 @@ interface TagPillProps {
 export default function TagPill(props: TagPillProps): JSX.Element {
   return (
     <span
-      class={`inline-block rounded-full border border-zinc-700 bg-zinc-800/50 px-2 py-0.5 text-[10px] text-zinc-400 ${
+      class={`inline-block rounded-full border border-[var(--ks-border-strong,#3f3f46)] bg-[var(--ks-surface-raised,#1a1a1a)] px-2 py-0.5 text-[10px] text-[var(--ks-fg-muted,#a1a1aa)] ${
         props.class ?? ""
       }`}
     >

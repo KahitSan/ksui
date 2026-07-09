@@ -63,10 +63,10 @@ export default function NotFound(props: NotFoundProps): JSX.Element {
   const showTitle = () => local.title !== "";
   const buttonClass =
     "inline-flex items-center justify-center gap-2 rounded-md border " +
-    "border-amber-600/60 bg-amber-600/20 px-5 py-2.5 text-sm font-semibold " +
-    "text-amber-400 transition-colors hover:border-amber-500 " +
-    "hover:bg-amber-600/30 focus:outline-none focus-visible:ring-2 " +
-    "focus-visible:ring-amber-500/60";
+    "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_60%,transparent)] bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_20%,transparent)] px-5 py-2.5 text-sm font-semibold " +
+    "text-[var(--ks-accent,#fbbf24)] transition-colors hover:border-[var(--ks-accent,#fbbf24)] " +
+    "hover:bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_30%,transparent)] focus:outline-none focus-visible:ring-2 " +
+    "focus-visible:ring-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_60%,transparent)]";
 
   return (
     <div
@@ -83,16 +83,16 @@ export default function NotFound(props: NotFoundProps): JSX.Element {
         </Show>
 
         <Show when={showTitle()}>
-          <h1 class="text-4xl md:text-6xl font-bold text-amber-500 mb-4">
+          <h1 class="text-4xl md:text-6xl font-bold text-[var(--ks-accent,#fbbf24)] mb-4">
             {local.title || "404"}
           </h1>
         </Show>
 
-        <h2 class="text-xl md:text-2xl font-bold text-white mb-3">
+        <h2 class="text-xl md:text-2xl font-bold text-[var(--ks-fg,#ffffff)] mb-3">
           {local.heading || "Page Not Found"}
         </h2>
 
-        <p class="text-sm text-zinc-400 max-w-md mb-8">
+        <p class="text-sm text-[var(--ks-fg-muted,#a1a1aa)] max-w-md mb-8">
           {local.message ||
             "The page you're looking for doesn't exist or has been moved."}
         </p>

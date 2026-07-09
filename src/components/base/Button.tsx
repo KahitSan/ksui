@@ -23,6 +23,7 @@ import {
   type Component,
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { injectCSS } from "../../utils/inject-css";
 
 const BUTTON_STYLE_ID = "ks-button-inline-style";
 const BUTTON_CSS = `
@@ -49,12 +50,7 @@ const BUTTON_CSS = `
 `;
 
 function ensureButtonStyle() {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(BUTTON_STYLE_ID)) return;
-  const el = document.createElement("style");
-  el.id = BUTTON_STYLE_ID;
-  el.textContent = BUTTON_CSS;
-  document.head.appendChild(el);
+  injectCSS(BUTTON_STYLE_ID, BUTTON_CSS);
 }
 
 const styles: Record<string, string> = {
@@ -106,12 +102,24 @@ function cn(...classes: Array<string | undefined | null | false>): string {
   return classes.filter(Boolean).join(" ");
 }
 
+// Intent → design token: the button's fill/border/glow effects are all
+// derived from a single base token per intent. Every effect string below is
+// written out literally (not built from a template at runtime) because the
+// theming rollout's check-token-fallbacks.mjs gate statically greps source
+// text for the color-mix CSS function with a literal --ks-* var name — an
+// interpolated `${token.name}` would read as malformed to that gate even
+// though the runtime output is correct.
 interface IntentColors {
   ripple: string;
-  effect: string;
+  effectColor: string;
   effectBg: string;
   effectBorder: string;
+  effectBgHover: string;
+  effectBorderHover: string;
   effectGlow: string;
+  effectGlowHover: string;
+  effectPulseBgMid: string;
+  effectPulseGlow: string;
 }
 
 interface IntentConfig {
@@ -121,41 +129,64 @@ interface IntentConfig {
   colors: IntentColors;
 }
 
+const RIPPLE = "color-mix(in srgb, var(--ks-fg, #ffffff) 30%, transparent)";
+
 const buttonIntentConfig: Record<ButtonIntent, IntentConfig> = {
   primary: {
-    textColor: "text-amber-400",
-    background: "bg-amber-600/20 border-amber-600/60",
-    hover: "hover:bg-amber-600/30 hover:border-amber-500",
+    textColor: "text-[var(--ks-accent,#fbbf24)]",
+    background:
+      "bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_20%,transparent)] border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_60%,transparent)]",
+    hover:
+      "hover:bg-[color-mix(in_srgb,var(--ks-primary-hover,#d4b876)_30%,transparent)] hover:border-[var(--ks-primary-hover,#d4b876)]",
     colors: {
-      ripple: "rgba(255, 255, 255, 0.3)",
-      effect: "rgba(201, 169, 97, 0.4)",
-      effectBg: "rgba(201, 169, 97, 0.1)",
-      effectBorder: "rgba(201, 169, 97, 0.4)",
-      effectGlow: "rgba(201, 169, 97, 0.3)",
+      ripple: RIPPLE,
+      effectColor: "color-mix(in srgb, var(--ks-primary, #c9a961) 40%, transparent)",
+      effectBg: "color-mix(in srgb, var(--ks-primary, #c9a961) 10%, transparent)",
+      effectBorder: "color-mix(in srgb, var(--ks-primary, #c9a961) 40%, transparent)",
+      effectBgHover: "color-mix(in srgb, var(--ks-primary, #c9a961) 20%, transparent)",
+      effectBorderHover: "color-mix(in srgb, var(--ks-primary, #c9a961) 60%, transparent)",
+      effectGlow: "color-mix(in srgb, var(--ks-primary, #c9a961) 30%, transparent)",
+      effectGlowHover: "color-mix(in srgb, var(--ks-primary, #c9a961) 50%, transparent)",
+      effectPulseBgMid: "color-mix(in srgb, var(--ks-primary, #c9a961) 20%, transparent)",
+      effectPulseGlow: "color-mix(in srgb, var(--ks-primary, #c9a961) 20%, transparent)",
     },
   },
   danger: {
-    textColor: "text-red-400",
-    background: "bg-red-600/20 border-red-600/60",
-    hover: "hover:bg-red-600/30 hover:border-red-500",
+    textColor: "text-[var(--ks-danger-fg,#f87171)]",
+    background:
+      "bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_20%,transparent)] border-[color-mix(in_srgb,var(--ks-danger,#ef4444)_60%,transparent)]",
+    hover:
+      "hover:bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_30%,transparent)] hover:border-[var(--ks-danger,#ef4444)]",
     colors: {
-      ripple: "rgba(255, 255, 255, 0.3)",
-      effect: "rgba(255, 68, 68, 0.4)",
-      effectBg: "rgba(255, 68, 68, 0.1)",
-      effectBorder: "rgba(255, 68, 68, 0.4)",
-      effectGlow: "rgba(255, 68, 68, 0.3)",
+      ripple: RIPPLE,
+      effectColor: "color-mix(in srgb, var(--ks-danger, #ef4444) 40%, transparent)",
+      effectBg: "color-mix(in srgb, var(--ks-danger, #ef4444) 10%, transparent)",
+      effectBorder: "color-mix(in srgb, var(--ks-danger, #ef4444) 40%, transparent)",
+      effectBgHover: "color-mix(in srgb, var(--ks-danger, #ef4444) 20%, transparent)",
+      effectBorderHover: "color-mix(in srgb, var(--ks-danger, #ef4444) 60%, transparent)",
+      effectGlow: "color-mix(in srgb, var(--ks-danger, #ef4444) 30%, transparent)",
+      effectGlowHover: "color-mix(in srgb, var(--ks-danger, #ef4444) 50%, transparent)",
+      effectPulseBgMid: "color-mix(in srgb, var(--ks-danger, #ef4444) 20%, transparent)",
+      effectPulseGlow: "color-mix(in srgb, var(--ks-danger, #ef4444) 20%, transparent)",
     },
   },
   secondary: {
-    textColor: "text-slate-400",
-    background: "bg-slate-600/20 border-slate-600/60",
-    hover: "hover:bg-slate-600/30 hover:border-slate-500",
+    textColor: "text-[var(--ks-fg-muted,#a1a1aa)]",
+    background:
+      "bg-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_20%,transparent)] border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_60%,transparent)]",
+    hover:
+      "hover:bg-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_30%,transparent)] hover:border-[var(--ks-fg-muted,#a1a1aa)]",
     colors: {
-      ripple: "rgba(255, 255, 255, 0.3)",
-      effect: "rgba(148, 163, 184, 0.4)",
-      effectBg: "rgba(148, 163, 184, 0.1)",
-      effectBorder: "rgba(148, 163, 184, 0.4)",
-      effectGlow: "rgba(148, 163, 184, 0.3)",
+      ripple: RIPPLE,
+      effectColor: "color-mix(in srgb, var(--ks-border-strong, #3f3f46) 40%, transparent)",
+      effectBg: "color-mix(in srgb, var(--ks-border-strong, #3f3f46) 10%, transparent)",
+      effectBorder: "color-mix(in srgb, var(--ks-border-strong, #3f3f46) 40%, transparent)",
+      effectBgHover: "color-mix(in srgb, var(--ks-border-strong, #3f3f46) 20%, transparent)",
+      effectBorderHover: "color-mix(in srgb, var(--ks-border-strong, #3f3f46) 60%, transparent)",
+      effectGlow: "color-mix(in srgb, var(--ks-border-strong, #3f3f46) 30%, transparent)",
+      effectGlowHover: "color-mix(in srgb, var(--ks-border-strong, #3f3f46) 50%, transparent)",
+      effectPulseBgMid: "color-mix(in srgb, var(--ks-border-strong, #3f3f46) 20%, transparent)",
+      effectPulseGlow: "color-mix(in srgb, var(--ks-border-strong, #3f3f46) 20%, transparent)",
     },
   },
 };
@@ -289,16 +320,16 @@ const Button = (props: ButtonProps): JSX.Element => {
   const customProperties = createMemo(() => {
     const colors = intentConfig().colors;
     return {
-      "--ks-effect-color": colors.effect,
+      "--ks-effect-color": colors.effectColor,
       "--ks-effect-bg": colors.effectBg,
       "--ks-effect-border": colors.effectBorder,
-      "--ks-effect-bg-hover": colors.effect.replace("0.1", "0.2"),
-      "--ks-effect-border-hover": colors.effect.replace("0.4", "0.6"),
+      "--ks-effect-bg-hover": colors.effectBgHover,
+      "--ks-effect-border-hover": colors.effectBorderHover,
       "--ks-effect-glow": colors.effectGlow,
-      "--ks-effect-glow-hover": colors.effectGlow.replace("0.3", "0.5"),
+      "--ks-effect-glow-hover": colors.effectGlowHover,
       "--ks-effect-pulse-bg": colors.effectBg,
-      "--ks-effect-pulse-bg-mid": colors.effect.replace("0.4", "0.2"),
-      "--ks-effect-pulse-glow": colors.effectGlow.replace("0.3", "0.2"),
+      "--ks-effect-pulse-bg-mid": colors.effectPulseBgMid,
+      "--ks-effect-pulse-glow": colors.effectPulseGlow,
       "--ks-effect-pulse-glow-mid": colors.effectGlow,
       "--ks-ripple-color": colors.ripple,
     } as JSX.CSSProperties;
@@ -416,7 +447,8 @@ const Button = (props: ButtonProps): JSX.Element => {
                 top: `${ripple.y - ripple.size / 2}px`,
                 width: `${ripple.size}px`,
                 height: `${ripple.size}px`,
-                "background-color": "var(--ks-ripple-color, rgba(255, 255, 255, 0.3))",
+                "background-color":
+                  "var(--ks-ripple-color, color-mix(in srgb, var(--ks-fg, #ffffff) 30%, transparent))",
               }}
             />
           )}

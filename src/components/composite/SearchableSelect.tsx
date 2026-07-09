@@ -151,7 +151,7 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
         onClick={() => !props.disabled && setOpen((o) => !o)}
         class={
           props.triggerClass ??
-          "inline-flex items-center gap-1.5 text-xs text-zinc-300 bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/60 rounded px-2 py-1 cursor-pointer transition-colors"
+          "inline-flex items-center gap-1.5 text-xs text-[var(--ks-fg,#ffffff)] bg-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] hover:bg-[var(--ks-surface-raised,#1a1a1a)] border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_60%,transparent)] rounded px-2 py-1 cursor-pointer transition-colors"
         }
         classList={{ "cursor-not-allowed opacity-60": props.disabled }}
         title={props.disabled ? undefined : "Click to select"}
@@ -160,33 +160,33 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
           {busy()
             ? "…"
             : (currentLabel() ?? (
-                <span class="text-zinc-500 italic">{props.placeholder ?? "Select…"}</span>
+                <span class="text-[var(--ks-fg-subtle,#71717a)] italic">{props.placeholder ?? "Select…"}</span>
               ))}
         </span>
-        <ChevronsUpDown size={12} class="text-zinc-500 shrink-0" />
+        <ChevronsUpDown size={12} class="text-[var(--ks-fg-subtle,#71717a)] shrink-0" />
       </button>
       <Show when={open()}>
         <Portal>
           <div
             ref={popupRef}
-            class="z-[10000] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[10000] rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
           >
-            <div class="px-2 py-1.5 border-b border-zinc-800">
+            <div class="px-2 py-1.5 border-b border-[var(--ks-border-strong,#3f3f46)]">
               <input
                 ref={inputRef}
                 type="text"
                 value={query()}
                 onInput={(e) => setQuery(e.currentTarget.value)}
                 placeholder={props.searchPlaceholder ?? "Search…"}
-                class="w-full px-2 py-1 text-xs bg-zinc-950 border border-zinc-800 rounded text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50"
+                class="w-full px-2 py-1 text-xs bg-[var(--ks-bg,#0a0a0a)] border border-[var(--ks-border-strong,#3f3f46)] rounded text-[var(--ks-fg,#ffffff)] placeholder:text-[var(--ks-input-placeholder,#71717a)] focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
               />
             </div>
             <div class="flex-1 overflow-y-auto">
               <Show
                 when={!props.loading && filtered().length > 0}
                 fallback={
-                  <div class="px-3 py-3 text-xs text-zinc-500 text-center">{emptyStateLabel()}</div>
+                  <div class="px-3 py-3 text-xs text-[var(--ks-fg-subtle,#71717a)] text-center">{emptyStateLabel()}</div>
                 }
               >
                 <For each={filtered()}>
@@ -196,22 +196,22 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
                       <button
                         type="button"
                         onClick={() => select(opt)}
-                        class="w-full text-left px-3 py-2 text-xs hover:bg-amber-500/10 transition-colors flex items-center justify-between gap-2"
+                        class="w-full text-left px-3 py-2 text-xs hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_10%,transparent)] transition-colors flex items-center justify-between gap-2"
                         classList={{
-                          "text-amber-400": selected(),
-                          "text-zinc-200": !selected(),
+                          "text-[var(--ks-accent,#fbbf24)]": selected(),
+                          "text-[var(--ks-fg,#ffffff)]": !selected(),
                         }}
                       >
                         <span class="flex flex-col min-w-0">
                           <span class="font-medium truncate">{opt.label}</span>
                           <Show when={opt.description}>
-                            <span class="text-[10px] text-zinc-500 truncate">
+                            <span class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] truncate">
                               {opt.description}
                             </span>
                           </Show>
                         </span>
                         <Show when={selected()}>
-                          <span class="text-amber-400 shrink-0">✓</span>
+                          <span class="text-[var(--ks-accent,#fbbf24)] shrink-0">✓</span>
                         </Show>
                       </button>
                     );
@@ -220,11 +220,11 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
               </Show>
             </div>
             <Show when={props.allowClear && props.value != null && props.value !== ""}>
-              <div class="border-t border-zinc-800">
+              <div class="border-t border-[var(--ks-border-strong,#3f3f46)]">
                 <button
                   type="button"
                   onClick={() => select(null)}
-                  class="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+                  class="w-full text-left px-3 py-2 text-xs text-[var(--ks-danger-fg,#f87171)] hover:bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_10%,transparent)] transition-colors flex items-center gap-2"
                 >
                   <X size={12} />
                   <span>Clear selection</span>

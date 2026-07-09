@@ -73,7 +73,7 @@ export default function AccountRadioPicker(props: AccountRadioPickerProps) {
           onInput={(e) => props.onChange(e.currentTarget.value)}
           aria-label={props.ariaLabel}
           placeholder="Account ID (financial-accounts module unavailable)"
-          class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button focus:outline-none focus:border-amber-500/50"
+          class="w-full bg-[color-mix(in_srgb,var(--ks-surface,#0f0f0f)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_50%,transparent)]"
         />
       }
     >
@@ -98,16 +98,20 @@ export default function AccountRadioPicker(props: AccountRadioPickerProps) {
                 onClick={() => props.onChange(a.id.toString())}
                 class="group flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm transition-colors cursor-pointer ks-hud-clip-top-left-bottom-right"
                 classList={{
-                  "border-amber-500/50 bg-amber-600/10 text-amber-300":
+                  "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_50%,transparent)] bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_10%,transparent)] text-[var(--ks-accent-hover,#fcd34d)]":
                     selected(),
-                  "border-zinc-700 bg-zinc-800/50 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800":
+                  "border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] text-[var(--ks-fg-muted,#a1a1aa)] hover:border-[var(--ks-border-strong,#3f3f46)] hover:bg-[var(--ks-surface-raised,#1a1a1a)]":
                     !selected(),
                 }}
               >
                 <AccountAvatar
                   account={a}
                   size={24}
-                  iconClass={selected() ? "text-amber-300" : "text-zinc-400"}
+                  iconClass={
+                    selected()
+                      ? "text-[var(--ks-accent-hover,#fcd34d)]"
+                      : "text-[var(--ks-fg-muted,#a1a1aa)]"
+                  }
                 />
                 <span class="truncate">{a.name}</span>
               </button>

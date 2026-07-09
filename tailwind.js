@@ -19,6 +19,10 @@
 /** @type {import('tailwindcss').Plugin} */
 export default function ksuiTailwindPlugin({ addUtilities, addComponents }) {
   // ─── Button intents ────────────────────────────────────────────────
+  // Amber/red/slate intent palette mirrors Button.tsx's own documented
+  // exception (component-authored tone system, not a 1:1 §1.2 surface/
+  // text/border mapping) — none of these rgba alpha values byte-match a
+  // §1.2 dark default, so left literal rather than guessed.
   // Primary (amber)
   addUtilities({
     ".ks-btn-primary": {
@@ -134,7 +138,7 @@ export default function ksuiTailwindPlugin({ addUtilities, addComponents }) {
       "align-items": "center",
       gap: "0.5rem",
       padding: "0.375rem 0.75rem",
-      "background-color": "rgb(24 24 27)",
+      "background-color": "var(--ks-input-bg, rgb(24 24 27))",
       border: "1px solid rgb(63 63 70 / 0.6)",
       "border-radius": "0.25rem",
       color: "rgb(228 228 231)",
@@ -152,7 +156,7 @@ export default function ksuiTailwindPlugin({ addUtilities, addComponents }) {
       padding: "0.5rem 1rem",
       "text-align": "left",
       "font-weight": 500,
-      color: "rgb(161 161 170)",
+      color: "var(--ks-fg-muted, rgb(161 161 170))",
       "font-size": "0.75rem",
       "text-transform": "uppercase",
       "letter-spacing": "0.05em",
@@ -168,7 +172,7 @@ export default function ksuiTailwindPlugin({ addUtilities, addComponents }) {
     ".ks-dt-empty": {
       padding: "2rem",
       "text-align": "center",
-      color: "rgb(113 113 122)",
+      color: "var(--ks-fg-subtle, rgb(113 113 122))",
     },
     ".ks-dt-pager": {
       display: "flex",
@@ -177,7 +181,7 @@ export default function ksuiTailwindPlugin({ addUtilities, addComponents }) {
       padding: "0.75rem 1rem",
       "border-top": "1px solid rgb(39 39 42 / 0.6)",
       "font-size": "0.8125rem",
-      color: "rgb(161 161 170)",
+      color: "var(--ks-fg-muted, rgb(161 161 170))",
     },
   });
 
@@ -194,7 +198,7 @@ export default function ksuiTailwindPlugin({ addUtilities, addComponents }) {
       padding: "1rem",
     },
     ".ks-modal-card": {
-      "background-color": "rgb(24 24 27)",
+      "background-color": "var(--ks-overlay-surface, rgb(24 24 27))",
       border: "1px solid rgb(63 63 70 / 0.6)",
       "max-height": "calc(100vh - 2rem)",
       overflow: "auto",
@@ -246,7 +250,7 @@ export default function ksuiTailwindPlugin({ addUtilities, addComponents }) {
       "background-color": "rgba(59 130 246 / 0.1)",
     },
     ".ks-pill-neutral": {
-      color: "rgb(161 161 170)",
+      color: "var(--ks-fg-muted, rgb(161 161 170))",
       "background-color": "rgb(63 63 70 / 0.3)",
     },
   });
@@ -259,7 +263,7 @@ export default function ksuiTailwindPlugin({ addUtilities, addComponents }) {
       gap: "0.25rem",
       padding: "0.25rem 0.5rem",
       "font-size": "0.75rem",
-      color: "rgb(161 161 170)",
+      color: "var(--ks-fg-muted, rgb(161 161 170))",
       "background-color": "transparent",
       border: "1px solid rgb(63 63 70 / 0.6)",
       "border-radius": "0.25rem",

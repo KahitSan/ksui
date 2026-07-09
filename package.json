@@ -32,6 +32,9 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "check:tokens": "node scripts/check-token-fallbacks.mjs",
+    "check:coverage": "node scripts/check-token-fallbacks.mjs --coverage",
+    "check:palette": "node scripts/check-palette-drift.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

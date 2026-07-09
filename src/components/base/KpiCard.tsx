@@ -9,10 +9,10 @@ export type KpiTone = "success" | "danger" | "info" | "warning";
 // Domain-free tone record. Each tone supplies a Tailwind text class for the
 // label icon + value and a literal SVG stroke color for the sparkline.
 const TONE: Record<KpiTone, { text: string; stroke: string }> = {
-  success: { text: "text-emerald-400", stroke: "#34d399" },
-  danger: { text: "text-red-400", stroke: "#f87171" },
-  info: { text: "text-blue-400", stroke: "#60a5fa" },
-  warning: { text: "text-amber-400", stroke: "#fbbf24" },
+  success: { text: "text-[var(--ks-success-fg,#34d399)]", stroke: "var(--ks-success-fg, #34d399)" },
+  danger: { text: "text-[var(--ks-danger-fg,#f87171)]", stroke: "var(--ks-danger-fg, #f87171)" },
+  info: { text: "text-[var(--ks-info-fg,#7dd3fc)]", stroke: "var(--ks-info-fg, #7dd3fc)" },
+  warning: { text: "text-[var(--ks-warning-fg,#fbbf24)]", stroke: "var(--ks-warning-fg, #fbbf24)" },
 };
 
 // Module-private counter so each card's sparkline gradient gets a unique id,
@@ -71,12 +71,12 @@ export default function KpiCard(props: KpiCardProps): JSX.Element {
 
   return (
     <div
-      class={`rounded-lg border border-zinc-800/50 bg-zinc-900/50 p-4 relative overflow-hidden ${
+      class={`rounded-lg border border-[var(--ks-border,rgba(39,39,42,0.5))] bg-[var(--ks-surface,#0f0f0f)]/50 p-4 relative overflow-hidden ${
         props.clipClass ?? ""
       } ${props.class ?? ""}`}
     >
       <div class="flex items-start justify-between mb-3">
-        <span class="text-[10px] text-zinc-500 uppercase tracking-[0.25em] font-semibold">
+        <span class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] uppercase tracking-[0.25em] font-semibold">
           {props.label}
         </span>
         <div class={`flex items-center justify-center ${t().text}`}>
@@ -91,7 +91,7 @@ export default function KpiCard(props: KpiCardProps): JSX.Element {
             {props.value}
           </div>
           <Show when={props.hint}>
-            <div class="text-[11px] text-zinc-600 mt-1">{props.hint}</div>
+            <div class="text-[11px] text-[var(--ks-fg-subtle,#71717a)] mt-1">{props.hint}</div>
           </Show>
         </div>
         <Show when={sparkPath()}>

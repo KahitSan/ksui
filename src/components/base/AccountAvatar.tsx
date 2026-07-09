@@ -117,7 +117,7 @@ export default function AccountAvatar(props: AccountAvatarProps) {
     <Dynamic
       component={getAccountIcon(props.account)}
       size={iconSize()}
-      class={props.iconClass ?? "text-zinc-300"}
+      class={props.iconClass ?? "text-[var(--ks-fg-muted,#a1a1aa)]"}
       style={iconStyle()}
     />
   );

@@ -18,7 +18,7 @@ export function renderCell(
       return (
         <button
           data-testid={`${spec.testIdPrefix}-row-${row.id}`}
-          class="text-left text-zinc-200 hover:text-amber-400 transition-colors cursor-pointer"
+          class="text-left text-[var(--ks-fg,#ffffff)] hover:text-[var(--ks-accent,#fbbf24)] transition-colors cursor-pointer"
           onClick={() => onTitleClick(row.id)}
         >
           {String(raw ?? "")}
@@ -26,7 +26,7 @@ export function renderCell(
       );
     case "enum": {
       const key = String(raw ?? "");
-      return <span class="text-zinc-400 text-sm capitalize">{r.labels[key] || key}</span>;
+      return <span class="text-[var(--ks-fg-muted,#a1a1aa)] text-sm capitalize">{r.labels[key] || key}</span>;
     }
     case "status": {
       const active = Boolean(raw);
@@ -35,7 +35,10 @@ export function renderCell(
     }
     case "text":
     default: {
-      const cls = (r.type === "text" && r.muted) ? "text-zinc-500 text-sm" : "text-zinc-400 text-sm";
+      const cls =
+        r.type === "text" && r.muted
+          ? "text-[var(--ks-fg-subtle,#71717a)] text-sm"
+          : "text-[var(--ks-fg-muted,#a1a1aa)] text-sm";
       const text = raw === null || raw === undefined || raw === "" ? "—" : String(raw);
       return <span class={cls}>{text}</span>;
     }

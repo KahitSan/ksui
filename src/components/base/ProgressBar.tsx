@@ -6,6 +6,7 @@
 import type { Component, JSX } from "solid-js";
 import { createMemo, splitProps, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { injectCSS } from "../../utils/inject-css";
 
 // The monolith ships these as a CSS module (ProgressBar.module.css). The
 // plugin remote builds to a single IIFE that the host serves as one script —
@@ -14,22 +15,16 @@ import { Dynamic } from "solid-js/web";
 // the keyframes + helper classes once per page via a <style> tag and reference
 // them with plain (unscoped) class names so the bundle stays self-contained.
 const PROGRESS_STYLE_ID = "ks-progress-bar-inline-style";
+// Shimmer stops per THEME-SPEC §6a named exception: primary through
+// surface-raised reads as a brand-tinted sheen instead of a flat white one.
 const PROGRESS_CSS = `
 .ks-progress-fill { position: relative; border-radius: 0; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
 .ks-progress-indicator { border-radius: 0; box-shadow: 0 0 2px currentColor; }
 .ks-progress-overflow { position: relative; }
 @keyframes ksLiveTimerShimmer { 0% { transform: translateX(-100%) skewX(-25deg); } 100% { transform: translateX(100%) skewX(-25deg); } }
-.ks-progress-shimmer { animation: ksLiveTimerShimmer 2s infinite; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent); background-size: 200% 100%; height: 100%; width: 100%; position: absolute; top: 0; left: 0; opacity: 0.7; }
+.ks-progress-shimmer { animation: ksLiveTimerShimmer 2s infinite; background: linear-gradient(90deg, transparent, var(--ks-primary, #c9a961), transparent); background-size: 200% 100%; height: 100%; width: 100%; position: absolute; top: 0; left: 0; opacity: 0.7; }
 @media (prefers-reduced-motion: reduce) { .ks-progress-fill { transition: width 0.3s ease; } }
 `;
-function ensureProgressStyle() {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(PROGRESS_STYLE_ID)) return;
-  const el = document.createElement("style");
-  el.id = PROGRESS_STYLE_ID;
-  el.textContent = PROGRESS_CSS;
-  document.head.appendChild(el);
-}
 const styles: Record<string, string> = {
   "ks-progress-fill": "ks-progress-fill",
   "ks-progress-indicator": "ks-progress-indicator",
@@ -65,69 +60,78 @@ interface ColorInfo {
   shimmer: string;
 }
 
+// Caller picks a color by name (e.g. class="text-red-400"); each name maps to
+// the closest §1.2 token by role — the 4 semantic tokens for their matching
+// hue, the neutral fg-muted token for the 3 near-identical grays, and the
+// nearest chart-series hue for the two colors with no semantic/neutral token
+// (orange, purple) since ksui has no dedicated token for those hues. Every
+// effect string below is written out literally (not built from a template at
+// runtime) because the theming rollout's check-token-fallbacks.mjs gate
+// statically greps source text for the color-mix CSS function with a literal
+// --ks-* var name.
 const COLOR_MAP: Record<string, ColorInfo> = {
   red: {
-    fill: "rgba(255, 68, 68, 0.2)",
-    indicator: "#FF4444",
-    stripe: "rgba(255, 68, 68, 0.4)",
-    overflow: "rgba(255, 68, 68, 0.4)",
-    shimmer: "rgba(255, 68, 68, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-danger, #ef4444) 20%, transparent)",
+    indicator: "var(--ks-danger, #ef4444)",
+    stripe: "color-mix(in srgb, var(--ks-danger, #ef4444) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-danger, #ef4444) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-danger, #ef4444) 30%, transparent)",
   },
   green: {
-    fill: "rgba(0, 204, 136, 0.2)",
-    indicator: "#00CC88",
-    stripe: "rgba(0, 204, 136, 0.4)",
-    overflow: "rgba(0, 204, 136, 0.4)",
-    shimmer: "rgba(0, 204, 136, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-success, #10b981) 20%, transparent)",
+    indicator: "var(--ks-success, #10b981)",
+    stripe: "color-mix(in srgb, var(--ks-success, #10b981) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-success, #10b981) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-success, #10b981) 30%, transparent)",
   },
   blue: {
-    fill: "rgba(74, 158, 255, 0.2)",
-    indicator: "#4A9EFF",
-    stripe: "rgba(74, 158, 255, 0.4)",
-    overflow: "rgba(74, 158, 255, 0.4)",
-    shimmer: "rgba(74, 158, 255, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-info, #38bdf8) 20%, transparent)",
+    indicator: "var(--ks-info, #38bdf8)",
+    stripe: "color-mix(in srgb, var(--ks-info, #38bdf8) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-info, #38bdf8) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-info, #38bdf8) 30%, transparent)",
   },
   amber: {
-    fill: "rgba(245, 158, 11, 0.2)",
-    indicator: "#F59E0B",
-    stripe: "rgba(245, 158, 11, 0.4)",
-    overflow: "rgba(245, 158, 11, 0.4)",
-    shimmer: "rgba(245, 158, 11, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-warning, #f59e0b) 20%, transparent)",
+    indicator: "var(--ks-warning, #f59e0b)",
+    stripe: "color-mix(in srgb, var(--ks-warning, #f59e0b) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-warning, #f59e0b) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-warning, #f59e0b) 30%, transparent)",
   },
   orange: {
-    fill: "rgba(255, 136, 51, 0.2)",
-    indicator: "#FF8833",
-    stripe: "rgba(255, 136, 51, 0.4)",
-    overflow: "rgba(255, 136, 51, 0.4)",
-    shimmer: "rgba(255, 136, 51, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-chart-4, #f59e0b) 20%, transparent)",
+    indicator: "var(--ks-chart-4, #f59e0b)",
+    stripe: "color-mix(in srgb, var(--ks-chart-4, #f59e0b) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-chart-4, #f59e0b) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-chart-4, #f59e0b) 30%, transparent)",
   },
   purple: {
-    fill: "rgba(168, 85, 247, 0.2)",
-    indicator: "#A855F7",
-    stripe: "rgba(168, 85, 247, 0.4)",
-    overflow: "rgba(168, 85, 247, 0.4)",
-    shimmer: "rgba(168, 85, 247, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-chart-6, #a78bfa) 20%, transparent)",
+    indicator: "var(--ks-chart-6, #a78bfa)",
+    stripe: "color-mix(in srgb, var(--ks-chart-6, #a78bfa) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-chart-6, #a78bfa) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-chart-6, #a78bfa) 30%, transparent)",
   },
   slate: {
-    fill: "rgba(148, 163, 184, 0.2)",
-    indicator: "#94A3B8",
-    stripe: "rgba(148, 163, 184, 0.4)",
-    overflow: "rgba(148, 163, 184, 0.4)",
-    shimmer: "rgba(148, 163, 184, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 20%, transparent)",
+    indicator: "var(--ks-fg-muted, #a1a1aa)",
+    stripe: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 30%, transparent)",
   },
   gray: {
-    fill: "rgba(156, 163, 175, 0.2)",
-    indicator: "#9CA3AF",
-    stripe: "rgba(156, 163, 175, 0.4)",
-    overflow: "rgba(156, 163, 175, 0.4)",
-    shimmer: "rgba(156, 163, 175, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 20%, transparent)",
+    indicator: "var(--ks-fg-muted, #a1a1aa)",
+    stripe: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 30%, transparent)",
   },
   zinc: {
-    fill: "rgba(161, 161, 170, 0.2)",
-    indicator: "#A1A1AA",
-    stripe: "rgba(161, 161, 170, 0.4)",
-    overflow: "rgba(161, 161, 170, 0.4)",
-    shimmer: "rgba(161, 161, 170, 0.3)",
+    fill: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 20%, transparent)",
+    indicator: "var(--ks-fg-muted, #a1a1aa)",
+    stripe: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    overflow: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 40%, transparent)",
+    shimmer: "color-mix(in srgb, var(--ks-fg-muted, #a1a1aa) 30%, transparent)",
   },
 };
 
@@ -149,7 +153,7 @@ function extractTextSize(className: string): number {
 }
 
 const ProgressBar: Component<ProgressBarProps> = (props) => {
-  ensureProgressStyle();
+  injectCSS(PROGRESS_STYLE_ID, PROGRESS_CSS);
   const [local, others] = splitProps(props, [
     "progress",
     "icon",
@@ -185,7 +189,7 @@ const ProgressBar: Component<ProgressBarProps> = (props) => {
 
   const containerClasses = createMemo(() =>
     cn(
-      "select-none relative overflow-hidden rounded bg-black/20 border border-zinc-700/40",
+      "select-none relative overflow-hidden rounded bg-[var(--ks-surface,#0f0f0f)]/20 border border-[var(--ks-border-strong,#3f3f46)]/40",
       "h-8",
       !classProp()?.includes("w-") ? "w-full" : "",
       classProp(),
@@ -302,9 +306,9 @@ const ProgressBar: Component<ProgressBarProps> = (props) => {
           )}
           {label() && (
             <>
-              {(Icon() || statusLabel()) && <span class="text-zinc-500 mx-1">·</span>}
+              {(Icon() || statusLabel()) && <span class="text-[var(--ks-fg-subtle,#71717a)] mx-1">·</span>}
               <span class="flex-1 min-w-0">
-                <span class="text-zinc-400 block overflow-hidden text-ellipsis whitespace-nowrap">
+                <span class="text-[var(--ks-fg-muted,#a1a1aa)] block overflow-hidden text-ellipsis whitespace-nowrap">
                   {label()}
                 </span>
               </span>
@@ -317,7 +321,7 @@ const ProgressBar: Component<ProgressBarProps> = (props) => {
           </div>
         ) : !hidePercentage() ? (
           <div class="flex-shrink-0 ml-2 text-right">
-            <span class="font-mono font-medium text-zinc-400">{Math.round(progressVal())}%</span>
+            <span class="font-mono font-medium text-[var(--ks-fg-muted,#a1a1aa)]">{Math.round(progressVal())}%</span>
           </div>
         ) : null}
       </div>

@@ -18,7 +18,7 @@ export default function FormErrorBanner(props: FormErrorBannerProps): JSX.Elemen
     <Show when={props.message}>
       <div
         role="alert"
-        class={`rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300 ${props.class ?? ""}`}
+        class={`rounded-md border border-[var(--ks-danger,#ef4444)]/30 bg-[var(--ks-danger-bg,rgba(239,68,68,0.12))] px-3 py-2 text-xs text-[var(--ks-danger-fg,#f87171)] ${props.class ?? ""}`}
       >
         {props.message}
       </div>

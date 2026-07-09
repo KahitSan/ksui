@@ -16,28 +16,28 @@ interface ToneClass {
 // passes a plain label; nothing domain-specific leaks into this atom.
 const TONE_CLASS: Record<StatusIndicatorTone, ToneClass> = {
   success: {
-    dot: "bg-emerald-400",
-    text: "text-white",
+    dot: "bg-[var(--ks-success,#10b981)]",
+    text: "text-[var(--ks-fg,#ffffff)]",
     glow: "shadow-[0_0_10px_rgba(52,211,153,0.6)]",
   },
   neutral: {
-    dot: "bg-zinc-400",
-    text: "text-zinc-400",
+    dot: "bg-[var(--ks-fg-muted,#a1a1aa)]",
+    text: "text-[var(--ks-fg-muted,#a1a1aa)]",
     glow: "shadow-[0_0_10px_rgba(161,161,170,0.5)]",
   },
   warning: {
-    dot: "bg-amber-400",
-    text: "text-amber-300",
+    dot: "bg-[var(--ks-warning,#f59e0b)]",
+    text: "text-[var(--ks-warning-fg,#fbbf24)]",
     glow: "shadow-[0_0_10px_rgba(251,191,36,0.6)]",
   },
   danger: {
-    dot: "bg-red-400",
-    text: "text-red-300",
+    dot: "bg-[var(--ks-danger,#ef4444)]",
+    text: "text-[var(--ks-danger-fg,#f87171)]",
     glow: "shadow-[0_0_10px_rgba(248,113,113,0.6)]",
   },
   info: {
-    dot: "bg-blue-400",
-    text: "text-blue-300",
+    dot: "bg-[var(--ks-info,#38bdf8)]",
+    text: "text-[var(--ks-info-fg,#7dd3fc)]",
     glow: "shadow-[0_0_10px_rgba(96,165,250,0.6)]",
   },
 };
@@ -89,7 +89,7 @@ export default function StatusIndicator(props: StatusIndicatorProps): JSX.Elemen
         <Show when={props.caption}>
           <div
             class={`text-xs font-bold uppercase tracking-widest ${
-              props.captionClass ?? "text-amber-400"
+              props.captionClass ?? "text-[var(--ks-accent,#fbbf24)]"
             }`}
           >
             {props.caption}

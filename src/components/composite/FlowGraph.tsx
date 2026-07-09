@@ -35,6 +35,7 @@ import {
   type GraphNode,
   type PositionedNode,
 } from "../../utils/graph";
+import { injectCSS } from "../../utils/inject-css";
 
 type IconComp = Component<{ size?: number; class?: string }>;
 
@@ -62,58 +63,50 @@ const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 3;
 
 const STYLE_ID = "ksui-flow-graph-style";
-
-function ensureStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
+const STYLE_CSS = `
 .ksui-fg-wrap{width:100%;overflow:auto;position:relative;user-select:none;-webkit-user-select:none;}
 .ksui-fg-card,.ksui-fg-title,.ksui-fg-kind,.ksui-fg-elabel{user-select:none;-webkit-user-select:none;}
-.ksui-fg-wrap.interactive{overflow:hidden;border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.12));border-radius:10px;background:var(--ksui-fg-canvas,#101014);background-image:radial-gradient(var(--ksui-fg-dot,rgba(255,255,255,0.05)) 1px,transparent 1px);background-size:20px 20px;cursor:grab;touch-action:none;}
+.ksui-fg-wrap.interactive{overflow:hidden;border:1px solid var(--ksui-fg-node-border,color-mix(in srgb, var(--ks-fg, #ffffff) 12%, transparent));border-radius:10px;background:var(--ksui-fg-canvas,var(--ks-bg,#0a0a0a));background-image:radial-gradient(var(--ksui-fg-dot,color-mix(in srgb, var(--ks-fg, #ffffff) 5%, transparent)) 1px,transparent 1px);background-size:20px 20px;cursor:grab;touch-action:none;}
 .ksui-fg-wrap.interactive.grabbing{cursor:grabbing;}
-.ksui-fg-wrap.scroll{overflow:auto;border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.12));border-radius:10px;background:var(--ksui-fg-canvas,#101014);background-image:radial-gradient(var(--ksui-fg-dot,rgba(255,255,255,0.05)) 1px,transparent 1px);background-size:20px 20px;}
+.ksui-fg-wrap.scroll{overflow:auto;border:1px solid var(--ksui-fg-node-border,color-mix(in srgb, var(--ks-fg, #ffffff) 12%, transparent));border-radius:10px;background:var(--ksui-fg-canvas,var(--ks-bg,#0a0a0a));background-image:radial-gradient(var(--ksui-fg-dot,color-mix(in srgb, var(--ks-fg, #ffffff) 5%, transparent)) 1px,transparent 1px);background-size:20px 20px;}
 .ksui-fg-svg{display:block;max-width:100%;height:auto;font-family:inherit;}
 .ksui-fg-wrap.scroll .ksui-fg-svg{margin:0 auto;}
 .ksui-fg-wrap.interactive .ksui-fg-svg{max-width:none;width:100%;height:100%;}
-.ksui-fg-edge{fill:none;stroke:var(--ksui-fg-edge,rgba(255,255,255,0.28));stroke-width:1.75;}
+.ksui-fg-edge{fill:none;stroke:var(--ksui-fg-edge,color-mix(in srgb, var(--ks-fg, #ffffff) 28%, transparent));stroke-width:1.75;}
 .ksui-fg-edge.dashed{stroke-dasharray:5 4;}
-.ksui-fg-edge.primary{stroke:var(--ksui-fg-primary,#c9a961);}
-.ksui-fg-edge.info{stroke:#5b9bf0;}
-.ksui-fg-edge.success{stroke:#43c478;}
-.ksui-fg-edge.danger{stroke:#ef6a6a;}
-.ksui-fg-edge.muted{stroke:rgba(255,255,255,0.2);}
+.ksui-fg-edge.primary{stroke:var(--ksui-fg-primary,var(--ks-primary,#c9a961));}
+.ksui-fg-edge.info{stroke:var(--ks-info,#38bdf8);}
+.ksui-fg-edge.success{stroke:var(--ks-success,#10b981);}
+.ksui-fg-edge.danger{stroke:var(--ks-danger,#ef4444);}
+.ksui-fg-edge.muted{stroke:color-mix(in srgb, var(--ks-fg, #ffffff) 20%, transparent);}
 .ksui-fg-edge.flow{stroke-dasharray:6 5;animation:ksui-fg-march .8s linear infinite;}
 @keyframes ksui-fg-march{to{stroke-dashoffset:-11;}}
 @media (prefers-reduced-motion:reduce){.ksui-fg-edge.flow{animation:none;}}
-.ksui-fg-handle{fill:var(--ksui-fg-canvas,#101014);stroke:var(--ksui-fg-edge,rgba(255,255,255,0.4));stroke-width:1.5;}
+.ksui-fg-handle{fill:var(--ksui-fg-canvas,var(--ks-bg,#0a0a0a));stroke:var(--ksui-fg-edge,color-mix(in srgb, var(--ks-fg, #ffffff) 40%, transparent));stroke-width:1.5;}
 .ksui-fg-node,.ksui-fg-edge,.ksui-fg-elabel,.ksui-fg-elabel-bg,.ksui-fg-handle{transition:opacity .12s ease;}
 .ksui-fg-dim{opacity:0.14;}
-.ksui-fg-elabel{fill:var(--ksui-fg-muted,rgba(255,255,255,0.78));font-size:9.5px;}
-.ksui-fg-elabel-bg{fill:var(--ksui-fg-canvas,#101014);opacity:0.92;}
-.ksui-fg-card{box-sizing:border-box;height:100%;display:flex;align-items:center;gap:9px;padding:0 11px;border-radius:9px;background:var(--ksui-fg-card,#1c1c22);border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.14));border-left-width:3px;overflow:hidden;}
+.ksui-fg-elabel{fill:var(--ksui-fg-muted,color-mix(in srgb, var(--ks-fg, #ffffff) 78%, transparent));font-size:9.5px;}
+.ksui-fg-elabel-bg{fill:var(--ksui-fg-canvas,var(--ks-bg,#0a0a0a));opacity:0.92;}
+.ksui-fg-card{box-sizing:border-box;height:100%;display:flex;align-items:center;gap:9px;padding:0 11px;border-radius:9px;background:var(--ksui-fg-card,var(--ks-surface-raised,#1a1a1a));border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.14));border-left-width:3px;overflow:hidden;}
 .ksui-fg-node.clickable .ksui-fg-card{cursor:pointer;}
-.ksui-fg-node.clickable .ksui-fg-card:hover{background:#23232b;}
+.ksui-fg-node.clickable .ksui-fg-card:hover{background:var(--ks-surface-raised,#1a1a1a);}
 .ksui-fg-node:focus{outline:none;}
-.ksui-fg-node:focus-visible .ksui-fg-card{border-color:var(--ksui-fg-primary,#c9a961);}
-.ksui-fg-chip{flex:none;width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;}
+.ksui-fg-node:focus-visible .ksui-fg-card{border-color:var(--ksui-fg-primary,var(--ks-primary,#c9a961));}
+.ksui-fg-chip{flex:none;width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--ks-fg,#ffffff);}
 .ksui-fg-txt{min-width:0;display:flex;flex-direction:column;line-height:1.15;}
-.ksui-fg-title{font-size:12px;font-weight:600;color:var(--ksui-fg-fg,#ececef);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ksui-fg-kind{font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ksui-fg-muted,rgba(255,255,255,0.45));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ksui-fg-card.primary{border-left-color:#c9a961;} .ksui-fg-card.primary .ksui-fg-chip{background:#c9a961;color:#18181b;}
-.ksui-fg-card.info{border-left-color:#5b9bf0;} .ksui-fg-card.info .ksui-fg-chip{background:#3f6fb0;}
-.ksui-fg-card.success{border-left-color:#43c478;} .ksui-fg-card.success .ksui-fg-chip{background:#2f8e57;}
-.ksui-fg-card.danger{border-left-color:#ef6a6a;} .ksui-fg-card.danger .ksui-fg-chip{background:#b04545;}
-.ksui-fg-card.muted{border-left-color:rgba(255,255,255,0.3);} .ksui-fg-card.muted .ksui-fg-chip{background:#3a3a42;}
-.ksui-fg-empty{padding:1.75rem 1rem;text-align:center;font-size:0.82rem;color:var(--ksui-fg-muted,rgba(255,255,255,0.55));}
+.ksui-fg-title{font-size:12px;font-weight:600;color:var(--ksui-fg-fg,var(--ks-fg,#ffffff));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ksui-fg-kind{font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ksui-fg-muted,color-mix(in srgb, var(--ks-fg, #ffffff) 45%, transparent));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ksui-fg-card.primary{border-left-color:var(--ks-primary,#c9a961);} .ksui-fg-card.primary .ksui-fg-chip{background:var(--ks-primary,#c9a961);color:var(--ks-fg-on-primary,#0a0a0a);}
+.ksui-fg-card.info{border-left-color:var(--ks-info,#38bdf8);} .ksui-fg-card.info .ksui-fg-chip{background:var(--ks-info-bg,rgba(56,189,248,0.12));}
+.ksui-fg-card.success{border-left-color:var(--ks-success,#10b981);} .ksui-fg-card.success .ksui-fg-chip{background:var(--ks-success-bg,rgba(16,185,129,0.12));}
+.ksui-fg-card.danger{border-left-color:var(--ks-danger,#ef4444);} .ksui-fg-card.danger .ksui-fg-chip{background:var(--ks-danger-bg,rgba(239,68,68,0.12));}
+.ksui-fg-card.muted{border-left-color:color-mix(in srgb, var(--ks-fg, #ffffff) 30%, transparent);} .ksui-fg-card.muted .ksui-fg-chip{background:var(--ks-border-strong,#3f3f46);}
+.ksui-fg-empty{padding:1.75rem 1rem;text-align:center;font-size:0.82rem;color:var(--ksui-fg-muted,color-mix(in srgb, var(--ks-fg, #ffffff) 55%, transparent));}
 .ksui-fg-controls{position:absolute;right:8px;bottom:8px;display:flex;gap:4px;z-index:1;}
-.ksui-fg-ctrl{width:24px;height:24px;display:grid;place-items:center;border-radius:5px;border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.18));background:var(--ksui-fg-card,#1c1c22);color:var(--ksui-fg-fg,#ececef);font-size:14px;line-height:1;cursor:pointer;user-select:none;}
-.ksui-fg-ctrl:hover{background:#23232b;}
-.ksui-fg-hint{position:absolute;left:8px;bottom:8px;font-size:9.5px;color:var(--ksui-fg-muted,rgba(255,255,255,0.4));pointer-events:none;}
+.ksui-fg-ctrl{width:24px;height:24px;display:grid;place-items:center;border-radius:5px;border:1px solid var(--ksui-fg-node-border,color-mix(in srgb, var(--ks-fg, #ffffff) 18%, transparent));background:var(--ksui-fg-card,var(--ks-surface-raised,#1a1a1a));color:var(--ksui-fg-fg,var(--ks-fg,#ffffff));font-size:14px;line-height:1;cursor:pointer;user-select:none;}
+.ksui-fg-ctrl:hover{background:var(--ks-surface-raised,#1a1a1a);}
+.ksui-fg-hint{position:absolute;left:8px;bottom:8px;font-size:9.5px;color:var(--ksui-fg-muted,color-mix(in srgb, var(--ks-fg, #ffffff) 40%, transparent));pointer-events:none;}
 `;
-  document.head.appendChild(style);
-}
 
 export interface FlowGraphProps {
   nodes: GraphNode[];
@@ -146,7 +139,7 @@ function clip(text: string, max: number): string {
 }
 
 export const FlowGraph: Component<FlowGraphProps> = (props) => {
-  ensureStyle();
+  injectCSS(STYLE_ID, STYLE_CSS);
   const tid = (s: string) => (props.testId ? `${props.testId}-${s}` : undefined);
 
   const vertical = () => props.direction === "vertical";

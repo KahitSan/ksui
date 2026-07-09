@@ -18,29 +18,29 @@ interface ToneClass {
 // compact sizes tables now use than the previous bordered pill did.
 const TONE_CLASS: Record<StatusTone, ToneClass> = {
   success: {
-    text: "text-emerald-400",
-    bg: "bg-emerald-500/10",
-    bgSolid: "bg-emerald-500/20",
+    text: "text-[var(--ks-success-fg,#34d399)]",
+    bg: "bg-[var(--ks-success-bg,rgba(16,185,129,0.12))]",
+    bgSolid: "bg-[var(--ks-success,#10b981)]/20",
   },
   neutral: {
-    text: "text-zinc-400",
-    bg: "bg-zinc-800/60",
-    bgSolid: "bg-zinc-700/40",
+    text: "text-[var(--ks-fg-muted,#a1a1aa)]",
+    bg: "bg-[var(--ks-surface-raised,#1a1a1a)]",
+    bgSolid: "bg-[var(--ks-surface-sunken,#141414)]",
   },
   warning: {
-    text: "text-amber-400",
-    bg: "bg-amber-500/10",
-    bgSolid: "bg-amber-500/20",
+    text: "text-[var(--ks-warning-fg,#fbbf24)]",
+    bg: "bg-[var(--ks-warning-bg,rgba(245,158,11,0.12))]",
+    bgSolid: "bg-[var(--ks-warning,#f59e0b)]/20",
   },
   danger: {
-    text: "text-red-400",
-    bg: "bg-red-500/10",
-    bgSolid: "bg-red-500/20",
+    text: "text-[var(--ks-danger-fg,#f87171)]",
+    bg: "bg-[var(--ks-danger-bg,rgba(239,68,68,0.12))]",
+    bgSolid: "bg-[var(--ks-danger,#ef4444)]/20",
   },
   info: {
-    text: "text-blue-400",
-    bg: "bg-blue-500/10",
-    bgSolid: "bg-blue-500/20",
+    text: "text-[var(--ks-info-fg,#7dd3fc)]",
+    bg: "bg-[var(--ks-info-bg,rgba(56,189,248,0.12))]",
+    bgSolid: "bg-[var(--ks-info,#38bdf8)]/20",
   },
 };
 
