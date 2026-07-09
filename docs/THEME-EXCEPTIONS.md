@@ -38,14 +38,22 @@ recognized as exclusions.
   both light and dark themes. Wrapping it in a text/fg token (e.g. `--ks-fg`)
   would turn it near-black in the light theme and make it disappear against
   the light-mode track — a real regression, not a styling preference.
-- FlowGraph: **no exception needed.** Audited 2026-07-09 — every literal was
-  per-STATUS coloring (`.ksui-fg-edge.info` / `.success` / `.danger` /
-  `.muted`, plus the matching `.ksui-fg-card.*` border/chip pairs) or a
-  neutral canvas/border/text tone on a white-alpha base. All converted to
-  `--ks-info`/`--ks-success`/`--ks-danger`/`--ks-*-bg` (rule 3) or
-  `color-mix(...)` on `--ks-fg`/`--ks-bg`/`--ks-surface-raised` (rule 1). No
-  distinct-per-node-KIND hue table exists in this file — `KIND_ICON` maps
-  kind to a lucide glyph only, never a color.
+- FlowGraph/FlowRunner: **no exception needed.** Re-audited 2026-07-09 after
+  a live-DOM light-theme regression report — the earlier "no exception
+  needed" entry here was itself too broad: it had signed off two rules that
+  still carried a bare `rgba(255,255,255,…)` fallback outside the `--ks-fg`
+  chain (`.ksui-fg-card`'s border and the SVG arrowhead marker's `fill`
+  attribute — the marker in particular sits inside `<defs>` on a `<path>`,
+  not a CSS class rule, so it was invisible to a class-name-based audit),
+  which rendered white-on-near-white on a light page. Both now read
+  `var(--ksui-fg-edge/-node-border, color-mix(in srgb, var(--ks-fg, #ffffff)
+  N%, transparent))`, matching every other rule in the file. Every remaining
+  literal is per-STATUS coloring (`.ksui-fg-edge.info` / `.success` /
+  `.danger` / `.muted`, plus the matching `.ksui-fg-card.*` border/chip
+  pairs) or a neutral canvas/border/text tone derived from
+  `--ks-fg`/`--ks-bg`/`--ks-surface-raised`. `KIND_ICON` maps kind to a
+  lucide glyph only, never a color — there is no distinct-per-node-KIND hue
+  table in either file.
 - Pure-transparency utilities (`transparent`, `currentColor`) are never
   flagged — they carry no color of their own to derive from a token.
 - Truly-fixed data-viz series hues that don't map to the `--ks-chart-1..N`
