@@ -14,6 +14,7 @@
 import { Hono, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { ctxGet } from "../types.js";
+import { parseIntParam } from "./shared.js";
 import crypto from "crypto";
 import path from "node:path";
 import {
@@ -62,8 +63,8 @@ export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx):
     requireWorkspace,
     requirePermission("transactions.view"),
     async (c) => {
-      const id = parseInt(String(c.req.param("id")), 10);
-      if (!Number.isFinite(id)) {
+      const id = parseIntParam(c, "id");
+      if (id == null) {
         return c.json({ error: "Invalid id" }, 400);
       }
       try {
@@ -94,9 +95,9 @@ export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx):
     requireWorkspace,
     requirePermission("transactions.view"),
     async (c) => {
-      const id = parseInt(String(c.req.param("id")), 10);
-      const attachmentId = parseInt(String(c.req.param("attachmentId")), 10);
-      if (!Number.isFinite(id) || !Number.isFinite(attachmentId)) {
+      const id = parseIntParam(c, "id");
+      const attachmentId = parseIntParam(c, "attachmentId");
+      if (id == null || attachmentId == null) {
         return c.json({ error: "Invalid id" }, 400);
       }
       try {
@@ -135,8 +136,8 @@ export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx):
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
-      const id = parseInt(String(c.req.param("id")), 10);
-      if (!Number.isFinite(id)) {
+      const id = parseIntParam(c, "id");
+      if (id == null) {
         return c.json({ error: "Invalid id" }, 400);
       }
       const wsId = ctxGet(c, "workspaceId")!;
@@ -217,9 +218,9 @@ export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx):
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
-      const id = parseInt(String(c.req.param("id")), 10);
-      const attachmentId = parseInt(String(c.req.param("attachmentId")), 10);
-      if (!Number.isFinite(id) || !Number.isFinite(attachmentId)) {
+      const id = parseIntParam(c, "id");
+      const attachmentId = parseIntParam(c, "attachmentId");
+      if (id == null || attachmentId == null) {
         return c.json({ error: "Invalid id" }, 400);
       }
       try {

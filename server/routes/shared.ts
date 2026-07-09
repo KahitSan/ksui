@@ -101,6 +101,14 @@ export const LINE_ITEM_COLS = [
   "customer_group_id",
 ] as const;
 
+/** Parses a Hono route :param as a finite integer, or null when it isn't one —
+ *  single source of truth for the :id/:paymentId/:attachmentId guard repeated
+ *  at every path-param route (was copy-pasted per-site before this). */
+export function parseIntParam(c: Context, name: string): number | null {
+  const n = parseInt(String(c.req.param(name)), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
 export function isValidIsoDate(s: string): boolean {
   if (!ISO_DATE_RE.test(s)) return false;
   const d = new Date(s + "T00:00:00Z");
