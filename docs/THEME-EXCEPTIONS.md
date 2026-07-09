@@ -94,6 +94,13 @@ recognized as exclusions.
   token as a whole value (rule 5); every surface/border color on the same
   rule is tokenized.
 
+- `src/components/composite/FlowGraph.test.tsx` — this is the regression
+  test that asserts the marker `fill` attribute and injected `.ksui-fg-card`
+  CSS never regress to a bare `rgba(255,255,255,…)` literal; its comments
+  and `not.toMatch(/rgba\(…/)` regex literals name the forbidden pattern in
+  order to check its *absence*, which the coverage scanner's substring match
+  can't distinguish from an actual applied color.
+
 ## Entries requiring per-literal justification when added
 
 Every new entry must state, in this file, WHY the literal can't be a token —

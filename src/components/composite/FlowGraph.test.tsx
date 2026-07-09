@@ -118,6 +118,45 @@ describe("FlowGraph", () => {
     expect(canvas.getByTestId("c-svg").getAttribute("width")).toBe("100%");
   });
 
+  // Regression for a class-name-only token audit missing an attribute: the
+  // marker <path> fill and .ksui-fg-card background/border are SVG/CSS-in-JS
+  // strings, not Tailwind classes, so a scan that only greps class names for
+  // bare rgba()/hex literals walks right past them. jsdom doesn't compute
+  // SVG presentation-attribute styles, so this asserts on the rendered `fill`
+  // attribute plus the injected <style> source — both must route through the
+  // var(--ksui-fg-*/--ks-*) chain, never a bare rgba(255,255,255,...) literal.
+  it("routes the arrowhead marker fill and card background through CSS custom props, not a bare literal", async () => {
+    // injectCSS dedupes per-process (module-level Set in utils/inject-css),
+    // so a PRIOR test's render already consumed the injection — reset the
+    // module registry and re-import fresh so this test's render leaves an
+    // inspectable <style> tag regardless of suite order.
+    vi.resetModules();
+    const { default: FreshFlowGraph } = await import("./FlowGraph");
+
+    const { container } = render(() => (
+      <FreshFlowGraph
+        testId="fg"
+        nodes={[{ id: "a", label: "A" }, { id: "b", label: "B" }]}
+        edges={[{ from: "a", to: "b" }]}
+      />
+    ));
+
+    const markerPath = container.querySelector("marker#ksui-fg-arrow path");
+    const fill = markerPath?.getAttribute("fill") ?? "";
+    expect(fill).toMatch(/^var\(--ksui-fg-edge,/);
+    expect(fill).not.toMatch(/rgba\(\s*255\s*,\s*255\s*,\s*255/);
+
+    // jsdom can't compute SVG/CSS custom-property values, so assert on the
+    // injected <style> tag's rendered source instead of a computed style.
+    const styleEl = document.getElementById("ksui-flow-graph-style");
+    const css = styleEl?.textContent ?? "";
+    expect(css).toContain(".ksui-fg-card{");
+    const cardRule = css.slice(css.indexOf(".ksui-fg-card{"));
+    expect(cardRule).toMatch(/background:var\(--ksui-fg-card,/);
+    expect(cardRule).toMatch(/border:1px solid var\(--ksui-fg-node-border,/);
+    expect(css).not.toMatch(/rgba\(\s*255\s*,\s*255\s*,\s*255/);
+  });
+
   it("animates edges with the flow class only when animated", () => {
     const { container } = render(() => (
       <FlowGraph
