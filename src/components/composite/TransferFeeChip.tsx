@@ -13,9 +13,9 @@ export default function TransferFeeChip(props: TransferFeeChipProps) {
       onClick={props.onToggle}
       class="flex items-center gap-1.5 self-center rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider transition-colors cursor-pointer"
       classList={{
-        "border-blue-500/50 bg-blue-500/15 text-blue-300 hover:bg-blue-500/25":
+        "border-[rgba(59,130,246,0.5)] bg-[rgba(59,130,246,0.15)] text-[#93c5fd] hover:bg-[rgba(59,130,246,0.25)]":
           props.enabled,
-        "border-zinc-700 bg-zinc-950/60 text-zinc-400 hover:border-blue-500/40 hover:text-blue-300":
+        "border-[var(--ks-input-border,#3f3f46)] bg-[rgba(9,9,11,0.6)] text-[var(--ks-fg-muted,#a1a1aa)] hover:border-[rgba(59,130,246,0.4)] hover:text-[#93c5fd]":
           !props.enabled,
       }}
       aria-pressed={props.enabled}

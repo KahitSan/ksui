@@ -64,7 +64,7 @@ export default function NotFound(props: NotFoundProps): JSX.Element {
   const buttonClass =
     "inline-flex items-center justify-center gap-2 rounded-md border " +
     "border-amber-600/60 bg-amber-600/20 px-5 py-2.5 text-sm font-semibold " +
-    "text-amber-400 transition-colors hover:border-amber-500 " +
+    "text-[var(--ks-accent,#fbbf24)] transition-colors hover:border-amber-500 " +
     "hover:bg-amber-600/30 focus:outline-none focus-visible:ring-2 " +
     "focus-visible:ring-amber-500/60";
 
@@ -92,7 +92,7 @@ export default function NotFound(props: NotFoundProps): JSX.Element {
           {local.heading || "Page Not Found"}
         </h2>
 
-        <p class="text-sm text-zinc-400 max-w-md mb-8">
+        <p class="text-sm text-[var(--ks-fg-muted,#a1a1aa)] max-w-md mb-8">
           {local.message ||
             "The page you're looking for doesn't exist or has been moved."}
         </p>

@@ -316,7 +316,7 @@ export function ResourcePage<T extends ResourceRow>(
                       onChange={(e) =>
                         setFilterState(f.param, e.currentTarget.value)
                       }
-                      class="rounded-lg border border-zinc-800/50 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-400 cursor-pointer"
+                      class="rounded-lg border border-[var(--ks-border,rgba(39,39,42,0.5))] bg-[var(--ks-input-bg,#18181b)] px-3 py-1.5 text-xs text-[var(--ks-fg-muted,#a1a1aa)] cursor-pointer"
                     >
                       <For each={f.options}>
                         {(o) => <option value={o.value}>{o.label}</option>}
@@ -344,7 +344,7 @@ export function ResourcePage<T extends ResourceRow>(
         >
           <div data-testid={`${spec.testIdPrefix}-create-modal`}>
             <div class="flex items-center justify-between mb-6">
-              <h2 class="text-lg font-semibold text-zinc-100">
+              <h2 class="text-lg font-semibold text-[#f4f4f5]">
                 {spec.labels.createTitle}
               </h2>
               <button
@@ -352,7 +352,7 @@ export function ResourcePage<T extends ResourceRow>(
                   setCreateOpen(false);
                   resetForm();
                 }}
-                class="text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                class="text-[var(--ks-fg-subtle,#71717a)] hover:text-[#d4d4d8] cursor-pointer"
                 aria-label="Close"
               >
                 <X size={20} />
@@ -387,7 +387,7 @@ export function ResourcePage<T extends ResourceRow>(
           >
             <div data-testid={`${spec.testIdPrefix}-detail-modal`}>
               <div class="flex items-center justify-between mb-6">
-                <h2 class="text-lg font-semibold text-zinc-100">
+                <h2 class="text-lg font-semibold text-[#f4f4f5]">
                   {editing()
                     ? spec.labels.editTitle
                     : String(row()[spec.labels.titleField] ?? "")}
@@ -396,7 +396,7 @@ export function ResourcePage<T extends ResourceRow>(
                   <Show when={!editing() && canEdit()}>
                     <button
                       onClick={startEdit}
-                      class="text-zinc-500 hover:text-amber-400 cursor-pointer p-1"
+                      class="text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-accent,#fbbf24)] cursor-pointer p-1"
                       title="Edit"
                       aria-label="Edit"
                     >
@@ -407,7 +407,7 @@ export function ResourcePage<T extends ResourceRow>(
                     {row()[spec.softDeleteField] ? (
                       <button
                         onClick={() => handleArchive(row().id)}
-                        class="text-zinc-500 hover:text-red-400 cursor-pointer p-1"
+                        class="text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-danger-fg,#f87171)] cursor-pointer p-1"
                         title="Archive"
                         aria-label="Archive"
                       >
@@ -416,7 +416,7 @@ export function ResourcePage<T extends ResourceRow>(
                     ) : (
                       <button
                         onClick={() => handleRestore(row().id)}
-                        class="text-zinc-500 hover:text-emerald-400 cursor-pointer p-1"
+                        class="text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-success-fg,#34d399)] cursor-pointer p-1"
                         title="Restore"
                         aria-label="Restore"
                       >
@@ -429,7 +429,7 @@ export function ResourcePage<T extends ResourceRow>(
                       setDetailRow(null);
                       setEditing(false);
                     }}
-                    class="text-zinc-500 hover:text-zinc-300 cursor-pointer p-1"
+                    class="text-[var(--ks-fg-subtle,#71717a)] hover:text-[#d4d4d8] cursor-pointer p-1"
                     aria-label="Close"
                   >
                     <X size={20} />

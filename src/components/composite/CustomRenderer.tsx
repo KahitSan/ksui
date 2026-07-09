@@ -16,22 +16,15 @@ import {
   validateConsumes,
   type RendererProps,
 } from "../../utils/renderers";
+import { injectCSS } from "../../utils/inject-css";
 
 const STYLE_ID = "ksui-custom-renderer-style";
-
-function ensureStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  // Unscoped ksui-* classes + CSS custom properties so a host can retint without
-  // forking; no Tailwind, no host-brand classes (standalone-library rule).
-  style.textContent = `
-.ksui-cr-fallback{display:flex;align-items:center;gap:0.5rem;padding:0.625rem 0.75rem;border-radius:0.5rem;font-size:0.8125rem;background:var(--ksui-cr-fallback-bg,rgba(245,158,11,0.08));border:1px solid var(--ksui-cr-fallback-border,rgba(245,158,11,0.25));color:var(--ksui-cr-fallback-fg,#fbbf24);}
+// Unscoped ksui-* classes + CSS custom properties so a host can retint without
+// forking; no Tailwind, no host-brand classes (standalone-library rule).
+const STYLE_CSS = `
+.ksui-cr-fallback{display:flex;align-items:center;gap:0.5rem;padding:0.625rem 0.75rem;border-radius:0.5rem;font-size:0.8125rem;background:var(--ksui-cr-fallback-bg,rgba(245,158,11,0.08));border:1px solid var(--ksui-cr-fallback-border,rgba(245,158,11,0.25));color:var(--ksui-cr-fallback-fg,var(--ks-warning-fg,#fbbf24));}
 .ksui-cr-fallback svg{flex:0 0 auto;}
 `;
-  document.head.appendChild(style);
-}
 
 export interface CustomRendererProps {
   /** Registered renderer id to look up (§8). */
@@ -52,7 +45,7 @@ export interface CustomRendererProps {
 }
 
 const DefaultFallback: Component<{ id: string; reason: string }> = (props) => {
-  ensureStyle();
+  injectCSS(STYLE_ID, STYLE_CSS);
   return (
     <div class="ksui-cr-fallback" role="status" data-testid="ksui-cr-fallback">
       <AlertTriangle size={14} />

@@ -75,16 +75,32 @@ export function getAccountIcon(account: { icon?: string | null; type: string }):
 }
 
 const DEFAULT_TONE_BY_TYPE: Record<string, { text: string; bg: string; border: string }> = {
-  bank: { text: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-400/40" },
-  e_wallet: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-400/40" },
-  cash: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-400/40" },
-  capital: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-400/40" },
+  bank: {
+    text: "text-[#60a5fa]",
+    bg: "bg-[rgba(59,130,246,0.1)]",
+    border: "border-[rgba(96,165,250,0.4)]",
+  },
+  e_wallet: {
+    text: "text-[var(--ks-accent,#fbbf24)]",
+    bg: "bg-[rgba(245,158,11,0.1)]",
+    border: "border-[rgba(251,191,36,0.4)]",
+  },
+  cash: {
+    text: "text-[var(--ks-success-fg,#34d399)]",
+    bg: "bg-[rgba(16,185,129,0.1)]",
+    border: "border-[rgba(52,211,153,0.4)]",
+  },
+  capital: {
+    text: "text-[var(--ks-accent,#fbbf24)]",
+    bg: "bg-[rgba(245,158,11,0.1)]",
+    border: "border-[rgba(251,191,36,0.4)]",
+  },
 };
 
 const FALLBACK_TONE = {
-  text: "text-zinc-300",
-  bg: "bg-zinc-700/30",
-  border: "border-zinc-700/60",
+  text: "text-[#d4d4d8]",
+  bg: "bg-[rgba(63,63,70,0.3)]",
+  border: "border-[rgba(63,63,70,0.6)]",
 };
 
 // Per-type accent tone for an account chip, or the account's own custom color.

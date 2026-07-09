@@ -182,8 +182,8 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
         aria-haspopup="listbox"
         aria-expanded={eng.open()}
       >
-        <Icon size={16} class="shrink-0 text-zinc-400" />
-        <Show when={triggerLabel()} fallback={<span class="text-zinc-500 italic">{placeholder()}</span>}>
+        <Icon size={16} class="shrink-0 text-[var(--ks-fg-muted,#a1a1aa)]" />
+        <Show when={triggerLabel()} fallback={<span class="text-[var(--ks-fg-subtle,#71717a)] italic">{placeholder()}</span>}>
           <span class="flex-1 min-w-0">
             <span class="block truncate text-zinc-100 font-medium">{triggerLabel()}</span>
           </span>
@@ -191,7 +191,7 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
             type="button"
             data-testid={tid("clear")}
             onClick={clear}
-            class="shrink-0 p-1 rounded text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+            class="shrink-0 p-1 rounded text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-danger-fg,#f87171)] hover:bg-red-500/10 transition-colors cursor-pointer"
             title="Clear"
             aria-label={`Clear ${props.noun}`}
           >
@@ -205,11 +205,11 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
           <div
             ref={popupRef}
             data-testid={tid("popup")}
-            class="z-[10000] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[10000] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={eng.popupStyle()}
           >
             <div class="px-2 py-2 border-b border-zinc-800 flex items-center gap-2">
-              <Search size={14} class="text-zinc-500 shrink-0 ml-1" />
+              <Search size={14} class="text-[var(--ks-fg-subtle,#71717a)] shrink-0 ml-1" />
               <input
                 ref={inputRef}
                 type="text"
@@ -225,17 +225,17 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
                 class="w-full px-1 py-1 text-sm bg-transparent text-zinc-200 placeholder:text-zinc-600 focus:outline-none"
               />
               <Show when={eng.loading()}>
-                <Loader2 size={14} class="animate-spin text-zinc-500 mr-1 shrink-0" />
+                <Loader2 size={14} class="animate-spin text-[var(--ks-fg-subtle,#71717a)] mr-1 shrink-0" />
               </Show>
             </div>
             <div class="flex-1 overflow-y-auto">
               <Show when={eng.error()}>
-                <div role="status" class="px-3 py-2 text-xs text-red-400">
+                <div role="status" class="px-3 py-2 text-xs text-[var(--ks-danger-fg,#f87171)]">
                   {eng.error()}
                 </div>
               </Show>
               <Show when={!eng.loading() && eng.results().length === 0 && !showCreateOption() && !eng.error()}>
-                <div role="status" class="px-3 py-4 text-xs text-zinc-500 text-center">
+                <div role="status" class="px-3 py-4 text-xs text-[var(--ks-fg-subtle,#71717a)] text-center">
                   {eng.trimmedQuery() ? "No matches" : "Start typing or pick from your list…"}
                 </div>
               </Show>
@@ -260,19 +260,19 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
                             onClick={() => select(item)}
                             class="w-full text-left px-3 py-2 hover:bg-amber-500/10 transition-colors flex items-start gap-2 cursor-pointer"
                           >
-                            <Icon size={14} class="text-zinc-500 shrink-0 mt-0.5" />
+                            <Icon size={14} class="text-[var(--ks-fg-subtle,#71717a)] shrink-0 mt-0.5" />
                             <span class="flex-1 min-w-0">
                               <span class="block text-sm text-zinc-100 truncate">
                                 {highlightMatch(props.labelOf(item), eng.debouncedQuery().trim())}
                               </span>
                               <Show when={secondary}>
-                                <span class="block text-[11px] text-zinc-500 truncate">
+                                <span class="block text-[11px] text-[var(--ks-fg-subtle,#71717a)] truncate">
                                   {highlightMatch(secondary!, eng.debouncedQuery().trim())}
                                 </span>
                               </Show>
                             </span>
                             <Show when={isSel()}>
-                              <span class="text-amber-400 text-xs shrink-0 mt-0.5">✓</span>
+                              <span class="text-[var(--ks-accent,#fbbf24)] text-xs shrink-0 mt-0.5">✓</span>
                             </Show>
                           </button>
                         </li>
@@ -292,9 +292,9 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
                   >
                     <Show
                       when={!eng.creating()}
-                      fallback={<Loader2 size={14} class="animate-spin text-emerald-400 shrink-0" />}
+                      fallback={<Loader2 size={14} class="animate-spin text-[var(--ks-success-fg,#34d399)] shrink-0" />}
                     >
-                      <UserPlus size={14} class="text-emerald-400 shrink-0" />
+                      <UserPlus size={14} class="text-[var(--ks-success-fg,#34d399)] shrink-0" />
                     </Show>
                     <span class="text-sm text-emerald-300">
                       New {props.noun} "<span class="font-medium">{eng.trimmedQuery()}</span>"
@@ -470,11 +470,11 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
                 class={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
                   primary()
                     ? "border-amber-500/50 bg-amber-500/10 text-amber-200"
-                    : "border-zinc-700 bg-zinc-800/40 text-zinc-200"
+                    : "border-[var(--ks-border-strong,#3f3f46)] bg-zinc-800/40 text-zinc-200"
                 }`}
               >
                 <Show when={primary()}>
-                  <Star size={10} class="text-amber-400 shrink-0" aria-label="Primary" />
+                  <Star size={10} class="text-[var(--ks-accent,#fbbf24)] shrink-0" aria-label="Primary" />
                 </Show>
                 <Show
                   when={props.primaryStar}
@@ -510,7 +510,7 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
                       removeFromPool(item);
                     }}
                     aria-label={`Remove ${props.labelOf(item)}`}
-                    class="shrink-0 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                    class="shrink-0 rounded-full p-0.5 text-[var(--ks-fg-muted,#a1a1aa)] hover:text-[var(--ks-danger-fg,#f87171)] hover:bg-red-500/10 transition-colors cursor-pointer"
                   >
                     <X size={11} />
                   </button>
@@ -520,7 +520,7 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
           }}
         </For>
         <Show when={isEmpty()}>
-          <Icon size={14} class={`shrink-0 ml-1 ${props.invalid ? "text-red-300" : "text-zinc-400"}`} />
+          <Icon size={14} class={`shrink-0 ml-1 ${props.invalid ? "text-red-300" : "text-[var(--ks-fg-muted,#a1a1aa)]"}`} />
         </Show>
         <input
           ref={inputRef}
@@ -548,20 +548,20 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
             data-testid={tid("popup")}
             role="listbox"
             aria-label={`${props.noun} search results`}
-            class="z-[110] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[110] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={eng.popupStyle()}
           >
             <Show when={eng.error()}>
-              <div role="status" class="px-3 py-2 text-xs text-red-400 border-b border-zinc-800">
+              <div role="status" class="px-3 py-2 text-xs text-[var(--ks-danger-fg,#f87171)] border-b border-zinc-800">
                 {eng.error()}
               </div>
             </Show>
             <div class="flex-1 overflow-y-auto">
               <Show when={eng.loading() && eng.results().length === 0}>
-                <div role="status" class="px-3 py-3 text-xs text-zinc-500 italic">Searching…</div>
+                <div role="status" class="px-3 py-3 text-xs text-[var(--ks-fg-subtle,#71717a)] italic">Searching…</div>
               </Show>
               <Show when={displayOptions().length === 0 && !eng.loading()}>
-                <div role="status" class="px-3 py-3 text-xs text-zinc-500 italic">
+                <div role="status" class="px-3 py-3 text-xs text-[var(--ks-fg-subtle,#71717a)] italic">
                   {eng.trimmedQuery() ? `No matching ${props.noun}s.` : `Start typing to find a ${props.noun}…`}
                 </div>
               </Show>
@@ -586,9 +586,9 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
                 >
                   <Show
                     when={!eng.creating()}
-                    fallback={<Loader2 size={14} class="animate-spin text-emerald-400 shrink-0 mt-0.5" />}
+                    fallback={<Loader2 size={14} class="animate-spin text-[var(--ks-success-fg,#34d399)] shrink-0 mt-0.5" />}
                   >
-                    <UserPlus size={14} class="text-emerald-400 shrink-0 mt-0.5" />
+                    <UserPlus size={14} class="text-[var(--ks-success-fg,#34d399)] shrink-0 mt-0.5" />
                   </Show>
                   <span class="flex-1 text-emerald-300">
                     New {props.noun} "<span class="font-medium">{eng.trimmedQuery()}</span>"
@@ -612,13 +612,13 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
                         isFocused() ? "bg-amber-500/15 text-amber-200" : "text-zinc-100 hover:bg-zinc-800"
                       }`}
                     >
-                      <Icon size={14} class="text-zinc-500 shrink-0 mt-0.5" />
+                      <Icon size={14} class="text-[var(--ks-fg-subtle,#71717a)] shrink-0 mt-0.5" />
                       <span class="flex-1 min-w-0">
                         <span class="block truncate font-medium">
                           {highlightMatch(props.labelOf(item), eng.debouncedQuery().trim())}
                         </span>
                         <Show when={secondary()}>
-                          <span class="block truncate text-[11px] text-zinc-500">
+                          <span class="block truncate text-[11px] text-[var(--ks-fg-subtle,#71717a)]">
                             {highlightMatch(secondary()!, eng.debouncedQuery().trim())}
                           </span>
                         </Show>

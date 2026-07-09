@@ -34,19 +34,19 @@ const SecretReveal: Component<SecretRevealProps> = (props) => {
   };
 
   return (
-    <div class="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-      <p class="text-xs text-amber-300 font-medium mb-2">{local.warning ?? DEFAULT_WARNING}</p>
+    <div class="mb-4 p-3 rounded-lg bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.2)]">
+      <p class="text-xs text-[var(--ks-accent-hover,#fcd34d)] font-medium mb-2">{local.warning ?? DEFAULT_WARNING}</p>
       <div class="flex items-center gap-2">
         <code
           data-testid={local.testId}
-          class="flex-1 px-2 py-1.5 rounded bg-zinc-900 border border-zinc-700 text-amber-200 text-xs font-mono break-all"
+          class="flex-1 px-2 py-1.5 rounded bg-[var(--ks-input-bg,#18181b)] border border-[var(--ks-input-border,#3f3f46)] text-[#fde68a] text-xs font-mono break-all"
         >
           {local.secret}
         </code>
         <button
           type="button"
           onClick={copy}
-          class="ks-interactive px-2 py-1.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-xs flex items-center gap-1"
+          class="ks-interactive px-2 py-1.5 rounded bg-[#27272a] border border-[var(--ks-input-border,#3f3f46)] text-[#d4d4d8] hover:text-[var(--ks-fg,#ffffff)] text-xs flex items-center gap-1"
           aria-label="Copy secret"
         >
           <Copy size={12} />
@@ -54,7 +54,7 @@ const SecretReveal: Component<SecretRevealProps> = (props) => {
         </button>
       </div>
       <Show when={local.caption}>
-        <p class="text-[10px] text-zinc-500 mt-2">{local.caption}</p>
+        <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-2">{local.caption}</p>
       </Show>
     </div>
   );

@@ -25,15 +25,10 @@ import {
   type FlowNode,
   type FlowState,
 } from "../../utils/flow";
+import { injectCSS } from "../../utils/inject-css";
 
 const STYLE_ID = "ksui-flow-runner-style";
-
-function ensureStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
+const STYLE_CSS = `
 .ksui-fr{display:flex;flex-direction:column;gap:0.875rem;color:var(--ksui-fr-fg,inherit);}
 .ksui-fr-title{font-size:0.95rem;font-weight:600;margin:0;}
 .ksui-fr-prompt,.ksui-fr-body{font-size:0.85rem;opacity:0.85;margin:0;}
@@ -43,17 +38,15 @@ function ensureStyle(): void {
 .ksui-fr-actions{display:flex;gap:0.5rem;flex-wrap:wrap;}
 .ksui-fr-btn{padding:0.5rem 0.875rem;border-radius:0.5rem;border:1px solid var(--ksui-fr-border,rgba(255,255,255,0.15));background:var(--ksui-fr-btn-bg,rgba(255,255,255,0.06));color:inherit;font-size:0.82rem;cursor:pointer;}
 .ksui-fr-btn:disabled{opacity:0.5;cursor:not-allowed;}
-.ksui-fr-btn.primary{background:var(--ksui-fr-primary,#c9a961);color:var(--ksui-fr-primary-fg,#18181b);border-color:transparent;}
-.ksui-fr-btn.danger{background:var(--ksui-fr-danger,#ef4444);color:#fff;border-color:transparent;}
+.ksui-fr-btn.primary{background:var(--ksui-fr-primary,var(--ks-primary,#c9a961));color:var(--ksui-fr-primary-fg,#18181b);border-color:transparent;}
+.ksui-fr-btn.danger{background:var(--ksui-fr-danger,var(--ks-danger,#ef4444));color:var(--ks-fg,#ffffff);border-color:transparent;}
 .ksui-fr-msg{padding:0.625rem 0.75rem;border-radius:0.5rem;font-size:0.85rem;}
 .ksui-fr-msg.info{background:rgba(59,130,246,0.1);}
 .ksui-fr-msg.success{background:rgba(34,197,94,0.12);}
-.ksui-fr-msg.error{background:rgba(239,68,68,0.12);}
-.ksui-fr-error{padding:0.625rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);}
+.ksui-fr-msg.error{background:var(--ks-danger-bg,rgba(239,68,68,0.12));}
+.ksui-fr-error{padding:0.625rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;background:var(--ks-danger-bg,rgba(239,68,68,0.12));border:1px solid rgba(239,68,68,0.3);}
 .ksui-fr-loading{font-size:0.82rem;opacity:0.7;}
 `;
-  document.head.appendChild(style);
-}
 
 export interface FlowRunnerProps {
   /** The first node the server handed the client (the flow entry). */
@@ -77,7 +70,7 @@ export interface FlowRunnerProps {
 }
 
 export const FlowRunner: Component<FlowRunnerProps> = (props) => {
-  ensureStyle();
+  injectCSS(STYLE_ID, STYLE_CSS);
   const [node, setNode] = createSignal<FlowNode>(props.initialNode);
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);

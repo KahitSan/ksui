@@ -222,8 +222,8 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
   });
 
   return (
-    <div class="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-3">
-      <div class="flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest text-emerald-400 font-semibold">
+    <div class="rounded-lg border border-[rgba(16,185,129,0.2)] bg-[rgba(16,185,129,0.05)] p-3 space-y-3">
+      <div class="flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest text-[var(--ks-success-fg,#34d399)] font-semibold">
         <span class="flex items-center gap-1.5">
           <PackageIcon size={12} />
           Packages availed
@@ -231,7 +231,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
         <button
           type="button"
           onClick={() => setPickerOpen((v) => !v)}
-          class="ks-interactive inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-widest text-emerald-300 hover:bg-emerald-500/20"
+          class="ks-interactive inline-flex items-center gap-1 rounded-md border border-[rgba(16,185,129,0.3)] bg-[rgba(16,185,129,0.1)] px-2 py-0.5 text-[10px] uppercase tracking-widest text-[#6ee7b7] hover:bg-[rgba(16,185,129,0.2)]"
         >
           <Plus size={10} /> Add package
         </button>
@@ -240,23 +240,23 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
       <Show when={pickerOpen()}>
         <Show
           when={!loading()}
-          fallback={<div class="text-xs text-zinc-500">Loading packages…</div>}
+          fallback={<div class="text-xs text-[var(--ks-fg-subtle,#71717a)]">Loading packages…</div>}
         >
           <Show
             when={!loadError()}
-            fallback={<div class="text-xs text-rose-400">{loadError()}</div>}
+            fallback={<div class="text-xs text-[#fb7185]">{loadError()}</div>}
           >
             <Show
               when={packages().length > 0}
               fallback={
-                <div class="text-xs text-zinc-500">No active packages.</div>
+                <div class="text-xs text-[var(--ks-fg-subtle,#71717a)]">No active packages.</div>
               }
             >
-              <div class="space-y-1.5 max-h-56 overflow-y-auto rounded-md border border-emerald-500/15 p-2 bg-zinc-950/40">
+              <div class="space-y-1.5 max-h-56 overflow-y-auto rounded-md border border-[rgba(16,185,129,0.15)] p-2 bg-[rgba(9,9,11,0.4)]">
                 <For each={packages()}>
                   {(pkg) => (
                     <div class="space-y-1">
-                      <div class="text-[11px] uppercase tracking-widest text-zinc-400">
+                      <div class="text-[11px] uppercase tracking-widest text-[var(--ks-fg-muted,#a1a1aa)]">
                         {pkg.name}
                       </div>
                       <div class="flex flex-wrap gap-1.5">
@@ -265,7 +265,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
                             <button
                               type="button"
                               onClick={() => addVariant(pkg, v)}
-                              class="ks-interactive inline-flex items-center gap-1 rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-300"
+                              class="ks-interactive inline-flex items-center gap-1 rounded border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] px-2 py-0.5 text-xs text-[#d4d4d8] hover:border-[rgba(16,185,129,0.4)] hover:text-[#6ee7b7]"
                             >
                               {v.name} · {formatPHP(Number(v.price))}
                             </button>
@@ -284,7 +284,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
       <Show
         when={props.items.length > 0}
         fallback={
-          <div class="text-xs text-zinc-500">No packages added yet.</div>
+          <div class="text-xs text-[var(--ks-fg-subtle,#71717a)]">No packages added yet.</div>
         }
       >
         <div class="space-y-1.5">
@@ -292,11 +292,11 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
             {(line) => (
               <div class="flex items-center gap-2 text-sm">
                 <div class="min-w-0 flex-1">
-                  <div class="text-zinc-200 truncate">
+                  <div class="text-[#e4e4e7] truncate">
                     {line.package_name}{" "}
-                    <span class="text-zinc-500">· {line.variant_name}</span>
+                    <span class="text-[var(--ks-fg-subtle,#71717a)]">· {line.variant_name}</span>
                   </div>
-                  <div class="text-[11px] text-zinc-500 tabular-nums">
+                  <div class="text-[11px] text-[var(--ks-fg-subtle,#71717a)] tabular-nums">
                     {formatPHP(line.unit_price)} · {line.duration_value}{" "}
                     {line.duration_unit}
                     {line.duration_value !== 1 ? "s" : ""}
@@ -306,30 +306,30 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
                   <button
                     type="button"
                     onClick={() => adjust(line.key, -1)}
-                    class="ks-interactive flex h-6 w-6 items-center justify-center rounded border border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-emerald-500/40"
+                    class="ks-interactive flex h-6 w-6 items-center justify-center rounded border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] text-[#d4d4d8] hover:border-[rgba(16,185,129,0.4)]"
                     aria-label="Decrease quantity"
                   >
                     <Minus size={12} />
                   </button>
-                  <span class="w-6 text-center text-sm text-zinc-200 tabular-nums">
+                  <span class="w-6 text-center text-sm text-[#e4e4e7] tabular-nums">
                     {line.quantity}
                   </span>
                   <button
                     type="button"
                     onClick={() => adjust(line.key, 1)}
-                    class="ks-interactive flex h-6 w-6 items-center justify-center rounded border border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-emerald-500/40"
+                    class="ks-interactive flex h-6 w-6 items-center justify-center rounded border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] text-[#d4d4d8] hover:border-[rgba(16,185,129,0.4)]"
                     aria-label="Increase quantity"
                   >
                     <Plus size={12} />
                   </button>
                 </div>
-                <div class="w-20 text-right text-zinc-300 tabular-nums whitespace-nowrap">
+                <div class="w-20 text-right text-[#d4d4d8] tabular-nums whitespace-nowrap">
                   {formatPHP(line.unit_price * line.quantity)}
                 </div>
                 <button
                   type="button"
                   onClick={() => remove(line.key)}
-                  class="ks-interactive flex h-6 w-6 items-center justify-center rounded text-zinc-500 hover:text-rose-400"
+                  class="ks-interactive flex h-6 w-6 items-center justify-center rounded text-[var(--ks-fg-subtle,#71717a)] hover:text-[#fb7185]"
                   aria-label="Remove line"
                 >
                   <Trash2 size={12} />
@@ -342,7 +342,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
-          <label class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
+          <label class="text-[10px] uppercase tracking-widest text-[var(--ks-fg-subtle,#71717a)] font-semibold">
             Billed to
           </label>
           <ComboBox<ClientOption>
@@ -360,7 +360,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
           />
         </div>
         <div>
-          <label class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
+          <label class="text-[10px] uppercase tracking-widest text-[var(--ks-fg-subtle,#71717a)] font-semibold">
             Voucher
           </label>
           <VoucherPicker
@@ -377,7 +377,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
 
       <Show when={!props.voucher}>
         <div>
-          <label class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">
+          <label class="text-[10px] uppercase tracking-widest text-[var(--ks-fg-subtle,#71717a)] font-semibold">
             Manual discount (₱)
           </label>
           <input
@@ -386,19 +386,19 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
             step="0.01"
             value={props.manualDiscount}
             onInput={(e) => props.setManualDiscount(e.currentTarget.value)}
-            class="mt-0.5 w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-200 tabular-nums focus:border-emerald-500/50 focus:outline-none"
+            class="mt-0.5 w-full rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] px-2 py-1 text-sm text-[#e4e4e7] tabular-nums focus:border-[rgba(16,185,129,0.5)] focus:outline-none"
           />
         </div>
       </Show>
 
       <Show when={props.items.length > 0}>
-        <div class="border-t border-emerald-500/15 pt-2 text-xs space-y-0.5 tabular-nums">
-          <div class="flex items-center justify-between text-zinc-400">
+        <div class="border-t border-[rgba(16,185,129,0.15)] pt-2 text-xs space-y-0.5 tabular-nums">
+          <div class="flex items-center justify-between text-[var(--ks-fg-muted,#a1a1aa)]">
             <span>Subtotal</span>
             <span>{formatPHP(subtotal())}</span>
           </div>
           <Show when={effectiveDiscount() > 0}>
-            <div class="flex items-center justify-between text-zinc-400">
+            <div class="flex items-center justify-between text-[var(--ks-fg-muted,#a1a1aa)]">
               <span>
                 {props.voucher
                   ? `Voucher ${props.voucher.code}`
@@ -407,7 +407,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
               <span>− {formatPHP(effectiveDiscount())}</span>
             </div>
           </Show>
-          <div class="flex items-center justify-between text-zinc-200 font-semibold">
+          <div class="flex items-center justify-between text-[#e4e4e7] font-semibold">
             <span>Total</span>
             <span>{formatPHP(total())}</span>
           </div>

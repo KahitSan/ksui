@@ -137,16 +137,24 @@ const TONE_CLASSES: Record<
   { bg: string; text: string; border: string }
 > = {
   emerald: {
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-400",
-    border: "border-emerald-500/30",
+    bg: "bg-[rgba(16,185,129,0.1)]",
+    text: "text-[var(--ks-success-fg,#34d399)]",
+    border: "border-[rgba(16,185,129,0.3)]",
   },
-  red: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30" },
-  blue: { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/30" },
+  red: {
+    bg: "bg-[rgba(239,68,68,0.1)]",
+    text: "text-[var(--ks-danger-fg,#f87171)]",
+    border: "border-[rgba(239,68,68,0.3)]",
+  },
+  blue: {
+    bg: "bg-[rgba(59,130,246,0.1)]",
+    text: "text-[#60a5fa]",
+    border: "border-[rgba(59,130,246,0.3)]",
+  },
   amber: {
-    bg: "bg-amber-500/10",
-    text: "text-amber-400",
-    border: "border-amber-500/30",
+    bg: "bg-[rgba(245,158,11,0.1)]",
+    text: "text-[var(--ks-accent,#fbbf24)]",
+    border: "border-[rgba(245,158,11,0.3)]",
   },
 };
 
@@ -160,10 +168,10 @@ const PAYABLE_KIND_OPTIONS: { id: string; label: string }[] = [
 ];
 
 const PDC_OPTIONS: { id: string; label: string; dot: string }[] = [
-  { id: "issued", label: "PDC issued", dot: "bg-amber-400" },
-  { id: "presented", label: "PDC presented", dot: "bg-blue-400" },
-  { id: "cleared", label: "PDC cleared", dot: "bg-emerald-400" },
-  { id: "bounced", label: "PDC bounced", dot: "bg-red-400" },
+  { id: "issued", label: "PDC issued", dot: "bg-[var(--ks-accent,#fbbf24)]" },
+  { id: "presented", label: "PDC presented", dot: "bg-[#60a5fa]" },
+  { id: "cleared", label: "PDC cleared", dot: "bg-[var(--ks-success-fg,#34d399)]" },
+  { id: "bounced", label: "PDC bounced", dot: "bg-[var(--ks-danger-fg,#f87171)]" },
 ];
 
 const CATEGORY_FORM: Record<
@@ -438,12 +446,12 @@ export default function TransactionForm(props: TransactionFormProps) {
       onPaste={handlePaste}
     >
       <Show when={dragging()}>
-        <div class="absolute inset-0 z-30 border-2 border-dashed border-amber-400/60 bg-amber-500/10 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-none">
-          <Upload size={32} class="text-amber-400 mb-2" />
-          <span class="text-sm text-amber-400 font-medium">
+        <div class="absolute inset-0 z-30 border-2 border-dashed border-[rgba(251,191,36,0.6)] bg-[rgba(245,158,11,0.1)] backdrop-blur-sm flex flex-col items-center justify-center pointer-events-none">
+          <Upload size={32} class="text-[var(--ks-accent,#fbbf24)] mb-2" />
+          <span class="text-sm text-[var(--ks-accent,#fbbf24)] font-medium">
             Drop files to attach
           </span>
-          <span class="text-[10px] text-amber-400/60 mt-1">Images or PDFs</span>
+          <span class="text-[10px] text-[rgba(251,191,36,0.6)] mt-1">Images or PDFs</span>
         </div>
       </Show>
 
@@ -467,7 +475,7 @@ export default function TransactionForm(props: TransactionFormProps) {
         <div class="flex-1 overflow-x-hidden overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
           <Show when={props.error}>
             <div
-              class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+              class="rounded-lg border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)] px-3 py-2 text-sm text-[var(--ks-danger-fg,#f87171)]"
               data-testid="transactions-form-error"
             >
               {props.error}
@@ -476,7 +484,7 @@ export default function TransactionForm(props: TransactionFormProps) {
 
           <Show when={!props.simpleMode}>
             <div>
-              <div class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-2">
+              <div class="text-[10px] uppercase tracking-widest text-[var(--ks-fg-subtle,#71717a)] font-semibold mb-2">
                 Type
               </div>
               <div
@@ -509,7 +517,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                         classList={{
                           [`${tc.bg} ${tc.border} ${tc.text}`]:
                             props.category === cat,
-                          "border-zinc-800 bg-transparent text-zinc-500 hover:border-zinc-700 hover:text-zinc-200":
+                          "border-[#27272a] bg-transparent text-[var(--ks-fg-subtle,#71717a)] hover:border-[var(--ks-input-border,#3f3f46)] hover:text-[#e4e4e7]":
                             props.category !== cat,
                         }}
                       >
@@ -520,7 +528,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   }}
                 </For>
               </div>
-              <p class="text-[11px] text-zinc-500 mt-2">{catConfig().hint}</p>
+              <p class="text-[11px] text-[var(--ks-fg-subtle,#71717a)] mt-2">{catConfig().hint}</p>
             </div>
           </Show>
 
@@ -541,8 +549,8 @@ export default function TransactionForm(props: TransactionFormProps) {
             when={!(props.category === "sale" && props.saleItems.length > 0)}
           >
             <FormField label="Amount *">
-              <div class="flex items-stretch gap-2 px-4 py-3 border bg-zinc-900/60 border-zinc-800/60 ks-hud-clip-button focus-within:border-amber-500/50 transition-colors">
-                <span class="self-center text-3xl font-bold text-zinc-500 tabular-nums">
+              <div class="flex items-stretch gap-2 px-4 py-3 border bg-[rgba(24,24,27,0.6)] border-[rgba(39,39,42,0.6)] ks-hud-clip-button focus-within:border-[rgba(245,158,11,0.5)] transition-colors">
+                <span class="self-center text-3xl font-bold text-[var(--ks-fg-subtle,#71717a)] tabular-nums">
                   ₱
                 </span>
                 <input
@@ -552,7 +560,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   data-testid="transactions-form-amount"
                   value={props.amount}
                   onInput={(e) => props.setAmount(e.currentTarget.value)}
-                  class="min-w-0 flex-1 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
+                  class="min-w-0 flex-1 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-[#f4f4f5] placeholder-[var(--ks-input-border,#3f3f46)] focus:outline-none"
                   placeholder="0.00"
                   required
                 />
@@ -582,8 +590,8 @@ export default function TransactionForm(props: TransactionFormProps) {
                 data-testid="transactions-form-transfer-fee-field"
               >
                 <FormField label="Transfer fee *">
-                  <div class="flex items-center gap-2 px-3 py-2 border bg-zinc-950/50 border-blue-500/30 ks-hud-clip-button focus-within:border-blue-500/60 transition-colors">
-                    <span class="text-lg font-bold text-zinc-500 tabular-nums">
+                  <div class="flex items-center gap-2 px-3 py-2 border bg-[rgba(9,9,11,0.5)] border-[rgba(59,130,246,0.3)] ks-hud-clip-button focus-within:border-[rgba(59,130,246,0.6)] transition-colors">
+                    <span class="text-lg font-bold text-[var(--ks-fg-subtle,#71717a)] tabular-nums">
                       ₱
                     </span>
                     <input
@@ -595,11 +603,11 @@ export default function TransactionForm(props: TransactionFormProps) {
                       onInput={(e) =>
                         props.setTransferFeeAmount(e.currentTarget.value)
                       }
-                      class="min-w-0 flex-1 bg-transparent text-lg font-semibold tabular-nums text-zinc-100 placeholder-zinc-700 focus:outline-none"
+                      class="min-w-0 flex-1 bg-transparent text-lg font-semibold tabular-nums text-[#f4f4f5] placeholder-[var(--ks-input-border,#3f3f46)] focus:outline-none"
                       placeholder="0.00"
                     />
                   </div>
-                  <p class="mt-1 text-[10px] text-zinc-600">
+                  <p class="mt-1 text-[10px] text-[#52525b]">
                     Saved as a separate expense from the source account.
                   </p>
                 </FormField>
@@ -614,14 +622,14 @@ export default function TransactionForm(props: TransactionFormProps) {
               disabled={!props.isAdmin}
             />
             <Show when={!props.isAdmin}>
-              <p class="text-[10px] text-zinc-600 mt-0.5">
+              <p class="text-[10px] text-[#52525b] mt-0.5">
                 Only admins can change the date
               </p>
             </Show>
           </FormField>
 
           <Show when={props.isBackdated}>
-            <div class="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+            <div class="rounded-lg border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.05)] px-3 py-2">
               <FormField label="Backdate Reason *">
                 <input
                   type="text"
@@ -630,7 +638,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   onInput={(e) =>
                     props.setBackdateReason(e.currentTarget.value)
                   }
-                  class="w-full rounded-lg border border-amber-500/30 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
+                  class="w-full rounded-lg border border-[rgba(245,158,11,0.3)] bg-[rgba(39,39,42,0.5)] px-3 py-2 text-sm text-[#e4e4e7] focus:border-[rgba(245,158,11,0.5)] focus:outline-none"
                   placeholder="Why are you backdating this transaction?"
                   required
                 />
@@ -644,7 +652,7 @@ export default function TransactionForm(props: TransactionFormProps) {
               data-testid="transactions-form-description"
               value={props.description}
               onInput={(e) => props.setDescription(e.currentTarget.value)}
-              class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button focus:outline-none focus:border-amber-500/50"
+              class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button focus:outline-none focus:border-[rgba(245,158,11,0.5)]"
               placeholder={catConfig().descPlaceholder}
               required
             />
@@ -687,7 +695,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   type="text"
                   value={props.refNumber}
                   onInput={(e) => props.setRefNumber(e.currentTarget.value)}
-                  class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button focus:outline-none focus:border-amber-500/50"
+                  class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button focus:outline-none focus:border-[rgba(245,158,11,0.5)]"
                   placeholder="OR#, SI#, or ref number"
                 />
               </FormField>
@@ -699,7 +707,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                 type="text"
                 value={props.refNumber}
                 onInput={(e) => props.setRefNumber(e.currentTarget.value)}
-                class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button focus:outline-none focus:border-amber-500/50"
+                class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button focus:outline-none focus:border-[rgba(245,158,11,0.5)]"
                 placeholder="Reference number (optional)"
               />
             </FormField>
@@ -713,7 +721,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   <select
                     disabled
                     data-testid="subcategory-select-loading"
-                    class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-500 ks-hud-clip-button focus:outline-none"
+                    class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[var(--ks-fg-subtle,#71717a)] ks-hud-clip-button focus:outline-none"
                   >
                     <option>Loading…</option>
                   </select>
@@ -745,19 +753,19 @@ export default function TransactionForm(props: TransactionFormProps) {
                   }
                   placeholder="— Uncategorised —"
                   searchPlaceholder="Search categories…"
-                  triggerClass="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button cursor-pointer focus:outline-none focus:border-amber-500/50 flex items-center justify-between gap-2"
+                  triggerClass="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button cursor-pointer focus:outline-none focus:border-[rgba(245,158,11,0.5)] flex items-center justify-between gap-2"
                   triggerLabelClass="truncate text-left flex-1 min-w-0"
                 />
               </Show>
-              <p class="text-[10px] text-zinc-600 mt-0.5">
+              <p class="text-[10px] text-[#52525b] mt-0.5">
                 Optional. Used for tax-prep classification.
               </p>
             </FormField>
           </Show>
 
           <Show when={props.category === "payable"}>
-            <div class="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 space-y-3">
-              <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-amber-400 font-semibold">
+            <div class="rounded-lg border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.05)] p-3 space-y-3">
+              <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[var(--ks-accent,#fbbf24)] font-semibold">
                 <CalendarDays size={12} />
                 <span>Payable details</span>
               </div>
@@ -768,7 +776,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                     onChange={(e) =>
                       props.setPayableKind(e.currentTarget.value)
                     }
-                    class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button cursor-pointer focus:outline-none focus:border-amber-500/50"
+                    class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button cursor-pointer focus:outline-none focus:border-[rgba(245,158,11,0.5)]"
                   >
                     <For each={PAYABLE_KIND_OPTIONS}>
                       {(opt) => <option value={opt.id}>{opt.label}</option>}
@@ -780,7 +788,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                     value={props.dueDate}
                     onChange={(d: string | null) => props.setDueDate(d || "")}
                   />
-                  <p class="text-[10px] text-zinc-600 mt-0.5">
+                  <p class="text-[10px] text-[#52525b] mt-0.5">
                     When payment is owed. Past-due payables show in the Payables
                     tab.
                   </p>
@@ -794,10 +802,10 @@ export default function TransactionForm(props: TransactionFormProps) {
                     onInput={(e) =>
                       props.setChequeNumber(e.currentTarget.value)
                     }
-                    class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-3 text-sm text-zinc-200 ks-hud-clip-button focus:outline-none focus:border-amber-500/50"
+                    class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button focus:outline-none focus:border-[rgba(245,158,11,0.5)]"
                     placeholder="e.g. 0004429-007"
                   />
-                  <p class="text-[10px] text-zinc-600 mt-0.5">
+                  <p class="text-[10px] text-[#52525b] mt-0.5">
                     For post-dated cheques (PDC). Leave blank for direct
                     payments.
                   </p>
@@ -841,7 +849,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   }}
                 />
                 <Show when={catConfig().accountHint}>
-                  <p class="text-[10px] text-zinc-600 mt-0.5">
+                  <p class="text-[10px] text-[#52525b] mt-0.5">
                     {catConfig().accountHint}
                   </p>
                 </Show>
@@ -866,7 +874,7 @@ export default function TransactionForm(props: TransactionFormProps) {
             <MentionTextarea
               value={props.notes}
               setValue={props.setNotes}
-              class="w-full bg-zinc-900/60 border border-zinc-800/60 px-3 py-2 text-sm text-zinc-200 ks-hud-clip-button focus:outline-none focus:border-amber-500/50 resize-none"
+              class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-2 text-sm text-[#e4e4e7] ks-hud-clip-button focus:outline-none focus:border-[rgba(245,158,11,0.5)] resize-none"
               rows={2}
               placeholder="Optional notes... (type @ to mention a client)"
               ariaLabel="Notes"
@@ -874,7 +882,7 @@ export default function TransactionForm(props: TransactionFormProps) {
           </FormField>
 
           <div>
-            <div class="flex items-center gap-1 mb-2 text-xs text-zinc-500">
+            <div class="flex items-center gap-1 mb-2 text-xs text-[var(--ks-fg-subtle,#71717a)]">
               <Paperclip size={12} /> Attachments
               <Show
                 when={
@@ -883,7 +891,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   0
                 }
               >
-                <span class="text-zinc-600">
+                <span class="text-[#52525b]">
                   (
                   {(props.existingAttachments?.length ?? 0) +
                     props.pendingFiles.length}
@@ -908,7 +916,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                     <Show
                       when={pf.previewUrl}
                       fallback={
-                        <div class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-700 bg-zinc-800/50 px-2 text-xs text-zinc-300">
+                        <div class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-[var(--ks-input-border,#3f3f46)] bg-[rgba(39,39,42,0.5)] px-2 text-xs text-[#d4d4d8]">
                           <FileIcon size={20} />
                           <span class="truncate max-w-full text-[10px]">
                             {pf.file.name}
@@ -916,7 +924,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                         </div>
                       }
                     >
-                      <div class="block rounded-lg border border-zinc-700 overflow-hidden">
+                      <div class="block rounded-lg border border-[var(--ks-input-border,#3f3f46)] overflow-hidden">
                         <img
                           src={pf.previewUrl!}
                           alt={pf.file.name}
@@ -932,7 +940,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                           props.pendingFiles.filter((f) => f.id !== pf.id)
                         );
                       }}
-                      class="absolute -top-2 -right-2 flex w-7 h-7 items-center justify-center rounded-full bg-red-600/90 border border-red-400/60 text-white cursor-pointer hover:bg-red-500 active:bg-red-700 shadow-lg"
+                      class="absolute -top-2 -right-2 flex w-7 h-7 items-center justify-center rounded-full bg-[rgba(220,38,38,0.9)] border border-[rgba(248,113,113,0.6)] text-[var(--ks-fg,#ffffff)] cursor-pointer hover:bg-[var(--ks-danger,#ef4444)] active:bg-[#b91c1c] shadow-lg"
                       aria-label={`Remove ${pf.file.name}`}
                     >
                       <X size={12} />
@@ -965,7 +973,7 @@ export default function TransactionForm(props: TransactionFormProps) {
             />
 
             <Show when={props.pendingFiles.length === 0}>
-              <p class="text-[10px] text-zinc-600 mt-1">
+              <p class="text-[10px] text-[#52525b] mt-1">
                 Drop files here or paste from clipboard.
               </p>
             </Show>
@@ -978,7 +986,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                 onClick={() =>
                   setViewMode(viewMode() === "default" ? "advanced" : "default")
                 }
-                class="text-xs text-zinc-500 hover:text-amber-400 px-3 py-1.5 transition-colors cursor-pointer"
+                class="text-xs text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-accent,#fbbf24)] px-3 py-1.5 transition-colors cursor-pointer"
               >
                 {viewMode() === "default"
                   ? "Show advanced fields"
@@ -1010,16 +1018,16 @@ export default function TransactionForm(props: TransactionFormProps) {
           </Show>
         </div>
 
-        <div class="px-5 sm:px-6 py-4 border-t border-zinc-800/60 bg-zinc-950 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
-          <div class="text-xs text-zinc-500">
-            <span class="text-zinc-600">Will record as </span>
+        <div class="px-5 sm:px-6 py-4 border-t border-[rgba(39,39,42,0.6)] bg-[#09090b] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
+          <div class="text-xs text-[var(--ks-fg-subtle,#71717a)]">
+            <span class="text-[#52525b]">Will record as </span>
             <span
               class="font-bold"
               classList={{
-                "text-emerald-400": props.category === "sale",
-                "text-red-400": props.category === "expense",
-                "text-amber-400": props.category === "payable",
-                "text-blue-400": props.category === "business",
+                "text-[var(--ks-success-fg,#34d399)]": props.category === "sale",
+                "text-[var(--ks-danger-fg,#f87171)]": props.category === "expense",
+                "text-[var(--ks-accent,#fbbf24)]": props.category === "payable",
+                "text-[#60a5fa]": props.category === "business",
               }}
             >
               {(CATEGORY_FORM[props.category] || CATEGORY_FORM.expense).label}

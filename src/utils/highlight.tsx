@@ -9,16 +9,15 @@
 // still pass their own `markClass` to override.
 
 import { type JSX } from "solid-js";
+import { injectCSS } from "./inject-css";
 
 const MARK_STYLE_ID = "ksui-mark-style";
 
 function ensureMarkStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(MARK_STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = MARK_STYLE_ID;
-  style.textContent = `.ksui-mark{background-color:rgba(245,158,11,0.3);color:inherit;border-radius:2px;}`;
-  document.head.appendChild(style);
+  injectCSS(
+    MARK_STYLE_ID,
+    `.ksui-mark{background-color:rgba(245,158,11,0.3);color:inherit;border-radius:2px;}`,
+  );
 }
 
 /** Case-insensitive substring test. Empty query matches everything. */

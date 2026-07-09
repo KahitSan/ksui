@@ -40,11 +40,11 @@ function AccountTile(p: AccountTileProps): JSX.Element {
       onClick={p.onEditRequest}
       class={`group flex flex-1 min-w-0 items-center gap-3 border px-4 py-3 text-left transition-colors cursor-pointer ${p.clipClass}`}
       classList={{
-        "border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10":
+        "border-[rgba(59,130,246,0.4)] bg-[rgba(59,130,246,0.05)] hover:bg-[rgba(59,130,246,0.1)]":
           isFilled() && isFrom(),
-        "border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10":
+        "border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.05)] hover:bg-[rgba(245,158,11,0.1)]":
           isFilled() && !isFrom(),
-        "border-dashed border-zinc-700 bg-zinc-900/40 hover:border-amber-500/50 hover:bg-zinc-900/60":
+        "border-dashed border-[var(--ks-input-border,#3f3f46)] bg-[rgba(24,24,27,0.4)] hover:border-[rgba(245,158,11,0.5)] hover:bg-[rgba(24,24,27,0.6)]":
           !isFilled(),
       }}
       aria-label={
@@ -57,7 +57,7 @@ function AccountTile(p: AccountTileProps): JSX.Element {
         when={p.account}
         keyed
         fallback={
-          <span class="flex h-8 w-8 items-center justify-center text-zinc-500">
+          <span class="flex h-8 w-8 items-center justify-center text-[var(--ks-fg-subtle,#71717a)]">
             <Plus size={18} />
           </span>
         }
@@ -66,7 +66,7 @@ function AccountTile(p: AccountTileProps): JSX.Element {
           <AccountAvatar
             account={a}
             size={28}
-            iconClass={isFrom() ? "text-blue-300" : "text-amber-300"}
+            iconClass={isFrom() ? "text-[#93c5fd]" : "text-[var(--ks-accent-hover,#fcd34d)]"}
           />
         )}
       </Show>
@@ -74,9 +74,9 @@ function AccountTile(p: AccountTileProps): JSX.Element {
         <span
           class="text-[10px] font-semibold uppercase tracking-widest"
           classList={{
-            "text-blue-300": isFilled() && isFrom(),
-            "text-amber-300": isFilled() && !isFrom(),
-            "text-zinc-500": !isFilled(),
+            "text-[#93c5fd]": isFilled() && isFrom(),
+            "text-[var(--ks-accent-hover,#fcd34d)]": isFilled() && !isFrom(),
+            "text-[var(--ks-fg-subtle,#71717a)]": !isFilled(),
           }}
         >
           {isFrom() ? "From" : "To"}
@@ -85,23 +85,23 @@ function AccountTile(p: AccountTileProps): JSX.Element {
           when={p.account}
           keyed
           fallback={
-            <span class="text-sm text-zinc-500">{p.emptyHint}</span>
+            <span class="text-sm text-[var(--ks-fg-subtle,#71717a)]">{p.emptyHint}</span>
           }
         >
           {(a) => (
             <>
-              <span class="truncate text-sm font-semibold text-zinc-100">
+              <span class="truncate text-sm font-semibold text-[#f4f4f5]">
                 {a.name}
               </span>
               <Show when={a.balance != null}>
-                <span class="flex items-baseline gap-1 text-[11px] tabular-nums text-zinc-400">
+                <span class="flex items-baseline gap-1 text-[11px] tabular-nums text-[var(--ks-fg-muted,#a1a1aa)]">
                   <span class="truncate">{formatPHP(a.balance!)}</span>
                   <Show when={p.delta !== 0}>
                     <span
                       class="whitespace-nowrap font-semibold"
                       classList={{
-                        "text-red-400": p.delta < 0,
-                        "text-emerald-400": p.delta > 0,
+                        "text-[var(--ks-danger-fg,#f87171)]": p.delta < 0,
+                        "text-[var(--ks-success-fg,#34d399)]": p.delta > 0,
                       }}
                       data-testid={`transactions-form-transfer-delta-${p.role}`}
                     >
@@ -168,7 +168,7 @@ export default function TransferAccountsPicker(
               type="button"
               data-testid="transactions-form-transfer-swap"
               onClick={swap}
-              class="flex h-9 w-9 shrink-0 items-center justify-center self-center border border-zinc-700 bg-zinc-900 text-zinc-300 transition-colors hover:border-amber-500/60 hover:text-amber-300 cursor-pointer ks-hud-clip-button max-sm:rotate-90"
+              class="flex h-9 w-9 shrink-0 items-center justify-center self-center border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] text-[#d4d4d8] transition-colors hover:border-[rgba(245,158,11,0.6)] hover:text-[var(--ks-accent-hover,#fcd34d)] cursor-pointer ks-hud-clip-button max-sm:rotate-90"
               aria-label="Swap source and destination"
               title="Swap source and destination"
             >
@@ -193,8 +193,8 @@ export default function TransferAccountsPicker(
                   x2="56"
                   y2="7"
                 >
-                  <stop offset="0" stop-color="#3b82f6" />
-                  <stop offset="1" stop-color="#f59e0b" />
+                  <stop offset="0" style={{ "stop-color": "#3b82f6" }} />
+                  <stop offset="1" style={{ "stop-color": "#f59e0b" }} />
                 </linearGradient>
               </defs>
               <line
@@ -206,7 +206,7 @@ export default function TransferAccountsPicker(
                 stroke-width="2"
                 class="fin-flow-dash"
               />
-              <path d="M44 1 L56 7 L44 13 Z" fill="#f59e0b" />
+              <path d="M44 1 L56 7 L44 13 Z" style={{ fill: "#f59e0b" }} />
             </svg>
             <svg
               viewBox="0 0 14 40"
@@ -221,8 +221,8 @@ export default function TransferAccountsPicker(
                   x2="7"
                   y2="40"
                 >
-                  <stop offset="0" stop-color="#3b82f6" />
-                  <stop offset="1" stop-color="#f59e0b" />
+                  <stop offset="0" style={{ "stop-color": "#3b82f6" }} />
+                  <stop offset="1" style={{ "stop-color": "#f59e0b" }} />
                 </linearGradient>
               </defs>
               <line
@@ -234,7 +234,7 @@ export default function TransferAccountsPicker(
                 stroke-width="2"
                 class="fin-flow-dash"
               />
-              <path d="M1 30 L13 30 L7 40 Z" fill="#f59e0b" />
+              <path d="M1 30 L13 30 L7 40 Z" style={{ fill: "#f59e0b" }} />
             </svg>
           </div>
         </Show>

@@ -98,16 +98,20 @@ export default function AccountRadioPicker(props: AccountRadioPickerProps) {
                 onClick={() => props.onChange(a.id.toString())}
                 class="group flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm transition-colors cursor-pointer ks-hud-clip-top-left-bottom-right"
                 classList={{
-                  "border-amber-500/50 bg-amber-600/10 text-amber-300":
+                  "border-amber-500/50 bg-amber-600/10 text-[var(--ks-accent-hover,#fcd34d)]":
                     selected(),
-                  "border-zinc-700 bg-zinc-800/50 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800":
+                  "border-[var(--ks-border-strong,#3f3f46)] bg-zinc-800/50 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800":
                     !selected(),
                 }}
               >
                 <AccountAvatar
                   account={a}
                   size={24}
-                  iconClass={selected() ? "text-amber-300" : "text-zinc-400"}
+                  iconClass={
+                    selected()
+                      ? "text-[var(--ks-accent-hover,#fcd34d)]"
+                      : "text-[var(--ks-fg-muted,#a1a1aa)]"
+                  }
                 />
                 <span class="truncate">{a.name}</span>
               </button>

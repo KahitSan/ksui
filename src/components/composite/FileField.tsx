@@ -19,6 +19,7 @@ import UploadCloud from "lucide-solid/icons/cloud-upload";
 import FileIcon from "lucide-solid/icons/file";
 import ImageOff from "lucide-solid/icons/image-off";
 import X from "lucide-solid/icons/x";
+import { injectCSS } from "../../utils/inject-css";
 
 /** The opaque asset handle the field stores as its value (§11). */
 export interface AssetHandle {
@@ -32,16 +33,10 @@ export interface AssetHandle {
 export type FileFieldStatus = "empty" | "uploading" | "done" | "failed";
 
 const STYLE_ID = "ksui-file-field-style";
-
-function ensureStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
+const STYLE_CSS = `
 .ksui-ff{display:flex;flex-direction:column;gap:0.5rem;}
 .ksui-ff-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.375rem;padding:1.25rem;border-radius:0.625rem;border:1.5px dashed var(--ksui-ff-border,rgba(255,255,255,0.2));background:var(--ksui-ff-bg,rgba(255,255,255,0.03));color:var(--ksui-ff-fg,inherit);cursor:pointer;text-align:center;font-size:0.82rem;transition:border-color .15s,background .15s;}
-.ksui-ff-drop.dragging{border-color:var(--ksui-ff-accent,#c9a961);background:var(--ksui-ff-accent-bg,rgba(201,169,97,0.08));}
+.ksui-ff-drop.dragging{border-color:var(--ksui-ff-accent,var(--ks-primary,#c9a961));background:var(--ksui-ff-accent-bg,rgba(201,169,97,0.08));}
 .ksui-ff-drop:disabled{opacity:0.5;cursor:not-allowed;}
 .ksui-ff-hint{font-size:0.72rem;opacity:0.6;}
 .ksui-ff-card{display:flex;align-items:center;gap:0.625rem;padding:0.5rem 0.625rem;border-radius:0.5rem;border:1px solid var(--ksui-ff-border,rgba(255,255,255,0.15));background:var(--ksui-ff-bg,rgba(255,255,255,0.03));}
@@ -49,12 +44,10 @@ function ensureStyle(): void {
 .ksui-ff-meta{display:flex;flex-direction:column;min-width:0;flex:1;}
 .ksui-ff-name{font-size:0.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ksui-ff-sub{font-size:0.72rem;opacity:0.6;}
-.ksui-ff-sub.failed{color:var(--ksui-ff-danger,#f87171);}
+.ksui-ff-sub.failed{color:var(--ksui-ff-danger,var(--ks-danger-fg,#f87171));}
 .ksui-ff-remove{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;border-radius:0.375rem;border:1px solid var(--ksui-ff-border,rgba(255,255,255,0.15));background:transparent;color:inherit;cursor:pointer;}
-.ksui-ff-retry{font-size:0.72rem;text-decoration:underline;cursor:pointer;color:var(--ksui-ff-accent,#c9a961);background:none;border:none;padding:0;}
+.ksui-ff-retry{font-size:0.72rem;text-decoration:underline;cursor:pointer;color:var(--ksui-ff-accent,var(--ks-primary,#c9a961));background:none;border:none;padding:0;}
 `;
-  document.head.appendChild(style);
-}
 
 export interface FileFieldProps {
   /** Field label. */
@@ -89,7 +82,7 @@ function formatSize(bytes: number): string {
 }
 
 export const FileField: Component<FileFieldProps> = (props) => {
-  ensureStyle();
+  injectCSS(STYLE_ID, STYLE_CSS);
   const [status, setStatus] = createSignal<FileFieldStatus>(props.value ? "done" : "empty");
   // The handle currently shown. Seeded from props.value, and updated locally on a
   // fresh upload so the done card shows even when the parent doesn't echo onChange

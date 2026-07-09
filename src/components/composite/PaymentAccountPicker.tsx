@@ -202,7 +202,7 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
         aria-expanded={open()}
       >
         <Show when={loading()} fallback={null}>
-          <Loader2 size={14} class="animate-spin text-zinc-500 shrink-0" aria-hidden="true" />
+          <Loader2 size={14} class="animate-spin text-[var(--ks-fg-subtle,#71717a)] shrink-0" aria-hidden="true" />
         </Show>
         <Show when={!loading()}>
           <Show
@@ -212,13 +212,13 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
                 when={noAccounts()}
                 fallback={
                   <>
-                    <Banknote size={16} class="shrink-0 text-zinc-400" aria-hidden="true" />
-                    <span class="text-zinc-500 italic">Choose payment account</span>
+                    <Banknote size={16} class="shrink-0 text-[var(--ks-fg-muted,#a1a1aa)]" aria-hidden="true" />
+                    <span class="text-[var(--ks-fg-subtle,#71717a)] italic">Choose payment account</span>
                   </>
                 }
               >
-                <Banknote size={16} class="shrink-0 text-zinc-500" aria-hidden="true" />
-                <span class="text-zinc-500 italic">No accessible accounts</span>
+                <Banknote size={16} class="shrink-0 text-[var(--ks-fg-subtle,#71717a)]" aria-hidden="true" />
+                <span class="text-[var(--ks-fg-subtle,#71717a)] italic">No accessible accounts</span>
               </Show>
             }
           >
@@ -227,7 +227,7 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
                 <AccountAvatar account={acct()} size={28} />
                 <span class="flex-1 min-w-0">
                   <span class="block truncate text-zinc-100 font-medium">{acct().name}</span>
-                  <span class="block truncate text-[11px] text-zinc-500">
+                  <span class="block truncate text-[11px] text-[var(--ks-fg-subtle,#71717a)]">
                     {TYPE_LABELS[acct().type] ?? acct().type}
                   </span>
                 </span>
@@ -242,26 +242,26 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
           <div
             ref={popupRef}
             data-testid="payment-account-picker-popup"
-            class="z-[100] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[100] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
           >
             <div class="px-3 py-2 border-b border-zinc-800 flex items-center gap-2">
-              <Banknote size={14} class="text-zinc-500 shrink-0" aria-hidden="true" />
-              <span class="text-xs uppercase tracking-widest text-zinc-500 font-bold">
+              <Banknote size={14} class="text-[var(--ks-fg-subtle,#71717a)] shrink-0" aria-hidden="true" />
+              <span class="text-xs uppercase tracking-widest text-[var(--ks-fg-subtle,#71717a)] font-bold">
                 Payment account
               </span>
               <Show when={loading()}>
-                <Loader2 size={14} class="animate-spin text-zinc-500 ml-auto shrink-0" />
+                <Loader2 size={14} class="animate-spin text-[var(--ks-fg-subtle,#71717a)] ml-auto shrink-0" />
               </Show>
             </div>
             <div class="flex-1 overflow-y-auto">
               <Show when={error()}>
-                <div role="status" class="px-3 py-2 text-xs text-red-400">
+                <div role="status" class="px-3 py-2 text-xs text-[var(--ks-danger-fg,#f87171)]">
                   {error()}
                 </div>
               </Show>
               <Show when={!loading() && !error() && accounts().length === 0}>
-                <div role="status" class="px-3 py-4 text-xs text-zinc-500 text-center">
+                <div role="status" class="px-3 py-4 text-xs text-[var(--ks-fg-subtle,#71717a)] text-center">
                   No accessible accounts. Ask an admin to grant access.
                 </div>
               </Show>
@@ -292,7 +292,7 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
                                   {a.name}
                                 </span>
                                 <Show when={selected()}>
-                                  <span class="text-amber-400 shrink-0">✓</span>
+                                  <span class="text-[var(--ks-accent,#fbbf24)] shrink-0">✓</span>
                                 </Show>
                               </button>
                             </li>

@@ -76,7 +76,7 @@ export function ResourceForm(props: ResourceFormProps) {
       <Show when={props.error}>
         <div
           data-testid={`${props.spec.testIdPrefix}-form-error`}
-          class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+          class="rounded-lg border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)] px-3 py-2 text-sm text-[var(--ks-danger-fg,#f87171)]"
         >
           {props.error}
         </div>

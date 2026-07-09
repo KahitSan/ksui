@@ -35,6 +35,7 @@ import {
   type GraphNode,
   type PositionedNode,
 } from "../../utils/graph";
+import { injectCSS } from "../../utils/inject-css";
 
 type IconComp = Component<{ size?: number; class?: string }>;
 
@@ -62,13 +63,7 @@ const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 3;
 
 const STYLE_ID = "ksui-flow-graph-style";
-
-function ensureStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
+const STYLE_CSS = `
 .ksui-fg-wrap{width:100%;overflow:auto;position:relative;user-select:none;-webkit-user-select:none;}
 .ksui-fg-card,.ksui-fg-title,.ksui-fg-kind,.ksui-fg-elabel{user-select:none;-webkit-user-select:none;}
 .ksui-fg-wrap.interactive{overflow:hidden;border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.12));border-radius:10px;background:var(--ksui-fg-canvas,#101014);background-image:radial-gradient(var(--ksui-fg-dot,rgba(255,255,255,0.05)) 1px,transparent 1px);background-size:20px 20px;cursor:grab;touch-action:none;}
@@ -79,7 +74,7 @@ function ensureStyle(): void {
 .ksui-fg-wrap.interactive .ksui-fg-svg{max-width:none;width:100%;height:100%;}
 .ksui-fg-edge{fill:none;stroke:var(--ksui-fg-edge,rgba(255,255,255,0.28));stroke-width:1.75;}
 .ksui-fg-edge.dashed{stroke-dasharray:5 4;}
-.ksui-fg-edge.primary{stroke:var(--ksui-fg-primary,#c9a961);}
+.ksui-fg-edge.primary{stroke:var(--ksui-fg-primary,var(--ks-primary,#c9a961));}
 .ksui-fg-edge.info{stroke:#5b9bf0;}
 .ksui-fg-edge.success{stroke:#43c478;}
 .ksui-fg-edge.danger{stroke:#ef6a6a;}
@@ -96,12 +91,12 @@ function ensureStyle(): void {
 .ksui-fg-node.clickable .ksui-fg-card{cursor:pointer;}
 .ksui-fg-node.clickable .ksui-fg-card:hover{background:#23232b;}
 .ksui-fg-node:focus{outline:none;}
-.ksui-fg-node:focus-visible .ksui-fg-card{border-color:var(--ksui-fg-primary,#c9a961);}
-.ksui-fg-chip{flex:none;width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;}
+.ksui-fg-node:focus-visible .ksui-fg-card{border-color:var(--ksui-fg-primary,var(--ks-primary,#c9a961));}
+.ksui-fg-chip{flex:none;width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--ks-fg,#ffffff);}
 .ksui-fg-txt{min-width:0;display:flex;flex-direction:column;line-height:1.15;}
 .ksui-fg-title{font-size:12px;font-weight:600;color:var(--ksui-fg-fg,#ececef);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ksui-fg-kind{font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ksui-fg-muted,rgba(255,255,255,0.45));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ksui-fg-card.primary{border-left-color:#c9a961;} .ksui-fg-card.primary .ksui-fg-chip{background:#c9a961;color:#18181b;}
+.ksui-fg-card.primary{border-left-color:var(--ks-primary,#c9a961);} .ksui-fg-card.primary .ksui-fg-chip{background:var(--ks-primary,#c9a961);color:#18181b;}
 .ksui-fg-card.info{border-left-color:#5b9bf0;} .ksui-fg-card.info .ksui-fg-chip{background:#3f6fb0;}
 .ksui-fg-card.success{border-left-color:#43c478;} .ksui-fg-card.success .ksui-fg-chip{background:#2f8e57;}
 .ksui-fg-card.danger{border-left-color:#ef6a6a;} .ksui-fg-card.danger .ksui-fg-chip{background:#b04545;}
@@ -112,8 +107,6 @@ function ensureStyle(): void {
 .ksui-fg-ctrl:hover{background:#23232b;}
 .ksui-fg-hint{position:absolute;left:8px;bottom:8px;font-size:9.5px;color:var(--ksui-fg-muted,rgba(255,255,255,0.4));pointer-events:none;}
 `;
-  document.head.appendChild(style);
-}
 
 export interface FlowGraphProps {
   nodes: GraphNode[];
@@ -146,7 +139,7 @@ function clip(text: string, max: number): string {
 }
 
 export const FlowGraph: Component<FlowGraphProps> = (props) => {
-  ensureStyle();
+  injectCSS(STYLE_ID, STYLE_CSS);
   const tid = (s: string) => (props.testId ? `${props.testId}-${s}` : undefined);
 
   const vertical = () => props.direction === "vertical";

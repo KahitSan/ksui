@@ -38,7 +38,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
       data-testid="advanced-fields-container"
       class="rounded-lg border border-zinc-700/60 bg-zinc-900/40 p-3 space-y-3"
     >
-      <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-zinc-400 font-semibold">
+      <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[var(--ks-fg-muted,#a1a1aa)] font-semibold">
         <span>Advanced</span>
       </div>
 
@@ -75,7 +75,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                 : Math.round(amt * 0.12 * 100) / 100;
             const total = props.taxType === "vat_exclusive" ? sub + vat : amt;
             return (
-              <div class="mt-2 text-xs text-zinc-500 space-y-0.5 border-t border-zinc-800/50 pt-2">
+              <div class="mt-2 text-xs text-[var(--ks-fg-subtle,#71717a)] space-y-0.5 border-t border-zinc-800/50 pt-2">
                 <div class="flex justify-between">
                   <span>VATtable Sales</span>
                   <span>{formatPHP(sub)}</span>
@@ -133,7 +133,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                     const rate = parseFloat(props.ewtRate);
                     const ewt = Math.round(amt * rate) / 100;
                     return (
-                      <div class="text-xs text-zinc-500 border-t border-zinc-800/50 pt-2">
+                      <div class="text-xs text-[var(--ks-fg-subtle,#71717a)] border-t border-zinc-800/50 pt-2">
                         <div class="flex justify-between">
                           <span>EWT ({rate}%)</span>
                           <span>{formatPHP(ewt)}</span>
@@ -159,7 +159,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
       >
         <div class="flex items-center justify-between min-h-[44px]">
           <div class="flex items-center gap-2">
-            <Lock size={14} class="text-zinc-500" />
+            <Lock size={14} class="text-[var(--ks-fg-subtle,#71717a)]" />
             <div>
               <span class="text-sm text-zinc-300">Private transaction</span>
               <p class="text-[10px] text-zinc-600">
@@ -196,14 +196,14 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
 
         <Show when={props.isPrivate && props.canShare}>
           <div class="mt-4 pt-3 border-t border-zinc-800/50">
-            <p class="text-[10px] text-zinc-500 mb-3">
+            <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mb-3">
               Always visible to:{" "}
-              <span class="text-zinc-400">
+              <span class="text-[var(--ks-fg-muted,#a1a1aa)]">
                 you (creator), org admins, superusers
               </span>
             </p>
 
-            <span class="text-xs text-zinc-500 block mb-2">
+            <span class="text-xs text-[var(--ks-fg-subtle,#71717a)] block mb-2">
               Share with role
             </span>
             <div class="flex gap-2 mb-3 flex-wrap">
@@ -240,9 +240,9 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                       }}
                       class="px-3 py-2 text-xs rounded-lg border cursor-pointer min-h-[36px] capitalize transition-colors active:opacity-80"
                       classList={{
-                        "border-amber-500/40 bg-amber-500/10 text-amber-400":
+                        "border-amber-500/40 bg-amber-500/10 text-[var(--ks-accent,#fbbf24)]":
                           selected(),
-                        "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-600":
+                        "border-[var(--ks-border-strong,#3f3f46)] bg-zinc-800/50 text-[var(--ks-fg-muted,#a1a1aa)] hover:border-zinc-600":
                           !selected(),
                       }}
                     >
@@ -258,7 +258,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
               </For>
             </div>
 
-            <span class="text-xs text-zinc-500 block mb-2">
+            <span class="text-xs text-[var(--ks-fg-subtle,#71717a)] block mb-2">
               Or select people
             </span>
             <div class="space-y-0.5 max-h-[150px] overflow-y-auto">
@@ -283,7 +283,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                       classList={{
                         "text-zinc-300 cursor-pointer hover:bg-zinc-800/30 active:bg-zinc-800/50":
                           !coveringRole(),
-                        "text-zinc-500 cursor-not-allowed bg-zinc-900/40":
+                        "text-[var(--ks-fg-subtle,#71717a)] cursor-not-allowed bg-zinc-900/40":
                           !!coveringRole(),
                       }}
                     >
