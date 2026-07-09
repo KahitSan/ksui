@@ -475,7 +475,7 @@ export default function TransactionForm(props: TransactionFormProps) {
         <div class="flex-1 overflow-x-hidden overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
           <Show when={props.error}>
             <div
-              class="rounded-lg border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)] px-3 py-2 text-sm text-[var(--ks-danger-fg,#f87171)]"
+              class="rounded-lg border border-[color-mix(in_srgb,var(--ks-danger,#ef4444)_30%,transparent)] bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_10%,transparent)] px-3 py-2 text-sm text-[var(--ks-danger-fg,#f87171)]"
               data-testid="transactions-form-error"
             >
               {props.error}
@@ -517,7 +517,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                         classList={{
                           [`${tc.bg} ${tc.border} ${tc.text}`]:
                             props.category === cat,
-                          "border-[#27272a] bg-transparent text-[var(--ks-fg-subtle,#71717a)] hover:border-[var(--ks-input-border,#3f3f46)] hover:text-[#e4e4e7]":
+                          "border-[var(--ks-border,rgba(39,39,42,0.5))] bg-transparent text-[var(--ks-fg-subtle,#71717a)] hover:border-[var(--ks-input-border,#3f3f46)] hover:text-[var(--ks-fg,#ffffff)]":
                             props.category !== cat,
                         }}
                       >
@@ -560,7 +560,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   data-testid="transactions-form-amount"
                   value={props.amount}
                   onInput={(e) => props.setAmount(e.currentTarget.value)}
-                  class="min-w-0 flex-1 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-[#f4f4f5] placeholder-[var(--ks-input-border,#3f3f46)] focus:outline-none"
+                  class="min-w-0 flex-1 bg-transparent text-2xl sm:text-3xl font-bold tabular-nums text-[var(--ks-fg,#ffffff)] placeholder-[var(--ks-input-border,#3f3f46)] focus:outline-none"
                   placeholder="0.00"
                   required
                 />
@@ -603,7 +603,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                       onInput={(e) =>
                         props.setTransferFeeAmount(e.currentTarget.value)
                       }
-                      class="min-w-0 flex-1 bg-transparent text-lg font-semibold tabular-nums text-[#f4f4f5] placeholder-[var(--ks-input-border,#3f3f46)] focus:outline-none"
+                      class="min-w-0 flex-1 bg-transparent text-lg font-semibold tabular-nums text-[var(--ks-fg,#ffffff)] placeholder-[var(--ks-input-border,#3f3f46)] focus:outline-none"
                       placeholder="0.00"
                     />
                   </div>
@@ -721,7 +721,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   <select
                     disabled
                     data-testid="subcategory-select-loading"
-                    class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[var(--ks-fg-subtle,#71717a)] ks-hud-clip-button focus:outline-none"
+                    class="w-full bg-[color-mix(in_srgb,var(--ks-input-bg,#18181b)_60%,transparent)] border border-[var(--ks-border,rgba(39,39,42,0.5))] px-3 py-3 text-sm text-[var(--ks-fg-subtle,#71717a)] ks-hud-clip-button focus:outline-none"
                   >
                     <option>Loading…</option>
                   </select>
@@ -916,7 +916,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                     <Show
                       when={pf.previewUrl}
                       fallback={
-                        <div class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-[var(--ks-input-border,#3f3f46)] bg-[rgba(39,39,42,0.5)] px-2 text-xs text-[#d4d4d8]">
+                        <div class="flex w-24 h-24 flex-col items-center justify-center gap-1 rounded-lg border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-border,rgba(39,39,42,0.5))] px-2 text-xs text-[var(--ks-fg-muted,#a1a1aa)]">
                           <FileIcon size={20} />
                           <span class="truncate max-w-full text-[10px]">
                             {pf.file.name}
@@ -940,7 +940,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                           props.pendingFiles.filter((f) => f.id !== pf.id)
                         );
                       }}
-                      class="absolute -top-2 -right-2 flex w-7 h-7 items-center justify-center rounded-full bg-[rgba(220,38,38,0.9)] border border-[rgba(248,113,113,0.6)] text-[var(--ks-fg,#ffffff)] cursor-pointer hover:bg-[var(--ks-danger,#ef4444)] active:bg-[#b91c1c] shadow-lg"
+                      class="absolute -top-2 -right-2 flex w-7 h-7 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_90%,transparent)] border border-[color-mix(in_srgb,var(--ks-danger-fg,#f87171)_60%,transparent)] text-[var(--ks-fg,#ffffff)] cursor-pointer hover:bg-[var(--ks-danger,#ef4444)] active:bg-[var(--ks-danger,#ef4444)] shadow-lg"
                       aria-label={`Remove ${pf.file.name}`}
                     >
                       <X size={12} />

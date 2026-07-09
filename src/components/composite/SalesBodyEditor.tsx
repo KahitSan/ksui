@@ -386,7 +386,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
             step="0.01"
             value={props.manualDiscount}
             onInput={(e) => props.setManualDiscount(e.currentTarget.value)}
-            class="mt-0.5 w-full rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] px-2 py-1 text-sm text-[var(--ks-fg,#ffffff)] tabular-nums focus:border-[rgba(16,185,129,0.5)] focus:outline-none"
+            class="mt-0.5 w-full rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] px-2 py-1 text-sm text-[var(--ks-fg,#ffffff)] tabular-nums focus:border-[color-mix(in_srgb,var(--ks-success,#10b981)_50%,transparent)] focus:outline-none"
           />
         </div>
       </Show>

@@ -75,7 +75,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                 : Math.round(amt * 0.12 * 100) / 100;
             const total = props.taxType === "vat_exclusive" ? sub + vat : amt;
             return (
-              <div class="mt-2 text-xs text-[var(--ks-fg-subtle,#71717a)] space-y-0.5 border-t border-zinc-800/50 pt-2">
+              <div class="mt-2 text-xs text-[var(--ks-fg-subtle,#71717a)] space-y-0.5 border-t border-[var(--ks-border,rgba(39,39,42,0.5))] pt-2">
                 <div class="flex justify-between">
                   <span>VATtable Sales</span>
                   <span>{formatPHP(sub)}</span>

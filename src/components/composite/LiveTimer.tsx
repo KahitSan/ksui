@@ -223,7 +223,7 @@ const SCENARIO_CONFIGS: Record<Scenario, ScenarioConfig> = {
   },
   [SCENARIO_COMPLETED]: {
     position: "left",
-    colorClass: "border border-zinc-600/60 text-[var(--ks-fg-muted,#a1a1aa)] hover:border-zinc-500",
+    colorClass: "border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_60%,transparent)] text-[var(--ks-fg-muted,#a1a1aa)] hover:border-[var(--ks-fg-subtle,#71717a)]",
     label: "Completed",
     hidePercentage: false,
     shimmer: false,
@@ -238,7 +238,7 @@ const SCENARIO_CONFIGS: Record<Scenario, ScenarioConfig> = {
 };
 
 const COLOR_GREEN = "border border-green-600/60 text-green-400 hover:border-green-500";
-const COLOR_AMBER = "border border-amber-600/60 text-[var(--ks-accent,#fbbf24)] hover:border-amber-500";
+const COLOR_AMBER = "border border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_60%,transparent)] text-[var(--ks-accent,#fbbf24)] hover:border-[var(--ks-accent-hover,#fcd34d)]";
 const COLOR_RED = "border border-red-600/60 text-[var(--ks-danger-fg,#f87171)] hover:border-[var(--ks-danger,#ef4444)]";
 
 const LiveTimer: Component<LiveTimerProps> = (props) => {

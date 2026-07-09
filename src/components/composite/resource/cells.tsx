@@ -18,7 +18,7 @@ export function renderCell(
       return (
         <button
           data-testid={`${spec.testIdPrefix}-row-${row.id}`}
-          class="text-left text-[#e4e4e7] hover:text-[var(--ks-accent,#fbbf24)] transition-colors cursor-pointer"
+          class="text-left text-[var(--ks-fg,#ffffff)] hover:text-[var(--ks-accent,#fbbf24)] transition-colors cursor-pointer"
           onClick={() => onTitleClick(row.id)}
         >
           {String(raw ?? "")}
