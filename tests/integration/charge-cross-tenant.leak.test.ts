@@ -5,6 +5,7 @@ import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { withRollbackDb, stubMiddleware, type FakePluginDb } from "@kahitsan/plugin-sdk/test";
 import { runWithTenantContext } from "@kahitsan/plugin-sdk";
+import { todayInOrgTimezone } from "../../server/lib/backdate.js";
 
 // ── F5 cross-tenant destination_account_id leak test ─────────────────────────
 //
@@ -14,6 +15,12 @@ import { runWithTenantContext } from "@kahitsan/plugin-sdk";
 // ownership assert in run-charge.ts, a workspace-A caller could point a sale
 // at workspace B's account, corrupting B's balance with A's money and no DB
 // constraint would ever catch it.
+//
+// Extended to cover the SAME missing check on the manual transaction
+// create/edit routes (transactions-core.ts) and the payment-leg routes
+// (payments.ts) — the #5 fix only closed the charge path; run-charge.ts's
+// assertOrgOwnsRow pattern is now reused at every other site that persists a
+// source/destination/financial_account_id.
 
 async function request(
   app: Hono,
@@ -107,7 +114,7 @@ beforeAll(async () => {
     userId,
     role: "superuser",
     wsRole: "admin",
-    permissions: ["transactions.view", "transactions.create"],
+    permissions: ["transactions.view", "transactions.create", "transactions.edit"],
   });
   const router = buildRouter({
     db: rdb.db as unknown as PluginDb,
@@ -153,5 +160,170 @@ describe("POST /charge — cross-workspace destination_account_id (real Postgres
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.transaction.destination_account_id).toBe(ownAccountId);
+  });
+});
+
+const todayIso = todayInOrgTimezone();
+
+describe("POST / (manual create) — cross-workspace source/destination_account_id", () => {
+  it("rejects a source_account_id belonging to a different workspace (404, not 500)", async () => {
+    const res = await request(honoApp, "POST", "/", {
+      category: "expense",
+      description: "CI manual-create source probe",
+      amount: 50,
+      transaction_date: todayIso,
+      source_account_id: otherAccountId,
+    });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toMatch(/source_account_id/);
+
+    // Read via `db` (the rollback-wrapped connection the request itself
+    // wrote through) — the raw `pool` is a separate connection and would
+    // never see the uncommitted row either way, making the check a no-op.
+    const leaked = await db.query(
+      `SELECT 1 FROM accounts.transactions WHERE source_account_id = $1 AND workspace_id = $2`,
+      [otherAccountId, WS_A],
+    );
+    expect(leaked.rows).toHaveLength(0);
+  });
+
+  it("rejects a destination_account_id belonging to a different workspace (404, not 500)", async () => {
+    const res = await request(honoApp, "POST", "/", {
+      category: "sale",
+      description: "CI manual-create destination probe",
+      amount: 50,
+      transaction_date: todayIso,
+      destination_account_id: otherAccountId,
+    });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toMatch(/destination_account_id/);
+  });
+
+  it("accepts a source_account_id belonging to the caller's own workspace", async () => {
+    const res = await request(honoApp, "POST", "/", {
+      category: "expense",
+      description: "CI manual-create own-account",
+      amount: 50,
+      transaction_date: todayIso,
+      source_account_id: ownAccountId,
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.source_account_id).toBe(ownAccountId);
+  });
+});
+
+describe("PUT /:id (edit) — cross-workspace source_account_id", () => {
+  let ownTxnId: number;
+
+  beforeAll(async () => {
+    const row = await db.query<{ id: number }>(
+      `INSERT INTO accounts.transactions
+         (workspace_id, category, source_account_id, amount, description, transaction_date, created_by)
+       VALUES ($1, 'expense', $2, 10, 'CI edit-target', $3, $4)
+       RETURNING id`,
+      [WS_A, ownAccountId, todayIso, "test-user-id"],
+    );
+    ownTxnId = row.rows[0].id;
+  });
+
+  it("rejects reassigning source_account_id to a different workspace's account (404, not 500)", async () => {
+    const res = await request(honoApp, "PUT", `/${ownTxnId}`, {
+      source_account_id: otherAccountId,
+    });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toMatch(/source_account_id/);
+
+    // The row must be untouched — the check runs BEFORE the UPDATE. Read via
+    // `db` (the withRollbackDb savepoint connection the request itself wrote
+    // through), not the raw `pool` — the write is uncommitted and invisible
+    // to any other connection until the whole test file's transaction ends.
+    const row = await db.query<{ source_account_id: number }>(
+      `SELECT source_account_id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
+      [ownTxnId, WS_A],
+    );
+    expect(row.rows[0].source_account_id).toBe(ownAccountId);
+  });
+});
+
+describe("Payment legs — cross-workspace financial_account_id + amount ceiling", () => {
+  let ownTxnId: number;
+  let ownPaymentId: number;
+
+  beforeAll(async () => {
+    const row = await db.query<{ id: number }>(
+      `INSERT INTO accounts.transactions
+         (workspace_id, category, amount, description, transaction_date, created_by)
+       VALUES ($1, 'sale', 500, 'CI payment-target', $2, $3)
+       RETURNING id`,
+      [WS_A, todayIso, "test-user-id"],
+    );
+    ownTxnId = row.rows[0].id;
+  });
+
+  it("POST /:id/payments rejects a financial_account_id belonging to a different workspace (404, not 500)", async () => {
+    const res = await request(honoApp, "POST", `/${ownTxnId}/payments`, {
+      financial_account_id: otherAccountId,
+      amount: 100,
+    });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toMatch(/financial_account_id/);
+
+    const leaked = await db.query(
+      `SELECT 1 FROM accounts.transaction_payments WHERE financial_account_id = $1 AND transaction_id = $2`,
+      [otherAccountId, ownTxnId],
+    );
+    expect(leaked.rows).toHaveLength(0);
+  });
+
+  it("POST /:id/payments rejects an amount at/above the NUMERIC(12,2) ceiling (400, not 500)", async () => {
+    const res = await request(honoApp, "POST", `/${ownTxnId}/payments`, {
+      financial_account_id: ownAccountId,
+      amount: 1e10,
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/exceed/);
+  });
+
+  it("POST /:id/payments accepts a financial_account_id belonging to the caller's own workspace", async () => {
+    const res = await request(honoApp, "POST", `/${ownTxnId}/payments`, {
+      financial_account_id: ownAccountId,
+      amount: 100,
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    ownPaymentId = body.id;
+    expect(body.financial_account_id).toBe(ownAccountId);
+  });
+
+  it("PUT /:id/payments/:paymentId rejects reassigning financial_account_id to a different workspace's account (404, not 500)", async () => {
+    const res = await request(honoApp, "PUT", `/${ownTxnId}/payments/${ownPaymentId}`, {
+      financial_account_id: otherAccountId,
+      amount: 100,
+    });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toMatch(/financial_account_id/);
+
+    const row = await db.query<{ financial_account_id: number }>(
+      `SELECT financial_account_id FROM accounts.transaction_payments WHERE id = $1`,
+      [ownPaymentId],
+    );
+    expect(row.rows[0].financial_account_id).toBe(ownAccountId);
+  });
+
+  it("PUT /:id/payments/:paymentId rejects an amount at/above the NUMERIC(12,2) ceiling (400, not 500)", async () => {
+    const res = await request(honoApp, "PUT", `/${ownTxnId}/payments/${ownPaymentId}`, {
+      financial_account_id: ownAccountId,
+      amount: 1e10,
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/exceed/);
   });
 });

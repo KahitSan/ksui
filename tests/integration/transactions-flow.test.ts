@@ -4,7 +4,7 @@ import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { todayInOrgTimezone } from "../../server/lib/backdate.js";
-import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-sdk/test";
+import { withRollbackDb, stubMiddleware, type FakePluginDb } from "@kahitsan/plugin-sdk/test";
 import { runWithTenantContext } from "@kahitsan/plugin-sdk";
 
 /** Make an HTTP request against a Hono app and return status + json accessor. */
@@ -51,7 +51,10 @@ const SCHEMAS = ["accounts"];
 
 let honoApp: Hono;
 let pool: pg.Pool;
+let db: FakePluginDb;
 let rollback: () => Promise<void>;
+let transferSourceAccountId: number;
+let transferDestinationAccountId: number;
 
 beforeAll(async () => {
   pool = new pg.Pool({
@@ -86,6 +89,24 @@ beforeAll(async () => {
 
   const rdb = await withRollbackDb(pool, SCHEMAS);
   rollback = rdb.rollback;
+  db = rdb.db;
+
+  // The manual-create route now asserts source/destination_account_id belong
+  // to the caller's workspace (assertOrgOwnsRow) — real rows are required so
+  // the transfer-fee test below exercises the check instead of tripping it.
+  const srcRow = await db.query<{ id: number }>(
+    `INSERT INTO accounts.financial_accounts (workspace_id, name, type)
+       VALUES ($1, 'CI Transfer Source', 'cash') RETURNING id`,
+    [TEST_ORG],
+  );
+  transferSourceAccountId = srcRow.rows[0].id;
+  const dstRow = await db.query<{ id: number }>(
+    `INSERT INTO accounts.financial_accounts (workspace_id, name, type)
+       VALUES ($1, 'CI Transfer Destination', 'cash') RETURNING id`,
+    [TEST_ORG],
+  );
+  transferDestinationAccountId = dstRow.rows[0].id;
+
   const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId: TEST_ORG,
     userId,
@@ -156,8 +177,8 @@ describe("transactions flow: list → create → list → detail → void (real 
   it("creates a transfer with a separate fee expense in the same workspace", async () => {
     const res = await request(honoApp, "POST", "/", {
       category: "business",
-      source_account_id: 1,
-      destination_account_id: 2,
+      source_account_id: transferSourceAccountId,
+      destination_account_id: transferDestinationAccountId,
       amount: "500.00",
       transfer_fee_amount: "15.00",
       description: transferDesc,
@@ -191,7 +212,7 @@ describe("transactions flow: list → create → list → detail → void (real 
     expect(transferRow).toBeTruthy();
     expect(transferRow).toMatchObject({
       category: "business",
-      source_account_id: 1,
+      source_account_id: transferSourceAccountId,
       description: transferDesc,
     });
     expect(parseFloat(transferRow!.amount)).toBe(500);
@@ -199,7 +220,7 @@ describe("transactions flow: list → create → list → detail → void (real 
     expect(feeRow).toMatchObject({
       category: "expense",
       subcategory: "Other expense",
-      source_account_id: 1,
+      source_account_id: transferSourceAccountId,
       description: `Transfer fee — ${transferDesc}`,
     });
     expect(parseFloat(feeRow!.amount)).toBe(15);
