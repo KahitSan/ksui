@@ -29,17 +29,18 @@
 //     degradation, consistent with the rest of the plugin.
 
 import { Hono } from "hono";
-import { applyTenantContext } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import {
   findPackagesByIds,
   findVariantsByIds,
   findClientsByIds,
+  findVoucherById,
 } from "./lib/peers.js";
 import type { RouterDeps } from "./routes.js";
 import { ctxGet, isWorkspaceElevated } from "./types.js";
 import { bumpBoardVersion } from "./lib/board-events.js";
 import { registerLineItemEventsRoute } from "./routes/line-items-events.js";
+import { registerLineItemExtendRoutes } from "./routes/line-items-extend.js";
 
 export function buildLineItemsRouter(deps: RouterDeps): Hono {
   const router = new Hono();
@@ -61,6 +62,8 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
 
   // The SSE board-change stream (distinct literal path, ordering not load-bearing).
   registerLineItemEventsRoute(router, deps);
+  // charge-overage + extend: both append a line and re-price the parent txn.
+  registerLineItemExtendRoutes(router, deps);
 
   // ── GET /api/transaction-line-items ──────────────────────────────────────
   //
@@ -277,6 +280,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
                li.updated_at,
                t.transaction_date,
                t.amount AS transaction_amount,
+               t.subtotal AS transaction_subtotal,
                t.discount_amount,
                t.notes,
                t.category,
@@ -292,7 +296,10 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
                cg.position AS customer_group_position,
                cg.display_name AS customer_group_display_name,
                cg.is_payer AS customer_group_is_payer,
-               cg.client_id AS customer_group_client_id
+               cg.client_id AS customer_group_client_id,
+               cg.subtotal AS customer_group_subtotal,
+               cg.voucher_id AS customer_group_voucher_id,
+               cg.discount_amount AS customer_group_discount_amount
              FROM accounts.transaction_line_items li
              JOIN accounts.transactions t
                ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id
@@ -348,6 +355,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              m.updated_at,
              m.transaction_date,
              m.transaction_amount,
+             m.transaction_subtotal,
              m.discount_amount,
              m.notes,
              m.category,
@@ -364,6 +372,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              m.customer_group_display_name,
              m.customer_group_is_payer,
              m.customer_group_client_id,
+             m.customer_group_subtotal,
+             m.customer_group_voucher_id,
+             m.customer_group_discount_amount,
              COALESCE(pc.payment_count, 0) AS payment_count,
              COALESCE(pm.payment_account_ids, '{}') AS payment_account_ids
            FROM matched m
@@ -439,6 +450,28 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         const variantById = new Map((variants ?? []).map((v) => [v.id, v]));
         const clientNameById = new Map<number, string>((clients ?? []).map((c) => [c.id, c.name]));
 
+        // Effective voucher per row, matching repriceParentForCostIncrease's
+        // precedence: a customer-group row's OWN voucher_id wins whenever the
+        // line belongs to a group (even if it's null — that's "no discount"),
+        // otherwise the transaction-level voucher_id applies. The counter
+        // Extend modal mirrors this against the effective subtotal/discount to
+        // preview the post-extend charge without drifting from the server.
+        const effectiveVoucherIds = [
+          ...new Set(
+            result.rows
+              .map((r) =>
+                r.customer_group_id != null
+                  ? (r.customer_group_voucher_id as number | null)
+                  : (r.voucher_id as number | null),
+              )
+              .filter((id): id is number => id != null),
+          ),
+        ];
+        const voucherEntries = await Promise.all(
+          effectiveVoucherIds.map(async (id) => [id, await findVoucherById(id, idh)] as const),
+        );
+        const voucherById = new Map(voucherEntries);
+
         // Build the per-transaction client pool, in pool order. The counter UI
         // expects `{ id, name_raw }`; the RPC returns `name`, so we map it.
         const poolByTxn = new Map<number, Array<{ id: number; name_raw: string | null }>>();
@@ -451,6 +484,12 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         const rows = result.rows.map((r) => {
           const variant =
             r.package_variant_id != null ? variantById.get(r.package_variant_id) : undefined;
+          const effectiveVoucherId =
+            r.customer_group_id != null
+              ? (r.customer_group_voucher_id as number | null)
+              : (r.voucher_id as number | null);
+          const effectiveVoucher =
+            effectiveVoucherId != null ? (voucherById.get(effectiveVoucherId) ?? null) : null;
           return {
             ...r,
             package_name: r.package_id != null ? (packageNameById.get(r.package_id) ?? null) : null,
@@ -473,6 +512,13 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
             voucher_code: null,
             source_account_name: null,
             destination_account_name: null,
+            effective_voucher: effectiveVoucher
+              ? {
+                  type: effectiveVoucher.type,
+                  value: effectiveVoucher.value,
+                  max_discount_amount: effectiveVoucher.max_discount_amount ?? null,
+                }
+              : null,
           };
         });
 
@@ -682,301 +728,6 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       } catch (err) {
         console.error("[transaction-line-items] settle error:", err);
         return c.json({ error: "Internal server error" }, 500);
-      }
-    },
-  );
-
-  // ── POST /api/transaction-line-items/:id/charge-overage ──────────────────
-  //
-  // Charges the customer for time past a rental's booked end. Appends a new
-  // 'completed' line covering the past overage window and bumps the parent
-  // transaction (and the cg subtotal) by its cost. The source line stays
-  // 'active'; the caller settles it separately.
-  // Body: { package_variant_id: number, quantity: number }
-  router.post(
-    "/api/transaction-line-items/:id/charge-overage",
-    requireAuth,
-    requireWorkspace,
-    requirePermission("transactions.edit"),
-    async (c) => {
-      if (!ctxGet(c, "workspaceId") || !ctxGet(c, "user")?.id) {
-        return c.json({ error: "No workspace context" }, 403);
-      }
-      const id = parseInt(c.req.param("id") as string);
-      if (!id) {
-        return c.json({ error: "id is required" }, 400);
-      }
-      const { package_variant_id, quantity } = await c.req.json() as {
-        package_variant_id?: number;
-        quantity?: number;
-      };
-      if (typeof package_variant_id !== "number" || package_variant_id <= 0) {
-        return c.json({ error: "package_variant_id is required" }, 400);
-      }
-      if (typeof quantity !== "number" || quantity <= 0) {
-        return c.json({ error: "quantity must be > 0" }, 400);
-      }
-
-      const idh = identityHeaderOf(c);
-      let client: import("pg").PoolClient | null = null;
-      try {
-        client = await pool.connect();
-        await client.query("BEGIN");
-        await applyTenantContext(client);
-
-        const srcRes = await client.query(
-          `SELECT id, transaction_id, ends_at, client_id, status, customer_group_id
-             FROM accounts.transaction_line_items
-            WHERE id = $1 AND workspace_id = $2
-            FOR UPDATE`,
-          [id, ctxGet(c, "workspaceId")],
-        );
-        if (srcRes.rows.length === 0) {
-          await client.query("ROLLBACK");
-          return c.json({ error: "Line item not found in this workspace" }, 404);
-        }
-        const src = srcRes.rows[0] as {
-          id: number;
-          transaction_id: number;
-          ends_at: Date | null;
-          client_id: number | null;
-          status: string;
-          customer_group_id: number | null;
-        };
-        if (src.status !== "active" && src.status !== "expired") {
-          await client.query("ROLLBACK");
-          return c.json({ error: "Line item is not active or expired" }, 409);
-        }
-        if (src.ends_at == null || new Date(src.ends_at).getTime() > Date.now()) {
-          await client.query("ROLLBACK");
-          return c.json({ error: "charge-overage is only valid for overdue line items" }, 409);
-        }
-
-        const variants = await findVariantsByIds([package_variant_id], idh);
-        const variant = variants?.[0];
-        if (variant == null) {
-          await client.query("ROLLBACK");
-          return c.json({ error: "package_variant_id must belong to this workspace" }, 400);
-        }
-        if (variant.duration_value == null) {
-          await client.query("ROLLBACK");
-          return c.json({ error: "package_variant has no duration_value" }, 400);
-        }
-
-        const durationValue = parseFloat(String(variant.duration_value));
-        const unitPrice = parseFloat(String(variant.price ?? 0));
-        const totalUnits = durationValue * quantity;
-        const extensionCost = unitPrice * quantity;
-
-        const intervalExpr =
-          variant.duration_unit === "hour"
-            ? "make_interval(hours => $7)"
-            : variant.duration_unit === "day"
-              ? "make_interval(days => $7)"
-              : "make_interval(months => $7)";
-
-        const insertResult = await client.query(
-          `INSERT INTO accounts.transaction_line_items
-             (transaction_id, workspace_id, package_id, package_variant_id,
-              description, quantity, unit_price, duration_value, duration_unit,
-              started_at, ends_at, status, client_id, customer_group_id)
-           VALUES ($1, $2, $3, $4,
-                   $5, $6, $9, $10, $11,
-                   $8::timestamptz, $8::timestamptz + ${intervalExpr},
-                   'completed', $12, $13)
-           RETURNING *`,
-          [
-            src.transaction_id,
-            ctxGet(c, "workspaceId"),
-            variant.package_id,
-            package_variant_id,
-            variant.name,
-            quantity,
-            totalUnits,
-            src.ends_at,
-            unitPrice,
-            durationValue,
-            variant.duration_unit,
-            src.client_id,
-            src.customer_group_id,
-          ],
-        );
-
-        await client.query(
-          `UPDATE accounts.transactions
-              SET amount = amount + $1, subtotal = COALESCE(subtotal, amount) + $1, updated_at = NOW(), updated_by = $2
-            WHERE id = $3 AND workspace_id = $4`,
-          [extensionCost, ctxGet(c, "user").id, src.transaction_id, ctxGet(c, "workspaceId")],
-        );
-
-        if (src.customer_group_id != null) {
-          await client.query(
-            `UPDATE accounts.transaction_customer_groups
-                SET subtotal = subtotal + $1
-              WHERE id = $2 AND workspace_id = $3`,
-            [extensionCost, src.customer_group_id, ctxGet(c, "workspaceId")],
-          );
-        }
-
-        await client.query("COMMIT");
-        return c.json({
-          source: src,
-          overage_line: insertResult.rows[0],
-        });
-      } catch (err) {
-        if (client) {
-          await client.query("ROLLBACK").catch(() => {});
-        }
-        console.error("[transaction-line-items] charge-overage error:", err);
-        return c.json({ error: "Internal server error" }, 500);
-      } finally {
-        if (client) client.release();
-      }
-    },
-  );
-
-  // ── POST /api/transaction-line-items/:id/extend ──────────────────────────
-  //
-  // Appends a new 'active' line to the same parent transaction extending the
-  // rental by quantity units of the picked variant. started_at always chains
-  // off the source's ends_at so the counter UI can link the lines into a
-  // single entry. Bumps the parent transaction (and cg subtotal) by the
-  // extension cost.
-  // Body: { package_variant_id: number, quantity: number }
-  router.post(
-    "/api/transaction-line-items/:id/extend",
-    requireAuth,
-    requireWorkspace,
-    requirePermission("transactions.edit"),
-    async (c) => {
-      if (!ctxGet(c, "workspaceId") || !ctxGet(c, "user")?.id) {
-        return c.json({ error: "No workspace context" }, 403);
-      }
-      const id = parseInt(c.req.param("id") as string);
-      if (!id) {
-        return c.json({ error: "id is required" }, 400);
-      }
-      const { package_variant_id, quantity } = await c.req.json() as {
-        package_variant_id?: number;
-        quantity?: number;
-      };
-      if (typeof package_variant_id !== "number" || package_variant_id <= 0) {
-        return c.json({ error: "package_variant_id is required" }, 400);
-      }
-      if (typeof quantity !== "number" || quantity <= 0) {
-        return c.json({ error: "quantity must be > 0" }, 400);
-      }
-
-      const idh = identityHeaderOf(c);
-      let client: import("pg").PoolClient | null = null;
-      try {
-        client = await pool.connect();
-        await client.query("BEGIN");
-        await applyTenantContext(client);
-
-        const srcRes = await client.query(
-          `SELECT id, transaction_id, package_id, ends_at, client_id, customer_group_id
-             FROM accounts.transaction_line_items
-            WHERE id = $1 AND workspace_id = $2
-            FOR UPDATE`,
-          [id, ctxGet(c, "workspaceId")],
-        );
-        if (srcRes.rows.length === 0) {
-          await client.query("ROLLBACK");
-          return c.json({ error: "Line item not found in this workspace" }, 404);
-        }
-        const src = srcRes.rows[0] as {
-          id: number;
-          transaction_id: number;
-          package_id: number;
-          ends_at: Date | null;
-          client_id: number | null;
-          customer_group_id: number | null;
-        };
-
-        // Variant must belong to the same workspace (resolved over RPC), but NOT
-        // necessarily the source's package — cross-package extends are allowed.
-        const variants = await findVariantsByIds([package_variant_id], idh);
-        const variant = variants?.[0];
-        if (variant == null) {
-          await client.query("ROLLBACK");
-          return c.json({ error: "package_variant_id must belong to this workspace" }, 400);
-        }
-        if (variant.duration_value == null) {
-          await client.query("ROLLBACK");
-          return c.json({ error: "package_variant has no duration_value" }, 400);
-        }
-
-        const durationValue = parseFloat(String(variant.duration_value));
-        const unitPrice = parseFloat(String(variant.price ?? 0));
-        const totalUnits = durationValue * quantity;
-        const extensionCost = unitPrice * quantity;
-
-        const intervalExpr =
-          variant.duration_unit === "hour"
-            ? "make_interval(hours => $7)"
-            : variant.duration_unit === "day"
-              ? "make_interval(days => $7)"
-              : "make_interval(months => $7)";
-
-        // Chain the extension off the source's ends_at so the counter UI can
-        // link the lines into a single entry. When ends_at is null (shouldn't
-        // happen for rentals) fall back to NOW().
-        const startedAtExpr = "COALESCE($8::timestamptz, NOW())";
-
-        const insertResult = await client.query(
-          `INSERT INTO accounts.transaction_line_items
-             (transaction_id, workspace_id, package_id, package_variant_id,
-              description, quantity, unit_price, duration_value, duration_unit,
-              started_at, ends_at, status, client_id, customer_group_id)
-           VALUES ($1, $2, $3, $4,
-                   $5, $6, $9, $10, $11,
-                   ${startedAtExpr}, ${startedAtExpr} + ${intervalExpr},
-                   'active', $12, $13)
-           RETURNING *`,
-          [
-            src.transaction_id,
-            ctxGet(c, "workspaceId"),
-            variant.package_id,
-            package_variant_id,
-            variant.name,
-            quantity,
-            totalUnits,
-            src.ends_at ?? null,
-            unitPrice,
-            durationValue,
-            variant.duration_unit,
-            src.client_id,
-            src.customer_group_id,
-          ],
-        );
-
-        await client.query(
-          `UPDATE accounts.transactions
-              SET amount = amount + $1, subtotal = COALESCE(subtotal, amount) + $1, updated_at = NOW(), updated_by = $2
-            WHERE id = $3 AND workspace_id = $4`,
-          [extensionCost, ctxGet(c, "user").id, src.transaction_id, ctxGet(c, "workspaceId")],
-        );
-
-        if (src.customer_group_id != null) {
-          await client.query(
-            `UPDATE accounts.transaction_customer_groups
-                SET subtotal = subtotal + $1
-              WHERE id = $2 AND workspace_id = $3`,
-            [extensionCost, src.customer_group_id, ctxGet(c, "workspaceId")],
-          );
-        }
-
-        await client.query("COMMIT");
-        return c.json(insertResult.rows[0], 201);
-      } catch (err) {
-        if (client) {
-          await client.query("ROLLBACK").catch(() => {});
-        }
-        console.error("[transaction-line-items] extend error:", err);
-        return c.json({ error: "Internal server error" }, 500);
-      } finally {
-        if (client) client.release();
       }
     },
   );
