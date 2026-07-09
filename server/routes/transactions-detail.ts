@@ -36,6 +36,10 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
     requireWorkspace,
     requirePermission("transactions.view"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         const result = await pool.query(
           `SELECT t.*,
@@ -61,7 +65,7 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
             ON fee.id = t.transfer_fee_transaction_id
            AND fee.workspace_id = t.workspace_id
           WHERE t.id = $1 AND t.workspace_id = $2`,
-          [c.req.param("id"), ctxGet(c, "workspaceId")],
+          [id, ctxGet(c, "workspaceId")],
         );
         if (result.rows.length === 0) {
           return c.json({ error: "Not found" }, 404);

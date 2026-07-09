@@ -54,6 +54,11 @@ export function registerPaymentUpdateRoute(router: Hono, ctx: PaymentRouteCtx): 
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      const paymentId = parseInt(String(c.req.param("paymentId")), 10);
+      if (!Number.isFinite(id) || !Number.isFinite(paymentId)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       const { financial_account_id, amount } = await c.req.json() ?? {};
       const parsed = parseFloat(amount);
       if (typeof financial_account_id !== "number" || !Number.isFinite(financial_account_id)) {
@@ -69,7 +74,7 @@ export function registerPaymentUpdateRoute(router: Hono, ctx: PaymentRouteCtx): 
         const rows = await data.update(
           "transaction_payments",
           { financial_account_id, amount: parsed },
-          { where: "id = $1 AND transaction_id = $2", params: [c.req.param("paymentId"), c.req.param("id")] },
+          { where: "id = $1 AND transaction_id = $2", params: [paymentId, id] },
           PAYMENT_COLS,
         );
         if (rows.length === 0) {
@@ -104,13 +109,17 @@ export function registerPaymentRoutes(router: Hono, ctx: PaymentRouteCtx): void 
     requireWorkspace,
     requirePermission("transactions.view"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         const payments = await data.find(
           "transaction_payments",
           ["id", "financial_account_id", "amount", "notes", "created_at", "customer_group_id"],
           {
             where: "transaction_id = $1",
-            params: [c.req.param("id")],
+            params: [id],
             orderBy: "created_at ASC, id ASC",
           },
         ) as Array<{ financial_account_id: number | null; financial_account_name?: string | null }>;
@@ -140,6 +149,10 @@ export function registerPaymentRoutes(router: Hono, ctx: PaymentRouteCtx): void 
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       const { financial_account_id, amount, notes } = await c.req.json() ?? {};
       const parsed = parseFloat(amount);
       if (typeof financial_account_id !== "number" || !Number.isFinite(financial_account_id)) {
@@ -152,7 +165,7 @@ export function registerPaymentRoutes(router: Hono, ctx: PaymentRouteCtx): void 
       try {
         const tx = await data.findOne("transactions", ["id"], {
           where: "id = $1",
-          params: [c.req.param("id")],
+          params: [id],
         });
         if (!tx) {
           return c.json({ error: "Not found" }, 404);
@@ -162,7 +175,7 @@ export function registerPaymentRoutes(router: Hono, ctx: PaymentRouteCtx): void 
         const payment = (await data.insert(
           "transaction_payments",
           {
-            transaction_id: c.req.param("id"),
+            transaction_id: id,
             financial_account_id,
             amount: parsed,
             notes: notes?.trim() || null,
@@ -188,10 +201,15 @@ export function registerPaymentRoutes(router: Hono, ctx: PaymentRouteCtx): void 
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      const paymentId = parseInt(String(c.req.param("paymentId")), 10);
+      if (!Number.isFinite(id) || !Number.isFinite(paymentId)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         const n = await data.delete("transaction_payments", {
           where: "id = $1 AND transaction_id = $2",
-          params: [c.req.param("paymentId"), c.req.param("id")],
+          params: [paymentId, id],
         });
         if (n === 0) {
           return c.json({ error: "Not found" }, 404);

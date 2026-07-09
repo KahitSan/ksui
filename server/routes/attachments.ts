@@ -62,13 +62,17 @@ export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx):
     requireWorkspace,
     requirePermission("transactions.view"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         const rows = await pool.query(
           `SELECT a.id, a.transaction_id, a.file_name, a.file_size, a.mime_type, a.uploaded_by, a.s3_link, a.created_at
              FROM accounts.transaction_attachments a
              JOIN accounts.transactions t ON t.id = a.transaction_id
             WHERE a.transaction_id = $1 AND t.workspace_id = $2 ORDER BY a.created_at`,
-          [c.req.param("id"), ctxGet(c, "workspaceId")],
+          [id, ctxGet(c, "workspaceId")],
         );
         return c.json({ attachments: rows.rows });
       } catch (err) {
@@ -90,13 +94,18 @@ export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx):
     requireWorkspace,
     requirePermission("transactions.view"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      const attachmentId = parseInt(String(c.req.param("attachmentId")), 10);
+      if (!Number.isFinite(id) || !Number.isFinite(attachmentId)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         const row = await pool.query<{ s3_link: string | null }>(
           `SELECT a.s3_link
              FROM accounts.transaction_attachments a
              JOIN accounts.transactions t ON t.id = a.transaction_id
             WHERE a.id = $1 AND a.transaction_id = $2 AND t.workspace_id = $3`,
-          [c.req.param("attachmentId"), c.req.param("id"), ctxGet(c, "workspaceId")],
+          [attachmentId, id, ctxGet(c, "workspaceId")],
         );
         if (row.rows.length === 0) {
           return c.json({ error: "Not found" }, 404);
@@ -126,6 +135,10 @@ export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx):
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       const wsId = ctxGet(c, "workspaceId")!;
       if (!s3Enabled()) {
         return c.json({ error: "Attachment storage is not configured" }, 503);
@@ -150,7 +163,7 @@ export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx):
       try {
         const tx = await pool.query(
           `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-          [c.req.param("id"), wsId],
+          [id, wsId],
         );
         if (tx.rows.length === 0) {
           return c.json({ error: "Not found" }, 404);
@@ -177,7 +190,7 @@ export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx):
                VALUES ($1, $2, $3, $4, $5, $6)
                RETURNING id, transaction_id, file_name, file_size, mime_type, uploaded_by, s3_link, created_at`,
             [
-              c.req.param("id"),
+              id,
               file_name,
               Number.isFinite(file_size) ? file_size : 0,
               mime_type || "application/octet-stream",
@@ -204,6 +217,11 @@ export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx):
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      const attachmentId = parseInt(String(c.req.param("attachmentId")), 10);
+      if (!Number.isFinite(id) || !Number.isFinite(attachmentId)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         const result = await pool.query(
           `DELETE FROM accounts.transaction_attachments a
@@ -211,7 +229,7 @@ export function registerAttachmentRoutes(router: Hono, ctx: AttachmentRouteCtx):
             WHERE a.transaction_id = t.id
               AND a.id = $1 AND a.transaction_id = $2 AND t.workspace_id = $3
             RETURNING a.id, a.s3_link`,
-          [c.req.param("attachmentId"), c.req.param("id"), ctxGet(c, "workspaceId")],
+          [attachmentId, id, ctxGet(c, "workspaceId")],
         );
         if (result.rows.length === 0) {
           return c.json({ error: "Not found" }, 404);
