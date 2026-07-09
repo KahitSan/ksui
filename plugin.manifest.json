@@ -98,5 +98,33 @@
       "visibility": "public",
       "grants": ["financial_accounts.view"]
     }
+  },
+  "contributes": {
+    "themes": [
+      {
+        "id": "royal-violet",
+        "label": "Royal Violet",
+        "base": "dark",
+        "version": "1.0.0",
+        "tokens": {
+          "--ks-bg": "#0a0612",
+          "--ks-bg-gradient-to": "#1c1032",
+          "--ks-surface": "#150d24",
+          "--ks-surface-raised": "#201530",
+          "--ks-surface-sunken": "#100a1c",
+          "--ks-overlay-surface": "#1c1230",
+          "--ks-primary": "#7c3aed",
+          "--ks-primary-hover": "#8b5cf6",
+          "--ks-primary-active": "#6d28d9",
+          "--ks-accent": "#a78bfa",
+          "--ks-accent-hover": "#c4b5fd",
+          "--ks-border": "rgba(124,58,237,0.35)",
+          "--ks-border-strong": "#6d28d9",
+          "--ks-focus-ring": "#a78bfa",
+          "--ks-focus-ring-offset": "#0a0612",
+          "--ks-input-border-focus": "#a78bfa"
+        }
+      }
+    ]
   }
 }
