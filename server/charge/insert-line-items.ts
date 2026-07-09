@@ -13,6 +13,7 @@ import {
   type ChargeLineInput,
   type ValidUnit,
 } from "./validate.js";
+import { LINE_ITEM_COLS } from "../routes/shared.js";
 
 function intervalSqlFor(unit: ValidUnit): string {
   if (unit === "hour") return "make_interval(hours => $8)";
@@ -151,7 +152,7 @@ export async function insertLineItemsForTransaction(
                ${endsAtExpr},
                $12,
                $11, $13)
-       RETURNING *`,
+       RETURNING ${LINE_ITEM_COLS.join(", ")}`,
       params,
     );
     lineItems.push(liResult.rows[0]);

@@ -14,6 +14,7 @@ import {
   lockParentForReprice,
   repriceParentForCostIncrease,
 } from "../lib/reprice-parent-transaction.js";
+import { LINE_ITEM_COLS } from "./shared.js";
 
 export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): void {
   const { db: pool, requireAuth, requireWorkspace, requirePermission } = deps;
@@ -131,7 +132,7 @@ export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): vo
                    $5, $6, $9, $10, $11,
                    $8::timestamptz, $8::timestamptz + ${intervalExpr},
                    'completed', $12, $13)
-           RETURNING *`,
+           RETURNING ${LINE_ITEM_COLS.join(", ")}`,
           [
             src.transaction_id,
             ctxGet(c, "workspaceId"),
@@ -294,7 +295,7 @@ export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): vo
                    $5, $6, $9, $10, $11,
                    ${startedAtExpr}, ${startedAtExpr} + ${intervalExpr},
                    'active', $12, $13)
-           RETURNING *`,
+           RETURNING ${LINE_ITEM_COLS.join(", ")}`,
           [
             src.transaction_id,
             ctxGet(c, "workspaceId"),
