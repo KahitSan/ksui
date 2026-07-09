@@ -1,6 +1,5 @@
 {
   "name": "finance",
-  "version": "0.11.0",
   "basePath": "/api/transactions",
   "additionalBasePaths": [
     "/api/transaction-line-items",
@@ -55,6 +54,7 @@
     "service:findByIds",
     "service:getAccountBalances",
     "service:getPackageCapacityUsage",
+    "service:hasClientAvailedPackage",
     "service:createSalaryTransaction"
   ],
   "permissions": [
@@ -76,7 +76,7 @@
   ],
   "exposes": {
     "finance:capacity": {
-      "methods": ["getPackageCapacityUsage"],
+      "methods": ["getPackageCapacityUsage", "hasClientAvailedPackage"],
       "risk": "low",
       "mode": "read",
       "visibility": "public",
