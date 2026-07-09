@@ -225,7 +225,7 @@ export function AccountForm(props: AccountFormProps) {
     !!props.logoBlob || (!!props.logoExistingS3 && !props.logoClear);
 
   const inputClass =
-    "w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none";
+    "w-full rounded-lg border border-ks-border-strong bg-ks-surface-raised/50 px-3 py-2 text-sm text-ks-fg focus:border-ks-accent/50 focus:outline-none";
 
   return (
     <form
@@ -237,7 +237,7 @@ export function AccountForm(props: AccountFormProps) {
       class="space-y-4"
     >
       <Show when={props.error}>
-        <div class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+        <div class="rounded-lg border border-ks-danger/30 bg-ks-danger/10 px-3 py-2 text-sm text-ks-danger">
           {props.error}
         </div>
       </Show>
@@ -293,7 +293,7 @@ export function AccountForm(props: AccountFormProps) {
               <button
                 type="button"
                 onClick={removeLogo}
-                class="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
+                class="inline-flex items-center gap-1 text-xs text-ks-fg-muted hover:text-ks-danger transition-colors cursor-pointer"
                 disabled={props.saving}
               >
                 <Trash size={14} />
@@ -306,19 +306,19 @@ export function AccountForm(props: AccountFormProps) {
               <button
                 type="button"
                 onClick={undoRemove}
-                class="text-xs text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
+                class="text-xs text-ks-accent hover:text-ks-accent-hover transition-colors cursor-pointer"
                 disabled={props.saving}
               >
                 Undo remove
               </button>
             </Show>
           </div>
-          <span class="text-[11px] text-zinc-500">
+          <span class="text-[11px] text-ks-fg-muted">
             Cropped to a 1:1 square. Pick a logo or an icon, not both. You can
             also paste an image here.
           </span>
           <Show when={props.logoClear && !props.logoBlob}>
-            <span class="text-[11px] text-red-400">
+            <span class="text-[11px] text-ks-danger">
               Logo will be removed when you save.
             </span>
           </Show>
@@ -340,7 +340,7 @@ export function AccountForm(props: AccountFormProps) {
         when={!hasLogo()}
         fallback={
           <FormField label="Icon">
-            <p class="text-[11px] text-zinc-500 italic">
+            <p class="text-[11px] text-ks-fg-muted italic">
               Hidden because a logo is set. Remove the logo above to pick an
               icon instead.
             </p>
@@ -356,9 +356,9 @@ export function AccountForm(props: AccountFormProps) {
               aria-pressed={props.icon === ""}
               class="px-2 py-1 rounded border text-[11px]"
               classList={{
-                "border-amber-400/60 bg-amber-500/10 text-amber-300":
+                "border-ks-accent/60 bg-ks-accent/10 text-ks-accent-hover":
                   props.icon === "",
-                "border-zinc-700 text-zinc-500 hover:border-zinc-600":
+                "border-ks-border-strong text-ks-fg-muted hover:border-ks-border-strong":
                   props.icon !== "",
               }}
             >
@@ -376,9 +376,9 @@ export function AccountForm(props: AccountFormProps) {
                     aria-pressed={props.icon === slug}
                     class="w-9 h-9 rounded border flex items-center justify-center"
                     classList={{
-                      "border-amber-400/60 bg-amber-500/10 text-amber-300":
+                      "border-ks-accent/60 bg-ks-accent/10 text-ks-accent-hover":
                         props.icon === slug,
-                      "border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200":
+                      "border-ks-border-strong text-ks-fg-muted hover:border-ks-border-strong hover:text-ks-fg":
                         props.icon !== slug,
                     }}
                   >
@@ -398,28 +398,28 @@ export function AccountForm(props: AccountFormProps) {
             data-testid="accounts-form-color"
             value={props.color || "#71717a"}
             onInput={(e) => props.setColor(e.currentTarget.value)}
-            class="w-12 h-9 rounded border border-zinc-700 bg-zinc-800/50 cursor-pointer"
+            class="w-12 h-9 rounded border border-ks-border-strong bg-ks-surface-raised/50 cursor-pointer"
             aria-label="Accent color"
           />
           <Show
             when={props.color}
             fallback={
-              <span class="text-xs text-zinc-500 italic">
+              <span class="text-xs text-ks-fg-muted italic">
                 Using default tone for type
               </span>
             }
           >
-            <code class="text-xs text-zinc-400 font-mono">{props.color}</code>
+            <code class="text-xs text-ks-fg-muted font-mono">{props.color}</code>
             <button
               type="button"
               onClick={() => props.setColor("")}
-              class="text-xs text-zinc-500 hover:text-red-400 cursor-pointer"
+              class="text-xs text-ks-fg-muted hover:text-ks-danger cursor-pointer"
             >
               Reset
             </button>
           </Show>
           <div class="ml-auto flex items-center gap-2">
-            <span class="text-[10px] text-zinc-500 uppercase tracking-widest">
+            <span class="text-[10px] text-ks-fg-muted uppercase tracking-widest">
               Preview
             </span>
             {(() => {
@@ -479,7 +479,7 @@ export function AccountForm(props: AccountFormProps) {
 function FormField(props: { label: string; children: JSX.Element }) {
   return (
     <div>
-      <label class="block text-xs text-zinc-500 mb-1">{props.label}</label>
+      <label class="block text-xs text-ks-fg-muted mb-1">{props.label}</label>
       {props.children}
     </div>
   );

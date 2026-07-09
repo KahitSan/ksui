@@ -40,13 +40,13 @@ export function AccountDetail(props: {
           <img
             src={logoSrc()!}
             alt={`${a.name} logo`}
-            class="w-24 h-24 rounded-xl object-cover border border-zinc-700 bg-zinc-900 shadow"
+            class="w-24 h-24 rounded-xl object-cover border border-ks-border-strong bg-ks-surface shadow"
           />
         </div>
       </Show>
       <DetailRow label="Name" value={a.name} />
       <div>
-        <span class="text-xs text-zinc-500 block mb-1">Type</span>
+        <span class="text-xs text-ks-fg-muted block mb-1">Type</span>
         <span
           class={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium uppercase tracking-wider border ${t.class}`}
         >
@@ -57,8 +57,8 @@ export function AccountDetail(props: {
         when={a.balance !== undefined && a.balance !== null}
         fallback={
           <div>
-            <span class="text-xs text-zinc-500 block mb-1">Balance</span>
-            <span class="text-sm text-zinc-400">
+            <span class="text-xs text-ks-fg-muted block mb-1">Balance</span>
+            <span class="text-sm text-ks-fg-muted">
               — (available once Transactions is enabled)
             </span>
           </div>
@@ -68,19 +68,19 @@ export function AccountDetail(props: {
           when={a.type === "capital"}
           fallback={
             <div>
-              <span class="text-xs text-zinc-500 block mb-1">Balance</span>
+              <span class="text-xs text-ks-fg-muted block mb-1">Balance</span>
               <span
                 class="text-lg font-semibold"
                 classList={{
-                  "text-emerald-400":
+                  "text-ks-success":
                     (typeof a.balance === "string"
                       ? parseFloat(a.balance)
                       : a.balance ?? 0) > 0,
-                  "text-red-400":
+                  "text-ks-danger":
                     (typeof a.balance === "string"
                       ? parseFloat(a.balance)
                       : a.balance ?? 0) < 0,
-                  "text-zinc-400":
+                  "text-ks-fg-muted":
                     (typeof a.balance === "string"
                       ? parseFloat(a.balance)
                       : a.balance ?? 0) === 0,
@@ -96,13 +96,13 @@ export function AccountDetail(props: {
             if (fig.overpaid) {
               return (
                 <div>
-                  <span class="text-xs text-zinc-500 block mb-1">
+                  <span class="text-xs text-ks-fg-muted block mb-1">
                     Overpayment
                   </span>
-                  <span class="text-lg font-semibold text-red-400">
+                  <span class="text-lg font-semibold text-ks-danger">
                     +{formatCurrency(fig.overpayment)}
                   </span>
-                  <p class="text-xs text-zinc-500 mt-1">
+                  <p class="text-xs text-ks-fg-muted mt-1">
                     More has been returned than contributed. Double-check the
                     account's transactions.
                   </p>
@@ -111,7 +111,7 @@ export function AccountDetail(props: {
             }
             return (
               <div>
-                <span class="text-xs text-zinc-500 block mb-1">
+                <span class="text-xs text-ks-fg-muted block mb-1">
                   {fig.outstanding === 0
                     ? "Outstanding"
                     : "Outstanding (to return)"}
@@ -119,13 +119,13 @@ export function AccountDetail(props: {
                 <span
                   class="text-lg font-semibold"
                   classList={{
-                    "text-amber-400": fig.outstanding > 0,
-                    "text-zinc-400": fig.outstanding === 0,
+                    "text-ks-accent": fig.outstanding > 0,
+                    "text-ks-fg-muted": fig.outstanding === 0,
                   }}
                 >
                   {formatCurrency(fig.outstanding)}
                 </span>
-                <p class="text-xs text-zinc-500 mt-1">
+                <p class="text-xs text-ks-fg-muted mt-1">
                   Net contribution still owed back to the funder.
                 </p>
               </div>
@@ -146,8 +146,8 @@ export function AccountDetail(props: {
 function DetailRow(props: { label: string; value: string | null | undefined }) {
   return (
     <div>
-      <span class="text-xs text-zinc-500 block">{props.label}</span>
-      <span class="text-sm text-zinc-200">{props.value || "—"}</span>
+      <span class="text-xs text-ks-fg-muted block">{props.label}</span>
+      <span class="text-sm text-ks-fg">{props.value || "—"}</span>
     </div>
   );
 }
