@@ -25,10 +25,12 @@ export interface TransactionAccountFieldsProps {
   allowTransferFee: boolean;
 }
 
-// The single-account-picker vs transfer-accounts-picker branch, split out of
-// TransactionForm to keep that file under the file-size budget. `sale` writes
-// to destAccount, every other category writes to sourceAccount — that
-// category-driven single/second-account split is the only domain logic here.
+/**
+ * The single-account-picker vs transfer-accounts-picker branch, split out of
+ * TransactionForm to keep that file under the file-size budget. `sale` writes
+ * to destAccount, every other category writes to sourceAccount — that
+ * category-driven single/second-account split is the only domain logic here.
+ */
 export default function TransactionAccountFields(props: TransactionAccountFieldsProps) {
   return (
     <Show

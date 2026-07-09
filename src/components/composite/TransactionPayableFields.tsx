@@ -31,9 +31,11 @@ export interface TransactionPayableFieldsProps {
   setPdcStatus: (v: string) => void;
 }
 
-// The "payable" category's extra fields, split out of TransactionForm to keep
-// that file under the file-size budget. Kind/due-date/cheque/PDC-status only
-// ever apply to the payable category, so this stays a pure sub-form.
+/**
+ * The "payable" category's extra fields, split out of TransactionForm to keep
+ * that file under the file-size budget. Kind/due-date/cheque/PDC-status only
+ * ever apply to the payable category, so this stays a pure sub-form.
+ */
 export default function TransactionPayableFields(props: TransactionPayableFieldsProps) {
   return (
     <div class="rounded-lg border border-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_20%,transparent)] bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_5%,transparent)] p-3 space-y-3">
