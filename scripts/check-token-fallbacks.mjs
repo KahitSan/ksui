@@ -218,12 +218,51 @@ const tailwindClassPattern =
 const hexPattern = /#[0-9a-fA-F]{3,8}\b/g;
 const rgbPattern = /rgba?\([^)]*\)/g;
 
-function findLiteralsInLine(line) {
+// Balanced-paren scan for every `var(--ks-*` / `var(--ksui-*` call (the
+// `--ks` marker is a prefix of both names) — returns [start, end] index
+// ranges spanning the FULL call (including nested fallback chains), so a
+// literal that is itself the fallback of a partially-converted line (one
+// that also has bare literals elsewhere) is excluded per-match, not by
+// blanket-excluding the whole line.
+function collectVarRanges(source) {
+  const ranges = [];
+  const marker = "var(--ks";
+  let searchFrom = 0;
+  for (;;) {
+    const start = source.indexOf(marker, searchFrom);
+    if (start === -1) break;
+    let i = start + 4; // position right after "var("
+    let depth = 1;
+    while (i < source.length && depth > 0) {
+      if (source[i] === "(") depth++;
+      else if (source[i] === ")") depth--;
+      if (depth > 0) i++;
+    }
+    ranges.push([start, i]);
+    searchFrom = i + 1;
+  }
+  return ranges;
+}
+
+// Same idea for `color-mix(...)` blocks — reuses the existing balanced
+// extractor since it already returns index + closing position via `body`.
+function collectColorMixRanges(source) {
+  return extractColorMixBlocks(source).map((block) => {
+    const closeIndex = block.index + "color-mix(".length + block.body.length;
+    return [block.index, closeIndex];
+  });
+}
+
+function isCovered(index, ranges) {
+  return ranges.some(([start, end]) => index >= start && index <= end);
+}
+
+function findLiteralsInSource(source) {
   const hits = [];
   for (const re of [hexPattern, rgbPattern, tailwindClassPattern]) {
     re.lastIndex = 0;
     let m;
-    while ((m = re.exec(line))) hits.push(m[0]);
+    while ((m = re.exec(source))) hits.push({ text: m[0], index: m.index });
   }
   return hits;
 }
@@ -241,15 +280,14 @@ function runCoverageGate() {
       const excludedLines = lineExceptions.get(relPath);
 
       const source = readFileSync(file, "utf8");
-      const lines = source.split("\n");
-      lines.forEach((line, i) => {
-        const lineNo = i + 1;
-        if (excludedLines?.has(lineNo)) return;
-        if (line.includes("var(--ks")) return;
-        for (const hit of findLiteralsInLine(line)) {
-          occurrences.push({ file: relPath, line: lineNo, hit });
-        }
-      });
+      const coveredRanges = [...collectVarRanges(source), ...collectColorMixRanges(source)];
+
+      for (const hit of findLiteralsInSource(source)) {
+        if (isCovered(hit.index, coveredRanges)) continue;
+        const lineNo = lineOf(source, hit.index);
+        if (excludedLines?.has(lineNo)) continue;
+        occurrences.push({ file: relPath, line: lineNo, hit: hit.text });
+      }
     }
   }
 
