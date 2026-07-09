@@ -1,5 +1,13 @@
 # @kahitsan/ksui
 
+## 0.34.0
+
+### Minor Changes
+
+- f61210d: Rewrite every component's hardcoded dark-mode colors to the `--ks-*` theme token system (THEME-SPEC.md §1.2/§1.4/§6a): each color reference is now `var(--ks-<token>, <exact dark literal>)` so an untheme'd host renders byte-identical to today's dark UI, while a themed host (once the kernel resolves and applies the 62-token allowlist) picks up the resolved value automatically. Existing `--ksui-<component>-*` override vars stay the live read-point ahead of the new token in a 3-level fallback chain, preserving external overrides. Adds a shared `injectCSS` util replacing the per-component `document.createElement('style')` dedup pattern, and an automated `check:tokens` gate asserting every fallback is byte-identical to its token's dark default.
+
+  `SegmentedFilter` now carries proper radio semantics: the wrapper is `role="radiogroup"` (honoring a new optional `ariaLabel` prop), each segment is `role="radio"` + `aria-checked`, and arrow keys / Home / End move a roving tabindex per the WAI-ARIA radiogroup pattern — visual output is unchanged. `RadioCardGroup` gains a `disabled` prop (roving tabindex removed, clicks suppressed, `aria-disabled` on the group and every item) so consumers stop faking disabled state with pointer-events CSS. `TransactionForm` is decomposed into `TransactionAccountFields` and `TransactionPayableFields` sibling components — same exported props, same rendered output.
+
 ## 0.33.0
 
 ### Minor Changes
