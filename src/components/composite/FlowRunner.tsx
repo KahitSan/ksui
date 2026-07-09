@@ -34,17 +34,17 @@ const STYLE_CSS = `
 .ksui-fr-prompt,.ksui-fr-body{font-size:0.85rem;opacity:0.85;margin:0;}
 .ksui-fr-field{display:flex;flex-direction:column;gap:0.25rem;}
 .ksui-fr-label{font-size:0.78rem;font-weight:500;}
-.ksui-fr-input{padding:0.5rem 0.625rem;border-radius:0.5rem;border:1px solid var(--ksui-fr-border,rgba(255,255,255,0.15));background:var(--ksui-fr-input-bg,rgba(255,255,255,0.04));color:inherit;font-size:0.85rem;}
+.ksui-fr-input{padding:0.5rem 0.625rem;border-radius:0.5rem;border:1px solid var(--ksui-fr-border,var(--ks-input-border,#3f3f46));background:var(--ksui-fr-input-bg,var(--ks-input-bg,#18181b));color:inherit;font-size:0.85rem;}
 .ksui-fr-actions{display:flex;gap:0.5rem;flex-wrap:wrap;}
-.ksui-fr-btn{padding:0.5rem 0.875rem;border-radius:0.5rem;border:1px solid var(--ksui-fr-border,rgba(255,255,255,0.15));background:var(--ksui-fr-btn-bg,rgba(255,255,255,0.06));color:inherit;font-size:0.82rem;cursor:pointer;}
+.ksui-fr-btn{padding:0.5rem 0.875rem;border-radius:0.5rem;border:1px solid var(--ksui-fr-border,var(--ks-input-border,#3f3f46));background:var(--ksui-fr-btn-bg,var(--ks-surface-raised,#1a1a1a));color:inherit;font-size:0.82rem;cursor:pointer;}
 .ksui-fr-btn:disabled{opacity:0.5;cursor:not-allowed;}
 .ksui-fr-btn.primary{background:var(--ksui-fr-primary,var(--ks-primary,#c9a961));color:var(--ksui-fr-primary-fg,#18181b);border-color:transparent;}
 .ksui-fr-btn.danger{background:var(--ksui-fr-danger,var(--ks-danger,#ef4444));color:var(--ks-fg,#ffffff);border-color:transparent;}
 .ksui-fr-msg{padding:0.625rem 0.75rem;border-radius:0.5rem;font-size:0.85rem;}
-.ksui-fr-msg.info{background:rgba(59,130,246,0.1);}
-.ksui-fr-msg.success{background:rgba(34,197,94,0.12);}
+.ksui-fr-msg.info{background:var(--ks-info-bg,rgba(56,189,248,0.12));}
+.ksui-fr-msg.success{background:var(--ks-success-bg,rgba(16,185,129,0.12));}
 .ksui-fr-msg.error{background:var(--ks-danger-bg,rgba(239,68,68,0.12));}
-.ksui-fr-error{padding:0.625rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;background:var(--ks-danger-bg,rgba(239,68,68,0.12));border:1px solid rgba(239,68,68,0.3);}
+.ksui-fr-error{padding:0.625rem 0.75rem;border-radius:0.5rem;font-size:0.82rem;background:var(--ks-danger-bg,rgba(239,68,68,0.12));border:1px solid color-mix(in srgb, var(--ks-danger, #ef4444) 30%, transparent);}
 .ksui-fr-loading{font-size:0.82rem;opacity:0.7;}
 `;
 

@@ -222,7 +222,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
   });
 
   return (
-    <div class="rounded-lg border border-[rgba(16,185,129,0.2)] bg-[rgba(16,185,129,0.05)] p-3 space-y-3">
+    <div class="rounded-lg border border-[color-mix(in_srgb,var(--ks-success,#10b981)_20%,transparent)] bg-[color-mix(in_srgb,var(--ks-success,#10b981)_5%,transparent)] p-3 space-y-3">
       <div class="flex items-center justify-between gap-2 text-[10px] uppercase tracking-widest text-[var(--ks-success-fg,#34d399)] font-semibold">
         <span class="flex items-center gap-1.5">
           <PackageIcon size={12} />
@@ -231,7 +231,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
         <button
           type="button"
           onClick={() => setPickerOpen((v) => !v)}
-          class="ks-interactive inline-flex items-center gap-1 rounded-md border border-[rgba(16,185,129,0.3)] bg-[rgba(16,185,129,0.1)] px-2 py-0.5 text-[10px] uppercase tracking-widest text-[#6ee7b7] hover:bg-[rgba(16,185,129,0.2)]"
+          class="ks-interactive inline-flex items-center gap-1 rounded-md border border-[color-mix(in_srgb,var(--ks-success,#10b981)_30%,transparent)] bg-[color-mix(in_srgb,var(--ks-success,#10b981)_10%,transparent)] px-2 py-0.5 text-[10px] uppercase tracking-widest text-[var(--ks-success-fg,#34d399)] hover:bg-[color-mix(in_srgb,var(--ks-success,#10b981)_20%,transparent)]"
         >
           <Plus size={10} /> Add package
         </button>
@@ -244,7 +244,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
         >
           <Show
             when={!loadError()}
-            fallback={<div class="text-xs text-[#fb7185]">{loadError()}</div>}
+            fallback={<div class="text-xs text-[var(--ks-danger-fg,#f87171)]">{loadError()}</div>}
           >
             <Show
               when={packages().length > 0}
@@ -252,7 +252,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
                 <div class="text-xs text-[var(--ks-fg-subtle,#71717a)]">No active packages.</div>
               }
             >
-              <div class="space-y-1.5 max-h-56 overflow-y-auto rounded-md border border-[rgba(16,185,129,0.15)] p-2 bg-[rgba(9,9,11,0.4)]">
+              <div class="space-y-1.5 max-h-56 overflow-y-auto rounded-md border border-[color-mix(in_srgb,var(--ks-success,#10b981)_15%,transparent)] p-2 bg-[color-mix(in_srgb,var(--ks-bg,#0a0a0a)_40%,transparent)]">
                 <For each={packages()}>
                   {(pkg) => (
                     <div class="space-y-1">
@@ -265,7 +265,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
                             <button
                               type="button"
                               onClick={() => addVariant(pkg, v)}
-                              class="ks-interactive inline-flex items-center gap-1 rounded border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] px-2 py-0.5 text-xs text-[#d4d4d8] hover:border-[rgba(16,185,129,0.4)] hover:text-[#6ee7b7]"
+                              class="ks-interactive inline-flex items-center gap-1 rounded border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] px-2 py-0.5 text-xs text-[var(--ks-fg,#ffffff)] hover:border-[color-mix(in_srgb,var(--ks-success,#10b981)_40%,transparent)] hover:text-[var(--ks-success-fg,#34d399)]"
                             >
                               {v.name} · {formatPHP(Number(v.price))}
                             </button>
@@ -292,7 +292,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
             {(line) => (
               <div class="flex items-center gap-2 text-sm">
                 <div class="min-w-0 flex-1">
-                  <div class="text-[#e4e4e7] truncate">
+                  <div class="text-[var(--ks-fg,#ffffff)] truncate">
                     {line.package_name}{" "}
                     <span class="text-[var(--ks-fg-subtle,#71717a)]">· {line.variant_name}</span>
                   </div>
@@ -306,30 +306,30 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
                   <button
                     type="button"
                     onClick={() => adjust(line.key, -1)}
-                    class="ks-interactive flex h-6 w-6 items-center justify-center rounded border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] text-[#d4d4d8] hover:border-[rgba(16,185,129,0.4)]"
+                    class="ks-interactive flex h-6 w-6 items-center justify-center rounded border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] text-[var(--ks-fg,#ffffff)] hover:border-[color-mix(in_srgb,var(--ks-success,#10b981)_40%,transparent)]"
                     aria-label="Decrease quantity"
                   >
                     <Minus size={12} />
                   </button>
-                  <span class="w-6 text-center text-sm text-[#e4e4e7] tabular-nums">
+                  <span class="w-6 text-center text-sm text-[var(--ks-fg,#ffffff)] tabular-nums">
                     {line.quantity}
                   </span>
                   <button
                     type="button"
                     onClick={() => adjust(line.key, 1)}
-                    class="ks-interactive flex h-6 w-6 items-center justify-center rounded border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] text-[#d4d4d8] hover:border-[rgba(16,185,129,0.4)]"
+                    class="ks-interactive flex h-6 w-6 items-center justify-center rounded border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] text-[var(--ks-fg,#ffffff)] hover:border-[color-mix(in_srgb,var(--ks-success,#10b981)_40%,transparent)]"
                     aria-label="Increase quantity"
                   >
                     <Plus size={12} />
                   </button>
                 </div>
-                <div class="w-20 text-right text-[#d4d4d8] tabular-nums whitespace-nowrap">
+                <div class="w-20 text-right text-[var(--ks-fg,#ffffff)] tabular-nums whitespace-nowrap">
                   {formatPHP(line.unit_price * line.quantity)}
                 </div>
                 <button
                   type="button"
                   onClick={() => remove(line.key)}
-                  class="ks-interactive flex h-6 w-6 items-center justify-center rounded text-[var(--ks-fg-subtle,#71717a)] hover:text-[#fb7185]"
+                  class="ks-interactive flex h-6 w-6 items-center justify-center rounded text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-danger-fg,#f87171)]"
                   aria-label="Remove line"
                 >
                   <Trash2 size={12} />
@@ -386,13 +386,13 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
             step="0.01"
             value={props.manualDiscount}
             onInput={(e) => props.setManualDiscount(e.currentTarget.value)}
-            class="mt-0.5 w-full rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] px-2 py-1 text-sm text-[#e4e4e7] tabular-nums focus:border-[rgba(16,185,129,0.5)] focus:outline-none"
+            class="mt-0.5 w-full rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[var(--ks-input-bg,#18181b)] px-2 py-1 text-sm text-[var(--ks-fg,#ffffff)] tabular-nums focus:border-[rgba(16,185,129,0.5)] focus:outline-none"
           />
         </div>
       </Show>
 
       <Show when={props.items.length > 0}>
-        <div class="border-t border-[rgba(16,185,129,0.15)] pt-2 text-xs space-y-0.5 tabular-nums">
+        <div class="border-t border-[color-mix(in_srgb,var(--ks-success,#10b981)_15%,transparent)] pt-2 text-xs space-y-0.5 tabular-nums">
           <div class="flex items-center justify-between text-[var(--ks-fg-muted,#a1a1aa)]">
             <span>Subtotal</span>
             <span>{formatPHP(subtotal())}</span>
@@ -407,7 +407,7 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
               <span>− {formatPHP(effectiveDiscount())}</span>
             </div>
           </Show>
-          <div class="flex items-center justify-between text-[#e4e4e7] font-semibold">
+          <div class="flex items-center justify-between text-[var(--ks-fg,#ffffff)] font-semibold">
             <span>Total</span>
             <span>{formatPHP(total())}</span>
           </div>

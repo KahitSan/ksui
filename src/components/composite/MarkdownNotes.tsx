@@ -288,7 +288,7 @@ function MentionHoverCard(props: { clientId: number; name: string }): JSX.Elemen
     <span class="relative inline-block" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       <a
         href={`/clients/${props.clientId}`}
-        class="inline-flex items-center rounded bg-zinc-800/50 px-1.5 py-0.5 text-[0.85em] text-[var(--ks-success-fg,#34d399)] hover:text-emerald-300 hover:bg-zinc-800/70 transition-colors"
+        class="inline-flex items-center rounded bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] px-1.5 py-0.5 text-[0.85em] text-[var(--ks-success-fg,#34d399)] hover:text-[var(--ks-success,#10b981)] hover:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_70%,transparent)] transition-colors"
         data-testid="mention-chip"
         aria-describedby={open() && data() !== null ? hoverCardId : undefined}
         onFocus={handleFocus}
@@ -301,14 +301,14 @@ function MentionHoverCard(props: { clientId: number; name: string }): JSX.Elemen
           id={hoverCardId}
           role="tooltip"
           data-testid="mention-hover-card"
-          class="absolute left-0 top-full z-50 mt-1 inline-block min-w-[14rem] max-w-xs rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-zinc-900 px-3 py-2 text-xs text-zinc-100 shadow-lg"
+          class="absolute left-0 top-full z-50 mt-1 inline-block min-w-[14rem] max-w-xs rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[var(--ks-overlay-surface,#18181b)] px-3 py-2 text-xs text-[var(--ks-fg,#ffffff)] shadow-lg"
           onMouseEnter={() => clearTimers()}
           onMouseLeave={handleLeave}
         >
           <Show when={!loading() && data()} fallback={<span class="text-[var(--ks-fg-muted,#a1a1aa)]">Loading…</span>}>
             {(c) => (
               <span class="block">
-                <span class="block font-medium text-zinc-100">{c().name_raw}</span>
+                <span class="block font-medium text-[var(--ks-fg,#ffffff)]">{c().name_raw}</span>
                 <Show when={c().email}>
                   <span class="mt-1 block text-[var(--ks-fg-muted,#a1a1aa)]" data-testid="mention-hover-email">
                     {c().email}
@@ -339,7 +339,7 @@ function MentionChip(props: { name: string; clientId: number | null }): JSX.Elem
       when={props.clientId !== null}
       fallback={
         <span
-          class="inline-flex items-center rounded bg-zinc-800/40 px-1.5 py-0.5 text-[0.85em] text-[var(--ks-fg-subtle,#71717a)]"
+          class="inline-flex items-center rounded bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_40%,transparent)] px-1.5 py-0.5 text-[0.85em] text-[var(--ks-fg-subtle,#71717a)]"
           data-testid="mention-chip-unresolved"
         >
           @{props.name}
@@ -351,7 +351,7 @@ function MentionChip(props: { name: string; clientId: number | null }): JSX.Elem
         fallback={
           <a
             href={`/clients/${props.clientId}`}
-            class="inline-flex items-center rounded bg-zinc-800/50 px-1.5 py-0.5 text-[0.85em] text-[var(--ks-success-fg,#34d399)] hover:text-emerald-300 hover:bg-zinc-800/70 transition-colors"
+            class="inline-flex items-center rounded bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] px-1.5 py-0.5 text-[0.85em] text-[var(--ks-success-fg,#34d399)] hover:text-[var(--ks-success,#10b981)] hover:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_70%,transparent)] transition-colors"
             data-testid="mention-chip"
           >
             @{props.name}
@@ -384,7 +384,7 @@ function RenderInline(props: { tokens: InlineToken[]; searchQuery?: string }): J
           );
         if (t.kind === "code")
           return (
-            <code class="px-1 py-0.5 rounded bg-zinc-800/60 text-[0.9em] text-zinc-200">
+            <code class="px-1 py-0.5 rounded bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_60%,transparent)] text-[0.9em] text-[var(--ks-fg-muted,#a1a1aa)]">
               {props.searchQuery ? highlightMatch(t.value, props.searchQuery) : t.value}
             </code>
           );
@@ -394,7 +394,7 @@ function RenderInline(props: { tokens: InlineToken[]; searchQuery?: string }): J
               href={t.href}
               target="_blank"
               rel="noopener noreferrer"
-              class="text-[var(--ks-success-fg,#34d399)] hover:text-emerald-300 underline"
+              class="text-[var(--ks-success-fg,#34d399)] hover:text-[var(--ks-success,#10b981)] underline"
             >
               <RenderInline tokens={t.children} searchQuery={props.searchQuery} />
             </a>

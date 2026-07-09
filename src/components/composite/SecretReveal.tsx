@@ -34,19 +34,19 @@ const SecretReveal: Component<SecretRevealProps> = (props) => {
   };
 
   return (
-    <div class="mb-4 p-3 rounded-lg bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.2)]">
+    <div class="mb-4 p-3 rounded-lg bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_10%,transparent)] border border-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_20%,transparent)]">
       <p class="text-xs text-[var(--ks-accent-hover,#fcd34d)] font-medium mb-2">{local.warning ?? DEFAULT_WARNING}</p>
       <div class="flex items-center gap-2">
         <code
           data-testid={local.testId}
-          class="flex-1 px-2 py-1.5 rounded bg-[var(--ks-input-bg,#18181b)] border border-[var(--ks-input-border,#3f3f46)] text-[#fde68a] text-xs font-mono break-all"
+          class="flex-1 px-2 py-1.5 rounded bg-[var(--ks-input-bg,#18181b)] border border-[var(--ks-input-border,#3f3f46)] text-[var(--ks-accent-hover,#fcd34d)] text-xs font-mono break-all"
         >
           {local.secret}
         </code>
         <button
           type="button"
           onClick={copy}
-          class="ks-interactive px-2 py-1.5 rounded bg-[#27272a] border border-[var(--ks-input-border,#3f3f46)] text-[#d4d4d8] hover:text-[var(--ks-fg,#ffffff)] text-xs flex items-center gap-1"
+          class="ks-interactive px-2 py-1.5 rounded bg-[var(--ks-surface-raised,#1a1a1a)] border border-[var(--ks-input-border,#3f3f46)] text-[var(--ks-fg-muted,#a1a1aa)] hover:text-[var(--ks-fg,#ffffff)] text-xs flex items-center gap-1"
           aria-label="Copy secret"
         >
           <Copy size={12} />

@@ -151,7 +151,7 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
         onClick={() => !props.disabled && setOpen((o) => !o)}
         class={
           props.triggerClass ??
-          "inline-flex items-center gap-1.5 text-xs text-[#d4d4d8] bg-[rgba(39,39,42,0.6)] hover:bg-[#27272a] border border-[rgba(63,63,70,0.6)] rounded px-2 py-1 cursor-pointer transition-colors"
+          "inline-flex items-center gap-1.5 text-xs text-[var(--ks-fg,#ffffff)] bg-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] hover:bg-[var(--ks-surface-raised,#1a1a1a)] border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_60%,transparent)] rounded px-2 py-1 cursor-pointer transition-colors"
         }
         classList={{ "cursor-not-allowed opacity-60": props.disabled }}
         title={props.disabled ? undefined : "Click to select"}
@@ -169,17 +169,17 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
         <Portal>
           <div
             ref={popupRef}
-            class="z-[10000] rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[rgba(24,24,27,0.95)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[10000] rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
           >
-            <div class="px-2 py-1.5 border-b border-[#27272a]">
+            <div class="px-2 py-1.5 border-b border-[var(--ks-border-strong,#3f3f46)]">
               <input
                 ref={inputRef}
                 type="text"
                 value={query()}
                 onInput={(e) => setQuery(e.currentTarget.value)}
                 placeholder={props.searchPlaceholder ?? "Search…"}
-                class="w-full px-2 py-1 text-xs bg-[#09090b] border border-[#27272a] rounded text-[#e4e4e7] placeholder:text-[#52525b] focus:outline-none focus:border-[rgba(245,158,11,0.5)]"
+                class="w-full px-2 py-1 text-xs bg-[var(--ks-bg,#0a0a0a)] border border-[var(--ks-border-strong,#3f3f46)] rounded text-[var(--ks-fg,#ffffff)] placeholder:text-[var(--ks-input-placeholder,#71717a)] focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
               />
             </div>
             <div class="flex-1 overflow-y-auto">
@@ -196,10 +196,10 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
                       <button
                         type="button"
                         onClick={() => select(opt)}
-                        class="w-full text-left px-3 py-2 text-xs hover:bg-[rgba(245,158,11,0.1)] transition-colors flex items-center justify-between gap-2"
+                        class="w-full text-left px-3 py-2 text-xs hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_10%,transparent)] transition-colors flex items-center justify-between gap-2"
                         classList={{
                           "text-[var(--ks-accent,#fbbf24)]": selected(),
-                          "text-[#e4e4e7]": !selected(),
+                          "text-[var(--ks-fg,#ffffff)]": !selected(),
                         }}
                       >
                         <span class="flex flex-col min-w-0">
@@ -220,11 +220,11 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
               </Show>
             </div>
             <Show when={props.allowClear && props.value != null && props.value !== ""}>
-              <div class="border-t border-[#27272a]">
+              <div class="border-t border-[var(--ks-border-strong,#3f3f46)]">
                 <button
                   type="button"
                   onClick={() => select(null)}
-                  class="w-full text-left px-3 py-2 text-xs text-[var(--ks-danger-fg,#f87171)] hover:bg-[rgba(239,68,68,0.1)] transition-colors flex items-center gap-2"
+                  class="w-full text-left px-3 py-2 text-xs text-[var(--ks-danger-fg,#f87171)] hover:bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_10%,transparent)] transition-colors flex items-center gap-2"
                 >
                   <X size={12} />
                   <span>Clear selection</span>

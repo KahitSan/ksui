@@ -36,13 +36,13 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
   return (
     <div
       data-testid="advanced-fields-container"
-      class="rounded-lg border border-zinc-700/60 bg-zinc-900/40 p-3 space-y-3"
+      class="rounded-lg border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_60%,transparent)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_40%,transparent)] p-3 space-y-3"
     >
       <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[var(--ks-fg-muted,#a1a1aa)] font-semibold">
         <span>Advanced</span>
       </div>
 
-      <div class="rounded-lg border border-zinc-800/50 bg-zinc-950/40 p-3">
+      <div class="rounded-lg border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)] bg-[color-mix(in_srgb,var(--ks-bg,#0a0a0a)_40%,transparent)] p-3">
         <FormField label="Tax">
           <SegmentedFilter
             options={[
@@ -84,7 +84,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                   <span>VAT (12%)</span>
                   <span>{formatPHP(vat)}</span>
                 </div>
-                <div class="flex justify-between font-medium text-zinc-300">
+                <div class="flex justify-between font-medium text-[var(--ks-fg-muted,#a1a1aa)]">
                   <span>Total</span>
                   <span>{formatPHP(total)}</span>
                 </div>
@@ -96,13 +96,13 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
         <Show
           when={props.category === "expense" || props.category === "payable"}
         >
-          <div class="mt-3 border-t border-zinc-800/50 pt-3">
-            <label class="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer select-none">
+          <div class="mt-3 border-t border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)] pt-3">
+            <label class="flex items-center gap-2 text-xs text-[var(--ks-fg-muted,#a1a1aa)] cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={props.hasEwt}
                 onChange={(e) => props.setHasEwt(e.currentTarget.checked)}
-                class="h-4 w-4 accent-amber-500 cursor-pointer"
+                class="h-4 w-4 accent-[var(--ks-primary,#c9a961)] cursor-pointer"
               />
               <span>Has Expanded Withholding Tax</span>
             </label>
@@ -116,7 +116,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                     max="100"
                     value={props.ewtRate}
                     onInput={(e) => props.setEwtRate(e.currentTarget.value)}
-                    class="w-full px-3 py-2 bg-zinc-900/50 border border-zinc-800 text-zinc-100 text-sm rounded-md focus:outline-none focus:border-amber-500/50"
+                    class="w-full px-3 py-2 bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_50%,transparent)] border border-[var(--ks-border-strong,#3f3f46)] text-[var(--ks-fg,#ffffff)] text-sm rounded-md focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_50%,transparent)]"
                     placeholder="e.g. 1, 2, 5, 10, 15"
                   />
                 </FormField>
@@ -133,7 +133,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                     const rate = parseFloat(props.ewtRate);
                     const ewt = Math.round(amt * rate) / 100;
                     return (
-                      <div class="text-xs text-[var(--ks-fg-subtle,#71717a)] border-t border-zinc-800/50 pt-2">
+                      <div class="text-xs text-[var(--ks-fg-subtle,#71717a)] border-t border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)] pt-2">
                         <div class="flex justify-between">
                           <span>EWT ({rate}%)</span>
                           <span>{formatPHP(ewt)}</span>
@@ -149,7 +149,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
       </div>
 
       <div
-        class="rounded-lg border border-zinc-800/50 bg-zinc-950/40 p-4 relative"
+        class="rounded-lg border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)] bg-[color-mix(in_srgb,var(--ks-bg,#0a0a0a)_40%,transparent)] p-4 relative"
         classList={{ "opacity-60": !props.canShare }}
         title={
           props.canShare
@@ -161,8 +161,8 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
           <div class="flex items-center gap-2">
             <Lock size={14} class="text-[var(--ks-fg-subtle,#71717a)]" />
             <div>
-              <span class="text-sm text-zinc-300">Private transaction</span>
-              <p class="text-[10px] text-zinc-600">
+              <span class="text-sm text-[var(--ks-fg-muted,#a1a1aa)]">Private transaction</span>
+              <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)]">
                 {props.canShare
                   ? "Hidden from others unless shared"
                   : "Locked — needs members.list_basic permission"}
@@ -195,7 +195,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
         </div>
 
         <Show when={props.isPrivate && props.canShare}>
-          <div class="mt-4 pt-3 border-t border-zinc-800/50">
+          <div class="mt-4 pt-3 border-t border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)]">
             <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mb-3">
               Always visible to:{" "}
               <span class="text-[var(--ks-fg-muted,#a1a1aa)]">
@@ -240,15 +240,15 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                       }}
                       class="px-3 py-2 text-xs rounded-lg border cursor-pointer min-h-[36px] capitalize transition-colors active:opacity-80"
                       classList={{
-                        "border-amber-500/40 bg-amber-500/10 text-[var(--ks-accent,#fbbf24)]":
+                        "border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_40%,transparent)] bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_10%,transparent)] text-[var(--ks-accent,#fbbf24)]":
                           selected(),
-                        "border-[var(--ks-border-strong,#3f3f46)] bg-zinc-800/50 text-[var(--ks-fg-muted,#a1a1aa)] hover:border-zinc-600":
+                        "border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] text-[var(--ks-fg-muted,#a1a1aa)] hover:border-[var(--ks-border-strong,#3f3f46)]":
                           !selected(),
                       }}
                     >
                       All {role.label}s
                       <Show when={membersInRole().length > 0}>
-                        <span class="text-zinc-600 ml-1">
+                        <span class="text-[var(--ks-fg-subtle,#71717a)] ml-1">
                           ({membersInRole().length})
                         </span>
                       </Show>
@@ -281,25 +281,25 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                     <label
                       class="flex items-center gap-3 text-sm py-2 px-2 rounded-lg min-h-[40px] transition-colors"
                       classList={{
-                        "text-zinc-300 cursor-pointer hover:bg-zinc-800/30 active:bg-zinc-800/50":
+                        "text-[var(--ks-fg-muted,#a1a1aa)] cursor-pointer hover:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_30%,transparent)] active:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)]":
                           !coveringRole(),
-                        "text-[var(--ks-fg-subtle,#71717a)] cursor-not-allowed bg-zinc-900/40":
+                        "text-[var(--ks-fg-subtle,#71717a)] cursor-not-allowed bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_40%,transparent)]":
                           !!coveringRole(),
                       }}
                     >
                       <div
                         class="w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors"
                         classList={{
-                          "border-amber-500 bg-amber-500":
+                          "border-[var(--ks-primary,#c9a961)] bg-[var(--ks-primary,#c9a961)]":
                             checked() && !coveringRole(),
-                          "border-amber-500/40 bg-amber-500/40":
+                          "border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_40%,transparent)] bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_40%,transparent)]":
                             checked() && !!coveringRole(),
-                          "border-zinc-600 bg-transparent": !checked(),
+                          "border-[var(--ks-border-strong,#3f3f46)] bg-transparent": !checked(),
                         }}
                       >
                         <Show when={checked()}>
                           <svg
-                            class="w-3 h-3 text-zinc-900"
+                            class="w-3 h-3 text-[var(--ks-fg-on-primary,#0a0a0a)]"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -336,12 +336,12 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                       <Show
                         when={coveringRole()}
                         fallback={
-                          <span class="text-[10px] text-zinc-600 capitalize">
+                          <span class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] capitalize">
                             {m.role}
                           </span>
                         }
                       >
-                        <span class="text-[10px] text-amber-500/70">
+                        <span class="text-[10px] text-[color-mix(in_srgb,var(--ks-primary,#c9a961)_70%,transparent)]">
                           via All {coveringRole()!.label}s
                         </span>
                       </Show>
@@ -355,7 +355,7 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                   props.orgMembers.length === 0
                 }
               >
-                <p class="text-xs text-zinc-600 py-2">Loading members...</p>
+                <p class="text-xs text-[var(--ks-fg-subtle,#71717a)] py-2">Loading members...</p>
               </Show>
             </div>
           </div>

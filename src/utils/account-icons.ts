@@ -74,33 +74,39 @@ export function getAccountIcon(account: { icon?: string | null; type: string }):
   return DEFAULT_BY_TYPE[account.type] ?? Banknote;
 }
 
+// bank has no exact-hue token (blue-400/500 family isn't in §1.2), so it
+// drifts to the nearest semantic bucket (--ks-info, sky). e_wallet/capital's
+// bg (amber-500) and border (amber-400) are each an EXACT hex match to
+// --ks-warning and --ks-accent respectively, so those keep zero-regression
+// color-mix rather than sharing one base. Same for cash: bg is an exact
+// --ks-success match, border an exact --ks-success-fg match.
 const DEFAULT_TONE_BY_TYPE: Record<string, { text: string; bg: string; border: string }> = {
   bank: {
-    text: "text-[#60a5fa]",
-    bg: "bg-[rgba(59,130,246,0.1)]",
-    border: "border-[rgba(96,165,250,0.4)]",
+    text: "text-[var(--ks-info,#38bdf8)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-info,#38bdf8)_10%,transparent)]",
+    border: "border-[color-mix(in_srgb,var(--ks-info,#38bdf8)_40%,transparent)]",
   },
   e_wallet: {
     text: "text-[var(--ks-accent,#fbbf24)]",
-    bg: "bg-[rgba(245,158,11,0.1)]",
-    border: "border-[rgba(251,191,36,0.4)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_10%,transparent)]",
+    border: "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_40%,transparent)]",
   },
   cash: {
     text: "text-[var(--ks-success-fg,#34d399)]",
-    bg: "bg-[rgba(16,185,129,0.1)]",
-    border: "border-[rgba(52,211,153,0.4)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-success,#10b981)_10%,transparent)]",
+    border: "border-[color-mix(in_srgb,var(--ks-success-fg,#34d399)_40%,transparent)]",
   },
   capital: {
     text: "text-[var(--ks-accent,#fbbf24)]",
-    bg: "bg-[rgba(245,158,11,0.1)]",
-    border: "border-[rgba(251,191,36,0.4)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_10%,transparent)]",
+    border: "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_40%,transparent)]",
   },
 };
 
 const FALLBACK_TONE = {
-  text: "text-[#d4d4d8]",
-  bg: "bg-[rgba(63,63,70,0.3)]",
-  border: "border-[rgba(63,63,70,0.6)]",
+  text: "text-[var(--ks-fg-muted,#a1a1aa)]",
+  bg: "bg-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_30%,transparent)]",
+  border: "border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_60%,transparent)]",
 };
 
 // Per-type accent tone for an account chip, or the account's own custom color.

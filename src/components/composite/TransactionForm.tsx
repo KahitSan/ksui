@@ -137,24 +137,24 @@ const TONE_CLASSES: Record<
   { bg: string; text: string; border: string }
 > = {
   emerald: {
-    bg: "bg-[rgba(16,185,129,0.1)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-success,#10b981)_10%,transparent)]",
     text: "text-[var(--ks-success-fg,#34d399)]",
-    border: "border-[rgba(16,185,129,0.3)]",
+    border: "border-[color-mix(in_srgb,var(--ks-success,#10b981)_30%,transparent)]",
   },
   red: {
-    bg: "bg-[rgba(239,68,68,0.1)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_10%,transparent)]",
     text: "text-[var(--ks-danger-fg,#f87171)]",
-    border: "border-[rgba(239,68,68,0.3)]",
+    border: "border-[color-mix(in_srgb,var(--ks-danger,#ef4444)_30%,transparent)]",
   },
   blue: {
-    bg: "bg-[rgba(59,130,246,0.1)]",
-    text: "text-[#60a5fa]",
-    border: "border-[rgba(59,130,246,0.3)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-info,#38bdf8)_10%,transparent)]",
+    text: "text-[var(--ks-info,#38bdf8)]",
+    border: "border-[color-mix(in_srgb,var(--ks-info,#38bdf8)_30%,transparent)]",
   },
   amber: {
-    bg: "bg-[rgba(245,158,11,0.1)]",
+    bg: "bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_10%,transparent)]",
     text: "text-[var(--ks-accent,#fbbf24)]",
-    border: "border-[rgba(245,158,11,0.3)]",
+    border: "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_30%,transparent)]",
   },
 };
 
@@ -169,7 +169,7 @@ const PAYABLE_KIND_OPTIONS: { id: string; label: string }[] = [
 
 const PDC_OPTIONS: { id: string; label: string; dot: string }[] = [
   { id: "issued", label: "PDC issued", dot: "bg-[var(--ks-accent,#fbbf24)]" },
-  { id: "presented", label: "PDC presented", dot: "bg-[#60a5fa]" },
+  { id: "presented", label: "PDC presented", dot: "bg-[var(--ks-info,#38bdf8)]" },
   { id: "cleared", label: "PDC cleared", dot: "bg-[var(--ks-success-fg,#34d399)]" },
   { id: "bounced", label: "PDC bounced", dot: "bg-[var(--ks-danger-fg,#f87171)]" },
 ];
@@ -446,12 +446,12 @@ export default function TransactionForm(props: TransactionFormProps) {
       onPaste={handlePaste}
     >
       <Show when={dragging()}>
-        <div class="absolute inset-0 z-30 border-2 border-dashed border-[rgba(251,191,36,0.6)] bg-[rgba(245,158,11,0.1)] backdrop-blur-sm flex flex-col items-center justify-center pointer-events-none">
+        <div class="absolute inset-0 z-30 border-2 border-dashed border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_60%,transparent)] bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_10%,transparent)] backdrop-blur-sm flex flex-col items-center justify-center pointer-events-none">
           <Upload size={32} class="text-[var(--ks-accent,#fbbf24)] mb-2" />
           <span class="text-sm text-[var(--ks-accent,#fbbf24)] font-medium">
             Drop files to attach
           </span>
-          <span class="text-[10px] text-[rgba(251,191,36,0.6)] mt-1">Images or PDFs</span>
+          <span class="text-[10px] text-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_60%,transparent)] mt-1">Images or PDFs</span>
         </div>
       </Show>
 
@@ -549,7 +549,7 @@ export default function TransactionForm(props: TransactionFormProps) {
             when={!(props.category === "sale" && props.saleItems.length > 0)}
           >
             <FormField label="Amount *">
-              <div class="flex items-stretch gap-2 px-4 py-3 border bg-[rgba(24,24,27,0.6)] border-[rgba(39,39,42,0.6)] ks-hud-clip-button focus-within:border-[rgba(245,158,11,0.5)] transition-colors">
+              <div class="flex items-stretch gap-2 px-4 py-3 border bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] ks-hud-clip-button focus-within:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)] transition-colors">
                 <span class="self-center text-3xl font-bold text-[var(--ks-fg-subtle,#71717a)] tabular-nums">
                   ₱
                 </span>
@@ -590,7 +590,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                 data-testid="transactions-form-transfer-fee-field"
               >
                 <FormField label="Transfer fee *">
-                  <div class="flex items-center gap-2 px-3 py-2 border bg-[rgba(9,9,11,0.5)] border-[rgba(59,130,246,0.3)] ks-hud-clip-button focus-within:border-[rgba(59,130,246,0.6)] transition-colors">
+                  <div class="flex items-center gap-2 px-3 py-2 border bg-[color-mix(in_srgb,var(--ks-bg,#0a0a0a)_50%,transparent)] border-[color-mix(in_srgb,var(--ks-info,#38bdf8)_30%,transparent)] ks-hud-clip-button focus-within:border-[color-mix(in_srgb,var(--ks-info,#38bdf8)_60%,transparent)] transition-colors">
                     <span class="text-lg font-bold text-[var(--ks-fg-subtle,#71717a)] tabular-nums">
                       ₱
                     </span>
@@ -607,7 +607,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                       placeholder="0.00"
                     />
                   </div>
-                  <p class="mt-1 text-[10px] text-[#52525b]">
+                  <p class="mt-1 text-[10px] text-[var(--ks-fg-subtle,#71717a)]">
                     Saved as a separate expense from the source account.
                   </p>
                 </FormField>
@@ -622,14 +622,14 @@ export default function TransactionForm(props: TransactionFormProps) {
               disabled={!props.isAdmin}
             />
             <Show when={!props.isAdmin}>
-              <p class="text-[10px] text-[#52525b] mt-0.5">
+              <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
                 Only admins can change the date
               </p>
             </Show>
           </FormField>
 
           <Show when={props.isBackdated}>
-            <div class="rounded-lg border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.05)] px-3 py-2">
+            <div class="rounded-lg border border-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_20%,transparent)] bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_5%,transparent)] px-3 py-2">
               <FormField label="Backdate Reason *">
                 <input
                   type="text"
@@ -638,7 +638,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   onInput={(e) =>
                     props.setBackdateReason(e.currentTarget.value)
                   }
-                  class="w-full rounded-lg border border-[rgba(245,158,11,0.3)] bg-[rgba(39,39,42,0.5)] px-3 py-2 text-sm text-[#e4e4e7] focus:border-[rgba(245,158,11,0.5)] focus:outline-none"
+                  class="w-full rounded-lg border border-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_30%,transparent)] bg-[var(--ks-border,rgba(39,39,42,0.5))] px-3 py-2 text-sm text-[var(--ks-fg,#ffffff)] focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)] focus:outline-none"
                   placeholder="Why are you backdating this transaction?"
                   required
                 />
@@ -652,7 +652,7 @@ export default function TransactionForm(props: TransactionFormProps) {
               data-testid="transactions-form-description"
               value={props.description}
               onInput={(e) => props.setDescription(e.currentTarget.value)}
-              class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button focus:outline-none focus:border-[rgba(245,158,11,0.5)]"
+              class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
               placeholder={catConfig().descPlaceholder}
               required
             />
@@ -695,7 +695,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   type="text"
                   value={props.refNumber}
                   onInput={(e) => props.setRefNumber(e.currentTarget.value)}
-                  class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button focus:outline-none focus:border-[rgba(245,158,11,0.5)]"
+                  class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
                   placeholder="OR#, SI#, or ref number"
                 />
               </FormField>
@@ -707,7 +707,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                 type="text"
                 value={props.refNumber}
                 onInput={(e) => props.setRefNumber(e.currentTarget.value)}
-                class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button focus:outline-none focus:border-[rgba(245,158,11,0.5)]"
+                class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
                 placeholder="Reference number (optional)"
               />
             </FormField>
@@ -753,18 +753,18 @@ export default function TransactionForm(props: TransactionFormProps) {
                   }
                   placeholder="— Uncategorised —"
                   searchPlaceholder="Search categories…"
-                  triggerClass="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button cursor-pointer focus:outline-none focus:border-[rgba(245,158,11,0.5)] flex items-center justify-between gap-2"
+                  triggerClass="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button cursor-pointer focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)] flex items-center justify-between gap-2"
                   triggerLabelClass="truncate text-left flex-1 min-w-0"
                 />
               </Show>
-              <p class="text-[10px] text-[#52525b] mt-0.5">
+              <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
                 Optional. Used for tax-prep classification.
               </p>
             </FormField>
           </Show>
 
           <Show when={props.category === "payable"}>
-            <div class="rounded-lg border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.05)] p-3 space-y-3">
+            <div class="rounded-lg border border-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_20%,transparent)] bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_5%,transparent)] p-3 space-y-3">
               <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[var(--ks-accent,#fbbf24)] font-semibold">
                 <CalendarDays size={12} />
                 <span>Payable details</span>
@@ -776,7 +776,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                     onChange={(e) =>
                       props.setPayableKind(e.currentTarget.value)
                     }
-                    class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button cursor-pointer focus:outline-none focus:border-[rgba(245,158,11,0.5)]"
+                    class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button cursor-pointer focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
                   >
                     <For each={PAYABLE_KIND_OPTIONS}>
                       {(opt) => <option value={opt.id}>{opt.label}</option>}
@@ -788,7 +788,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                     value={props.dueDate}
                     onChange={(d: string | null) => props.setDueDate(d || "")}
                   />
-                  <p class="text-[10px] text-[#52525b] mt-0.5">
+                  <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
                     When payment is owed. Past-due payables show in the Payables
                     tab.
                   </p>
@@ -802,10 +802,10 @@ export default function TransactionForm(props: TransactionFormProps) {
                     onInput={(e) =>
                       props.setChequeNumber(e.currentTarget.value)
                     }
-                    class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-3 text-sm text-[#e4e4e7] ks-hud-clip-button focus:outline-none focus:border-[rgba(245,158,11,0.5)]"
+                    class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
                     placeholder="e.g. 0004429-007"
                   />
-                  <p class="text-[10px] text-[#52525b] mt-0.5">
+                  <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
                     For post-dated cheques (PDC). Leave blank for direct
                     payments.
                   </p>
@@ -849,7 +849,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   }}
                 />
                 <Show when={catConfig().accountHint}>
-                  <p class="text-[10px] text-[#52525b] mt-0.5">
+                  <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
                     {catConfig().accountHint}
                   </p>
                 </Show>
@@ -874,7 +874,7 @@ export default function TransactionForm(props: TransactionFormProps) {
             <MentionTextarea
               value={props.notes}
               setValue={props.setNotes}
-              class="w-full bg-[rgba(24,24,27,0.6)] border border-[rgba(39,39,42,0.6)] px-3 py-2 text-sm text-[#e4e4e7] ks-hud-clip-button focus:outline-none focus:border-[rgba(245,158,11,0.5)] resize-none"
+              class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-2 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)] resize-none"
               rows={2}
               placeholder="Optional notes... (type @ to mention a client)"
               ariaLabel="Notes"
@@ -891,7 +891,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                   0
                 }
               >
-                <span class="text-[#52525b]">
+                <span class="text-[var(--ks-fg-subtle,#71717a)]">
                   (
                   {(props.existingAttachments?.length ?? 0) +
                     props.pendingFiles.length}
@@ -973,7 +973,7 @@ export default function TransactionForm(props: TransactionFormProps) {
             />
 
             <Show when={props.pendingFiles.length === 0}>
-              <p class="text-[10px] text-[#52525b] mt-1">
+              <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-1">
                 Drop files here or paste from clipboard.
               </p>
             </Show>
@@ -1018,16 +1018,16 @@ export default function TransactionForm(props: TransactionFormProps) {
           </Show>
         </div>
 
-        <div class="px-5 sm:px-6 py-4 border-t border-[rgba(39,39,42,0.6)] bg-[#09090b] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
+        <div class="px-5 sm:px-6 py-4 border-t border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] bg-[var(--ks-bg,#0a0a0a)] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
           <div class="text-xs text-[var(--ks-fg-subtle,#71717a)]">
-            <span class="text-[#52525b]">Will record as </span>
+            <span class="text-[var(--ks-fg-subtle,#71717a)]">Will record as </span>
             <span
               class="font-bold"
               classList={{
                 "text-[var(--ks-success-fg,#34d399)]": props.category === "sale",
                 "text-[var(--ks-danger-fg,#f87171)]": props.category === "expense",
                 "text-[var(--ks-accent,#fbbf24)]": props.category === "payable",
-                "text-[#60a5fa]": props.category === "business",
+                "text-[var(--ks-info,#38bdf8)]": props.category === "business",
               }}
             >
               {(CATEGORY_FORM[props.category] || CATEGORY_FORM.expense).label}

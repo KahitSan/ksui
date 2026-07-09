@@ -16,7 +16,7 @@ const MARK_STYLE_ID = "ksui-mark-style";
 function ensureMarkStyle(): void {
   injectCSS(
     MARK_STYLE_ID,
-    `.ksui-mark{background-color:rgba(245,158,11,0.3);color:inherit;border-radius:2px;}`,
+    `.ksui-mark{background-color:color-mix(in srgb, var(--ks-warning, #f59e0b) 30%, transparent);color:inherit;border-radius:2px;}`,
   );
 }
 

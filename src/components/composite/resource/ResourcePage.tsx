@@ -344,7 +344,7 @@ export function ResourcePage<T extends ResourceRow>(
         >
           <div data-testid={`${spec.testIdPrefix}-create-modal`}>
             <div class="flex items-center justify-between mb-6">
-              <h2 class="text-lg font-semibold text-[#f4f4f5]">
+              <h2 class="text-lg font-semibold text-[var(--ks-fg,#ffffff)]">
                 {spec.labels.createTitle}
               </h2>
               <button
@@ -352,7 +352,7 @@ export function ResourcePage<T extends ResourceRow>(
                   setCreateOpen(false);
                   resetForm();
                 }}
-                class="text-[var(--ks-fg-subtle,#71717a)] hover:text-[#d4d4d8] cursor-pointer"
+                class="text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-fg,#ffffff)] cursor-pointer"
                 aria-label="Close"
               >
                 <X size={20} />
@@ -387,7 +387,7 @@ export function ResourcePage<T extends ResourceRow>(
           >
             <div data-testid={`${spec.testIdPrefix}-detail-modal`}>
               <div class="flex items-center justify-between mb-6">
-                <h2 class="text-lg font-semibold text-[#f4f4f5]">
+                <h2 class="text-lg font-semibold text-[var(--ks-fg,#ffffff)]">
                   {editing()
                     ? spec.labels.editTitle
                     : String(row()[spec.labels.titleField] ?? "")}
@@ -429,7 +429,7 @@ export function ResourcePage<T extends ResourceRow>(
                       setDetailRow(null);
                       setEditing(false);
                     }}
-                    class="text-[var(--ks-fg-subtle,#71717a)] hover:text-[#d4d4d8] cursor-pointer p-1"
+                    class="text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-fg,#ffffff)] cursor-pointer p-1"
                     aria-label="Close"
                   >
                     <X size={20} />

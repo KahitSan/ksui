@@ -35,9 +35,9 @@ export interface MentionTextareaProps {
 }
 
 const CHIP_BASE_CLASSES =
-  "inline-flex items-baseline align-baseline rounded bg-amber-500/15 text-[var(--ks-accent-hover,#fcd34d)] px-1.5 py-px text-[0.9em] mx-px";
+  "inline-flex items-baseline align-baseline rounded bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_15%,transparent)] text-[var(--ks-accent-hover,#fcd34d)] px-1.5 py-px text-[0.9em] mx-px";
 const CHIP_UNRESOLVED_CLASSES =
-  "inline-flex items-baseline align-baseline rounded bg-zinc-700/40 text-[var(--ks-fg-muted,#a1a1aa)] px-1.5 py-px text-[0.9em] mx-px";
+  "inline-flex items-baseline align-baseline rounded bg-[color-mix(in_srgb,var(--ks-input-border,#3f3f46)_40%,transparent)] text-[var(--ks-fg-muted,#a1a1aa)] px-1.5 py-px text-[0.9em] mx-px";
 
 function buildMentionChip(name: string, idStr: string): HTMLSpanElement {
   const span = document.createElement("span");
@@ -430,7 +430,7 @@ export default function MentionTextarea(props: MentionTextareaProps): JSX.Elemen
           <div
             ref={popupRef}
             data-testid="mention-popup"
-            class="z-[120] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[120] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
           >
             <Show when={loading() && results().length === 0}>
@@ -464,12 +464,12 @@ export default function MentionTextarea(props: MentionTextareaProps): JSX.Elemen
                         onMouseEnter={() => setActiveIdx(idx())}
                         onClick={() => insertSelected(c)}
                         class={`w-full text-left px-3 py-2 transition-colors flex items-start gap-2 cursor-pointer ${
-                          idx() === activeIdx() ? "bg-amber-500/15" : "hover:bg-amber-500/10"
+                          idx() === activeIdx() ? "bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_15%,transparent)]" : "hover:bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_10%,transparent)]"
                         }`}
                       >
                         <UserRound size={14} class="text-[var(--ks-fg-subtle,#71717a)] shrink-0 mt-0.5" />
                         <span class="flex-1 min-w-0">
-                          <span class="block text-sm text-zinc-100 truncate">{c.name_raw}</span>
+                          <span class="block text-sm text-[var(--ks-fg,#ffffff)] truncate">{c.name_raw}</span>
                           <Show when={c.email || c.phone}>
                             <span class="block text-[11px] text-[var(--ks-fg-subtle,#71717a)] truncate">
                               {[c.email, c.phone].filter(Boolean).join(" · ")}

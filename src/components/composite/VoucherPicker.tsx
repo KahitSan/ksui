@@ -229,14 +229,14 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
         onClick={() => !props.disabled && setOpen((o) => !o)}
         class={`${props.compact ? "inline-flex" : "w-full flex"} items-center gap-2 ${
           props.compact ? "px-2.5 py-2" : "px-3 py-2.5"
-        } rounded-lg bg-[rgba(39,39,42,0.3)] border border-[rgba(63,63,70,0.5)] hover:border-[rgba(245,158,11,0.4)] hover:bg-[rgba(245,158,11,0.05)] transition-colors text-sm text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
+        } rounded-lg bg-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_30%,transparent)] border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)] hover:border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_5%,transparent)] transition-colors text-sm text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
         aria-haspopup="listbox"
         aria-expanded={open()}
       >
         <Ticket size={16} class="shrink-0 text-[var(--ks-fg-muted,#a1a1aa)]" />
         <Show when={props.selected} fallback={<span class="text-[var(--ks-fg-subtle,#71717a)] italic">No voucher</span>}>
           <span class="flex-1 min-w-0">
-            <span class="block truncate text-[#f4f4f5] font-medium">{props.selected!.code}</span>
+            <span class="block truncate text-[var(--ks-fg,#ffffff)] font-medium">{props.selected!.code}</span>
             <span class="block truncate text-[11px] text-[var(--ks-success-fg,#34d399)]">
               {formatVoucherDescription(props.selected!)}
               <Show when={previewDiscount() > 0}> · {formatCurrency(previewDiscount())} off</Show>
@@ -246,7 +246,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
             type="button"
             data-testid="voucher-picker-clear"
             onClick={clear}
-            class="shrink-0 p-1 rounded text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-danger-fg,#f87171)] hover:bg-[rgba(239,68,68,0.1)] transition-colors cursor-pointer"
+            class="shrink-0 p-1 rounded text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-danger-fg,#f87171)] hover:bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_10%,transparent)] transition-colors cursor-pointer"
             title="Remove voucher"
             aria-label="Remove voucher"
           >
@@ -260,10 +260,10 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
           <div
             ref={popupRef}
             data-testid="voucher-picker-popup"
-            class="z-[100] rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[rgba(24,24,27,0.95)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[100] rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
           >
-            <div class="px-3 py-2 border-b border-[#27272a] flex items-center gap-2">
+            <div class="px-3 py-2 border-b border-[var(--ks-border-strong,#3f3f46)] flex items-center gap-2">
               <Ticket size={14} class="text-[var(--ks-fg-subtle,#71717a)] shrink-0" />
               <span class="text-xs uppercase tracking-widest text-[var(--ks-fg-subtle,#71717a)] font-bold">Vouchers</span>
               <Show when={loading()}>
@@ -301,16 +301,16 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                         type="button"
                         data-testid={`voucher-picker-result-${v.id}`}
                         onClick={() => select(v)}
-                        class="w-full text-left px-3 py-2 hover:bg-[rgba(245,158,11,0.1)] transition-colors flex items-start gap-2 cursor-pointer"
+                        class="w-full text-left px-3 py-2 hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_10%,transparent)] transition-colors flex items-start gap-2 cursor-pointer"
                       >
                         <Ticket size={14} class="shrink-0 mt-0.5 text-[var(--ks-success-fg,#34d399)]" aria-hidden="true" />
                         <span class="flex-1 min-w-0">
-                          <span class="block text-sm text-[#f4f4f5] truncate">{v.code}</span>
+                          <span class="block text-sm text-[var(--ks-fg,#ffffff)] truncate">{v.code}</span>
                           <span class="block text-[11px] text-[var(--ks-fg-subtle,#71717a)] truncate">
                             {formatVoucherDescription(v)}
                           </span>
                         </span>
-                        <span class="text-xs text-[#6ee7b7] shrink-0 mt-0.5 font-mono">
+                        <span class="text-xs text-[var(--ks-success-fg,#34d399)] shrink-0 mt-0.5 font-mono">
                           {formatCurrency(discount())}
                         </span>
                         <Show when={selected()}>
@@ -323,7 +323,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
               </For>
               <Show when={inapplicable().length > 0}>
                 <li>
-                  <div class="px-3 pt-3 pb-1 text-[10px] uppercase tracking-widest text-[#52525b] font-semibold border-t border-[#27272a] mt-1">
+                  <div class="px-3 pt-3 pb-1 text-[10px] uppercase tracking-widest text-[var(--ks-fg-subtle,#71717a)] font-semibold border-t border-[var(--ks-border-strong,#3f3f46)] mt-1">
                     Not applicable to this cart
                   </div>
                 </li>
@@ -337,7 +337,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                       >
                         <Ticket size={14} class="shrink-0 mt-0.5 text-[var(--ks-fg-subtle,#71717a)]" aria-hidden="true" />
                         <span class="flex-1 min-w-0">
-                          <span class="block text-sm text-[#d4d4d8] truncate">{v.code}</span>
+                          <span class="block text-sm text-[var(--ks-fg,#ffffff)] truncate">{v.code}</span>
                           <span class="block text-[11px] text-[var(--ks-fg-subtle,#71717a)] truncate">
                             {formatVoucherDescription(v)}
                           </span>
@@ -349,12 +349,12 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
               </Show>
             </ul>
             <Show when={props.selected}>
-              <div class="border-t border-[#27272a]">
+              <div class="border-t border-[var(--ks-border-strong,#3f3f46)]">
                 <button
                   type="button"
                   data-testid="voucher-picker-clear-from-list"
                   onClick={() => select(null)}
-                  class="w-full text-left px-3 py-2 text-xs text-[var(--ks-danger-fg,#f87171)] hover:bg-[rgba(239,68,68,0.1)] transition-colors flex items-center gap-2 cursor-pointer"
+                  class="w-full text-left px-3 py-2 text-xs text-[var(--ks-danger-fg,#f87171)] hover:bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_10%,transparent)] transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <X size={12} />
                   <span>Remove voucher</span>
