@@ -22,6 +22,85 @@ export const VALID_STATUSES = ["pending", "completed", "voided"];
 export const VALID_TAX_TYPES = ["vat_inclusive", "vat_exclusive", "vat_exempt", "non_vat"];
 export const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+// Every money column across this plugin is NUMERIC(12,2) — a value at or
+// above this overflows the column with a raw Postgres 22003 error (500),
+// not a clean 400. Every user-supplied money value gets checked against it
+// before it reaches a query.
+export const MAX_NUMERIC_12_2 = 9999999999.99;
+
+// Explicit column list for accounts.transactions — the data surface bans
+// `RETURNING *`; this is every column the table currently declares (base
+// CREATE + the forfeit + transfer-fee-link ALTER TABLEs), so every INSERT/
+// UPDATE RETURNING against this table stays byte-identical to the prior `*`.
+export const TRANSACTION_COLS = [
+  "id",
+  "workspace_id",
+  "category",
+  "source_account_id",
+  "destination_account_id",
+  "amount",
+  "currency",
+  "description",
+  "notes",
+  "transaction_date",
+  "is_private",
+  "status",
+  "is_backdated",
+  "backdate_reason",
+  "created_by",
+  "created_at",
+  "updated_at",
+  "reference_number",
+  "tax_type",
+  "tax_rate",
+  "tax_amount",
+  "subtotal",
+  "updated_by",
+  "client_id",
+  "voucher_id",
+  "discount_amount",
+  "payable_kind",
+  "due_date",
+  "cheque_number",
+  "pdc_status",
+  "subcategory",
+  "has_ewt",
+  "ewt_rate",
+  "ewt_amount",
+  "payee_id",
+  "notion_id",
+  "parent_transaction_id",
+  "batch_code",
+  "forfeited_at",
+  "forfeited_amount",
+  "forfeited_by",
+  "forfeited_reason",
+  "transfer_fee_transaction_id",
+] as const;
+
+// Explicit column list for accounts.transaction_line_items — every column the
+// table declares, so an INSERT/UPDATE RETURNING against it stays
+// byte-identical to the prior `*`.
+export const LINE_ITEM_COLS = [
+  "id",
+  "transaction_id",
+  "workspace_id",
+  "package_id",
+  "package_variant_id",
+  "description",
+  "quantity",
+  "unit_price",
+  "duration_value",
+  "duration_unit",
+  "started_at",
+  "ends_at",
+  "status",
+  "created_at",
+  "updated_at",
+  "client_id",
+  "customer_group_id",
+] as const;
+
 export function isValidIsoDate(s: string): boolean {
   if (!ISO_DATE_RE.test(s)) return false;
   const d = new Date(s + "T00:00:00Z");
