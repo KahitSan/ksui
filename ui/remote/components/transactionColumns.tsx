@@ -57,14 +57,14 @@ export function makeTransactionColumns(
           const isOpen = expandedGroups().has(row._groupKey || "");
           return (
             <span
-              class="flex items-center gap-1 text-zinc-300 text-[11px] tabular-nums whitespace-nowrap font-semibold"
+              class="flex items-center gap-1 text-ks-fg text-[11px] tabular-nums whitespace-nowrap font-semibold"
               data-testid="grouped-row-date"
             >
               <Show
                 when={isOpen}
-                fallback={<ChevronRight size={12} class="text-zinc-500" />}
+                fallback={<ChevronRight size={12} class="text-ks-fg-muted" />}
               >
-                <ChevronDown size={12} class="text-amber-400" />
+                <ChevronDown size={12} class="text-ks-accent" />
               </Show>
               {formatDate(row._groupDate || row.transaction_date)}
             </span>
@@ -72,7 +72,7 @@ export function makeTransactionColumns(
         }
         return (
           <span
-            class="text-zinc-500 text-[11px] tabular-nums whitespace-nowrap"
+            class="text-ks-fg-muted text-[11px] tabular-nums whitespace-nowrap"
             classList={{ "pl-4": !!row._isSubrow }}
           >
             {formatDate(row.transaction_date)}
@@ -87,9 +87,9 @@ export function makeTransactionColumns(
       render: (_val, _type, row) => (
         <Show
           when={!row._grouped}
-          fallback={<span class="text-[11px] text-zinc-700">—</span>}
+          fallback={<span class="text-[11px] text-ks-fg-subtle">—</span>}
         >
-          <span class="text-[11px] tabular-nums text-zinc-500">#{row.id}</span>
+          <span class="text-[11px] tabular-nums text-ks-fg-muted">#{row.id}</span>
         </Show>
       ),
     },
@@ -104,7 +104,7 @@ export function makeTransactionColumns(
             <div class="min-w-0 py-1">
               <div class="flex items-center gap-1.5">
                 <span
-                  class="text-sm font-semibold text-zinc-100 truncate"
+                  class="text-sm font-semibold text-ks-fg truncate"
                   data-testid="grouped-row-summary"
                 >
                   {count} {count === 1 ? "sale" : "sales"} on this day
@@ -116,23 +116,23 @@ export function makeTransactionColumns(
         return (
           <div class="min-w-0 py-1">
             <div class="flex items-center gap-1.5">
-              <span class="text-sm font-medium text-zinc-100 truncate">
+              <span class="text-sm font-medium text-ks-fg truncate">
                 {highlightMatch(row.description ?? "", tableSearchTerm())}
               </span>
               <Show when={row.is_private}>
-                <Lock size={12} class="text-amber-500/60 shrink-0" />
+                <Lock size={12} class="text-ks-accent/60 shrink-0" />
               </Show>
               <Show when={row.is_private && (row.shared_with?.length ?? 0) > 0}>
                 <SharedWithStack people={row.shared_with!} />
               </Show>
               <Show when={parseInt(row.attachment_count) > 0}>
-                <span class="flex items-center gap-0.5 text-zinc-500 shrink-0">
+                <span class="flex items-center gap-0.5 text-ks-fg-muted shrink-0">
                   <Paperclip size={12} />
                   <span class="text-[10px]">{row.attachment_count}</span>
                 </span>
               </Show>
               <Show when={row.cheque_number}>
-                <span class="text-[9px] uppercase tracking-widest text-amber-400/80 border border-amber-500/30 px-1 py-px shrink-0">
+                <span class="text-[9px] uppercase tracking-widest text-ks-accent/80 border border-ks-accent/30 px-1 py-px shrink-0">
                   PDC
                 </span>
               </Show>
@@ -140,7 +140,7 @@ export function makeTransactionColumns(
             <Show when={row.notes}>
               <MarkdownNotes
                 value={row.notes}
-                class="text-[11px] text-zinc-500 leading-snug mt-0.5 line-clamp-1"
+                class="text-[11px] text-ks-fg-muted leading-snug mt-0.5 line-clamp-1"
               />
             </Show>
           </div>
@@ -154,9 +154,9 @@ export function makeTransactionColumns(
       render: (_val, _type, row) => (
         <Show
           when={!row._grouped && row.subcategory}
-          fallback={<span class="text-[11px] text-zinc-700">—</span>}
+          fallback={<span class="text-[11px] text-ks-fg-subtle">—</span>}
         >
-          <span class="inline-block text-[11px] text-zinc-400 truncate">
+          <span class="inline-block text-[11px] text-ks-fg-muted truncate">
             {row.subcategory}
           </span>
         </Show>
@@ -169,7 +169,7 @@ export function makeTransactionColumns(
       render: (_val, _type, row) => {
         if (!row._grouped && row.payee) {
           return (
-            <span class="text-xs text-zinc-300 truncate">
+            <span class="text-xs text-ks-fg truncate">
               {highlightMatch(row.payee ?? "", tableSearchTerm())}
             </span>
           );
@@ -185,7 +185,7 @@ export function makeTransactionColumns(
             <PeerUnavailable title="Payees plugin unavailable — couldn't load payee name" />
           );
         }
-        return <span class="text-[11px] text-zinc-700">—</span>;
+        return <span class="text-[11px] text-ks-fg-subtle">—</span>;
       },
     },
     {
@@ -194,7 +194,7 @@ export function makeTransactionColumns(
       className: "hidden md:table-cell w-[220px]",
       render: (_val, _type, row) => {
         if (row._grouped) {
-          return <span class="text-[11px] text-zinc-700">—</span>;
+          return <span class="text-[11px] text-ks-fg-subtle">—</span>;
         }
         // The row references an account but no name resolved because the
         // financial-accounts plugin was unavailable for this fetch — show a
@@ -216,18 +216,18 @@ export function makeTransactionColumns(
         );
         if (row.category === "business") {
           return (
-            <span class="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+            <span class="flex items-center gap-1.5 text-xs text-ks-fg-muted truncate">
               <Show when={srcAcct}>
                 {(a) => <AccountAvatar account={a()} size={14} />}
               </Show>
-              <span class="text-zinc-500 truncate">
+              <span class="text-ks-fg-muted truncate">
                 {row.source_account_name || "—"}
               </span>
-              <ArrowRight size={10} class="text-zinc-600 shrink-0" />
+              <ArrowRight size={10} class="text-ks-fg-subtle shrink-0" />
               <Show when={dstAcct}>
                 {(a) => <AccountAvatar account={a()} size={14} />}
               </Show>
-              <span class="text-zinc-300 truncate">
+              <span class="text-ks-fg truncate">
                 {row.destination_account_name || "—"}
               </span>
             </span>
@@ -235,25 +235,25 @@ export function makeTransactionColumns(
         }
         if (row.category === "sale") {
           return (
-            <span class="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
-              <ArrowDownLeft size={10} class="text-emerald-500/70 shrink-0" />
+            <span class="flex items-center gap-1.5 text-xs text-ks-fg-muted truncate">
+              <ArrowDownLeft size={10} class="text-ks-success/70 shrink-0" />
               <Show when={dstAcct}>
                 {(a) => <AccountAvatar account={a()} size={14} />}
               </Show>
-              <span class="text-zinc-300 truncate">
+              <span class="text-ks-fg truncate">
                 {row.destination_account_name || "—"}
               </span>
             </span>
           );
         }
         return (
-          <span class="flex items-center gap-1.5 text-xs text-zinc-400 min-w-0">
+          <span class="flex items-center gap-1.5 text-xs text-ks-fg-muted min-w-0">
             <ArrowUpRight
               size={10}
               class={
                 row.category === "payable"
-                  ? "text-amber-400/80 shrink-0"
-                  : "text-red-500/70 shrink-0"
+                  ? "text-ks-accent/80 shrink-0"
+                  : "text-ks-danger/70 shrink-0"
               }
             />
             <Show
@@ -261,12 +261,12 @@ export function makeTransactionColumns(
               fallback={
                 <Show
                   when={row.source_account_name}
-                  fallback={<span class="text-zinc-300 truncate">{"—"}</span>}
+                  fallback={<span class="text-ks-fg truncate">{"—"}</span>}
                 >
                   <Show when={srcAcct}>
                     {(a) => <AccountAvatar account={a()} size={14} />}
                   </Show>
-                  <span class="text-zinc-300 truncate">
+                  <span class="text-ks-fg truncate">
                     {row.source_account_name}
                   </span>
                 </Show>
@@ -275,11 +275,11 @@ export function makeTransactionColumns(
               <Show when={dstAcct}>
                 {(a) => <AccountAvatar account={a()} size={14} />}
               </Show>
-              <span class="text-zinc-300 truncate">
+              <span class="text-ks-fg truncate">
                 {row.destination_account_name}
               </span>
               <Show when={row.source_account_name}>
-                <span class="inline-flex items-center gap-1 text-zinc-600 truncate">
+                <span class="inline-flex items-center gap-1 text-ks-fg-subtle truncate">
                   <span>·</span>
                   <Show when={srcAcct}>
                     {(a) => <AccountAvatar account={a()} size={14} />}
@@ -298,7 +298,7 @@ export function makeTransactionColumns(
       className: "hidden lg:table-cell w-[60px] text-center",
       render: (_val, _type, row) => {
         if (row._grouped) {
-          return <span class="text-[11px] text-zinc-700">—</span>;
+          return <span class="text-[11px] text-ks-fg-subtle">—</span>;
         }
         // created_by is a kernel user id; the server can't join the kernel
         // `user` table, so resolve the display name from the host's workspace member
@@ -335,7 +335,7 @@ export function makeTransactionColumns(
             <span
               class={`text-sm font-bold tabular-nums whitespace-nowrap ${
                 t.text
-              } ${isVoided ? "line-through text-zinc-500" : ""}`}
+              } ${isVoided ? "line-through text-ks-fg-muted" : ""}`}
               data-testid={row._grouped ? "grouped-row-total" : undefined}
             >
               {tone.sign}
@@ -343,7 +343,7 @@ export function makeTransactionColumns(
             </span>
             <Show when={isVoided}>
               <span
-                class="text-[10px] font-bold tabular-nums whitespace-nowrap text-red-400 uppercase tracking-wider"
+                class="text-[10px] font-bold tabular-nums whitespace-nowrap text-ks-danger uppercase tracking-wider"
                 data-testid="transaction-row-voided-badge"
               >
                 Voided
@@ -351,7 +351,7 @@ export function makeTransactionColumns(
             </Show>
             <Show when={showBalance}>
               <span
-                class="text-[10px] font-bold tabular-nums whitespace-nowrap text-amber-400 uppercase tracking-wider"
+                class="text-[10px] font-bold tabular-nums whitespace-nowrap text-ks-accent uppercase tracking-wider"
                 data-testid="transaction-row-balance"
                 title="Outstanding balance"
               >
@@ -370,12 +370,12 @@ export function makeTransactionColumns(
         if (row._grouped) {
           const isOpen = expandedGroups().has(row._groupKey || "");
           return isOpen ? (
-            <ChevronDown size={14} class="text-amber-400 inline" />
+            <ChevronDown size={14} class="text-ks-accent inline" />
           ) : (
-            <ChevronRight size={14} class="text-zinc-600 inline" />
+            <ChevronRight size={14} class="text-ks-fg-subtle inline" />
           );
         }
-        return <ChevronRight size={14} class="text-zinc-600 inline" />;
+        return <ChevronRight size={14} class="text-ks-fg-subtle inline" />;
       },
     },
   ];

@@ -98,5 +98,82 @@
       "visibility": "public",
       "grants": ["financial_accounts.view"]
     }
+  },
+  "contributes": {
+    "themes": [
+      {
+        "id": "royal-violet",
+        "label": "Royal Violet",
+        "version": "1.2.0",
+        "variants": {
+          "dark": {
+            "tokens": {
+              "--ks-bg": "#0a0612",
+              "--ks-bg-gradient-to": "#1c1032",
+              "--ks-surface": "#150d24",
+              "--ks-surface-raised": "#201530",
+              "--ks-surface-sunken": "#100a1c",
+              "--ks-overlay-surface": "#1c1230",
+              "--ks-primary": "#7c3aed",
+              "--ks-primary-hover": "#8b5cf6",
+              "--ks-primary-active": "#6d28d9",
+              "--ks-accent": "#a78bfa",
+              "--ks-accent-hover": "#c4b5fd",
+              "--ks-border": "rgba(124,58,237,0.35)",
+              "--ks-border-strong": "#6d28d9",
+              "--ks-focus-ring": "#a78bfa",
+              "--ks-focus-ring-offset": "#0a0612",
+              "--ks-input-border-focus": "#a78bfa"
+            }
+          },
+          "light": {
+            "tokens": {
+              "--ks-bg": "#f7f3ff",
+              "--ks-bg-gradient-to": "#ece2ff",
+              "--ks-surface": "#ffffff",
+              "--ks-surface-raised": "#fbf8ff",
+              "--ks-surface-sunken": "#ede2fc",
+              "--ks-overlay-surface": "#ffffff",
+              "--ks-primary": "#6d28d9",
+              "--ks-primary-hover": "#5b21b6",
+              "--ks-primary-active": "#4c1d95",
+              "--ks-accent": "#7c3aed",
+              "--ks-accent-hover": "#6d28d9",
+              "--ks-border": "rgba(109,40,217,0.25)",
+              "--ks-border-strong": "#7c3aed",
+              "--ks-focus-ring": "#7c3aed",
+              "--ks-focus-ring-offset": "#f7f3ff",
+              "--ks-input-border-focus": "#7c3aed"
+            }
+          },
+          "high-contrast": {
+            "label": "High Contrast",
+            "appearance": "dark",
+            "tokens": {
+              "--ks-bg": "#000000",
+              "--ks-bg-gradient-to": "#050005",
+              "--ks-surface": "#000000",
+              "--ks-surface-raised": "#0d0010",
+              "--ks-surface-sunken": "#000000",
+              "--ks-fg": "#ffffff",
+              "--ks-fg-muted": "#e8e8e8",
+              "--ks-fg-subtle": "#c9c9c9",
+              "--ks-border": "#ffffff",
+              "--ks-border-strong": "#ffffff",
+              "--ks-primary": "#c9a3ff",
+              "--ks-primary-hover": "#dbc0ff",
+              "--ks-accent": "#ffe066",
+              "--ks-accent-hover": "#fff0a3",
+              "--ks-accent-selected-fg": "#000000",
+              "--ks-danger": "#ff8a8a",
+              "--ks-success": "#6bffb0",
+              "--ks-focus-ring": "#ffffff",
+              "--ks-focus-ring-offset": "#000000",
+              "--ks-input-border-focus": "#ffffff"
+            }
+          }
+        }
+      }
+    ]
   }
 }

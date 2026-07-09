@@ -44,10 +44,10 @@ const CATEGORY_DEFS: { id: string; label: string; icon: IconLike }[] = [
 ];
 
 const PDC_DEFS: { id: string; label: string; dot: string }[] = [
-  { id: "issued", label: "PDC issued", dot: "bg-amber-400" },
-  { id: "presented", label: "PDC presented", dot: "bg-blue-400" },
-  { id: "cleared", label: "PDC cleared", dot: "bg-emerald-400" },
-  { id: "bounced", label: "PDC bounced", dot: "bg-red-400" },
+  { id: "issued", label: "PDC issued", dot: "bg-ks-accent" },
+  { id: "presented", label: "PDC presented", dot: "bg-ks-info" },
+  { id: "cleared", label: "PDC cleared", dot: "bg-ks-success" },
+  { id: "bounced", label: "PDC bounced", dot: "bg-ks-danger" },
 ];
 
 const STATUS_DEFS: { id: string; label: string }[] = [
@@ -400,7 +400,7 @@ export default function TransactionFilters(
         }}
         aria-haspopup="dialog"
         aria-expanded={open() && anchorEl() === triggerRef}
-        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium border ks-hud-clip-top-left-bottom-right transition-colors cursor-pointer border-zinc-800/60 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700"
+        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium border ks-hud-clip-top-left-bottom-right transition-colors cursor-pointer border-ks-border/60 text-ks-fg-muted hover:text-ks-fg hover:border-ks-border-strong"
         title="Add filter"
       >
         <Show
@@ -421,9 +421,9 @@ export default function TransactionFilters(
         data-testid="group-sales-toggle"
         class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium border ks-hud-clip-top-left-bottom-right transition-colors cursor-pointer"
         classList={{
-          "bg-amber-500/15 border-amber-500/40 text-amber-400":
+          "bg-ks-accent/15 border-ks-accent/40 text-ks-accent":
             props.groupSalesByDay(),
-          "border-zinc-800/60 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700":
+          "border-ks-border/60 text-ks-fg-muted hover:text-ks-fg hover:border-ks-border-strong":
             !props.groupSalesByDay(),
         }}
         title="Group sales per day"
@@ -435,7 +435,7 @@ export default function TransactionFilters(
       <Show when={props.activeFilterCount() > 0}>
         <button
           onClick={props.clearAllFilters}
-          class="text-xs text-zinc-500 hover:text-amber-400 px-2 py-1.5 flex items-center gap-1 cursor-pointer"
+          class="text-xs text-ks-fg-muted hover:text-ks-accent px-2 py-1.5 flex items-center gap-1 cursor-pointer"
         >
           <X size={12} />
           Clear ({props.activeFilterCount()})
@@ -455,7 +455,7 @@ export default function TransactionFilters(
                   } filter`
                 : "Add filter"
             }
-            class="z-[100] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[100] rounded-md border border-ks-border-strong bg-ks-surface-raised/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
           >
             <Show
@@ -505,7 +505,7 @@ const FilterPill: Component<{
   let ref: HTMLButtonElement | undefined;
   const Ico = p.prop.icon;
   return (
-    <div class="inline-flex items-center gap-0 border ks-hud-clip-top-left-bottom-right border-amber-500/40 bg-amber-500/15 text-amber-400">
+    <div class="inline-flex items-center gap-0 border ks-hud-clip-top-left-bottom-right border-ks-accent/40 bg-ks-accent/15 text-ks-accent">
       <button
         ref={ref}
         type="button"
@@ -515,11 +515,11 @@ const FilterPill: Component<{
           p.onEdit(ref!);
         }}
         aria-label={`Edit ${p.prop.label} filter, currently set to ${p.valueLabel}`}
-        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium cursor-pointer hover:bg-amber-500/25 transition-colors"
+        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium cursor-pointer hover:bg-ks-accent/25 transition-colors"
         title={`Edit ${p.prop.label} filter`}
       >
         <Ico size={12} />
-        <span class="text-zinc-400">{p.prop.label}:</span>
+        <span class="text-ks-fg-muted">{p.prop.label}:</span>
         <span>{p.valueLabel}</span>
       </button>
       <button
@@ -530,7 +530,7 @@ const FilterPill: Component<{
           p.onClear();
         }}
         aria-label={`Remove ${p.prop.label} filter`}
-        class="px-1.5 py-1.5 hover:bg-amber-500/30 transition-colors cursor-pointer"
+        class="px-1.5 py-1.5 hover:bg-ks-accent/30 transition-colors cursor-pointer"
         title={`Remove ${p.prop.label} filter`}
       >
         <X size={12} />
@@ -552,21 +552,21 @@ const PropertyPicker: Component<{
 }> = (p) => {
   return (
     <>
-      <div class="px-2 py-1.5 border-b border-zinc-800">
+      <div class="px-2 py-1.5 border-b border-ks-border">
         <input
           ref={p.searchRef}
           type="text"
           value={p.query()}
           onInput={(e) => p.setQuery(e.currentTarget.value)}
           placeholder="Filter by..."
-          class="w-full px-2 py-1 text-xs bg-zinc-950 border border-zinc-800 rounded text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50"
+          class="w-full px-2 py-1 text-xs bg-ks-surface border border-ks-border rounded text-ks-fg placeholder:text-ks-fg-subtle focus:outline-none focus:border-ks-accent/50"
         />
       </div>
       <div class="flex-1 overflow-y-auto">
         <Show
           when={p.filtered().length > 0}
           fallback={
-            <div class="px-3 py-3 text-xs text-zinc-500 text-center">
+            <div class="px-3 py-3 text-xs text-ks-fg-muted text-center">
               No matching properties
             </div>
           }
@@ -579,17 +579,17 @@ const PropertyPicker: Component<{
                   type="button"
                   data-testid={`filter-property-${prop.id}`}
                   onClick={() => p.onPick(prop.id)}
-                  class="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-amber-500/10 transition-colors cursor-pointer text-zinc-200"
+                  class="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-ks-accent/10 transition-colors cursor-pointer text-ks-fg"
                 >
                   <span class="flex items-center gap-2">
-                    <Ico size={14} class="text-zinc-500" />
+                    <Ico size={14} class="text-ks-fg-muted" />
                     {prop.label}
                   </span>
                   <Show
                     when={p.isActive(prop.id)}
-                    fallback={<ChevronRight size={14} class="text-zinc-600" />}
+                    fallback={<ChevronRight size={14} class="text-ks-fg-subtle" />}
                   >
-                    <Check size={14} class="text-amber-400" />
+                    <Check size={14} class="text-ks-accent" />
                   </Show>
                 </button>
               );
@@ -619,23 +619,23 @@ const ValueEditor: Component<{
 
   return (
     <>
-      <div class="flex items-center gap-1.5 px-2 py-1.5 border-b border-zinc-800">
+      <div class="flex items-center gap-1.5 px-2 py-1.5 border-b border-ks-border">
         <button
           type="button"
           onClick={p.onBack}
           aria-label="Back to properties"
-          class="p-1 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
+          class="p-1 rounded hover:bg-ks-surface-raised transition-colors cursor-pointer"
           title="Back to properties"
         >
-          <ChevronLeft size={14} class="text-zinc-400" />
+          <ChevronLeft size={14} class="text-ks-fg-muted" />
         </button>
-        <span class="text-xs text-zinc-300 font-medium flex-1">
+        <span class="text-xs text-ks-fg font-medium flex-1">
           {def().label}
         </span>
         <button
           type="button"
           onClick={p.onDone}
-          class="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-amber-400 px-2 cursor-pointer"
+          class="text-[10px] uppercase tracking-wider text-ks-fg-muted hover:text-ks-accent px-2 cursor-pointer"
         >
           Done
         </button>
@@ -781,7 +781,7 @@ const MultiSelectList: Component<{
   });
   return (
     <>
-      <div class="px-2 py-1.5 border-b border-zinc-800">
+      <div class="px-2 py-1.5 border-b border-ks-border">
         <input
           ref={p.searchRef}
           type="text"
@@ -789,14 +789,14 @@ const MultiSelectList: Component<{
           onInput={(e) => p.setQuery(e.currentTarget.value)}
           placeholder="Search..."
           data-testid={`${p.testidPrefix}-search`}
-          class="w-full px-2 py-1 text-xs bg-zinc-950 border border-zinc-800 rounded text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50"
+          class="w-full px-2 py-1 text-xs bg-ks-surface border border-ks-border rounded text-ks-fg placeholder:text-ks-fg-subtle focus:outline-none focus:border-ks-accent/50"
         />
       </div>
       <div class="flex-1 overflow-y-auto">
         <Show
           when={filtered().length > 0}
           fallback={
-            <div class="px-3 py-3 text-xs text-zinc-500 text-center">
+            <div class="px-3 py-3 text-xs text-ks-fg-muted text-center">
               No matches
             </div>
           }
@@ -817,27 +817,27 @@ const MultiSelectList: Component<{
                   data-testid={`${p.testidPrefix}-${opt.value}`}
                   aria-pressed={checked()}
                   onClick={() => p.onToggle(opt.value)}
-                  class="w-full text-left px-3 py-2 text-xs hover:bg-amber-500/10 transition-colors flex items-center gap-2 cursor-pointer"
+                  class="w-full text-left px-3 py-2 text-xs hover:bg-ks-accent/10 transition-colors flex items-center gap-2 cursor-pointer"
                   classList={{
-                    "text-amber-400": checked(),
-                    "text-zinc-200": !checked(),
+                    "text-ks-accent": checked(),
+                    "text-ks-fg": !checked(),
                   }}
                 >
                   <span
                     class="w-4 h-4 rounded border flex items-center justify-center shrink-0"
                     classList={{
-                      "border-amber-500/60 bg-amber-500/20": checked(),
-                      "border-zinc-700": !checked(),
+                      "border-ks-accent/60 bg-ks-accent/20": checked(),
+                      "border-ks-border-strong": !checked(),
                     }}
                   >
                     <Show when={checked()}>
-                      <Check size={10} class="text-amber-400" />
+                      <Check size={10} class="text-ks-accent" />
                     </Show>
                   </span>
                   <Show when={opt.icon}>
                     {(icon) => {
                       const Ico = icon();
-                      return <Ico size={12} class="text-zinc-500" />;
+                      return <Ico size={12} class="text-ks-fg-muted" />;
                     }}
                   </Show>
                   <Show when={opt.dot}>
@@ -875,7 +875,7 @@ const SingleSelectList: Component<{
   });
   return (
     <>
-      <div class="px-2 py-1.5 border-b border-zinc-800">
+      <div class="px-2 py-1.5 border-b border-ks-border">
         <input
           ref={p.searchRef}
           type="text"
@@ -883,14 +883,14 @@ const SingleSelectList: Component<{
           onInput={(e) => p.setQuery(e.currentTarget.value)}
           placeholder="Search..."
           data-testid={`${p.testidPrefix}-search`}
-          class="w-full px-2 py-1 text-xs bg-zinc-950 border border-zinc-800 rounded text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50"
+          class="w-full px-2 py-1 text-xs bg-ks-surface border border-ks-border rounded text-ks-fg placeholder:text-ks-fg-subtle focus:outline-none focus:border-ks-accent/50"
         />
       </div>
       <div class="flex-1 overflow-y-auto">
         <Show
           when={filtered().length > 0}
           fallback={
-            <div class="px-3 py-3 text-xs text-zinc-500 text-center">
+            <div class="px-3 py-3 text-xs text-ks-fg-muted text-center">
               No matches
             </div>
           }
@@ -904,15 +904,15 @@ const SingleSelectList: Component<{
                   data-testid={`${p.testidPrefix}-${opt.value || "empty"}`}
                   aria-pressed={selected()}
                   onClick={() => p.onPick(opt.value)}
-                  class="w-full text-left px-3 py-2 text-xs hover:bg-amber-500/10 transition-colors flex items-center justify-between gap-2 cursor-pointer"
+                  class="w-full text-left px-3 py-2 text-xs hover:bg-ks-accent/10 transition-colors flex items-center justify-between gap-2 cursor-pointer"
                   classList={{
-                    "text-amber-400": selected(),
-                    "text-zinc-200": !selected(),
+                    "text-ks-accent": selected(),
+                    "text-ks-fg": !selected(),
                   }}
                 >
                   <span class="truncate">{opt.label}</span>
                   <Show when={selected()}>
-                    <Check size={12} class="text-amber-400 shrink-0" />
+                    <Check size={12} class="text-ks-accent shrink-0" />
                   </Show>
                 </button>
               );
@@ -921,12 +921,12 @@ const SingleSelectList: Component<{
         </Show>
       </div>
       <Show when={p.allowClear && p.selected() !== ""}>
-        <div class="border-t border-zinc-800">
+        <div class="border-t border-ks-border">
           <button
             type="button"
             data-testid={`${p.testidPrefix}-clear`}
             onClick={() => p.onPick("")}
-            class="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2 cursor-pointer"
+            class="w-full text-left px-3 py-2 text-xs text-ks-danger hover:bg-ks-danger/10 transition-colors flex items-center gap-2 cursor-pointer"
           >
             <X size={12} />
             Clear selection

@@ -29,9 +29,9 @@ export default function TransactionCreateModal(
         class="sm:w-[42rem] lg:w-[48rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh]"
         data-testid="transactions-create-modal"
       >
-        <div class="px-5 sm:px-6 py-3 border-b border-zinc-800/60 flex items-center justify-between gap-3 shrink-0">
+        <div class="px-5 sm:px-6 py-3 border-b border-ks-border/60 flex items-center justify-between gap-3 shrink-0">
           <div class="flex items-center gap-2 min-w-0">
-            <h2 class="text-base font-semibold text-zinc-100 truncate">
+            <h2 class="text-base font-semibold text-ks-fg truncate">
               Record transaction
             </h2>
             <Tooltip
@@ -43,7 +43,7 @@ export default function TransactionCreateModal(
               <button
                 type="button"
                 aria-label="About recording a transaction"
-                class="ks-interactive inline-flex items-center justify-center w-5 h-5 rounded border border-zinc-700/60 bg-zinc-800/60 text-zinc-500 hover:text-zinc-200 hover:border-zinc-600 transition-colors shrink-0"
+                class="ks-interactive inline-flex items-center justify-center w-5 h-5 rounded border border-ks-border-strong/60 bg-ks-surface-raised/60 text-ks-fg-muted hover:text-ks-fg hover:border-ks-border-strong transition-colors shrink-0"
               >
                 <span
                   class="font-serif italic text-[11px] leading-none"
@@ -56,7 +56,7 @@ export default function TransactionCreateModal(
           </div>
           <button
             onClick={props.onClose}
-            class="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors ks-hud-clip-button cursor-pointer shrink-0"
+            class="w-8 h-8 flex items-center justify-center text-ks-fg-muted hover:text-ks-fg hover:bg-ks-surface-raised/50 transition-colors ks-hud-clip-button cursor-pointer shrink-0"
             aria-label="Close"
           >
             <X size={16} />

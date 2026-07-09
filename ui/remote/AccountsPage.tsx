@@ -501,7 +501,7 @@ export default function AccountsPage() {
       orderable: true,
       render: (_val, _type, row) => (
         <button
-          class="flex items-center gap-2 text-left text-zinc-200 hover:text-amber-400 transition-colors cursor-pointer"
+          class="flex items-center gap-2 text-left text-ks-fg hover:text-ks-accent transition-colors cursor-pointer"
           onClick={() => openDetail(row.id)}
         >
           <AccountAvatar account={row} size={28} />
@@ -516,7 +516,7 @@ export default function AccountsPage() {
       render: (_val, _type, row) => {
         const t = TYPE_LABELS[row.type] || {
           label: row.type,
-          class: "border-zinc-700 text-zinc-400",
+          class: "border-ks-border-strong text-ks-fg-muted",
         };
         return (
           <span
@@ -532,17 +532,17 @@ export default function AccountsPage() {
       title: "Balance",
       render: (_val, _type, row) => {
         if (row.balance === undefined || row.balance === null) {
-          return <span class="text-zinc-500">—</span>;
+          return <span class="text-ks-fg-muted">—</span>;
         }
         if (row.type === "capital") {
           const fig = capitalRowFigures(row.balance);
           if (fig.overpaid) {
             return (
               <div class="flex flex-col">
-                <span class="text-sm font-medium text-red-400">
+                <span class="text-sm font-medium text-ks-danger">
                   +{formatCurrency(fig.overpayment)}
                 </span>
-                <span class="text-[10px] uppercase tracking-wider text-red-400/70">
+                <span class="text-[10px] uppercase tracking-wider text-ks-danger/70">
                   overpaid
                 </span>
               </div>
@@ -550,10 +550,10 @@ export default function AccountsPage() {
           }
           return (
             <div class="flex flex-col">
-              <span class="text-sm font-medium text-amber-400">
+              <span class="text-sm font-medium text-ks-accent">
                 {formatCurrency(fig.outstanding)}
               </span>
-              <span class="text-[10px] uppercase tracking-wider text-zinc-500">
+              <span class="text-[10px] uppercase tracking-wider text-ks-fg-muted">
                 {fig.outstanding === 0 ? "settled" : "to return"}
               </span>
             </div>
@@ -567,9 +567,9 @@ export default function AccountsPage() {
           <span
             class="text-sm font-medium"
             classList={{
-              "text-emerald-400": bal > 0,
-              "text-red-400": bal < 0,
-              "text-zinc-400": bal === 0,
+              "text-ks-success": bal > 0,
+              "text-ks-danger": bal < 0,
+              "text-ks-fg-muted": bal === 0,
             }}
           >
             {formatCurrency(row.balance)}
@@ -597,7 +597,7 @@ export default function AccountsPage() {
             render: (_val: unknown, _type: unknown, row: FinancialAccount) => (
               <div data-action-menu>
                 <button
-                  class="p-1 text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer rounded hover:bg-zinc-800/50"
+                  class="p-1 text-ks-fg-muted hover:text-ks-fg transition-colors cursor-pointer rounded hover:bg-ks-surface-raised/50"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (openMenuId() === row.id) {
@@ -621,7 +621,7 @@ export default function AccountsPage() {
                 <Show when={openMenuId() === row.id}>
                   <Portal>
                     <div
-                      class="fixed z-50 w-44 rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl py-1"
+                      class="fixed z-50 w-44 rounded-lg border border-ks-border-strong bg-ks-surface shadow-xl py-1"
                       style={{
                         top: `${menuPos().top}px`,
                         left: `${menuPos().left}px`,
@@ -629,7 +629,7 @@ export default function AccountsPage() {
                       data-action-menu
                     >
                       <button
-                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 transition-colors cursor-pointer"
+                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-ks-fg hover:bg-ks-surface-raised hover:text-ks-fg transition-colors cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenMenuId(null);
@@ -640,7 +640,7 @@ export default function AccountsPage() {
                         Open
                       </button>
                       <button
-                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 transition-colors cursor-pointer"
+                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-ks-fg hover:bg-ks-surface-raised hover:text-ks-fg transition-colors cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           openRename(row);
@@ -649,10 +649,10 @@ export default function AccountsPage() {
                         <Pencil size={14} />
                         Rename
                       </button>
-                      <div class="my-1 border-t border-zinc-800" />
+                      <div class="my-1 border-t border-ks-border" />
                       {row.is_active ? (
                         <button
-                          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-ks-danger hover:bg-ks-danger/10 transition-colors cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             requestArchive(row);
@@ -663,7 +663,7 @@ export default function AccountsPage() {
                         </button>
                       ) : (
                         <button
-                          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-ks-success hover:bg-ks-success/10 transition-colors cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             setOpenMenuId(null);
@@ -741,7 +741,7 @@ export default function AccountsPage() {
             noResultsMessage="No accounts match your search."
             filters={
               <div class="flex items-center gap-2 flex-wrap">
-                <div class="flex rounded-lg border border-zinc-800/50 overflow-hidden">
+                <div class="flex rounded-lg border border-ks-border/50 overflow-hidden">
                   <For each={["active", "archived", "all"]}>
                     {(s) => (
                       <button
@@ -749,9 +749,9 @@ export default function AccountsPage() {
                         onClick={() => setStatusFilter(s)}
                         class="px-3 py-1.5 text-xs capitalize transition-colors cursor-pointer"
                         classList={{
-                          "bg-amber-500/20 text-amber-400":
+                          "bg-ks-accent/20 text-ks-accent":
                             statusFilter() === s,
-                          "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50":
+                          "text-ks-fg-muted hover:text-ks-fg hover:bg-ks-surface-raised/50":
                             statusFilter() !== s,
                         }}
                       >
@@ -781,13 +781,13 @@ export default function AccountsPage() {
               data-testid="accounts-create-modal"
               class="flex items-center justify-between mb-6"
             >
-              <h2 class="text-lg font-semibold text-zinc-100">New Account</h2>
+              <h2 class="text-lg font-semibold text-ks-fg">New Account</h2>
               <button
                 onClick={() => {
                   setCreateOpen(false);
                   resetForm();
                 }}
-                class="text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                class="text-ks-fg-muted hover:text-ks-fg cursor-pointer"
                 aria-label="Close"
               >
                 <X size={20} />
@@ -830,11 +830,11 @@ export default function AccountsPage() {
                 when={detailAccount()}
                 fallback={
                   <>
-                    <div class="h-6 w-40 animate-pulse rounded bg-white/5" />
+                    <div class="h-6 w-40 animate-pulse rounded bg-ks-fg/5" />
                     <button
                       data-testid="accounts-detail-close"
                       onClick={() => closeDetail()}
-                      class="text-zinc-500 hover:text-zinc-300 cursor-pointer p-1"
+                      class="text-ks-fg-muted hover:text-ks-fg cursor-pointer p-1"
                       aria-label="Close"
                     >
                       <X size={20} />
@@ -844,7 +844,7 @@ export default function AccountsPage() {
               >
                 {(account) => (
                   <>
-                    <h2 class="text-lg font-semibold text-zinc-100">
+                    <h2 class="text-lg font-semibold text-ks-fg">
                       {editing() ? "Edit Account" : account().name}
                     </h2>
                     <div class="flex items-center gap-2">
@@ -852,7 +852,7 @@ export default function AccountsPage() {
                         <button
                           data-testid="accounts-edit-btn"
                           onClick={startEdit}
-                          class="text-zinc-500 hover:text-amber-400 cursor-pointer p-1"
+                          class="text-ks-fg-muted hover:text-ks-accent cursor-pointer p-1"
                           title="Edit"
                           aria-label="Edit account"
                         >
@@ -864,7 +864,7 @@ export default function AccountsPage() {
                           <button
                             data-testid="accounts-archive-btn"
                             onClick={() => requestArchive(account())}
-                            class="text-zinc-500 hover:text-red-400 cursor-pointer p-1"
+                            class="text-ks-fg-muted hover:text-ks-danger cursor-pointer p-1"
                             title="Archive"
                             aria-label="Archive account"
                           >
@@ -874,7 +874,7 @@ export default function AccountsPage() {
                           <button
                             data-testid="accounts-restore-btn"
                             onClick={() => handleRestore(account().id)}
-                            class="text-zinc-500 hover:text-emerald-400 cursor-pointer p-1"
+                            class="text-ks-fg-muted hover:text-ks-success cursor-pointer p-1"
                             title="Restore"
                             aria-label="Restore account"
                           >
@@ -885,7 +885,7 @@ export default function AccountsPage() {
                       <button
                         data-testid="accounts-detail-close"
                         onClick={() => closeDetail()}
-                        class="text-zinc-500 hover:text-zinc-300 cursor-pointer p-1"
+                        class="text-ks-fg-muted hover:text-ks-fg cursor-pointer p-1"
                         aria-label="Close"
                       >
                         <X size={20} />

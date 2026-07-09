@@ -12,19 +12,19 @@ export const CATEGORY_STYLES: Record<string, { label: string; class: string }> =
   {
     expense: {
       label: "Expense",
-      class: "border-red-400/40 text-red-400 bg-red-500/20",
+      class: "border-ks-danger/40 text-ks-danger bg-ks-danger/20",
     },
     sale: {
       label: "Income",
-      class: "border-emerald-400/40 text-emerald-400 bg-emerald-500/20",
+      class: "border-ks-success/40 text-ks-success bg-ks-success/20",
     },
     business: {
       label: "Transfer",
-      class: "border-blue-400/40 text-blue-400 bg-blue-500/20",
+      class: "border-ks-info/40 text-ks-info bg-ks-info/20",
     },
     payable: {
       label: "Payable",
-      class: "border-amber-400/40 text-amber-400 bg-amber-500/20",
+      class: "border-ks-accent/40 text-ks-accent bg-ks-accent/20",
     },
   };
 
@@ -47,24 +47,24 @@ export const TONE_CLASSES: Record<
   { bg: string; text: string; border: string }
 > = {
   emerald: {
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-400",
-    border: "border-emerald-500/30",
+    bg: "bg-ks-success/10",
+    text: "text-ks-success",
+    border: "border-ks-success/30",
   },
   red: {
-    bg: "bg-red-500/10",
-    text: "text-red-400",
-    border: "border-red-500/30",
+    bg: "bg-ks-danger/10",
+    text: "text-ks-danger",
+    border: "border-ks-danger/30",
   },
   blue: {
-    bg: "bg-blue-500/10",
-    text: "text-blue-400",
-    border: "border-blue-500/30",
+    bg: "bg-ks-info/10",
+    text: "text-ks-info",
+    border: "border-ks-info/30",
   },
   amber: {
-    bg: "bg-amber-500/10",
-    text: "text-amber-400",
-    border: "border-amber-500/30",
+    bg: "bg-ks-accent/10",
+    text: "text-ks-accent",
+    border: "border-ks-accent/30",
   },
 };
 
@@ -78,10 +78,10 @@ export const PAYABLE_KIND_OPTIONS: { id: string; label: string }[] = [
 ];
 
 export const PDC_OPTIONS: { id: string; label: string; dot: string }[] = [
-  { id: "issued", label: "PDC issued", dot: "bg-amber-400" },
-  { id: "presented", label: "PDC presented", dot: "bg-blue-400" },
-  { id: "cleared", label: "PDC cleared", dot: "bg-emerald-400" },
-  { id: "bounced", label: "PDC bounced", dot: "bg-red-400" },
+  { id: "issued", label: "PDC issued", dot: "bg-ks-accent" },
+  { id: "presented", label: "PDC presented", dot: "bg-ks-info" },
+  { id: "cleared", label: "PDC cleared", dot: "bg-ks-success" },
+  { id: "bounced", label: "PDC bounced", dot: "bg-ks-danger" },
 ];
 
 export const TAX_TYPE_LABELS: Record<string, string> = {

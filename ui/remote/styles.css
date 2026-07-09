@@ -19,6 +19,29 @@
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(components);
 
+/* Runtime theme tokens (THEME-SPEC.md §6c) — RHS stays var(--ks-*) unresolved
+ * at build time so the generated ks-* utilities track theme swaps without a
+ * rebuild; bare @import "tailwindcss" is forbidden here (see §6c). */
+@theme {
+  --color-ks-bg: var(--ks-bg);
+  --color-ks-surface: var(--ks-surface);
+  --color-ks-surface-raised: var(--ks-surface-raised);
+  --color-ks-surface-sunken: var(--ks-surface-sunken);
+  --color-ks-overlay: var(--ks-overlay);
+  --color-ks-fg: var(--ks-fg);
+  --color-ks-fg-muted: var(--ks-fg-muted);
+  --color-ks-fg-subtle: var(--ks-fg-subtle);
+  --color-ks-border: var(--ks-border);
+  --color-ks-border-strong: var(--ks-border-strong);
+  --color-ks-primary: var(--ks-primary);
+  --color-ks-accent: var(--ks-accent);
+  --color-ks-accent-hover: var(--ks-accent-hover);
+  --color-ks-success: var(--ks-success);
+  --color-ks-warning: var(--ks-warning);
+  --color-ks-danger: var(--ks-danger);
+  --color-ks-info: var(--ks-info);
+}
+
 /* Safelist the responsive variants the host KIT components (DataTable, Modal, ...)
  * use, so a plugin that renders them carries the correctly-ordered base->responsive
  * pair too (belt-and-suspenders alongside the layer ordering above). */

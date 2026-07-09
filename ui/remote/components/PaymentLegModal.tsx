@@ -252,7 +252,7 @@ export default function PaymentLegModal(props: Props) {
 
   return (
     <Portal>
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-ks-overlay backdrop-blur-sm">
         <div
           ref={(el) => {
             autoFocusOnMount(el);
@@ -261,7 +261,7 @@ export default function PaymentLegModal(props: Props) {
           role="dialog"
           aria-modal="true"
           aria-label={isList() ? "Payment history" : "Record payment"}
-          class="relative z-10 m-2 sm:m-4 w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] card-bg border border-amber-500/30 rounded-xl flex flex-col shadow-2xl"
+          class="relative z-10 m-2 sm:m-4 w-full max-w-md max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] card-bg border border-ks-accent/30 rounded-xl flex flex-col shadow-2xl"
           data-testid="payment-leg-modal"
           data-mode={props.mode}
         >
@@ -270,18 +270,18 @@ export default function PaymentLegModal(props: Props) {
             onClick={() => props.onClose()}
             aria-label="Close"
             data-testid="payment-leg-close"
-            class="absolute -top-2.5 -right-2.5 z-30 w-7 h-7 rounded-full bg-zinc-900 border border-zinc-700/80 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 hover:border-zinc-600 transition-colors cursor-pointer flex items-center justify-center shadow-lg"
+            class="absolute -top-2.5 -right-2.5 z-30 w-7 h-7 rounded-full bg-ks-surface border border-ks-border-strong/80 text-ks-fg hover:text-ks-fg hover:bg-ks-surface-raised hover:border-ks-border-strong transition-colors cursor-pointer flex items-center justify-center shadow-lg"
           >
             <X size={14} />
           </button>
 
           <Show when={loading()}>
-            <div class="flex-1 min-h-0 flex flex-col overflow-hidden bg-zinc-900/30">
-              <header class="border-b border-zinc-800/50 px-4 py-3 bg-zinc-900/50">
+            <div class="flex-1 min-h-0 flex flex-col overflow-hidden bg-ks-surface/30">
+              <header class="border-b border-ks-border/50 px-4 py-3 bg-ks-surface/50">
                 <div class="h-2.5 w-24 rounded ks-shimmer" />
               </header>
               <div class="flex-1 overflow-hidden p-2 space-y-1.5">
-                <div class="rounded-md border border-zinc-800/60 bg-zinc-900/40 px-2.5 py-2 space-y-1.5">
+                <div class="rounded-md border border-ks-border/60 bg-ks-surface/40 px-2.5 py-2 space-y-1.5">
                   <div class="h-2.5 w-32 rounded ks-shimmer" />
                   <div class="h-2.5 w-full rounded ks-shimmer" />
                 </div>
@@ -291,11 +291,11 @@ export default function PaymentLegModal(props: Props) {
 
           <Show when={!loading() && loadError()}>
             <div class="flex flex-col items-center text-center gap-3 px-6 py-8">
-              <div class="w-9 h-9 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center">
-                <AlertCircle size={18} class="text-amber-300" />
+              <div class="w-9 h-9 rounded-full bg-ks-accent/15 border border-ks-accent/40 flex items-center justify-center">
+                <AlertCircle size={18} class="text-ks-accent-hover" />
               </div>
               <p
-                class="text-sm text-zinc-200 leading-snug"
+                class="text-sm text-ks-fg leading-snug"
                 data-testid="payment-leg-load-error"
               >
                 {loadError()}
@@ -315,12 +315,12 @@ export default function PaymentLegModal(props: Props) {
               class="flex-1 min-h-0 flex flex-col overflow-hidden"
               data-testid="payment-leg-history"
             >
-              <header class="border-b border-zinc-800/50 px-4 py-3 bg-zinc-900/50 flex items-center justify-between gap-2">
+              <header class="border-b border-ks-border/50 px-4 py-3 bg-ks-surface/50 flex items-center justify-between gap-2">
                 <div>
-                  <div class="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-400">
+                  <div class="text-[10px] font-bold tracking-[0.2em] uppercase text-ks-fg-muted">
                     Payment history
                   </div>
-                  <p class="text-[10px] text-zinc-500 mt-0.5 leading-tight">
+                  <p class="text-[10px] text-ks-fg-muted mt-0.5 leading-tight">
                     Past payments on this sale. Add another tender below.
                   </p>
                 </div>
@@ -329,8 +329,8 @@ export default function PaymentLegModal(props: Props) {
                     <div
                       class={`text-[9px] font-bold tracking-widest uppercase ${
                         outstanding() <= 0
-                          ? "text-emerald-400"
-                          : "text-amber-400"
+                          ? "text-ks-success"
+                          : "text-ks-accent"
                       }`}
                     >
                       Outstanding
@@ -338,8 +338,8 @@ export default function PaymentLegModal(props: Props) {
                     <div
                       class={`text-sm font-bold tabular-nums ${
                         outstanding() <= 0
-                          ? "text-emerald-300"
-                          : "text-amber-300"
+                          ? "text-ks-success"
+                          : "text-ks-accent-hover"
                       }`}
                       data-testid="record-payment-balance"
                     >
@@ -354,7 +354,7 @@ export default function PaymentLegModal(props: Props) {
                   when={(txn()?.payments?.length ?? 0) > 0}
                   fallback={
                     <p
-                      class="rounded-md border border-zinc-800/60 bg-zinc-900/40 px-3 py-4 text-[11px] text-zinc-500 text-center"
+                      class="rounded-md border border-ks-border/60 bg-ks-surface/40 px-3 py-4 text-[11px] text-ks-fg-muted text-center"
                       data-testid="payment-leg-history-empty"
                     >
                       No payments recorded yet.
@@ -365,12 +365,12 @@ export default function PaymentLegModal(props: Props) {
                     {(p) => (
                       <div
                         data-testid={`payment-leg-history-${p.id}`}
-                        class="rounded-md border border-zinc-800/60 bg-zinc-900/40 px-2.5 py-2"
+                        class="rounded-md border border-ks-border/60 bg-ks-surface/40 px-2.5 py-2"
                       >
-                        <div class="flex items-center justify-between gap-2 text-[10px] text-zinc-500">
-                          <span class="tabular-nums font-medium text-zinc-300">
+                        <div class="flex items-center justify-between gap-2 text-[10px] text-ks-fg-muted">
+                          <span class="tabular-nums font-medium text-ks-fg">
                             TP#{p.id}
-                            <span class="text-zinc-600 font-normal">
+                            <span class="text-ks-fg-subtle font-normal">
                               {" · "}
                               {formatDate(p.created_at)}
                             </span>
@@ -381,7 +381,7 @@ export default function PaymentLegModal(props: Props) {
                             data-testid={`payment-leg-history-${p.id}-delete`}
                             onClick={() => void handleDeletePayment(p.id)}
                             disabled={deletingId() === p.id}
-                            class="ks-interactive inline-flex items-center justify-center w-6 h-6 rounded text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            class="ks-interactive inline-flex items-center justify-center w-6 h-6 rounded text-ks-fg-muted hover:text-ks-danger hover:bg-ks-danger/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             title="Delete payment"
                           >
                             <Show
@@ -401,16 +401,16 @@ export default function PaymentLegModal(props: Props) {
                           >
                             {(a) => <AccountAvatar account={a()} size={16} />}
                           </Show>
-                          <span class="text-[11px] text-zinc-300 truncate flex-1">
+                          <span class="text-[11px] text-ks-fg truncate flex-1">
                             {p.financial_account_name ??
                               `Account #${p.financial_account_id}`}
                           </span>
-                          <span class="text-[11px] font-semibold tabular-nums text-zinc-100 shrink-0">
+                          <span class="text-[11px] font-semibold tabular-nums text-ks-fg shrink-0">
                             {formatCurrency(parseFloat(p.amount))}
                           </span>
                         </div>
                         <Show when={p.notes}>
-                          <div class="mt-1 text-[10px] text-zinc-500 truncate">
+                          <div class="mt-1 text-[10px] text-ks-fg-muted truncate">
                             {p.notes}
                           </div>
                         </Show>
@@ -423,13 +423,13 @@ export default function PaymentLegModal(props: Props) {
               {/* Add-payment form. Always available (the fork models add, not
                   edit) so the cashier can record another tender straight from
                   the ledger. */}
-              <div class="border-t border-zinc-800/50 px-4 py-3 bg-zinc-900/40 space-y-2">
-                <div class="text-[10px] font-bold tracking-[0.2em] uppercase text-amber-400 flex items-center gap-1.5">
+              <div class="border-t border-ks-border/50 px-4 py-3 bg-ks-surface/40 space-y-2">
+                <div class="text-[10px] font-bold tracking-[0.2em] uppercase text-ks-accent flex items-center gap-1.5">
                   <Plus size={12} /> Record a payment
                 </div>
                 <Show when={saveError()}>
                   <p
-                    class="rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1.5 text-xs text-red-400"
+                    class="rounded-md border border-ks-danger/30 bg-ks-danger/10 px-2 py-1.5 text-xs text-ks-danger"
                     data-testid="payment-leg-error"
                   >
                     {saveError()}
@@ -437,7 +437,7 @@ export default function PaymentLegModal(props: Props) {
                 </Show>
                 <div class="grid grid-cols-2 gap-2">
                   <div>
-                    <label class="block text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
+                    <label class="block text-[10px] uppercase tracking-widest text-ks-fg-muted mb-1">
                       Account
                     </label>
                     <Show
@@ -449,7 +449,7 @@ export default function PaymentLegModal(props: Props) {
                           onInput={(e) => setFormAccount(e.currentTarget.value)}
                           placeholder="Account ID"
                           data-testid="payment-leg-account-input"
-                          class="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
+                          class="w-full rounded-lg border border-ks-border-strong bg-ks-surface-raised/50 px-3 py-2 text-sm text-ks-fg focus:border-ks-accent/50 focus:outline-none"
                         />
                       }
                     >
@@ -457,7 +457,7 @@ export default function PaymentLegModal(props: Props) {
                         value={formAccount()}
                         onChange={(e) => setFormAccount(e.currentTarget.value)}
                         data-testid="payment-leg-account-select"
-                        class="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-200 cursor-pointer focus:border-amber-500/50 focus:outline-none"
+                        class="w-full rounded-lg border border-ks-border-strong bg-ks-surface-raised/50 px-3 py-2 text-sm text-ks-fg cursor-pointer focus:border-ks-accent/50 focus:outline-none"
                       >
                         <option value="">Select…</option>
                         <For each={accounts()}>
@@ -467,7 +467,7 @@ export default function PaymentLegModal(props: Props) {
                     </Show>
                   </div>
                   <div>
-                    <label class="block text-[10px] uppercase tracking-widest text-zinc-500 mb-1">
+                    <label class="block text-[10px] uppercase tracking-widest text-ks-fg-muted mb-1">
                       Amount (₱)
                     </label>
                     <input
@@ -478,7 +478,7 @@ export default function PaymentLegModal(props: Props) {
                       onInput={(e) => setFormAmount(e.currentTarget.value)}
                       placeholder="0.00"
                       data-testid="payment-leg-amount"
-                      class="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-200 tabular-nums focus:border-amber-500/50 focus:outline-none"
+                      class="w-full rounded-lg border border-ks-border-strong bg-ks-surface-raised/50 px-3 py-2 text-sm text-ks-fg tabular-nums focus:border-ks-accent/50 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -488,7 +488,7 @@ export default function PaymentLegModal(props: Props) {
                   onInput={(e) => setFormNotes(e.currentTarget.value)}
                   placeholder="Notes (optional)"
                   data-testid="payment-leg-notes"
-                  class="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2 text-sm text-zinc-200 focus:border-amber-500/50 focus:outline-none"
+                  class="w-full rounded-lg border border-ks-border-strong bg-ks-surface-raised/50 px-3 py-2 text-sm text-ks-fg focus:border-ks-accent/50 focus:outline-none"
                 />
                 <div class="flex justify-end gap-2 pt-1">
                   <Button

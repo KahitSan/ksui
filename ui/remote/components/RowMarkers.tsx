@@ -15,7 +15,7 @@ import TriangleAlert from "lucide-solid/icons/triangle-alert";
 export function PeerUnavailable(props: { title: string }) {
   return (
     <span
-      class="inline-flex items-center text-amber-400/80"
+      class="inline-flex items-center text-ks-accent/80"
       title={props.title}
       aria-label={props.title}
     >
@@ -42,12 +42,12 @@ export function SharedWithStack(props: {
             name={p.name}
             image={p.image}
             size="xs"
-            class="ring-2 ring-zinc-950"
+            class="ring-2 ring-ks-border-strong"
           />
         )}
       </For>
       <Show when={extra() > 0}>
-        <span class="w-5 h-5 rounded-full ring-2 ring-zinc-950 bg-zinc-700 flex items-center justify-center text-[8px] font-semibold text-zinc-200 select-none">
+        <span class="w-5 h-5 rounded-full ring-2 ring-ks-border-strong bg-ks-surface-sunken flex items-center justify-center text-[8px] font-semibold text-ks-fg select-none">
           +{extra()}
         </span>
       </Show>
