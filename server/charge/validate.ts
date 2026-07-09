@@ -7,6 +7,13 @@
 // validateChargePayload, validateCustomerGroups). No SQL, no logic, no
 // signature changes. The original public surface is re-exported from the
 // helpers-charge.ts barrel so callers keep importing from there.
+//
+// unit_price's upper bound (below) is a later addition, not part of the
+// verbatim extraction — it feeds accounts.transaction_line_items.unit_price
+// NUMERIC(12,2) directly, so an unbounded value 22003-errors into a 500
+// instead of a clean 400.
+
+import { MAX_NUMERIC_12_2 } from "../routes/shared.js";
 
 export interface ChargeLineInput {
   // package_id / package_variant_id are OPTIONAL here (unlike the monolith,
@@ -118,6 +125,12 @@ export function validateLineItems(items: unknown): asserts items is ChargeLineIn
     }
     if (typeof l.unit_price !== "number" || !Number.isFinite(l.unit_price) || l.unit_price < 0) {
       throw new ChargeValidationError(400, `items[${idx}].unit_price must be >= 0`);
+    }
+    if (l.unit_price > MAX_NUMERIC_12_2) {
+      throw new ChargeValidationError(
+        400,
+        `items[${idx}].unit_price must not exceed ${MAX_NUMERIC_12_2}`,
+      );
     }
     // A package ref requires BOTH package_id and package_variant_id together,
     // or NEITHER (manual line). Half a ref is a malformed cart.
