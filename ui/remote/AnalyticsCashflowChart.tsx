@@ -35,13 +35,13 @@ export default function AnalyticsCashflowChart(props: {
   };
 
   return (
-    <div class="rounded-lg border border-zinc-800/50 bg-zinc-900/50 p-5 ks-hud-clip-top-left-bottom-right">
+    <div class="rounded-lg border border-ks-border/50 bg-ks-surface/50 p-5 ks-hud-clip-top-left-bottom-right">
       <div class="flex items-start justify-between mb-4 gap-4">
         <div class="min-w-0">
-          <p class="text-[10px] tracking-[0.3em] uppercase text-amber-400 font-semibold mb-1">
+          <p class="text-[10px] tracking-[0.3em] uppercase text-ks-accent font-semibold mb-1">
             Cash flow
           </p>
-          <h3 class="text-base font-bold text-zinc-100 truncate">
+          <h3 class="text-base font-bold text-ks-fg truncate">
             <Show when={active()} fallback="Daily inflow vs outflow">
               {(b) => fmtFullDateLocal(b().date)}
             </Show>
@@ -49,21 +49,21 @@ export default function AnalyticsCashflowChart(props: {
         </div>
         <div class="flex items-center gap-4 flex-wrap justify-end">
           <ChartLegend
-            dot="bg-emerald-400"
+            dot="bg-ks-success"
             label="Money in"
             value={formatCurrency(active()?.in ?? totals().inSum)}
           />
           <ChartLegend
-            dot="bg-red-400"
+            dot="bg-ks-danger"
             label="Money out"
             value={formatCurrency(active()?.out ?? totals().outSum)}
           />
           <ChartLegend
-            dot="bg-amber-400"
+            dot="bg-ks-accent"
             label="Net"
             value={formatCurrency(netLegendValue())}
             valueColor={
-              netLegendValue() >= 0 ? "text-emerald-400" : "text-red-400"
+              netLegendValue() >= 0 ? "text-ks-success" : "text-ks-danger"
             }
           />
         </div>
@@ -72,7 +72,7 @@ export default function AnalyticsCashflowChart(props: {
       <Show
         when={buckets().length > 0}
         fallback={
-          <div class="h-40 flex items-center justify-center text-xs text-zinc-600">
+          <div class="h-40 flex items-center justify-center text-xs text-ks-fg-subtle">
             No activity in this period.
           </div>
         }
@@ -81,7 +81,7 @@ export default function AnalyticsCashflowChart(props: {
           class="relative h-40 flex items-end gap-[3px]"
           onMouseLeave={() => setHover(null)}
         >
-          <div class="absolute left-0 right-0 top-1/2 border-t border-zinc-800/70 pointer-events-none" />
+          <div class="absolute left-0 right-0 top-1/2 border-t border-ks-border/70 pointer-events-none" />
           <For each={buckets()}>
             {(b, i) => {
               const inH = (b.in / maxAbs()) * 50;
@@ -96,8 +96,8 @@ export default function AnalyticsCashflowChart(props: {
                     <div
                       class="w-full transition-all duration-150"
                       classList={{
-                        "bg-emerald-300": isHover(),
-                        "bg-emerald-500/70": !isHover(),
+                        "bg-ks-success": isHover(),
+                        "bg-ks-success/70": !isHover(),
                       }}
                       style={{ height: inH + "%" }}
                     />
@@ -106,8 +106,8 @@ export default function AnalyticsCashflowChart(props: {
                     <div
                       class="w-full transition-all duration-150"
                       classList={{
-                        "bg-red-300": isHover(),
-                        "bg-red-500/70": !isHover(),
+                        "bg-ks-danger": isHover(),
+                        "bg-ks-danger/70": !isHover(),
                       }}
                       style={{ height: outH + "%" }}
                     />
@@ -117,7 +117,7 @@ export default function AnalyticsCashflowChart(props: {
             }}
           </For>
         </div>
-        <div class="flex justify-between mt-2 text-[10px] text-zinc-600 tabular-nums">
+        <div class="flex justify-between mt-2 text-[10px] text-ks-fg-subtle tabular-nums">
           <span>{fmtShortDateLocal(buckets()[0]?.date)}</span>
           <Show when={buckets().length > 2}>
             <span>

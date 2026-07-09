@@ -278,13 +278,13 @@ export default function ExportTransactionsModal(
       onClose={props.onClose}
       ariaLabel="Export transactions"
     >
-      <div class="sm:w-[32rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh] text-zinc-100">
-        <header class="px-5 sm:px-6 pt-5 pb-4 border-b border-zinc-800/60">
-          <p class="text-[10px] tracking-[0.3em] uppercase text-amber-400 font-semibold mb-0.5">
+      <div class="sm:w-[32rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh] text-ks-fg">
+        <header class="px-5 sm:px-6 pt-5 pb-4 border-b border-ks-border/60">
+          <p class="text-[10px] tracking-[0.3em] uppercase text-ks-accent font-semibold mb-0.5">
             Download
           </p>
           <h2 class="text-lg font-bold leading-tight">Export transactions</h2>
-          <p class="text-xs text-zinc-500 mt-1 leading-relaxed">
+          <p class="text-xs text-ks-fg-muted mt-1 leading-relaxed">
             Pick a date range and we'll prepare a CSV in the background. Voided
             rows and transactions you don't have visibility on are excluded
             automatically.
@@ -295,7 +295,7 @@ export default function ExportTransactionsModal(
           <Show when={phase() === "form"}>
             <section class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-[10px] uppercase tracking-widest text-zinc-400 font-semibold mb-2">
+                <label class="block text-[10px] uppercase tracking-widest text-ks-fg-muted font-semibold mb-2">
                   Start date
                 </label>
                 <DatePicker
@@ -304,7 +304,7 @@ export default function ExportTransactionsModal(
                 />
               </div>
               <div>
-                <label class="block text-[10px] uppercase tracking-widest text-zinc-400 font-semibold mb-2">
+                <label class="block text-[10px] uppercase tracking-widest text-ks-fg-muted font-semibold mb-2">
                   End date
                 </label>
                 <DatePicker
@@ -313,26 +313,26 @@ export default function ExportTransactionsModal(
                 />
               </div>
               <Show when={rangeError()}>
-                <p class="col-span-2 -mt-1 text-xs text-red-400">
+                <p class="col-span-2 -mt-1 text-xs text-ks-danger">
                   {rangeError()}
                 </p>
               </Show>
             </section>
 
-            <section class="rounded-lg border border-zinc-800/60 bg-zinc-900/40 p-3">
+            <section class="rounded-lg border border-ks-border/60 bg-ks-surface/40 p-3">
               <label class="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={consolidate()}
                   onChange={(e) => setConsolidate(e.currentTarget.checked)}
-                  class="mt-0.5 h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-amber-500"
+                  class="mt-0.5 h-4 w-4 rounded border-ks-border-strong bg-ks-surface text-ks-accent focus:ring-ks-accent"
                   data-testid="export-consolidate"
                 />
                 <span>
-                  <span class="block text-sm font-semibold text-zinc-200">
+                  <span class="block text-sm font-semibold text-ks-fg">
                     Consolidate daily sales
                   </span>
-                  <span class="block text-xs text-zinc-500 mt-0.5">
+                  <span class="block text-xs text-ks-fg-muted mt-0.5">
                     Roll every day's sales into one row (date, count, total).
                     Non-sale transactions are excluded from the file.
                   </span>
@@ -343,20 +343,20 @@ export default function ExportTransactionsModal(
 
           <Show when={phase() === "preparing"}>
             <section
-              class="rounded-lg border border-zinc-800/60 bg-zinc-900/40 p-4 space-y-3"
+              class="rounded-lg border border-ks-border/60 bg-ks-surface/40 p-4 space-y-3"
               data-testid="export-preparing"
             >
-              <div class="flex items-center gap-2 text-zinc-200">
-                <Loader2 size={16} class="animate-spin text-amber-400" />
+              <div class="flex items-center gap-2 text-ks-fg">
+                <Loader2 size={16} class="animate-spin text-ks-accent" />
                 <span class="text-sm font-semibold">Preparing your CSV…</span>
               </div>
-              <div class="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+              <div class="h-2 w-full overflow-hidden rounded-full bg-ks-surface-raised">
                 <div
-                  class="h-full bg-amber-500 transition-[width] duration-200"
+                  class="h-full bg-ks-accent transition-[width] duration-200"
                   style={{ width: `${progressPct()}%` }}
                 />
               </div>
-              <p class="text-xs text-zinc-500 tabular-nums">
+              <p class="text-xs text-ks-fg-muted tabular-nums">
                 {progressDone().toLocaleString()}
                 {progressTotal() > 0
                   ? ` of ${progressTotal().toLocaleString()}`
@@ -368,14 +368,14 @@ export default function ExportTransactionsModal(
 
           <Show when={phase() === "done"}>
             <section
-              class="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2"
+              class="rounded-lg border border-ks-success/30 bg-ks-success/5 p-4 space-y-2"
               data-testid="export-done"
             >
-              <div class="flex items-center gap-2 text-emerald-300">
+              <div class="flex items-center gap-2 text-ks-success">
                 <CheckCircle2 size={16} />
                 <span class="text-sm font-semibold">Download starting…</span>
               </div>
-              <p class="text-xs text-zinc-400 leading-relaxed">
+              <p class="text-xs text-ks-fg-muted leading-relaxed">
                 If the download didn't start, use the matching entry in "Recent
                 exports" below to grab it directly. We'll keep the file ready
                 for 24 hours.
@@ -385,14 +385,14 @@ export default function ExportTransactionsModal(
 
           <Show when={phase() === "error"}>
             <section
-              class="rounded-lg border border-red-500/30 bg-red-500/5 p-4 space-y-2"
+              class="rounded-lg border border-ks-danger/30 bg-ks-danger/5 p-4 space-y-2"
               data-testid="export-error"
             >
-              <div class="flex items-center gap-2 text-red-300">
+              <div class="flex items-center gap-2 text-ks-danger">
                 <AlertCircle size={16} />
                 <span class="text-sm font-semibold">Export failed</span>
               </div>
-              <p class="text-xs text-zinc-400">
+              <p class="text-xs text-ks-fg-muted">
                 {errorMessage() ?? "Something went wrong."}
               </p>
             </section>
@@ -401,23 +401,23 @@ export default function ExportTransactionsModal(
           <Show when={(recent() ?? []).length > 0}>
             <section>
               <div class="flex items-center justify-between mb-2">
-                <h3 class="text-[10px] uppercase tracking-widest text-zinc-400 font-semibold">
+                <h3 class="text-[10px] uppercase tracking-widest text-ks-fg-muted font-semibold">
                   Recent exports
                 </h3>
-                <span class="text-[10px] text-zinc-600">
+                <span class="text-[10px] text-ks-fg-subtle">
                   Available for 24 hours
                 </span>
               </div>
               <ul class="space-y-1.5">
                 <For each={recent() ?? []}>
                   {(job) => (
-                    <li class="flex items-center justify-between gap-2 rounded-md border border-zinc-800/60 bg-zinc-900/40 px-3 py-2">
+                    <li class="flex items-center justify-between gap-2 rounded-md border border-ks-border/60 bg-ks-surface/40 px-3 py-2">
                       <div class="min-w-0 flex-1">
-                        <div class="text-xs font-semibold text-zinc-200 truncate">
+                        <div class="text-xs font-semibold text-ks-fg truncate">
                           {job.date_from} → {job.date_to}
                           {job.consolidate ? " · daily sales" : ""}
                         </div>
-                        <div class="text-[10px] text-zinc-500 mt-0.5 flex items-center gap-2">
+                        <div class="text-[10px] text-ks-fg-muted mt-0.5 flex items-center gap-2">
                           <Show when={job.status === "done"}>
                             <span>
                               {job.row_count?.toLocaleString() ?? 0} rows
@@ -434,7 +434,7 @@ export default function ExportTransactionsModal(
                           >
                             <Loader2
                               size={10}
-                              class="animate-spin text-amber-400 inline"
+                              class="animate-spin text-ks-accent inline"
                             />
                             <span>preparing…</span>
                             <span>·</span>
@@ -442,7 +442,7 @@ export default function ExportTransactionsModal(
                           <Show when={job.status === "error"}>
                             <AlertCircle
                               size={10}
-                              class="text-red-400 inline"
+                              class="text-ks-danger inline"
                             />
                             <span>failed</span>
                             <span>·</span>
@@ -454,7 +454,7 @@ export default function ExportTransactionsModal(
                         <button
                           type="button"
                           onClick={() => redownload(job)}
-                          class="ks-interactive rounded-md border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] uppercase tracking-widest text-zinc-300 hover:border-zinc-600 flex items-center gap-1"
+                          class="ks-interactive rounded-md border border-ks-border-strong bg-ks-surface px-2.5 py-1 text-[10px] uppercase tracking-widest text-ks-fg hover:border-ks-border-strong flex items-center gap-1"
                           data-testid="export-redownload"
                         >
                           <Download size={11} />
@@ -469,7 +469,7 @@ export default function ExportTransactionsModal(
           </Show>
         </div>
 
-        <footer class="px-5 sm:px-6 py-4 border-t border-zinc-800/60 flex items-center justify-end gap-2">
+        <footer class="px-5 sm:px-6 py-4 border-t border-ks-border/60 flex items-center justify-end gap-2">
           <Show when={phase() === "form"}>
             <Button intent="secondary" variant="ghost" onClick={props.onClose}>
               Cancel

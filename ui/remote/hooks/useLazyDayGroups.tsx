@@ -148,7 +148,7 @@ export function useLazyDayGroups(deps: LazyDayGroupsDeps) {
     if (!state || (state.loading && state.rows.length === 0)) {
       return (
         <div
-          class="p-4 text-xs text-zinc-500"
+          class="p-4 text-xs text-ks-fg-muted"
           data-testid={`expansion-loading-${dateKey}`}
         >
           Loading transactions for this day…
@@ -179,7 +179,7 @@ export function useLazyDayGroups(deps: LazyDayGroupsDeps) {
             <For each={state.rows}>
               {(sub) => (
                 <tr
-                  class="border-t border-zinc-800/30 hover:bg-zinc-800/40 cursor-pointer"
+                  class="border-t border-ks-border/30 hover:bg-ks-surface-raised/40 cursor-pointer"
                   onClick={() => openDetail(sub.id)}
                   data-testid={`expansion-subrow-${sub.id}`}
                 >
@@ -213,7 +213,7 @@ export function useLazyDayGroups(deps: LazyDayGroupsDeps) {
           </tbody>
         </table>
         <Show when={state.rows.length < state.total}>
-          <div class="border-t border-zinc-800/30 p-2 flex items-center justify-between gap-2 text-[11px] text-zinc-500">
+          <div class="border-t border-ks-border/30 p-2 flex items-center justify-between gap-2 text-[11px] text-ks-fg-muted">
             <span>
               Showing {state.rows.length} of {state.total}
             </span>
@@ -222,7 +222,7 @@ export function useLazyDayGroups(deps: LazyDayGroupsDeps) {
               data-testid={`day-show-more-${dateKey}`}
               disabled={state.loading}
               onClick={() => void loadDayPage(dateKey, true)}
-              class="rounded-lg border border-zinc-800/50 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 hover:border-amber-500/40 hover:text-amber-400 disabled:opacity-50"
+              class="rounded-lg border border-ks-border/50 bg-ks-surface px-3 py-1.5 text-xs text-ks-fg hover:border-ks-accent/40 hover:text-ks-accent disabled:opacity-50"
             >
               {state.loading ? "Loading…" : "Show more"}
             </button>

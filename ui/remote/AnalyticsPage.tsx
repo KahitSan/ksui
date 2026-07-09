@@ -299,14 +299,14 @@ export default function AnalyticsPage() {
                 value={statsDateFrom()}
                 onChange={(d: string | null) => d && setStatsDateFrom(d)}
               />
-              <span class="text-zinc-600 text-xs">to</span>
+              <span class="text-ks-fg-subtle text-xs">to</span>
               <DatePicker
                 value={statsDateTo()}
                 onChange={(d: string | null) => d && setStatsDateTo(d)}
               />
               <button
                 onClick={applyCustomRange}
-                class="px-3 py-1.5 text-xs text-amber-400 hover:bg-amber-500/20 active:bg-amber-500/30 rounded-lg border border-amber-500/30 cursor-pointer min-h-[36px]"
+                class="px-3 py-1.5 text-xs text-ks-accent hover:bg-ks-accent/20 active:bg-ks-accent/30 rounded-lg border border-ks-accent/30 cursor-pointer min-h-[36px]"
               >
                 Apply
               </button>
@@ -315,16 +315,16 @@ export default function AnalyticsPage() {
 
           <Show when={analyticsError()}>
             <div
-              class="mb-3 flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              class="mb-3 flex items-start gap-3 rounded-lg border border-ks-danger/30 bg-ks-danger/10 px-3 py-2 text-sm text-ks-danger"
               data-testid="analytics-error-banner"
               role="alert"
             >
-              <AlertTriangle size={16} class="text-red-400 shrink-0 mt-0.5" />
+              <AlertTriangle size={16} class="text-ks-danger shrink-0 mt-0.5" />
               <div class="flex-1 min-w-0">
-                <div class="font-semibold text-red-200">
+                <div class="font-semibold text-ks-danger">
                   Some analytics didn't load
                 </div>
-                <div class="text-xs text-red-300/90 mt-0.5">
+                <div class="text-xs text-ks-danger/90 mt-0.5">
                   Click Retry to try again, or dismiss this notice.
                 </div>
               </div>
@@ -332,7 +332,7 @@ export default function AnalyticsPage() {
                 type="button"
                 onClick={retryAllFetches}
                 data-testid="analytics-error-retry"
-                class="ks-interactive flex items-center gap-1.5 rounded border border-red-400/40 bg-red-500/15 px-2.5 py-1 text-xs font-semibold text-red-200 hover:bg-red-500/25 active:bg-red-500/35 cursor-pointer min-h-[28px]"
+                class="ks-interactive flex items-center gap-1.5 rounded border border-ks-danger/40 bg-ks-danger/15 px-2.5 py-1 text-xs font-semibold text-ks-danger hover:bg-ks-danger/25 active:bg-ks-danger/35 cursor-pointer min-h-[28px]"
               >
                 <RefreshCw size={12} />
                 Retry
@@ -342,7 +342,7 @@ export default function AnalyticsPage() {
                 onClick={() => setAnalyticsError(null)}
                 data-testid="analytics-error-dismiss"
                 aria-label="Dismiss"
-                class="ks-interactive flex items-center justify-center rounded p-1 text-red-300/70 hover:text-red-200 hover:bg-red-500/15 cursor-pointer"
+                class="ks-interactive flex items-center justify-center rounded p-1 text-ks-danger/70 hover:text-ks-danger hover:bg-ks-danger/15 cursor-pointer"
               >
                 <X size={14} />
               </button>
@@ -398,10 +398,10 @@ export default function AnalyticsPage() {
           </div>
 
           <Show when={(statsSummary()._privateHidden || 0) > 0}>
-            <div class="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 mb-3 flex items-center gap-2 text-xs text-zinc-400">
-              <Lock size={12} class="text-amber-500/60 shrink-0" />
+            <div class="rounded-lg border border-ks-accent/20 bg-ks-accent/5 p-3 mb-3 flex items-center gap-2 text-xs text-ks-fg-muted">
+              <Lock size={12} class="text-ks-accent/60 shrink-0" />
               <span>
-                <span class="text-amber-400 font-semibold">
+                <span class="text-ks-accent font-semibold">
                   {statsSummary()._privateHidden}
                 </span>{" "}
                 private transaction(s) hidden -- may affect totals.

@@ -22,7 +22,7 @@ export interface FinancialAccount {
 export const TYPE_LABELS: Record<string, { label: string; class: string }> = {
   bank: {
     label: "Bank",
-    class: "border-blue-400/40 text-blue-400 bg-blue-500/20",
+    class: "border-ks-info/40 text-ks-info bg-ks-info/20",
   },
   e_wallet: {
     label: "E-Wallet",
@@ -30,15 +30,15 @@ export const TYPE_LABELS: Record<string, { label: string; class: string }> = {
   },
   cash: {
     label: "Cash",
-    class: "border-emerald-400/40 text-emerald-400 bg-emerald-500/20",
+    class: "border-ks-success/40 text-ks-success bg-ks-success/20",
   },
   external: {
     label: "External",
-    class: "border-zinc-600 text-zinc-400 bg-zinc-800/50",
+    class: "border-ks-border-strong text-ks-fg-muted bg-ks-surface-raised/50",
   },
   capital: {
     label: "Capital",
-    class: "border-amber-400/40 text-amber-400 bg-amber-500/20",
+    class: "border-ks-accent/40 text-ks-accent bg-ks-accent/20",
   },
 };
 
