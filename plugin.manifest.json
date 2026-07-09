@@ -6,7 +6,7 @@
     "/api/payees",
     "/api/financial-accounts"
   ],
-  "port": 5420,
+  "port": 5220,
   "capabilityKey": "finance",
   "label": "Finance",
   "uiRouteBase": "transactions",
