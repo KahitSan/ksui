@@ -6,7 +6,7 @@
     "/api/payees",
     "/api/financial-accounts"
   ],
-  "port": 5220,
+  "port": 5420,
   "capabilityKey": "finance",
   "label": "Finance",
   "uiRouteBase": "transactions",
@@ -104,7 +104,7 @@
       {
         "id": "royal-violet",
         "label": "Royal Violet",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "variants": {
           "dark": {
             "tokens": {
@@ -144,6 +144,32 @@
               "--ks-focus-ring": "#7c3aed",
               "--ks-focus-ring-offset": "#f7f3ff",
               "--ks-input-border-focus": "#7c3aed"
+            }
+          },
+          "high-contrast": {
+            "label": "High Contrast",
+            "appearance": "dark",
+            "tokens": {
+              "--ks-bg": "#000000",
+              "--ks-bg-gradient-to": "#050005",
+              "--ks-surface": "#000000",
+              "--ks-surface-raised": "#0d0010",
+              "--ks-surface-sunken": "#000000",
+              "--ks-fg": "#ffffff",
+              "--ks-fg-muted": "#e8e8e8",
+              "--ks-fg-subtle": "#c9c9c9",
+              "--ks-border": "#ffffff",
+              "--ks-border-strong": "#ffffff",
+              "--ks-primary": "#c9a3ff",
+              "--ks-primary-hover": "#dbc0ff",
+              "--ks-accent": "#ffe066",
+              "--ks-accent-hover": "#fff0a3",
+              "--ks-accent-selected-fg": "#000000",
+              "--ks-danger": "#ff8a8a",
+              "--ks-success": "#6bffb0",
+              "--ks-focus-ring": "#ffffff",
+              "--ks-focus-ring-offset": "#000000",
+              "--ks-input-border-focus": "#ffffff"
             }
           }
         }
