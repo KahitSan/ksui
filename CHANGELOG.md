@@ -1,5 +1,23 @@
 # @kahitsan/kplugin_transactions
 
+## 1.3.0
+
+### Minor Changes
+
+- e71ea3f: Add a third Royal Violet variant, `high-contrast` (`appearance: "dark"`), per THEME-SPEC-V2.1-DYNAMIC-VARIANTS.md §7.2 — the addendum's own end-to-end proof that a theme's `variants` map works past the v2 two-key (`dark`/`light`) special case. Pure-black surfaces + pure-white text/borders push royal-violet's identity (violet primary, gold accent, lifted in luminance) to WCAG-AAA-adjacent contrast (body text ≥7:1, UI/accent pairs ≥4.5:1 — verified with a standalone relative-luminance script, values iterated until every pairing passed).
+
+  `royal-violet` bumps `1.1.0` → `1.2.0`. Additive only — `variants.dark`/`variants.light` are byte-for-byte unchanged, so this ships no visual regression for existing users. **Sequenced after the kernel PR that lands the v2.1 loader** (open `variantId` map, `appearance` inference, `MAX_VARIANTS_PER_THEME`): the current kernel on this branch is still v2-only and its `isInvalidVariantsShape` check drops the _entire_ contributed theme when `variants` contains any key other than `dark`/`light`, so deploying this manifest change ahead of that kernel PR would silently pull Royal Violet from every workspace that has it selected, not just withhold the new variant. Do not deploy before the kernel PR is live.
+
+- 5844993: Contribute the "Royal Violet" theme via `plugin.manifest.json`'s `contributes.themes` (THEME-SPEC.md §4.3) — the first real third-party-pipeline theme, proving a plugin can ship its own brand palette (violet primary/accent, `#7c3aed`–`#a78bfa`) without touching kernel code.
+
+  This manifest change causes a kernel reload on deploy (its SHA changes) — kserp's tier-aware loader parses `contributes.themes` at plugin-load time and registers the entry namespaced as `finance:royal-violet`.
+
+  Migrated to THEME-SPEC-V2-VARIANTS.md's shape (`v1.1.0`): the flat `base`/`tokens` fields are replaced by `variants.dark`/`variants.light`, and a new light-violet variant (`--ks-bg: #f7f3ff`, `--ks-primary: #6d28d9`) ships alongside the existing dark palette so Royal Violet renders correctly in both modes. Sequenced after the kernel PR that ships the v2 loader (§7 of the addendum) — deploy this only once that loader is live.
+
+### Patch Changes
+
+- cdf2dfe: Migrate UI to the theme token system (`--ks-*` via Tailwind v4 `@theme`), replacing hardcoded zinc/amber/red/emerald/blue palette classes and raw hex/rgb literals so the plugin renders correctly once the workspace theme resolves to something other than the built-in dark default.
+
 ## 1.2.0
 
 ### Minor Changes
