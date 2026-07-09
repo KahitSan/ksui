@@ -20,7 +20,7 @@ export default function ChartLegend(props: ChartLegendProps) {
     <div class="flex items-center gap-2">
       <span class={`w-2 h-2 rounded-sm ${props.dot}`} />
       <div class="flex flex-col">
-        <span class="text-[9px] uppercase tracking-widest text-zinc-500 font-medium leading-tight">
+        <span class="text-[9px] uppercase tracking-widest text-[var(--ks-fg-subtle,#71717a)] font-medium leading-tight">
           {props.label}
         </span>
         <span

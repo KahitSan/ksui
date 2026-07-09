@@ -25,7 +25,7 @@ export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Elemen
   const optionOf = (o: SegmentedFilterOption) =>
     typeof o === "string" ? { value: o, label: o, capitalize: true } : { ...o, capitalize: false };
   return (
-    <div class={`flex rounded-lg border border-zinc-800/50 overflow-hidden ${props.class ?? ""}`}>
+    <div class={`flex rounded-lg border border-[var(--ks-border,rgba(39,39,42,0.5))] overflow-hidden ${props.class ?? ""}`}>
       <For each={props.options}>
         {(o) => {
           const opt = optionOf(o);
@@ -36,8 +36,9 @@ export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Elemen
               class="px-3 py-1.5 text-xs transition-colors cursor-pointer"
               classList={{
                 capitalize: opt.capitalize,
-                "bg-amber-500/20 text-amber-400": props.value === opt.value,
-                "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50": props.value !== opt.value,
+                "bg-[var(--ks-accent,#fbbf24)]/20 text-[var(--ks-accent,#fbbf24)]": props.value === opt.value,
+                "text-[var(--ks-fg-muted,#a1a1aa)] hover:text-[var(--ks-fg,#ffffff)] hover:bg-[var(--ks-surface-raised,#1a1a1a)]":
+                  props.value !== opt.value,
               }}
             >
               {opt.label}

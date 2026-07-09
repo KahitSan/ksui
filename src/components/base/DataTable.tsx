@@ -46,6 +46,7 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import ChevronsUpDown from "lucide-solid/icons/chevrons-up-down";
 import DatePicker from "./DatePicker";
+import { injectCSS } from "../../utils/inject-css";
 
 // ---------------------------------------------------------------------------
 // Injected CSS
@@ -97,27 +98,27 @@ const STYLE_ID = "ksui-datatable-style";
 // infers column semantics from data.
 //
 const DATATABLE_CSS = `
-.ksui-datatable{background:var(--ksui-dt-card-bg,linear-gradient(135deg,#0f0f0f 0%,#1a1a1a 100%));border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));border-radius:var(--ksui-dt-radius,0.625rem);color:var(--ksui-dt-fg,#e4e4e7);box-shadow:0 1px 2px rgba(0,0,0,0.3),0 8px 20px -10px rgba(0,0,0,0.5);}
-.ksui-datatable-header{display:flex;flex-wrap:wrap;align-items:center;gap:0.75rem;border-bottom:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));padding:0.75rem 0.875rem;}
+.ksui-datatable{background:var(--ksui-dt-card-bg,linear-gradient(135deg,var(--ks-surface,#0f0f0f) 0%,var(--ks-surface-raised,#1a1a1a) 100%));border:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));border-radius:var(--ksui-dt-radius,0.625rem);color:var(--ksui-dt-fg,#e4e4e7);box-shadow:0 1px 2px rgba(0,0,0,0.3),0 8px 20px -10px rgba(0,0,0,0.5);}
+.ksui-datatable-header{display:flex;flex-wrap:wrap;align-items:center;gap:0.75rem;border-bottom:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));padding:0.75rem 0.875rem;}
 .ksui-datatable-filters-inline{display:none;flex:1 1 0%;}
 .ksui-datatable-filters-mobile{display:block;flex:1 1 0%;}
 @media (min-width:768px){.ksui-datatable-filters-inline{display:block;}.ksui-datatable-filters-mobile{display:none;}}
 .ksui-datatable-spacer{flex:1 1 0%;}
 .ksui-datatable-controls{display:flex;align-items:center;gap:0.5rem;}
 .ksui-datatable-filter-toggle-wrap{position:relative;}
-.ksui-datatable-filter-toggle{display:inline-flex;cursor:pointer;align-items:center;gap:0.5rem;border-radius:0.5rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);padding:0.5rem 0.75rem;font-size:0.75rem;line-height:1rem;color:var(--ksui-dt-text,#a1a1aa);transition:color 0.15s ease;}
-.ksui-datatable-filter-toggle:hover{color:var(--ksui-dt-fg-strong,#ffffff);}
-.ksui-datatable-filter-menu{position:absolute;left:0;top:100%;z-index:50;margin-top:0.5rem;border-radius:0.5rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);padding:0.75rem;box-shadow:0 20px 25px -5px rgba(0,0,0,0.4),0 8px 10px -6px rgba(0,0,0,0.4);}
-.ksui-datatable-select{border-radius:0.375rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);padding:0.5rem;font-size:0.75rem;line-height:1rem;color:var(--ksui-dt-text,#a1a1aa);}
+.ksui-datatable-filter-toggle{display:inline-flex;cursor:pointer;align-items:center;gap:0.5rem;border-radius:0.5rem;border:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));background:var(--ksui-dt-control-bg,var(--ks-input-bg,#18181b));padding:0.5rem 0.75rem;font-size:0.75rem;line-height:1rem;color:var(--ksui-dt-text,var(--ks-fg-muted,#a1a1aa));transition:color 0.15s ease;}
+.ksui-datatable-filter-toggle:hover{color:var(--ksui-dt-fg-strong,var(--ks-fg,#ffffff));}
+.ksui-datatable-filter-menu{position:absolute;left:0;top:100%;z-index:50;margin-top:0.5rem;border-radius:0.5rem;border:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));background:var(--ksui-dt-control-bg,var(--ks-input-bg,#18181b));padding:0.75rem;box-shadow:0 20px 25px -5px rgba(0,0,0,0.4),0 8px 10px -6px rgba(0,0,0,0.4);}
+.ksui-datatable-select{border-radius:0.375rem;border:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));background:var(--ksui-dt-control-bg,var(--ks-input-bg,#18181b));padding:0.5rem;font-size:0.75rem;line-height:1rem;color:var(--ksui-dt-text,var(--ks-fg-muted,#a1a1aa));}
 .ksui-datatable-search-wrap{position:relative;}
-.ksui-datatable-search-icon{position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);color:var(--ksui-dt-muted,#71717a);pointer-events:none;}
-.ksui-datatable-search-input{width:100%;border-radius:0.5rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);padding:0.5rem 1rem 0.5rem 2.25rem;font-size:0.875rem;line-height:1.25rem;color:var(--ksui-dt-fg,#e4e4e7);outline:none;transition:border-color 0.15s ease;}
-.ksui-datatable-search-input::placeholder{color:var(--ksui-dt-muted,#71717a);}
+.ksui-datatable-search-icon{position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));pointer-events:none;}
+.ksui-datatable-search-input{width:100%;border-radius:0.5rem;border:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));background:var(--ksui-dt-control-bg,var(--ks-input-bg,#18181b));padding:0.5rem 1rem 0.5rem 2.25rem;font-size:0.875rem;line-height:1.25rem;color:var(--ksui-dt-fg,#e4e4e7);outline:none;transition:border-color 0.15s ease;}
+.ksui-datatable-search-input::placeholder{color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));}
 .ksui-datatable-search-input:focus{border-color:var(--ksui-dt-accent-border,rgba(245,158,11,0.4));}
 @media (min-width:640px){.ksui-datatable-search-input{width:18rem;}}
 .ksui-datatable-scroll{overflow-x:auto;transition:opacity 0.15s ease;}
 .ksui-datatable-table{width:100%;text-align:left;font-size:0.78125rem;line-height:1.3;border-collapse:collapse;}
-.ksui-datatable-thead{border-bottom:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-thead-bg,rgba(255,255,255,0.03));font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;font-size:0.65625rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ksui-dt-muted,#71717a);}
+.ksui-datatable-thead{border-bottom:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));background:var(--ksui-dt-thead-bg,rgba(255,255,255,0.03));font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;font-size:0.65625rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));}
 .ksui-datatable-th{padding:0.5625rem 0.875rem;background:var(--ksui-dt-thead-bg,rgba(255,255,255,0.03));white-space:nowrap;}
 .ksui-datatable-th-num{text-align:right;}
 .ksui-datatable-th-sortable{cursor:pointer;transition:color 0.15s ease;}
@@ -125,44 +126,39 @@ const DATATABLE_CSS = `
 .ksui-datatable-th-inner{display:inline-flex;align-items:center;}
 .ksui-datatable-sort-icon{margin-left:0.25rem;display:inline-flex;color:var(--ksui-dt-faint,#52525b);}
 .ksui-datatable-row{border-top:1px solid var(--ksui-dt-row-border,rgba(39,39,42,0.3));transition:background-color 0.15s ease;}
-.ksui-datatable-row:hover{background-color:var(--ksui-dt-row-hover,rgba(39,39,42,0.5));}
+.ksui-datatable-row:hover{background-color:var(--ksui-dt-row-hover,var(--ks-border,rgba(39,39,42,0.5)));}
 .ksui-datatable-row-clickable{cursor:pointer;}
 .ksui-datatable-row-clickable:active{background-color:var(--ksui-dt-row-active,rgba(39,39,42,0.7));}
 .ksui-datatable-td{padding:0.5rem 0.875rem;vertical-align:middle;white-space:nowrap;}
 .ksui-datatable-td-num{font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;color:var(--ksui-dt-text-strong,#d4d4d8);}
 .ksui-datatable-code{display:block;font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;font-size:0.71875rem;color:var(--ksui-dt-fg,#e4e4e7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34ch;}
-.ksui-datatable-badge{display:inline-block;font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;font-size:0.625rem;padding:0.125rem 0.4375rem;border-radius:0.3125rem;letter-spacing:0.02em;background:var(--ksui-dt-control-bg,#18181b);color:var(--ksui-dt-text,#a1a1aa);}
-.ksui-datatable-badge-ok{background:var(--ksui-dt-good-bg,rgba(52,211,153,0.14));color:var(--ksui-dt-good,#34d399);}
-.ksui-datatable-badge-warn{background:var(--ksui-dt-accent-bg,rgba(217,119,6,0.2));color:var(--ksui-dt-accent,#fbbf24);}
-.ksui-datatable-badge-danger{background:var(--ksui-dt-danger-bg,rgba(248,113,113,0.14));color:var(--ksui-dt-danger,#f87171);}
+.ksui-datatable-badge{display:inline-block;font-family:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;font-size:0.625rem;padding:0.125rem 0.4375rem;border-radius:0.3125rem;letter-spacing:0.02em;background:var(--ksui-dt-control-bg,var(--ks-input-bg,#18181b));color:var(--ksui-dt-text,var(--ks-fg-muted,#a1a1aa));}
+.ksui-datatable-badge-ok{background:var(--ksui-dt-good-bg,rgba(52,211,153,0.14));color:var(--ksui-dt-good,var(--ks-success-fg,#34d399));}
+.ksui-datatable-badge-warn{background:var(--ksui-dt-accent-bg,rgba(217,119,6,0.2));color:var(--ksui-dt-accent,var(--ks-accent,#fbbf24));}
+.ksui-datatable-badge-danger{background:var(--ksui-dt-danger-bg,rgba(248,113,113,0.14));color:var(--ksui-dt-danger,var(--ks-danger-fg,#f87171));}
 .ksui-datatable-expansion-row{border-top:1px solid var(--ksui-dt-row-border,rgba(39,39,42,0.3));background-color:var(--ksui-dt-expansion-bg,rgba(9,9,11,0.4));}
 .ksui-datatable-expansion-td{padding:0;}
-.ksui-datatable-skeleton{height:1rem;width:100%;border-radius:0.25rem;background:var(--ksui-dt-skeleton,rgba(39,39,42,0.5));animation:ksuiDatatablePulse 1.5s cubic-bezier(0.4,0,0.6,1) infinite;}
+.ksui-datatable-skeleton{height:1rem;width:100%;border-radius:0.25rem;background:var(--ksui-dt-skeleton,var(--ks-border,rgba(39,39,42,0.5)));animation:ksuiDatatablePulse 1.5s cubic-bezier(0.4,0,0.6,1) infinite;}
 @keyframes ksuiDatatablePulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
-.ksui-datatable-empty{padding:3rem 1rem;text-align:center;color:var(--ksui-dt-muted,#71717a);}
-.ksui-datatable-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));padding:0.625rem 0.875rem;}
-.ksui-datatable-info{font-size:0.75rem;color:var(--ksui-dt-muted,#71717a);}
-.ksui-datatable-showmore{border-radius:0.5rem;border:1px solid var(--ksui-dt-border,rgba(39,39,42,0.5));background:var(--ksui-dt-control-bg,#18181b);padding:0.5rem 1rem;font-size:0.75rem;font-weight:500;color:var(--ksui-dt-text-strong,#d4d4d8);transition:border-color 0.15s ease,color 0.15s ease;cursor:pointer;}
-.ksui-datatable-showmore:hover:not(:disabled){border-color:var(--ksui-dt-accent-border,rgba(245,158,11,0.4));color:var(--ksui-dt-accent,#fbbf24);}
+.ksui-datatable-empty{padding:3rem 1rem;text-align:center;color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));}
+.ksui-datatable-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));padding:0.625rem 0.875rem;}
+.ksui-datatable-info{font-size:0.75rem;color:var(--ksui-dt-muted,var(--ks-fg-subtle,#71717a));}
+.ksui-datatable-showmore{border-radius:0.5rem;border:1px solid var(--ksui-dt-border,var(--ks-border,rgba(39,39,42,0.5)));background:var(--ksui-dt-control-bg,var(--ks-input-bg,#18181b));padding:0.5rem 1rem;font-size:0.75rem;font-weight:500;color:var(--ksui-dt-text-strong,#d4d4d8);transition:border-color 0.15s ease,color 0.15s ease;cursor:pointer;}
+.ksui-datatable-showmore:hover:not(:disabled){border-color:var(--ksui-dt-accent-border,rgba(245,158,11,0.4));color:var(--ksui-dt-accent,var(--ks-accent,#fbbf24));}
 .ksui-datatable-showmore:disabled{cursor:not-allowed;opacity:0.5;}
 .ksui-datatable-pager{display:flex;align-items:center;gap:0.25rem;}
-.ksui-datatable-pager-arrow{border-radius:0.25rem;padding:0.375rem;color:var(--ksui-dt-text,#a1a1aa);transition:background-color 0.15s ease,color 0.15s ease;background:transparent;border:0;cursor:pointer;display:inline-flex;}
-.ksui-datatable-pager-arrow:hover:not(:disabled){background-color:var(--ksui-dt-row-hover,rgba(39,39,42,0.5));color:var(--ksui-dt-fg-strong,#ffffff);}
+.ksui-datatable-pager-arrow{border-radius:0.25rem;padding:0.375rem;color:var(--ksui-dt-text,var(--ks-fg-muted,#a1a1aa));transition:background-color 0.15s ease,color 0.15s ease;background:transparent;border:0;cursor:pointer;display:inline-flex;}
+.ksui-datatable-pager-arrow:hover:not(:disabled){background-color:var(--ksui-dt-row-hover,var(--ks-border,rgba(39,39,42,0.5)));color:var(--ksui-dt-fg-strong,var(--ks-fg,#ffffff));}
 .ksui-datatable-pager-arrow:disabled{cursor:not-allowed;opacity:0.3;}
-.ksui-datatable-pager-num{border-radius:0.25rem;padding:0.25rem 0.625rem;font-size:0.75rem;color:var(--ksui-dt-text,#a1a1aa);transition:background-color 0.15s ease,color 0.15s ease;background:transparent;border:0;cursor:pointer;}
-.ksui-datatable-pager-num:hover{background-color:var(--ksui-dt-row-hover,rgba(39,39,42,0.5));color:var(--ksui-dt-fg-strong,#ffffff);}
-.ksui-datatable-pager-num-active{background-color:var(--ksui-dt-accent-bg,rgba(217,119,6,0.2));font-weight:500;color:var(--ksui-dt-accent,#fbbf24);}
-.ksui-datatable-pager-num-active:hover{background-color:var(--ksui-dt-accent-bg,rgba(217,119,6,0.2));color:var(--ksui-dt-accent,#fbbf24);}
+.ksui-datatable-pager-num{border-radius:0.25rem;padding:0.25rem 0.625rem;font-size:0.75rem;color:var(--ksui-dt-text,var(--ks-fg-muted,#a1a1aa));transition:background-color 0.15s ease,color 0.15s ease;background:transparent;border:0;cursor:pointer;}
+.ksui-datatable-pager-num:hover{background-color:var(--ksui-dt-row-hover,var(--ks-border,rgba(39,39,42,0.5)));color:var(--ksui-dt-fg-strong,var(--ks-fg,#ffffff));}
+.ksui-datatable-pager-num-active{background-color:var(--ksui-dt-accent-bg,rgba(217,119,6,0.2));font-weight:500;color:var(--ksui-dt-accent,var(--ks-accent,#fbbf24));}
+.ksui-datatable-pager-num-active:hover{background-color:var(--ksui-dt-accent-bg,rgba(217,119,6,0.2));color:var(--ksui-dt-accent,var(--ks-accent,#fbbf24));}
 .ksui-datatable-pager-ellipsis{padding:0 0.375rem;font-size:0.75rem;color:var(--ksui-dt-faint,#52525b);}
 `;
 
 function ensureDataTableStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const el = document.createElement("style");
-  el.id = STYLE_ID;
-  el.textContent = DATATABLE_CSS;
-  document.head.appendChild(el);
+  injectCSS(STYLE_ID, DATATABLE_CSS);
 }
 
 // ---------------------------------------------------------------------------

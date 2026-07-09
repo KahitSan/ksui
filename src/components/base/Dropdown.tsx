@@ -53,7 +53,7 @@ export interface DropdownProps {
 function statusColor(status?: DropdownItemStatus): string {
   switch (status) {
     case "open":
-      return "#10B981";
+      return "var(--ks-success, #10b981)";
     case "closed":
       return "#6B7280";
     default:
@@ -96,7 +96,7 @@ export default function Dropdown(props: DropdownProps): JSX.Element {
       <button
         onClick={() => !props.disabled && setIsOpen(!isOpen())}
         disabled={props.disabled}
-        class={`flex items-center gap-3 px-4 py-3 bg-zinc-900/50 border border-zinc-800/50 rounded-lg hover:bg-zinc-900/70 transition-all backdrop-blur-sm select-none ${
+        class={`flex items-center gap-3 px-4 py-3 bg-zinc-900/50 border border-[var(--ks-border,rgba(39,39,42,0.5))] rounded-lg hover:bg-zinc-900/70 transition-all backdrop-blur-sm select-none ${
           props.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
         }`}
         style={{ "min-width": props.minWidth ?? "280px" }}
@@ -105,18 +105,18 @@ export default function Dropdown(props: DropdownProps): JSX.Element {
           {(Icon) => <Dynamic component={Icon()} size={18} class="text-amber-500" />}
         </Show>
         <div class="flex-1 text-left">
-          <div class="font-semibold text-white">
+          <div class="font-semibold text-[var(--ks-fg,#ffffff)]">
             {currentSelection()?.label ?? props.placeholder ?? "Select an option"}
           </div>
           <Show when={currentSelection()?.description}>
-            <div class="text-xs text-zinc-400">{currentSelection()?.description}</div>
+            <div class="text-xs text-[var(--ks-fg-muted,#a1a1aa)]">{currentSelection()?.description}</div>
           </Show>
         </div>
-        <ChevronDown size={18} class={`text-zinc-400 transition-transform ${isOpen() ? "rotate-180" : ""}`} />
+        <ChevronDown size={18} class={`text-[var(--ks-fg-muted,#a1a1aa)] transition-transform ${isOpen() ? "rotate-180" : ""}`} />
       </button>
 
       <Show when={isOpen()}>
-        <div class="absolute top-full left-0 mt-2 w-full bg-zinc-900/95 border border-zinc-800/50 rounded-lg backdrop-blur-xl z-50 shadow-xl select-none">
+        <div class="absolute top-full left-0 mt-2 w-full bg-zinc-900/95 border border-[var(--ks-border,rgba(39,39,42,0.5))] rounded-lg backdrop-blur-xl z-50 shadow-xl select-none">
           <For each={props.items}>
             {(item) => (
               <button
@@ -142,16 +142,16 @@ export default function Dropdown(props: DropdownProps): JSX.Element {
                   </Show>
                 </div>
                 <div class="flex-1 text-left min-w-0">
-                  <div class="font-medium text-white flex items-center gap-2">
+                  <div class="font-medium text-[var(--ks-fg,#ffffff)] flex items-center gap-2">
                     {item.label}
                     <Show when={item.badge}>
-                      <span class="px-2 py-0.5 text-xs font-medium bg-zinc-700/50 text-zinc-400 rounded flex-shrink-0">
+                      <span class="px-2 py-0.5 text-xs font-medium bg-zinc-700/50 text-[var(--ks-fg-muted,#a1a1aa)] rounded flex-shrink-0">
                         {item.badge}
                       </span>
                     </Show>
                   </div>
                   <Show when={item.description}>
-                    <div class="text-xs text-zinc-400 truncate">{item.description}</div>
+                    <div class="text-xs text-[var(--ks-fg-muted,#a1a1aa)] truncate">{item.description}</div>
                   </Show>
                 </div>
               </button>

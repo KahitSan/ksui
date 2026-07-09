@@ -53,7 +53,7 @@ export default function AddAttachmentTile(props: Props) {
           setOpen(!open());
         }}
         disabled={props.uploading}
-        class="w-24 h-24 flex flex-col items-center justify-center gap-1 border border-dashed border-zinc-700 bg-zinc-800/30 text-zinc-400 hover:bg-zinc-800/60 hover:border-amber-500/40 hover:text-amber-400 active:bg-zinc-800/80 transition-colors ks-hud-clip-top-left-bottom-right cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        class="w-24 h-24 flex flex-col items-center justify-center gap-1 border border-dashed border-[var(--ks-border-strong,#3f3f46)] bg-zinc-800/30 text-[var(--ks-fg-muted,#a1a1aa)] hover:bg-zinc-800/60 hover:border-amber-500/40 hover:text-[var(--ks-accent,#fbbf24)] active:bg-zinc-800/80 transition-colors ks-hud-clip-top-left-bottom-right cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label="Add attachment"
       >
         <Plus size={22} />

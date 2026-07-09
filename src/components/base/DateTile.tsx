@@ -53,7 +53,7 @@ export default function DateTile(props: DateTileProps): JSX.Element {
     >
       <div
         style={{ height: "18px" }}
-        class="flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.15em] bg-zinc-800/70 text-zinc-500"
+        class="flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.15em] bg-zinc-800/70 text-[var(--ks-fg-subtle,#71717a)]"
       >
         {props.topLabel ?? ""}
       </div>
@@ -62,7 +62,7 @@ export default function DateTile(props: DateTileProps): JSX.Element {
           class="text-xl font-semibold leading-none tabular-nums"
           classList={{
             "text-amber-400/90": on(),
-            "text-zinc-500": !on(),
+            "text-[var(--ks-fg-subtle,#71717a)]": !on(),
           }}
         >
           {props.value}
@@ -71,8 +71,8 @@ export default function DateTile(props: DateTileProps): JSX.Element {
           <div
             class="text-[9px] mt-0.5 tabular-nums"
             classList={{
-              "text-zinc-500": on(),
-              "text-zinc-700": !on(),
+              "text-[var(--ks-fg-subtle,#71717a)]": on(),
+              "text-[var(--ks-border-strong,#3f3f46)]": !on(),
             }}
           >
             {props.subLabel}

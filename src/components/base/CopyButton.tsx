@@ -44,7 +44,7 @@ export default function CopyButton(props: CopyButtonProps): JSX.Element {
       type="button"
       onClick={handleClick}
       aria-label={props.ariaLabel ?? "Copy"}
-      class={`ks-interactive px-2 py-1.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-xs flex items-center gap-1 ${props.class ?? ""}`}
+      class={`ks-interactive px-2 py-1.5 rounded bg-zinc-800 border border-[var(--ks-border-strong,#3f3f46)] text-zinc-300 hover:text-[var(--ks-fg,#ffffff)] text-xs flex items-center gap-1 ${props.class ?? ""}`}
     >
       {copied() ? <Check size={props.size ?? 12} /> : <Copy size={props.size ?? 12} />}
       {copied() ? (props.copiedLabel ?? "Copied") : (props.label ?? "Copy")}

@@ -78,7 +78,7 @@ export default function CameraCapture(props: Props) {
       class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
     >
       <div class="card-bg rounded-xl border border-amber-500/30 overflow-hidden max-w-lg w-full shadow-2xl">
-        <div class="flex items-center justify-between p-3 border-b border-zinc-800/50">
+        <div class="flex items-center justify-between p-3 border-b border-[var(--ks-border,rgba(39,39,42,0.5))]">
           <span
             class="text-sm text-zinc-200 font-medium flex items-center gap-2"
             data-testid="camera-capture-title"
@@ -87,7 +87,7 @@ export default function CameraCapture(props: Props) {
           </span>
           <button
             onClick={() => props.onClose()}
-            class="text-zinc-500 hover:text-zinc-300 cursor-pointer"
+            class="text-[var(--ks-fg-subtle,#71717a)] hover:text-zinc-300 cursor-pointer"
             aria-label="Close camera"
           >
             <X size={18} />
@@ -96,7 +96,7 @@ export default function CameraCapture(props: Props) {
 
         <Show when={error()}>
           <div class="p-6 text-center">
-            <p class="text-sm text-red-400 mb-3">{error()}</p>
+            <p class="text-sm text-[var(--ks-danger-fg,#f87171)] mb-3">{error()}</p>
             <Button intent="secondary" variant="ghost" onClick={() => props.onClose()}>
               Close
             </Button>

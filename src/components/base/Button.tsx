@@ -23,6 +23,7 @@ import {
   type Component,
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { injectCSS } from "../../utils/inject-css";
 
 const BUTTON_STYLE_ID = "ks-button-inline-style";
 const BUTTON_CSS = `
@@ -49,12 +50,7 @@ const BUTTON_CSS = `
 `;
 
 function ensureButtonStyle() {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(BUTTON_STYLE_ID)) return;
-  const el = document.createElement("style");
-  el.id = BUTTON_STYLE_ID;
-  el.textContent = BUTTON_CSS;
-  document.head.appendChild(el);
+  injectCSS(BUTTON_STYLE_ID, BUTTON_CSS);
 }
 
 const styles: Record<string, string> = {

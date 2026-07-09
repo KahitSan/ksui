@@ -76,7 +76,7 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
     );
   });
 
-  const defaultBadge = () => "bg-zinc-800 text-zinc-400 border border-transparent";
+  const defaultBadge = () => "bg-zinc-800 text-[var(--ks-fg-muted,#a1a1aa)] border border-transparent";
   const badgeClass = () => props.badgeClass?.(props.value) ?? defaultBadge();
 
   const emptyStateMessage = () => {
@@ -176,7 +176,7 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
           <div
             ref={popupRef}
             role="listbox"
-            class="z-[100] rounded-md border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
+            class="z-[100] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-zinc-900/95 backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
           >
             <Show when={showSearch()}>
@@ -194,7 +194,7 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
             <div class="flex-1 overflow-y-auto">
               <Show
                 when={!props.loading && filtered().length > 0}
-                fallback={<div class="px-3 py-2 text-xs text-zinc-500">{emptyStateMessage()}</div>}
+                fallback={<div class="px-3 py-2 text-xs text-[var(--ks-fg-subtle,#71717a)]">{emptyStateMessage()}</div>}
               >
                 <For each={filtered()}>
                   {(opt) => (
@@ -204,17 +204,17 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
                       aria-selected={opt.value === props.value}
                       onClick={() => handleSelect(opt.value)}
                       class={`w-full text-left px-3 py-2 text-xs hover:bg-amber-500/10 transition-colors flex items-center justify-between gap-2 ${
-                        opt.value === props.value ? "text-amber-400" : "text-zinc-200"
+                        opt.value === props.value ? "text-[var(--ks-accent,#fbbf24)]" : "text-zinc-200"
                       }`}
                     >
                       <span class="flex flex-col">
                         <span class="font-medium">{opt.label}</span>
                         <Show when={opt.description}>
-                          <span class="text-[10px] text-zinc-500">{opt.description}</span>
+                          <span class="text-[10px] text-[var(--ks-fg-subtle,#71717a)]">{opt.description}</span>
                         </Show>
                       </span>
                       <Show when={opt.value === props.value}>
-                        <span class="text-amber-400" aria-hidden="true">✓</span>
+                        <span class="text-[var(--ks-accent,#fbbf24)]" aria-hidden="true">✓</span>
                       </Show>
                     </button>
                   )}

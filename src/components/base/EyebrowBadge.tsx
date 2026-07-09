@@ -16,9 +16,9 @@ interface ToneClass {
 // the badge reads as a quiet accent rather than a loud chip.
 const TONE_CLASS: Record<EyebrowTone, ToneClass> = {
   amber: {
-    text: "text-amber-400",
+    text: "text-[var(--ks-accent,#fbbf24)]",
     bg: "bg-amber-500/10",
-    border: "border-amber-500",
+    border: "border-[var(--ks-warning,#f59e0b)]",
   },
   blue: {
     text: "text-blue-400",
@@ -26,18 +26,18 @@ const TONE_CLASS: Record<EyebrowTone, ToneClass> = {
     border: "border-blue-500",
   },
   emerald: {
-    text: "text-emerald-400",
+    text: "text-[var(--ks-success-fg,#34d399)]",
     bg: "bg-emerald-500/10",
-    border: "border-emerald-500",
+    border: "border-[var(--ks-success,#10b981)]",
   },
   red: {
-    text: "text-red-400",
+    text: "text-[var(--ks-danger-fg,#f87171)]",
     bg: "bg-red-500/10",
-    border: "border-red-500",
+    border: "border-[var(--ks-danger,#ef4444)]",
   },
   zinc: {
-    text: "text-zinc-500",
-    bg: "bg-zinc-800/50",
+    text: "text-[var(--ks-fg-subtle,#71717a)]",
+    bg: "bg-[var(--ks-border,rgba(39,39,42,0.5))]",
     border: "border-zinc-600",
   },
 };

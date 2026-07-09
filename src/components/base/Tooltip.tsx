@@ -62,7 +62,7 @@ export default function Tooltip(props: TooltipProps): JSX.Element {
       <span
         role="tooltip"
         id={tooltipId}
-        class={`pointer-events-none absolute px-2 py-1 rounded-md bg-zinc-900 border border-zinc-700/80 text-[11px] text-zinc-100 opacity-0 group-hover/tt:opacity-100 group-focus-within/tt:opacity-100 transition-opacity duration-150 delay-150 z-50 shadow-lg ${
+        class={`pointer-events-none absolute px-2 py-1 rounded-md bg-[var(--ks-overlay-surface,#18181b)] border border-zinc-700/80 text-[11px] text-zinc-100 opacity-0 group-hover/tt:opacity-100 group-focus-within/tt:opacity-100 transition-opacity duration-150 delay-150 z-50 shadow-lg ${
           align() === "start" ? "left-0" : "left-1/2 -translate-x-1/2"
         } ${props.wrap ? "whitespace-normal w-max max-w-[260px]" : "whitespace-nowrap"} ${
           placement() === "bottom" ? "top-full mt-1" : "bottom-full mb-1"

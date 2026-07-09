@@ -6,6 +6,7 @@
 import type { Component, JSX } from "solid-js";
 import { createMemo, splitProps, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { injectCSS } from "../../utils/inject-css";
 
 // The monolith ships these as a CSS module (ProgressBar.module.css). The
 // plugin remote builds to a single IIFE that the host serves as one script —
@@ -14,22 +15,16 @@ import { Dynamic } from "solid-js/web";
 // the keyframes + helper classes once per page via a <style> tag and reference
 // them with plain (unscoped) class names so the bundle stays self-contained.
 const PROGRESS_STYLE_ID = "ks-progress-bar-inline-style";
+// Shimmer stops per THEME-SPEC §6a named exception: primary through
+// surface-raised reads as a brand-tinted sheen instead of a flat white one.
 const PROGRESS_CSS = `
 .ks-progress-fill { position: relative; border-radius: 0; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
 .ks-progress-indicator { border-radius: 0; box-shadow: 0 0 2px currentColor; }
 .ks-progress-overflow { position: relative; }
 @keyframes ksLiveTimerShimmer { 0% { transform: translateX(-100%) skewX(-25deg); } 100% { transform: translateX(100%) skewX(-25deg); } }
-.ks-progress-shimmer { animation: ksLiveTimerShimmer 2s infinite; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent); background-size: 200% 100%; height: 100%; width: 100%; position: absolute; top: 0; left: 0; opacity: 0.7; }
+.ks-progress-shimmer { animation: ksLiveTimerShimmer 2s infinite; background: linear-gradient(90deg, transparent, var(--ks-primary, #c9a961), transparent); background-size: 200% 100%; height: 100%; width: 100%; position: absolute; top: 0; left: 0; opacity: 0.7; }
 @media (prefers-reduced-motion: reduce) { .ks-progress-fill { transition: width 0.3s ease; } }
 `;
-function ensureProgressStyle() {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(PROGRESS_STYLE_ID)) return;
-  const el = document.createElement("style");
-  el.id = PROGRESS_STYLE_ID;
-  el.textContent = PROGRESS_CSS;
-  document.head.appendChild(el);
-}
 const styles: Record<string, string> = {
   "ks-progress-fill": "ks-progress-fill",
   "ks-progress-indicator": "ks-progress-indicator",
@@ -149,7 +144,7 @@ function extractTextSize(className: string): number {
 }
 
 const ProgressBar: Component<ProgressBarProps> = (props) => {
-  ensureProgressStyle();
+  injectCSS(PROGRESS_STYLE_ID, PROGRESS_CSS);
   const [local, others] = splitProps(props, [
     "progress",
     "icon",
@@ -185,7 +180,7 @@ const ProgressBar: Component<ProgressBarProps> = (props) => {
 
   const containerClasses = createMemo(() =>
     cn(
-      "select-none relative overflow-hidden rounded bg-black/20 border border-zinc-700/40",
+      "select-none relative overflow-hidden rounded bg-[var(--ks-surface,#0f0f0f)]/20 border border-[var(--ks-border-strong,#3f3f46)]/40",
       "h-8",
       !classProp()?.includes("w-") ? "w-full" : "",
       classProp(),
@@ -302,9 +297,9 @@ const ProgressBar: Component<ProgressBarProps> = (props) => {
           )}
           {label() && (
             <>
-              {(Icon() || statusLabel()) && <span class="text-zinc-500 mx-1">·</span>}
+              {(Icon() || statusLabel()) && <span class="text-[var(--ks-fg-subtle,#71717a)] mx-1">·</span>}
               <span class="flex-1 min-w-0">
-                <span class="text-zinc-400 block overflow-hidden text-ellipsis whitespace-nowrap">
+                <span class="text-[var(--ks-fg-muted,#a1a1aa)] block overflow-hidden text-ellipsis whitespace-nowrap">
                   {label()}
                 </span>
               </span>
@@ -317,7 +312,7 @@ const ProgressBar: Component<ProgressBarProps> = (props) => {
           </div>
         ) : !hidePercentage() ? (
           <div class="flex-shrink-0 ml-2 text-right">
-            <span class="font-mono font-medium text-zinc-400">{Math.round(progressVal())}%</span>
+            <span class="font-mono font-medium text-[var(--ks-fg-muted,#a1a1aa)]">{Math.round(progressVal())}%</span>
           </div>
         ) : null}
       </div>

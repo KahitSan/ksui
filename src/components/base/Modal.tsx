@@ -17,6 +17,7 @@
 
 import { JSX, onCleanup, onMount, splitProps } from "solid-js";
 import { autoFocusOnMount, lockPullToRefresh, unlockPullToRefresh, useFocusTrap } from "../../utils/dom";
+import { injectCSS } from "../../utils/inject-css";
 
 export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "5xl" | "7xl";
 export type ModalTone = "default" | "danger";
@@ -33,27 +34,22 @@ const SIZE_MAX_WIDTH: Record<ModalSize, string> = {
 };
 
 const STYLE_ID = "ksui-modal-style";
-
-function ensureModalStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
+// Backdrops read --ks-overlay (§6a named exception); card surface/border keep
+// the old --ksui-modal-* name as the live read-point, per §1.4's direction,
+// now falling through to the new token before the dark literal.
+const STYLE_CSS = `
 .ksui-modal-dialog{position:fixed;inset:0;z-index:50;background:transparent;padding:0;margin:0;max-width:none;max-height:none;width:100vw;height:100vh;border:0;}
 .ksui-modal-dialog[open]{display:flex;align-items:center;justify-content:center;padding:1rem;}
-.ksui-modal-dialog::backdrop{background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);}
+.ksui-modal-dialog::backdrop{background:var(--ks-overlay, rgba(0,0,0,0.7));backdrop-filter:blur(4px);}
 .ksui-modal-sheet-overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;}
 @media (min-width:640px){.ksui-modal-sheet-overlay{align-items:center;padding:1rem;}}
-.ksui-modal-sheet-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);}
-.ksui-modal-card{position:relative;z-index:10;width:100%;background:var(--ksui-modal-bg,#18181b);color:var(--ksui-modal-fg,inherit);border:1px solid var(--ksui-modal-border,rgba(245,158,11,0.3));border-radius:0.75rem;padding:1.5rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.6);max-height:90vh;overflow-x:hidden;overflow-y:auto;}
+.ksui-modal-sheet-backdrop{position:absolute;inset:0;background:var(--ks-overlay, rgba(0,0,0,0.7));backdrop-filter:blur(6px);}
+.ksui-modal-card{position:relative;z-index:10;width:100%;background:var(--ksui-modal-bg,var(--ks-overlay-surface,#18181b));color:var(--ksui-modal-fg,inherit);border:1px solid var(--ksui-modal-border,rgba(245,158,11,0.3));border-radius:0.75rem;padding:1.5rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.6);max-height:90vh;overflow-x:hidden;overflow-y:auto;}
 .ksui-modal-card.danger{border-color:var(--ksui-modal-border-danger,rgba(239,68,68,0.3));}
-.ksui-modal-sheet-card{position:relative;z-index:10;width:100%;background:var(--ksui-modal-bg,#18181b);color:var(--ksui-modal-fg,inherit);border:1px solid var(--ksui-modal-border,rgba(245,158,11,0.3));box-shadow:0 25px 50px -12px rgba(0,0,0,0.6);max-height:92vh;overflow:hidden;overscroll-behavior:contain;}
+.ksui-modal-sheet-card{position:relative;z-index:10;width:100%;background:var(--ksui-modal-bg,var(--ks-overlay-surface,#18181b));color:var(--ksui-modal-fg,inherit);border:1px solid var(--ksui-modal-border,rgba(245,158,11,0.3));box-shadow:0 25px 50px -12px rgba(0,0,0,0.6);max-height:92vh;overflow:hidden;overscroll-behavior:contain;}
 .ksui-modal-sheet-card.danger{border-color:var(--ksui-modal-border-danger,rgba(239,68,68,0.3));}
 @media (min-width:640px){.ksui-modal-sheet-card{width:auto;border-radius:0.75rem;max-height:88vh;}}
 `;
-  document.head.appendChild(style);
-}
 
 export interface ModalProps {
   /** Fired on Escape, backdrop click, or any other dismissal trigger. */
@@ -74,7 +70,7 @@ export interface ModalProps {
 type LocalProps = Omit<ModalProps, "variant">;
 
 export function Modal(props: ModalProps): JSX.Element {
-  ensureModalStyle();
+  injectCSS(STYLE_ID, STYLE_CSS);
   const [local] = splitProps(props, [
     "onClose",
     "dismissable",

@@ -1,4 +1,5 @@
 import { For, type Component, type JSX } from "solid-js";
+import { injectCSS } from "../../utils/inject-css";
 
 /** Icon component shape: any component that accepts a numeric `size`
  *  (lucide-solid icons satisfy this, as does any custom SVG component). */
@@ -38,19 +39,6 @@ export interface SocialLinksBarProps {
 const CLIP_STYLE_ID = "ksui-social-clip-style";
 const CLIP_STYLE = `.ksui-social-clip{clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%);}`;
 
-// Inject the clip-path rule once per document, matching the SSR-safe
-// getElementById-dedupe pattern used by Button/ThemeToggle. A module-level
-// boolean would be non-reentrant across SSR requests (the worker reuses the
-// module), so the style must be keyed off the document, not module state.
-function ensureSocialClipStyle(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(CLIP_STYLE_ID)) return;
-  const el = document.createElement("style");
-  el.id = CLIP_STYLE_ID;
-  el.textContent = CLIP_STYLE;
-  document.head.appendChild(el);
-}
-
 /**
  * A horizontal row of accessible, round (or clip-cornered) icon buttons that
  * link out to external profiles. Each button opens its href in a new tab with
@@ -59,7 +47,7 @@ function ensureSocialClipStyle(): void {
  * Domain-free: the specific URLs, icons, and labels all come from `links`.
  */
 export default function SocialLinksBar(props: SocialLinksBarProps): JSX.Element {
-  ensureSocialClipStyle();
+  injectCSS(CLIP_STYLE_ID, CLIP_STYLE);
   const shape = () => props.shape ?? "round";
   const btn = () => props.buttonSize ?? (shape() === "clip" ? 48 : 40);
   const icon = () => props.iconSize ?? Math.round(btn() * 0.45);
@@ -80,7 +68,7 @@ export default function SocialLinksBar(props: SocialLinksBarProps): JSX.Element 
             rel="noopener noreferrer"
             title={link.label}
             aria-label={link.label}
-            class={`flex items-center justify-center bg-zinc-800 text-zinc-400 transition-all hover:bg-amber-500 hover:text-black ${shapeClass()}`}
+            class={`flex items-center justify-center bg-[var(--ks-surface-raised,#1a1a1a)] text-[var(--ks-fg-muted,#a1a1aa)] transition-all hover:bg-[var(--ks-accent,#fbbf24)] hover:text-[var(--ks-fg-on-accent,#0a0a0a)] ${shapeClass()}`}
             style={{ width: `${btn()}px`, height: `${btn()}px` }}
           >
             {link.icon({ size: icon() })}

@@ -193,11 +193,11 @@ export default function ImageCropper(props: ImageCropperProps) {
   return (
     <Modal onClose={props.onCancel} size="md">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-zinc-100">{props.title ?? "Crop logo"}</h2>
+        <h2 class="text-lg font-semibold text-[var(--ks-fg,#ffffff)]">{props.title ?? "Crop logo"}</h2>
         <button
           type="button"
           onClick={props.onCancel}
-          class="text-zinc-500 hover:text-zinc-300 cursor-pointer"
+          class="text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-fg-muted,#a1a1aa)] cursor-pointer"
           disabled={props.busy}
           aria-label="Close cropper"
         >
@@ -206,12 +206,12 @@ export default function ImageCropper(props: ImageCropperProps) {
       </div>
 
       <Show when={loadError()}>
-        <div class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 mb-3">
+        <div class="rounded-lg border border-[var(--ks-danger,#ef4444)]/30 bg-[var(--ks-danger-bg,rgba(239,68,68,0.12))] px-3 py-2 text-sm text-[var(--ks-danger-fg,#f87171)] mb-3">
           {loadError()}
         </div>
       </Show>
 
-      <p class="text-xs text-zinc-500 mb-3">
+      <p class="text-xs text-[var(--ks-fg-subtle,#71717a)] mb-3">
         Drag inside the box to reposition. Drag a corner to resize. The result is saved as a 1:1 square.
       </p>
 
@@ -219,43 +219,44 @@ export default function ImageCropper(props: ImageCropperProps) {
         <Show when={image()}>
           {(img) => (
             <div
-              class="relative select-none touch-none bg-zinc-900 rounded-lg overflow-hidden"
+              class="relative select-none touch-none bg-[var(--ks-surface,#0f0f0f)] rounded-lg overflow-hidden"
               style={{ width: `${img().displayedWidth}px`, height: `${img().displayedHeight}px` }}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
             >
               <img src={imageUrl()} alt="" draggable={false} class="absolute inset-0 w-full h-full pointer-events-none" />
+              {/* bg-black/60 (0.6 alpha) intentionally not tokenized — --ks-overlay's dark default is 0.7, a byte mismatch would regress the mask's visible darkness */}
               <div class="absolute bg-black/60 pointer-events-none" style={maskTop()} />
               <div class="absolute bg-black/60 pointer-events-none" style={maskBottom()} />
               <div class="absolute bg-black/60 pointer-events-none" style={maskLeft()} />
               <div class="absolute bg-black/60 pointer-events-none" style={maskRight()} />
-              <div class="absolute border-2 border-amber-400 cursor-move" style={selectionStyle()} onPointerDown={handlePointerDown("move")}>
-                <span class="absolute inset-0 ring-1 ring-amber-400/30 pointer-events-none" />
-                <span class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-amber-400 rounded-sm cursor-nwse-resize" onPointerDown={handlePointerDown("tl")} />
-                <span class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-amber-400 rounded-sm cursor-nesw-resize" onPointerDown={handlePointerDown("tr")} />
-                <span class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-amber-400 rounded-sm cursor-nesw-resize" onPointerDown={handlePointerDown("bl")} />
-                <span class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-amber-400 rounded-sm cursor-nwse-resize" onPointerDown={handlePointerDown("br")} />
+              <div class="absolute border-2 border-[var(--ks-accent,#fbbf24)] cursor-move" style={selectionStyle()} onPointerDown={handlePointerDown("move")}>
+                <span class="absolute inset-0 ring-1 ring-[var(--ks-accent,#fbbf24)]/30 pointer-events-none" />
+                <span class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-[var(--ks-accent,#fbbf24)] rounded-sm cursor-nwse-resize" onPointerDown={handlePointerDown("tl")} />
+                <span class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-[var(--ks-accent,#fbbf24)] rounded-sm cursor-nesw-resize" onPointerDown={handlePointerDown("tr")} />
+                <span class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-[var(--ks-accent,#fbbf24)] rounded-sm cursor-nesw-resize" onPointerDown={handlePointerDown("bl")} />
+                <span class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-[var(--ks-accent,#fbbf24)] rounded-sm cursor-nwse-resize" onPointerDown={handlePointerDown("br")} />
               </div>
             </div>
           )}
         </Show>
         <Show when={!image() && !loadError()}>
-          <div class="w-[320px] h-[240px] flex items-center justify-center text-xs text-zinc-500 border border-zinc-700 rounded-lg">
+          <div class="w-[320px] h-[240px] flex items-center justify-center text-xs text-[var(--ks-fg-subtle,#71717a)] border border-[var(--ks-border-strong,#3f3f46)] rounded-lg">
             Loading…
           </div>
         </Show>
       </div>
 
-      <div class="flex items-center justify-between text-xs text-zinc-500 mb-4">
+      <div class="flex items-center justify-between text-xs text-[var(--ks-fg-subtle,#71717a)] mb-4">
         <span>
-          Source crop: <span class="tabular-nums text-zinc-300">{sourceCropSizePx()}</span> px ·
+          Source crop: <span class="tabular-nums text-[var(--ks-fg-muted,#a1a1aa)]">{sourceCropSizePx()}</span> px ·
           output {outputSize()}×{outputSize()}
         </span>
         <button
           type="button"
           onClick={recenter}
-          class="text-amber-400 hover:text-amber-300 transition-colors cursor-pointer disabled:opacity-50"
+          class="text-[var(--ks-accent,#fbbf24)] hover:text-[var(--ks-accent-hover,#fcd34d)] transition-colors cursor-pointer disabled:opacity-50"
           disabled={!image() || props.busy}
         >
           Reset selection

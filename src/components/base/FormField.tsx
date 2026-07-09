@@ -9,10 +9,10 @@ import type { JSX } from "solid-js";
 export default function FormField(props: { label: string; children: JSX.Element; hint?: string }) {
   return (
     <div>
-      <label class="block text-xs text-zinc-500 mb-1">{props.label}</label>
+      <label class="block text-xs text-[var(--ks-fg-subtle,#71717a)] mb-1">{props.label}</label>
       {props.children}
       <Show when={props.hint}>
-        <p class="text-[10px] text-zinc-600 mt-1">{props.hint}</p>
+        <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-1">{props.hint}</p>
       </Show>
     </div>
   );
