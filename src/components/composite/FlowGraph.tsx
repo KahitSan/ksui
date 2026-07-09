@@ -87,7 +87,7 @@ const STYLE_CSS = `
 .ksui-fg-dim{opacity:0.14;}
 .ksui-fg-elabel{fill:var(--ksui-fg-muted,color-mix(in srgb, var(--ks-fg, #ffffff) 78%, transparent));font-size:9.5px;}
 .ksui-fg-elabel-bg{fill:var(--ksui-fg-canvas,var(--ks-bg,#0a0a0a));opacity:0.92;}
-.ksui-fg-card{box-sizing:border-box;height:100%;display:flex;align-items:center;gap:9px;padding:0 11px;border-radius:9px;background:var(--ksui-fg-card,var(--ks-surface-raised,#1a1a1a));border:1px solid var(--ksui-fg-node-border,rgba(255,255,255,0.14));border-left-width:3px;overflow:hidden;}
+.ksui-fg-card{box-sizing:border-box;height:100%;display:flex;align-items:center;gap:9px;padding:0 11px;border-radius:9px;background:var(--ksui-fg-card,var(--ks-surface-raised,#1a1a1a));border:1px solid var(--ksui-fg-node-border,color-mix(in srgb, var(--ks-fg, #ffffff) 14%, transparent));border-left-width:3px;overflow:hidden;}
 .ksui-fg-node.clickable .ksui-fg-card{cursor:pointer;}
 .ksui-fg-node.clickable .ksui-fg-card:hover{background:var(--ks-surface-raised,#1a1a1a);}
 .ksui-fg-node:focus{outline:none;}
@@ -424,7 +424,10 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
               markerHeight="6"
               orient="auto-start-reverse"
             >
-              <path d="M0 0 L8 4 L0 8 z" fill="var(--ksui-fg-edge,rgba(255,255,255,0.45))" />
+              <path
+                d="M0 0 L8 4 L0 8 z"
+                fill="var(--ksui-fg-edge,color-mix(in srgb, var(--ks-fg, #ffffff) 45%, transparent))"
+              />
             </marker>
           </defs>
 
