@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 1.3.2
+
+### Patch Changes
+
+- aee0fc4: Perf: `computeAccountBalances` (the read backing `GET /api/financial-accounts`) rewrites its `legacy_sums` CTE from a correlated `NOT EXISTS` re-check plus an unindexable `(source_account_id = $id OR destination_account_id = $id)` join into a set-based `UNION ALL` of the destination leg and the source leg, each filtered on its own single-column index (`idx_transactions_dest` / `idx_transactions_source`, ported into this plugin's own migrations in the same change — they previously existed on prod only via pre-fork monolith history), with the "already paid" set precomputed once via a hash anti-join (`paid_txn_ids`) instead of per-row. Reconciled byte-identical against the prior formula across every account in a 300k-row synthetic fixture (split payment legs, forfeits, transfers, self-transfers, voided/unpaid sales) — see `tests/integration/account-balances.reconcile.test.ts`. Measured on that fixture: the query plan for a 4-account read moved from a `Nested Loop` materializing the OR-join once per requested account (1234ms) to index-backed `Bitmap Heap Scan`s per leg (688ms), and eliminates the Materialize/temp-file spill the OR-join forced under the correlated-subplan formula this supersedes the deferred "materialized running balance" note left in an earlier changeset.
+
 ## 1.3.1
 
 ### Patch Changes
