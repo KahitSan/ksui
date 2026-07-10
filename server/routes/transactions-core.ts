@@ -268,6 +268,9 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
         if (!Number.isFinite(parsedTransferFeeAmount) || parsedTransferFeeAmount <= 0) {
           return c.json({ error: "transfer_fee_amount must be greater than 0" }, 400);
         }
+        if (parsedTransferFeeAmount > MAX_NUMERIC_12_2) {
+          return c.json({ error: `transfer_fee_amount must not exceed ${MAX_NUMERIC_12_2}` }, 400);
+        }
         if (srcAccountId == null) {
           return c.json({ error: "transfer_fee_amount requires a source_account_id" }, 400);
         }
@@ -731,6 +734,9 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           const raw = parseFloat(String(transfer_fee_amount));
           if (!Number.isFinite(raw) || raw <= 0) {
             return c.json({ error: "transfer_fee_amount must be greater than 0" }, 400);
+          }
+          if (raw > MAX_NUMERIC_12_2) {
+            return c.json({ error: `transfer_fee_amount must not exceed ${MAX_NUMERIC_12_2}` }, 400);
           }
           parsedRequestedFee = raw;
         }

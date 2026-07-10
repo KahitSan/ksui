@@ -227,6 +227,21 @@ describe("transactions flow: list → create → list → detail → void (real 
     expect(parseFloat(feeRow!.amount)).toBe(15);
   });
 
+  it("rejects a transfer with an oversized transfer_fee_amount (400, not a NUMERIC(12,2) overflow 500)", async () => {
+    const res = await request(honoApp, "POST", "/", {
+      category: "business",
+      source_account_id: transferSourceAccountId,
+      destination_account_id: transferDestinationAccountId,
+      amount: "500.00",
+      transfer_fee_amount: "100000000000",
+      description: `${transferDesc}-oversized-fee`,
+      transaction_date: todayInOrgTimezone(),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/transfer_fee_amount must not exceed/);
+  });
+
   it("the new transaction appears in the org-scoped list", async () => {
     const res = await request(honoApp, "GET", `/?search=${encodeURIComponent(desc)}`);
     const body = await res.json();
