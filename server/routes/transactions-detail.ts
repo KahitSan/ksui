@@ -22,7 +22,7 @@ import {
   findClientsByIds,
   findPayeesByIds,
 } from "../lib/peers.js";
-import { resolveUserNames } from "./shared.js";
+import { resolveUserNames, TRANSACTION_COLS_T } from "./shared.js";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet, isWorkspaceElevated } from "../types.js";
 
@@ -42,7 +42,7 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
       }
       try {
         const result = await pool.query(
-          `SELECT t.*,
+          `SELECT ${TRANSACTION_COLS_T},
             to_char(t.transaction_date, 'YYYY-MM-DD') AS transaction_date,
             paid.total_paid::numeric(12,2) AS amount_collected,
             (t.amount - paid.total_paid)::numeric(12,2) AS balance,

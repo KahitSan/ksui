@@ -6,6 +6,7 @@ import { buildRouter } from "../../server/routes.js";
 import { todayInOrgTimezone } from "../../server/lib/backdate.js";
 import { withRollbackDb, stubMiddleware, type FakePluginDb } from "@kahitsan/plugin-sdk/test";
 import { runWithTenantContext } from "@kahitsan/plugin-sdk";
+import { TRANSACTION_COLS } from "../../server/routes/shared.js";
 
 /** Make an HTTP request against a Hono app and return status + json accessor. */
 async function request(
@@ -244,6 +245,22 @@ describe("transactions flow: list → create → list → detail → void (real 
     expect(body.id).toBe(newId);
     // Mirrors the e2e guard: detail must not 500 on customer_group resolution.
     expect(Array.isArray(body.customer_groups)).toBe(true);
+  });
+
+  it("list and detail expose every accounts.transactions column (guards the t.* → explicit-column-list fix)", async () => {
+    const listRes = await request(honoApp, "GET", `/?search=${encodeURIComponent(desc)}`);
+    const listBody = await listRes.json();
+    const listRow = (listBody.data as Array<Record<string, unknown>>).find((r) => r.id === newId);
+    expect(listRow, "created transaction must show in the list").toBeTruthy();
+    for (const col of TRANSACTION_COLS) {
+      expect(listRow, `list row missing column ${col}`).toHaveProperty(col);
+    }
+
+    const detailRes = await request(honoApp, "GET", `/${newId}`);
+    const detailBody = await detailRes.json();
+    for (const col of TRANSACTION_COLS) {
+      expect(detailBody, `detail row missing column ${col}`).toHaveProperty(col);
+    }
   });
 
   it("voids (soft-deletes) the transaction", async () => {

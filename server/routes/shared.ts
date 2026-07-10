@@ -78,6 +78,11 @@ export const TRANSACTION_COLS = [
   "transfer_fee_transaction_id",
 ] as const;
 
+// `t.`-qualified form of TRANSACTION_COLS for queries that alias the table as
+// `t` (list/detail joins against transaction_payments etc.) — same ban on
+// `t.*`, same byte-identical column set.
+export const TRANSACTION_COLS_T = TRANSACTION_COLS.map((c) => `t.${c}`).join(", ");
+
 // Explicit column list for accounts.transaction_line_items — every column the
 // table declares, so an INSERT/UPDATE RETURNING against it stays
 // byte-identical to the prior `*`.

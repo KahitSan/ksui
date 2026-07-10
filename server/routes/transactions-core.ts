@@ -37,6 +37,7 @@ import {
   VALID_CATEGORIES,
   VALID_TAX_TYPES,
   TRANSACTION_COLS,
+  TRANSACTION_COLS_T,
   MAX_NUMERIC_12_2,
   isValidIsoDate,
   resolveUserNames,
@@ -99,7 +100,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
         const orderClause = `ORDER BY t.${sortColumn} ${sortDir}, t.id DESC`;
 
         const dataQuery = `
-          SELECT t.*,
+          SELECT ${TRANSACTION_COLS_T},
             to_char(t.transaction_date, 'YYYY-MM-DD') AS transaction_date,
             (SELECT COUNT(*) FROM accounts.transaction_attachments ta WHERE ta.transaction_id = t.id) AS attachment_count,
             paid.total_paid::numeric(12,2) AS amount_collected,
