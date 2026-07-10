@@ -20,29 +20,7 @@ import { Hono } from "hono";
 import { tenant, readIdentity, applyTenantContext, makeDataSurface } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet } from "../types.js";
-
-// Explicit column list for a line-item row — the data surface bans `RETURNING *`;
-// these are every column of accounts.transaction_line_items, so the void
-// response stays byte-identical to the prior `RETURNING *`.
-const LINE_ITEM_COLS = [
-  "id",
-  "transaction_id",
-  "workspace_id",
-  "package_id",
-  "package_variant_id",
-  "description",
-  "quantity",
-  "unit_price",
-  "duration_value",
-  "duration_unit",
-  "started_at",
-  "ends_at",
-  "status",
-  "created_at",
-  "updated_at",
-  "client_id",
-  "customer_group_id",
-] as const;
+import { LINE_ITEM_COLS, TRANSACTION_COLS } from "./shared.js";
 
 export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
@@ -55,6 +33,10 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
     requireWorkspace,
     requirePermission("transactions.delete"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         // No BEFORE UPDATE trigger on accounts.transactions, so updated_at is
         // set explicitly — `new Date()` (an absolute instant) is TZ-safe, vs
@@ -62,7 +44,7 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
         const rows = await data.update(
           "transactions",
           { status: "voided", updated_at: new Date(), updated_by: ctxGet(c, "user")?.id ?? null },
-          { where: "id = $1 AND status != 'voided'", params: [c.req.param("id")] },
+          { where: "id = $1 AND status != 'voided'", params: [id] },
           ["id"],
         );
         if (rows.length === 0) {
@@ -83,6 +65,10 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
     requireWorkspace,
     requirePermission("transactions.delete"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       const { reason } = await c.req.json() ?? {};
       if (!reason || !String(reason).trim()) {
         return c.json({ error: "reason is required" }, 400);
@@ -94,8 +80,9 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
         await applyTenantContext(dbClient);
         const result = await dbClient.query(
           `UPDATE accounts.transactions SET status = 'voided', updated_at = NOW(), updated_by = $3
-             WHERE id = $1 AND workspace_id = $2 AND status != 'voided' RETURNING *`,
-          [c.req.param("id"), ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? null],
+             WHERE id = $1 AND workspace_id = $2 AND status != 'voided'
+             RETURNING ${TRANSACTION_COLS.join(", ")}`,
+          [id, ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? null],
         );
         if (result.rows.length === 0) {
           await dbClient.query("ROLLBACK");
@@ -104,7 +91,7 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
         await dbClient.query(
           `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
              VALUES ($1, $2, $3, $4, 'void')`,
-          [c.req.param("id"), ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? "", String(reason).trim()],
+          [id, ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? "", String(reason).trim()],
         );
         await dbClient.query("COMMIT");
         return c.json(result.rows[0]);
@@ -124,6 +111,10 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
     requireWorkspace,
     requirePermission("transactions.delete"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       const { reason } = await c.req.json() ?? {};
       if (!reason || !String(reason).trim()) {
         return c.json({ error: "reason is required" }, 400);
@@ -135,8 +126,9 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
         await applyTenantContext(dbClient);
         const result = await dbClient.query(
           `UPDATE accounts.transactions SET status = 'completed', updated_at = NOW(), updated_by = $3
-             WHERE id = $1 AND workspace_id = $2 AND status = 'voided' RETURNING *`,
-          [c.req.param("id"), ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? null],
+             WHERE id = $1 AND workspace_id = $2 AND status = 'voided'
+             RETURNING ${TRANSACTION_COLS.join(", ")}`,
+          [id, ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? null],
         );
         if (result.rows.length === 0) {
           await dbClient.query("ROLLBACK");
@@ -145,7 +137,7 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
         await dbClient.query(
           `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
              VALUES ($1, $2, $3, $4, 'unvoid')`,
-          [c.req.param("id"), ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? "", String(reason).trim()],
+          [id, ctxGet(c, "workspaceId"), ctxGet(c, "user")?.id ?? "", String(reason).trim()],
         );
         await dbClient.query("COMMIT");
         return c.json(result.rows[0]);
@@ -166,6 +158,10 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
     requireWorkspace,
     requirePermission("transactions.delete"),
     async (c) => {
+      const txnId = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(txnId)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       const { reason } = await c.req.json() ?? {};
       if (!reason || !String(reason).trim()) {
         return c.json({ error: "reason is required" }, 400);
@@ -175,7 +171,6 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
         await applyTenantContext(dbClient);
-        const txnId = c.req.param("id");
         const workspaceId = ctxGet(c, "workspaceId");
         // Lock the row + resolve the live balance inside the transaction so a
         // concurrent payment can't race the forfeit into writing off more
@@ -286,12 +281,16 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       const { is_private, shared_with, shared_with_roles } = await c.req.json() ?? {};
       let dbClient: import("pg").PoolClient | null = null;
       try {
         const exists = await pool.query(
           `SELECT id FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
-          [c.req.param("id"), ctxGet(c, "workspaceId")],
+          [id, ctxGet(c, "workspaceId")],
         );
         if (exists.rows.length === 0) {
           return c.json({ error: "Not found" }, 404);
@@ -305,7 +304,7 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
         await applyTenantContext(dbClient);
         await dbClient.query(
           `UPDATE accounts.transactions SET is_private = $3, updated_at = NOW() WHERE id = $1 AND workspace_id = $2`,
-          [c.req.param("id"), ctxGet(c, "workspaceId"), Boolean(is_private)],
+          [id, ctxGet(c, "workspaceId"), Boolean(is_private)],
         );
         // Child tables have no workspace_id column; route both deletes
         // through the workspace-scoped tenant handle (same pinned client, inside the
@@ -313,18 +312,18 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
         // parent accounts.transactions and the delete can't cross tenants.
         await tenant(dbClient, identity).delete("transaction_visibility", {
           where: "transaction_id = $1",
-          params: [c.req.param("id")],
+          params: [id],
         });
         await tenant(dbClient, identity).delete("transaction_visibility_role", {
           where: "transaction_id = $1",
-          params: [c.req.param("id")],
+          params: [id],
         });
         if (is_private && Array.isArray(shared_with) && shared_with.length > 0) {
           const values = shared_with.map((_: string, i: number) => `($1, $${i + 2})`).join(", ");
           await dbClient.query(
             `INSERT INTO accounts.transaction_visibility (transaction_id, user_id) VALUES ${values}
                ON CONFLICT (transaction_id, user_id) DO NOTHING`,
-            [c.req.param("id"), ...shared_with],
+            [id, ...shared_with],
           );
         }
         if (is_private && Array.isArray(shared_with_roles) && shared_with_roles.length > 0) {
@@ -332,7 +331,7 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
           await dbClient.query(
             `INSERT INTO accounts.transaction_visibility_role (transaction_id, role_code) VALUES ${values}
                ON CONFLICT (transaction_id, role_code) DO NOTHING`,
-            [c.req.param("id"), ...shared_with_roles],
+            [id, ...shared_with_roles],
           );
         }
         await dbClient.query("COMMIT");
@@ -354,6 +353,10 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
     requireWorkspace,
     requirePermission("transactions.view"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         const line_items = await data.find(
           "transaction_line_items",
@@ -372,7 +375,7 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
             "client_id",
             "customer_group_id",
           ],
-          { where: "transaction_id = $1", params: [c.req.param("id")], orderBy: "id ASC" },
+          { where: "transaction_id = $1", params: [id], orderBy: "id ASC" },
         );
         return c.json({ line_items });
       } catch (err) {
@@ -388,6 +391,11 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      const lineItemId = parseInt(String(c.req.param("lineItemId")), 10);
+      if (!Number.isFinite(id) || !Number.isFinite(lineItemId)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         // No BEFORE UPDATE trigger, so updated_at is set explicitly (TZ-safe
         // absolute instant). RETURNING * → the full explicit column list so the
@@ -397,7 +405,7 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
           { status: "voided", updated_at: new Date() },
           {
             where: "id = $1 AND transaction_id = $2 AND status != 'voided'",
-            params: [c.req.param("lineItemId"), c.req.param("id")],
+            params: [lineItemId, id],
           },
           LINE_ITEM_COLS,
         );

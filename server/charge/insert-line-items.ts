@@ -6,13 +6,22 @@
 // position are byte-for-byte unchanged. No SQL, no logic, no signature
 // changes. The original public surface is re-exported from the
 // helpers-charge.ts barrel so callers keep importing from there.
+//
+// assertOrgOwnsRow's client param was widened from PoolClient to Queryable
+// (query-only) so routes that never open an explicit transaction — payments.ts,
+// which calls it against the bare pool — can reuse the same ownership check
+// instead of forking a copy.
 
 import type { PoolClient } from "pg";
+import type { PluginDb } from "@kahitsan/plugin-sdk";
 import {
   ChargeValidationError,
   type ChargeLineInput,
   type ValidUnit,
 } from "./validate.js";
+import { LINE_ITEM_COLS } from "../routes/shared.js";
+
+type Queryable = Pick<PluginDb, "query">;
 
 function intervalSqlFor(unit: ValidUnit): string {
   if (unit === "hour") return "make_interval(hours => $8)";
@@ -26,7 +35,7 @@ function intervalSqlFor(unit: ValidUnit): string {
 // plugin at write time only insofar as the FK target exists. We only assert
 // rows in THIS plugin's own `accounts` schema.
 export async function assertOrgOwnsRow(
-  client: PoolClient,
+  client: Queryable,
   table: string,
   id: number,
   workspaceId: number,
@@ -151,7 +160,7 @@ export async function insertLineItemsForTransaction(
                ${endsAtExpr},
                $12,
                $11, $13)
-       RETURNING *`,
+       RETURNING ${LINE_ITEM_COLS.join(", ")}`,
       params,
     );
     lineItems.push(liResult.rows[0]);

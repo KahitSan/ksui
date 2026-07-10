@@ -11,6 +11,18 @@ import type { PluginDb } from "@kahitsan/plugin-sdk";
  *       Excludes sales already covered by (a) via NOT EXISTS.
  * Voided transactions are excluded on both sides. Returned as a plain object
  * keyed by account id.
+ *
+ * Perf note (assessed, not fixed here): the columns both CTEs filter/join on
+ * are already indexed — transaction_payments(transaction_id) backs the
+ * NOT EXISTS subplan, transaction_payments(financial_account_id, workspace_id)
+ * backs leg_sums, and transactions(source_account_id, workspace_id, status) /
+ * (destination_account_id, workspace_id, status) back legacy_sums' join — so
+ * a new index would not change the plan. The residual cost is the
+ * legacy_sums OR-join itself: workspace_id has poor selectivity for a
+ * single-tenant-heavy deployment, so the planner ends up walking most of
+ * accounts.transactions per read regardless of index choice. Only a
+ * materialized/incrementally-maintained running balance removes that scan —
+ * architectural, deferred.
  */
 export async function computeAccountBalances(
   db: PluginDb,

@@ -38,6 +38,7 @@ import {
 } from "./lib/peers.js";
 import type { RouterDeps } from "./routes.js";
 import { ctxGet, isWorkspaceElevated } from "./types.js";
+import { LINE_ITEM_COLS } from "./routes/shared.js";
 import { bumpBoardVersion } from "./lib/board-events.js";
 import { registerLineItemEventsRoute } from "./routes/line-items-events.js";
 import { registerLineItemExtendRoutes } from "./routes/line-items-extend.js";
@@ -708,14 +709,14 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           `UPDATE accounts.transaction_line_items
               SET ${setClause}
             WHERE id = $1 AND workspace_id = $2 AND status IN ('active','expired')
-            RETURNING *`,
+            RETURNING ${LINE_ITEM_COLS.join(", ")}`,
           params,
         );
         if (result.rows.length === 0) {
           // Idempotency: an already-completed line 200s with its row so a
           // partial-failure retry from the counter Settle action doesn't error.
           const existing = await pool.query(
-            `SELECT * FROM accounts.transaction_line_items
+            `SELECT ${LINE_ITEM_COLS.join(", ")} FROM accounts.transaction_line_items
               WHERE id = $1 AND workspace_id = $2 AND status = 'completed'`,
             [id, ctxGet(c, "workspaceId")],
           );

@@ -29,11 +29,16 @@ import { validateSubcategory } from "../lib/transaction-subcategories.js";
 import { isBackdated } from "../lib/backdate.js";
 import { registerTransactionDetailRoute } from "./transactions-detail.js";
 import { registerTransactionStatusRoutes } from "./transactions-status.js";
+import { assertOrgOwnsRow } from "../charge/insert-line-items.js";
+import { ChargeValidationError } from "../charge/validate.js";
 import { ctxGet, isWorkspaceElevated } from "../types.js";
 import {
   SORTABLE_COLUMNS,
   VALID_CATEGORIES,
   VALID_TAX_TYPES,
+  TRANSACTION_COLS,
+  TRANSACTION_COLS_T,
+  MAX_NUMERIC_12_2,
   isValidIsoDate,
   resolveUserNames,
   privacyClause,
@@ -95,7 +100,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
         const orderClause = `ORDER BY t.${sortColumn} ${sortDir}, t.id DESC`;
 
         const dataQuery = `
-          SELECT t.*,
+          SELECT ${TRANSACTION_COLS_T},
             to_char(t.transaction_date, 'YYYY-MM-DD') AS transaction_date,
             (SELECT COUNT(*) FROM accounts.transaction_attachments ta WHERE ta.transaction_id = t.id) AS attachment_count,
             paid.total_paid::numeric(12,2) AS amount_collected,
@@ -228,6 +233,16 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
       if (payee_id != null && (typeof payee_id !== "number" || !Number.isFinite(payee_id))) {
         return c.json({ error: "payee_id must be a finite number" }, 400);
       }
+      if (source_account_id != null && (typeof source_account_id !== "number" || !Number.isFinite(source_account_id))) {
+        return c.json({ error: "source_account_id must be a finite number" }, 400);
+      }
+      if (destination_account_id != null && (typeof destination_account_id !== "number" || !Number.isFinite(destination_account_id))) {
+        return c.json({ error: "destination_account_id must be a finite number" }, 400);
+      }
+      // Single computed value feeds both the INSERTs and the ownership check
+      // below, so validation and persistence can never see different ids.
+      const srcAccountId: number | null = source_account_id || null;
+      const dstAccountId: number | null = destination_account_id || null;
 
       let validatedSubcategory: string | null;
       try {
@@ -241,6 +256,9 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
       if (!amount || !(parsedAmount > 0)) {
         return c.json({ error: "amount must be greater than 0" }, 400);
       }
+      if (parsedAmount > MAX_NUMERIC_12_2) {
+        return c.json({ error: `amount must not exceed ${MAX_NUMERIC_12_2}` }, 400);
+      }
       let parsedTransferFeeAmount: number | null = null;
       if (transfer_fee_amount !== undefined && transfer_fee_amount !== null) {
         if (category !== "business") {
@@ -250,7 +268,10 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
         if (!Number.isFinite(parsedTransferFeeAmount) || parsedTransferFeeAmount <= 0) {
           return c.json({ error: "transfer_fee_amount must be greater than 0" }, 400);
         }
-        if (!source_account_id || !Number.isFinite(Number(source_account_id))) {
+        if (parsedTransferFeeAmount > MAX_NUMERIC_12_2) {
+          return c.json({ error: `transfer_fee_amount must not exceed ${MAX_NUMERIC_12_2}` }, 400);
+        }
+        if (srcAccountId == null) {
           return c.json({ error: "transfer_fee_amount requires a source_account_id" }, 400);
         }
       }
@@ -341,12 +362,22 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
         dbClient = await pool.connect();
         await dbClient.query("BEGIN");
         await applyTenantContext(dbClient);
+
+        // Cross-tenant guard: reject a source/destination account belonging
+        // to a different workspace before it ever reaches the INSERT.
+        if (srcAccountId != null) {
+          await assertOrgOwnsRow(dbClient, "accounts.financial_accounts", srcAccountId, ctxGet(c, "workspaceId"), "source_account_id");
+        }
+        if (dstAccountId != null) {
+          await assertOrgOwnsRow(dbClient, "accounts.financial_accounts", dstAccountId, ctxGet(c, "workspaceId"), "destination_account_id");
+        }
+
         const txn = await insertTransactionRow(dbClient, {
           workspaceId: ctxGet(c, "workspaceId"),
           category,
           subcategory: validatedSubcategory,
-          sourceAccountId: source_account_id || null,
-          destinationAccountId: destination_account_id || null,
+          sourceAccountId: srcAccountId,
+          destinationAccountId: dstAccountId,
           amount: storedAmount,
           description: String(description).trim(),
           notes: notes || null,
@@ -383,7 +414,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
             workspaceId: ctxGet(c, "workspaceId"),
             category: "expense",
             subcategory: TRANSFER_FEE_SUBCATEGORY,
-            sourceAccountId: source_account_id || null,
+            sourceAccountId: srcAccountId,
             destinationAccountId: null,
             amount: parsedTransferFeeAmount,
             description: `Transfer fee — ${String(description).trim()}`,
@@ -434,6 +465,9 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
         );
       } catch (err) {
         if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
+        if (err instanceof ChargeValidationError) {
+          return c.json({ error: err.message }, err.status as any);
+        }
         console.error("[transactions] create error:", err);
         return c.json({ error: "Internal server error" }, 500);
       } finally {
@@ -488,10 +522,24 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
       if (tax_type !== undefined && tax_type !== null && !VALID_TAX_TYPES.includes(tax_type)) {
         return c.json({ error: `tax_type must be one of: ${VALID_TAX_TYPES.join(", ")}` }, 400);
       }
+      if (
+        source_account_id !== undefined &&
+        source_account_id !== null &&
+        (typeof source_account_id !== "number" || !Number.isFinite(source_account_id))
+      ) {
+        return c.json({ error: "source_account_id must be a finite number" }, 400);
+      }
+      if (
+        destination_account_id !== undefined &&
+        destination_account_id !== null &&
+        (typeof destination_account_id !== "number" || !Number.isFinite(destination_account_id))
+      ) {
+        return c.json({ error: "destination_account_id must be a finite number" }, 400);
+      }
 
       try {
         const existing = await pool.query(
-          `SELECT * FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
+          `SELECT ${TRANSACTION_COLS.join(", ")} FROM accounts.transactions WHERE id = $1 AND workspace_id = $2`,
           [id, ctxGet(c, "workspaceId")],
         );
         if (existing.rows.length === 0) {
@@ -533,6 +581,9 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           // eslint-disable-next-line sonarjs/no-inverted-boolean-check -- !(x>0) also rejects NaN (non-numeric amount); `<=0` would let NaN through, changing validation.
           if (!(parsed > 0)) {
             return c.json({ error: "amount must be greater than 0" }, 400);
+          }
+          if (parsed > MAX_NUMERIC_12_2) {
+            return c.json({ error: `amount must not exceed ${MAX_NUMERIC_12_2}` }, 400);
           }
           sets.push(`amount = $${idx++}`);
           params.push(parsed);
@@ -684,6 +735,9 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           if (!Number.isFinite(raw) || raw <= 0) {
             return c.json({ error: "transfer_fee_amount must be greater than 0" }, 400);
           }
+          if (raw > MAX_NUMERIC_12_2) {
+            return c.json({ error: `transfer_fee_amount must not exceed ${MAX_NUMERIC_12_2}` }, 400);
+          }
           parsedRequestedFee = raw;
         }
 
@@ -702,13 +756,23 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           dbClient = await pool.connect();
           await dbClient.query("BEGIN");
           await applyTenantContext(dbClient);
+
+          // Cross-tenant guard: an edit reassigning source/destination to
+          // another workspace's account must fail before the UPDATE runs.
+          if (source_account_id !== undefined && source_account_id != null) {
+            await assertOrgOwnsRow(dbClient, "accounts.financial_accounts", source_account_id, ctxGet(c, "workspaceId"), "source_account_id");
+          }
+          if (destination_account_id !== undefined && destination_account_id != null) {
+            await assertOrgOwnsRow(dbClient, "accounts.financial_accounts", destination_account_id, ctxGet(c, "workspaceId"), "destination_account_id");
+          }
+
           const result = sets.length > 0
             ? await dbClient.query(
-                `UPDATE accounts.transactions SET ${sets.join(", ")} WHERE id = $${idx++} AND workspace_id = $${idx} RETURNING *`,
+                `UPDATE accounts.transactions SET ${sets.join(", ")} WHERE id = $${idx++} AND workspace_id = $${idx} RETURNING ${TRANSACTION_COLS.join(", ")}`,
                 params,
               )
             : await dbClient.query(
-                `SELECT * FROM accounts.transactions WHERE id = $${idx++} AND workspace_id = $${idx}`,
+                `SELECT ${TRANSACTION_COLS.join(", ")} FROM accounts.transactions WHERE id = $${idx++} AND workspace_id = $${idx}`,
                 params,
               );
           if (feeTouched) {
@@ -776,6 +840,9 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           if (dbClient) dbClient.release();
         }
       } catch (err) {
+        if (err instanceof ChargeValidationError) {
+          return c.json({ error: err.message }, err.status as any);
+        }
         console.error("[transactions] update error:", err);
         return c.json({ error: "Internal server error" }, 500);
       }

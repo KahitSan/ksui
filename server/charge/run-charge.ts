@@ -50,6 +50,7 @@ import {
   insertLineItemsForTransaction,
 } from "./insert-line-items.js";
 import { tryProbeVoucher } from "./probe-voucher.js";
+import { TRANSACTION_COLS } from "../routes/shared.js";
 
 export type ChargeConnectHandle = { connect(): Promise<PoolClient> };
 
@@ -215,9 +216,9 @@ export async function runCharge(opts: {
     await client.query("BEGIN");
     await applyTenantContext(client);
 
-    // destination_account_id is a SOFT ref to financial-accounts' table — we
-    // can't workspace-check it here (other plugin's schema), so we trust the FK-less
-    // soft ref. parent_transaction_id, by contrast, is OUR table.
+    // financial_accounts was adopted into this plugin's own schema (see
+    // migrations/20260707000000_adopt_financial_accounts.ts), so both refs
+    // below are workspace-checked before they flow into the INSERTs.
     if (payload.parent_transaction_id != null) {
       await assertOrgOwnsRow(
         client,
@@ -225,6 +226,15 @@ export async function runCharge(opts: {
         payload.parent_transaction_id,
         workspaceId,
         "parent_transaction_id",
+      );
+    }
+    if (payload.destination_account_id != null) {
+      await assertOrgOwnsRow(
+        client,
+        "accounts.financial_accounts",
+        payload.destination_account_id,
+        workspaceId,
+        "destination_account_id",
       );
     }
 
@@ -286,7 +296,7 @@ export async function runCharge(opts: {
                  COALESCE($7::date, CURRENT_DATE) < CURRENT_DATE,
                  CASE WHEN COALESCE($7::date, CURRENT_DATE) < CURRENT_DATE THEN $10 ELSE NULL END,
                  $11, $13)
-         RETURNING *`,
+         RETURNING ${TRANSACTION_COLS.join(", ")}`,
         [
           workspaceId, // $1
           payload.destination_account_id, // $2
@@ -393,7 +403,7 @@ export async function runCharge(opts: {
                  COALESCE($7::date, CURRENT_DATE) < CURRENT_DATE,
                  CASE WHEN COALESCE($7::date, CURRENT_DATE) < CURRENT_DATE THEN $10 ELSE NULL END,
                  $11)
-         RETURNING *`,
+         RETURNING ${TRANSACTION_COLS.join(", ")}`,
         [
           workspaceId, // $1
           payload.destination_account_id, // $2

@@ -23,6 +23,7 @@ import {
   insertTransactionRow,
   insertVisibilityShares,
 } from "./lib/create-transaction.js";
+import { assertOrgOwnsRow } from "./charge/insert-line-items.js";
 import { isBackdated } from "./lib/backdate.js";
 import {
   hasClientAvailedPackage as hasClientAvailedPackageQuery,
@@ -279,6 +280,12 @@ createPluginServer({
       try {
         await client.query("BEGIN");
         await applyTenantContext(client);
+        // Cross-tenant guard: the calling plugin (timesheets) relays a
+        // caller-supplied account id we've never validated — reject one that
+        // belongs to another workspace before it lands on a salary expense.
+        if (sourceAccountId != null) {
+          await assertOrgOwnsRow(client, "accounts.financial_accounts", sourceAccountId, wsId, "source_account_id");
+        }
         const txn = await insertTransactionRow(client, {
           workspaceId: wsId,
           category: "expense",

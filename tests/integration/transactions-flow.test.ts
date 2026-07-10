@@ -4,8 +4,9 @@ import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes.js";
 import { todayInOrgTimezone } from "../../server/lib/backdate.js";
-import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-sdk/test";
+import { withRollbackDb, stubMiddleware, type FakePluginDb } from "@kahitsan/plugin-sdk/test";
 import { runWithTenantContext } from "@kahitsan/plugin-sdk";
+import { TRANSACTION_COLS } from "../../server/routes/shared.js";
 
 /** Make an HTTP request against a Hono app and return status + json accessor. */
 async function request(
@@ -51,7 +52,10 @@ const SCHEMAS = ["accounts"];
 
 let honoApp: Hono;
 let pool: pg.Pool;
+let db: FakePluginDb;
 let rollback: () => Promise<void>;
+let transferSourceAccountId: number;
+let transferDestinationAccountId: number;
 
 beforeAll(async () => {
   pool = new pg.Pool({
@@ -86,6 +90,24 @@ beforeAll(async () => {
 
   const rdb = await withRollbackDb(pool, SCHEMAS);
   rollback = rdb.rollback;
+  db = rdb.db;
+
+  // The manual-create route now asserts source/destination_account_id belong
+  // to the caller's workspace (assertOrgOwnsRow) — real rows are required so
+  // the transfer-fee test below exercises the check instead of tripping it.
+  const srcRow = await db.query<{ id: number }>(
+    `INSERT INTO accounts.financial_accounts (workspace_id, name, type)
+       VALUES ($1, 'CI Transfer Source', 'cash') RETURNING id`,
+    [TEST_ORG],
+  );
+  transferSourceAccountId = srcRow.rows[0].id;
+  const dstRow = await db.query<{ id: number }>(
+    `INSERT INTO accounts.financial_accounts (workspace_id, name, type)
+       VALUES ($1, 'CI Transfer Destination', 'cash') RETURNING id`,
+    [TEST_ORG],
+  );
+  transferDestinationAccountId = dstRow.rows[0].id;
+
   const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId: TEST_ORG,
     userId,
@@ -156,8 +178,8 @@ describe("transactions flow: list → create → list → detail → void (real 
   it("creates a transfer with a separate fee expense in the same workspace", async () => {
     const res = await request(honoApp, "POST", "/", {
       category: "business",
-      source_account_id: 1,
-      destination_account_id: 2,
+      source_account_id: transferSourceAccountId,
+      destination_account_id: transferDestinationAccountId,
       amount: "500.00",
       transfer_fee_amount: "15.00",
       description: transferDesc,
@@ -191,7 +213,7 @@ describe("transactions flow: list → create → list → detail → void (real 
     expect(transferRow).toBeTruthy();
     expect(transferRow).toMatchObject({
       category: "business",
-      source_account_id: 1,
+      source_account_id: transferSourceAccountId,
       description: transferDesc,
     });
     expect(parseFloat(transferRow!.amount)).toBe(500);
@@ -199,10 +221,25 @@ describe("transactions flow: list → create → list → detail → void (real 
     expect(feeRow).toMatchObject({
       category: "expense",
       subcategory: "Other expense",
-      source_account_id: 1,
+      source_account_id: transferSourceAccountId,
       description: `Transfer fee — ${transferDesc}`,
     });
     expect(parseFloat(feeRow!.amount)).toBe(15);
+  });
+
+  it("rejects a transfer with an oversized transfer_fee_amount (400, not a NUMERIC(12,2) overflow 500)", async () => {
+    const res = await request(honoApp, "POST", "/", {
+      category: "business",
+      source_account_id: transferSourceAccountId,
+      destination_account_id: transferDestinationAccountId,
+      amount: "500.00",
+      transfer_fee_amount: "100000000000",
+      description: `${transferDesc}-oversized-fee`,
+      transaction_date: todayInOrgTimezone(),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/transfer_fee_amount must not exceed/);
   });
 
   it("the new transaction appears in the org-scoped list", async () => {
@@ -223,6 +260,22 @@ describe("transactions flow: list → create → list → detail → void (real 
     expect(body.id).toBe(newId);
     // Mirrors the e2e guard: detail must not 500 on customer_group resolution.
     expect(Array.isArray(body.customer_groups)).toBe(true);
+  });
+
+  it("list and detail expose every accounts.transactions column (guards the t.* → explicit-column-list fix)", async () => {
+    const listRes = await request(honoApp, "GET", `/?search=${encodeURIComponent(desc)}`);
+    const listBody = await listRes.json();
+    const listRow = (listBody.data as Array<Record<string, unknown>>).find((r) => r.id === newId);
+    expect(listRow, "created transaction must show in the list").toBeTruthy();
+    for (const col of TRANSACTION_COLS) {
+      expect(listRow, `list row missing column ${col}`).toHaveProperty(col);
+    }
+
+    const detailRes = await request(honoApp, "GET", `/${newId}`);
+    const detailBody = await detailRes.json();
+    for (const col of TRANSACTION_COLS) {
+      expect(detailBody, `detail row missing column ${col}`).toHaveProperty(col);
+    }
   });
 
   it("voids (soft-deletes) the transaction", async () => {

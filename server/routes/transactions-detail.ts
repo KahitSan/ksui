@@ -22,7 +22,7 @@ import {
   findClientsByIds,
   findPayeesByIds,
 } from "../lib/peers.js";
-import { resolveUserNames } from "./shared.js";
+import { resolveUserNames, TRANSACTION_COLS_T } from "./shared.js";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet, isWorkspaceElevated } from "../types.js";
 
@@ -36,9 +36,13 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
     requireWorkspace,
     requirePermission("transactions.view"),
     async (c) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         const result = await pool.query(
-          `SELECT t.*,
+          `SELECT ${TRANSACTION_COLS_T},
             to_char(t.transaction_date, 'YYYY-MM-DD') AS transaction_date,
             paid.total_paid::numeric(12,2) AS amount_collected,
             (t.amount - paid.total_paid)::numeric(12,2) AS balance,
@@ -61,7 +65,7 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
             ON fee.id = t.transfer_fee_transaction_id
            AND fee.workspace_id = t.workspace_id
           WHERE t.id = $1 AND t.workspace_id = $2`,
-          [c.req.param("id"), ctxGet(c, "workspaceId")],
+          [id, ctxGet(c, "workspaceId")],
         );
         if (result.rows.length === 0) {
           return c.json({ error: "Not found" }, 404);
