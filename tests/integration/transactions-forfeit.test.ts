@@ -43,6 +43,7 @@ let honoApp: Hono;
 let pool: pg.Pool;
 let db: FakePluginDb;
 let rollback: () => Promise<void>;
+let paymentAccountId: number;
 
 beforeAll(async () => {
   pool = new pg.Pool({
@@ -74,6 +75,17 @@ beforeAll(async () => {
   const rdb = await withRollbackDb(pool, SCHEMAS);
   rollback = rdb.rollback;
   db = rdb.db;
+
+  // The payment-leg route now asserts financial_account_id belongs to the
+  // caller's workspace (assertOrgOwnsRow) — a real row is required so the
+  // partial-payment test below exercises the flow instead of tripping the check.
+  const acctRow = await db.query<{ id: number }>(
+    `INSERT INTO accounts.financial_accounts (workspace_id, name, type)
+       VALUES ($1, 'CI Forfeit Payment Account', 'cash') RETURNING id`,
+    [TEST_ORG],
+  );
+  paymentAccountId = acctRow.rows[0].id;
+
   const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId: TEST_ORG,
     userId,
@@ -137,7 +149,7 @@ describe("transactions forfeit: create → part-pay → forfeit → outstanding 
 
   it("records a partial payment", async () => {
     const res = await request(honoApp, "POST", `/${newId}/payments`, {
-      financial_account_id: 1,
+      financial_account_id: paymentAccountId,
       amount: "40.00",
     });
     expect(res.status).toBe(201);

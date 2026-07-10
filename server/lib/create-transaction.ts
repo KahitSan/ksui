@@ -9,6 +9,7 @@
 // this module only owns the writes.
 
 import type { PoolClient } from "pg";
+import { TRANSACTION_COLS } from "../routes/shared.js";
 
 /** Every column the create path sets. Callers pass already-validated, already-
  *  computed values — this helper does no validation or VAT math. */
@@ -58,7 +59,7 @@ export async function insertTransactionRow(
         payee_id)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, $18,
              $19, $20, $21, $22, $23, $24, $25, $26, $27)
-     RETURNING *`,
+     RETURNING ${TRANSACTION_COLS.join(", ")}`,
     [
       f.workspaceId,
       f.category,

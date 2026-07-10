@@ -18,6 +18,10 @@ import { Hono, type MiddlewareHandler } from "hono";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf, makeDataSurface } from "@kahitsan/plugin-sdk";
 import { findAccountsByIds } from "../lib/peers.js";
+import { assertOrgOwnsRow } from "../charge/insert-line-items.js";
+import { ChargeValidationError } from "../charge/validate.js";
+import { MAX_NUMERIC_12_2, parseIntParam } from "./shared.js";
+import { ctxGet } from "../types.js";
 
 export type PaymentRouteCtx = {
   pool: PluginDb;
@@ -54,6 +58,11 @@ export function registerPaymentUpdateRoute(router: Hono, ctx: PaymentRouteCtx): 
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
+      const id = parseIntParam(c, "id");
+      const paymentId = parseIntParam(c, "paymentId");
+      if (id == null || paymentId == null) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       const { financial_account_id, amount } = await c.req.json() ?? {};
       const parsed = parseFloat(amount);
       if (typeof financial_account_id !== "number" || !Number.isFinite(financial_account_id)) {
@@ -62,14 +71,21 @@ export function registerPaymentUpdateRoute(router: Hono, ctx: PaymentRouteCtx): 
       if (!Number.isFinite(parsed) || parsed <= 0) {
         return c.json({ error: "amount must be a finite number greater than 0" }, 400);
       }
+      if (parsed > MAX_NUMERIC_12_2) {
+        return c.json({ error: `amount must not exceed ${MAX_NUMERIC_12_2}` }, 400);
+      }
       try {
+        // Cross-tenant guard: a payment leg attributing money to another
+        // workspace's account must fail before the UPDATE runs.
+        await assertOrgOwnsRow(pool, "accounts.financial_accounts", financial_account_id, ctxGet(c, "workspaceId"), "financial_account_id");
+
         // The surface injects `AND workspace_id = <ctx>`; the route's id +
         // transaction_id scoping stays in the user WHERE. Returns [] (→ 404)
         // when no row matches in this workspace.
         const rows = await data.update(
           "transaction_payments",
           { financial_account_id, amount: parsed },
-          { where: "id = $1 AND transaction_id = $2", params: [c.req.param("paymentId"), c.req.param("id")] },
+          { where: "id = $1 AND transaction_id = $2", params: [paymentId, id] },
           PAYMENT_COLS,
         );
         if (rows.length === 0) {
@@ -83,6 +99,9 @@ export function registerPaymentUpdateRoute(router: Hono, ctx: PaymentRouteCtx): 
         }
         return c.json(payment);
       } catch (err) {
+        if (err instanceof ChargeValidationError) {
+          return c.json({ error: err.message }, err.status as any);
+        }
         console.error("[transactions] payment update error:", err);
         return c.json({ error: "Internal server error" }, 500);
       }
@@ -104,13 +123,17 @@ export function registerPaymentRoutes(router: Hono, ctx: PaymentRouteCtx): void 
     requireWorkspace,
     requirePermission("transactions.view"),
     async (c) => {
+      const id = parseIntParam(c, "id");
+      if (id == null) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         const payments = await data.find(
           "transaction_payments",
           ["id", "financial_account_id", "amount", "notes", "created_at", "customer_group_id"],
           {
             where: "transaction_id = $1",
-            params: [c.req.param("id")],
+            params: [id],
             orderBy: "created_at ASC, id ASC",
           },
         ) as Array<{ financial_account_id: number | null; financial_account_name?: string | null }>;
@@ -140,6 +163,10 @@ export function registerPaymentRoutes(router: Hono, ctx: PaymentRouteCtx): void 
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
+      const id = parseIntParam(c, "id");
+      if (id == null) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       const { financial_account_id, amount, notes } = await c.req.json() ?? {};
       const parsed = parseFloat(amount);
       if (typeof financial_account_id !== "number" || !Number.isFinite(financial_account_id)) {
@@ -149,20 +176,27 @@ export function registerPaymentRoutes(router: Hono, ctx: PaymentRouteCtx): void 
       if (!(parsed > 0)) {
         return c.json({ error: "amount must be greater than 0" }, 400);
       }
+      if (parsed > MAX_NUMERIC_12_2) {
+        return c.json({ error: `amount must not exceed ${MAX_NUMERIC_12_2}` }, 400);
+      }
       try {
         const tx = await data.findOne("transactions", ["id"], {
           where: "id = $1",
-          params: [c.req.param("id")],
+          params: [id],
         });
         if (!tx) {
           return c.json({ error: "Not found" }, 404);
         }
+        // Cross-tenant guard: a payment leg attributing money to another
+        // workspace's account must fail before the INSERT runs.
+        await assertOrgOwnsRow(pool, "accounts.financial_accounts", financial_account_id, ctxGet(c, "workspaceId"), "financial_account_id");
+
         // workspace_id is injected from the ambient tenant context by the
         // surface — never passed by the handler.
         const payment = (await data.insert(
           "transaction_payments",
           {
-            transaction_id: c.req.param("id"),
+            transaction_id: id,
             financial_account_id,
             amount: parsed,
             notes: notes?.trim() || null,
@@ -176,6 +210,9 @@ export function registerPaymentRoutes(router: Hono, ctx: PaymentRouteCtx): void 
         }
         return c.json(payment, 201);
       } catch (err) {
+        if (err instanceof ChargeValidationError) {
+          return c.json({ error: err.message }, err.status as any);
+        }
         console.error("[transactions] payment create error:", err);
         return c.json({ error: "Internal server error" }, 500);
       }
@@ -188,10 +225,15 @@ export function registerPaymentRoutes(router: Hono, ctx: PaymentRouteCtx): void 
     requireWorkspace,
     requirePermission("transactions.edit"),
     async (c) => {
+      const id = parseIntParam(c, "id");
+      const paymentId = parseIntParam(c, "paymentId");
+      if (id == null || paymentId == null) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
       try {
         const n = await data.delete("transaction_payments", {
           where: "id = $1 AND transaction_id = $2",
-          params: [c.req.param("paymentId"), c.req.param("id")],
+          params: [paymentId, id],
         });
         if (n === 0) {
           return c.json({ error: "Not found" }, 404);
