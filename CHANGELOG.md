@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 1.3.3
+
+### Patch Changes
+
+- c44f1fd: Rescheduling a settled booking into the future now reopens it (status back to active), and a reschedule that matches no booking now fails loudly with a 404 instead of silently succeeding.
+
 ## 1.3.2
 
 ### Patch Changes
