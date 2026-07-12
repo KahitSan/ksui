@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 1.3.4
+
+### Patch Changes
+
+- 4e6cd58: Bump @kahitsan/ksui to ^0.36.1 (fix: ProgressBar/LiveTimer amber fill restored via explicit color prop).
+
 ## 1.3.3
 
 ### Patch Changes
