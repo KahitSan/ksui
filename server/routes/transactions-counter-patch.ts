@@ -129,7 +129,7 @@ export function registerCounterPatchRoutes(router: Hono, ctx: CoreRouteCtx): voi
           // natural-day CASE then buckets the already-"ended" line by its old
           // ends_at date — dropping a today session onto the wrong day board.
           // Non-duration lines (ends_at NULL) are left untouched.
-          await dbClient.query(
+          const result = await dbClient.query(
             `UPDATE accounts.transaction_line_items
                 SET started_at = $1::timestamptz,
                     ends_at = CASE
@@ -141,10 +141,23 @@ export function registerCounterPatchRoutes(router: Hono, ctx: CoreRouteCtx): voi
                         THEN $1::timestamptz + (duration_value * COALESCE(quantity, 1)) * INTERVAL '1 month'
                       ELSE ends_at
                     END,
+                    -- completed is a staff-settled terminal state (Settle/Forfeit); a start
+                    -- pushed into the future contradicts it, so reopen only that narrow case.
+                    status = CASE
+                      WHEN status = 'completed' AND $1::timestamptz > NOW() THEN 'active'
+                      ELSE status
+                    END,
                     updated_at = NOW()
-              WHERE customer_group_id = $2 AND transaction_id = $3 AND workspace_id = $4`,
+              WHERE customer_group_id = $2 AND transaction_id = $3 AND workspace_id = $4
+              RETURNING id`,
             [u.started_at, u.customer_group_id, id, ctxGet(c, "workspaceId")],
           );
+          // A stale/mismatched customer_group_id must not silently no-op while
+          // the audit row below still records the edit as if it happened.
+          if (result.rowCount === 0) {
+            await dbClient.query("ROLLBACK");
+            return c.json({ error: "Customer group not found" }, 404);
+          }
         }
         await dbClient.query(
           `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
