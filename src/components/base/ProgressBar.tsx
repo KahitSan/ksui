@@ -32,6 +32,10 @@ const styles: Record<string, string> = {
   "animate-shimmer": "ks-progress-shimmer",
 };
 
+// ProgressColor is derived from COLOR_MAP so adding a hue later flows here
+// without re-syncing a hardcoded list.
+export type ProgressColor = keyof typeof COLOR_MAP;
+
 export interface ProgressBarProps extends JSX.HTMLAttributes<HTMLDivElement> {
   progress: number;
   icon?: Component<{ size: number; class?: string }>;
@@ -45,6 +49,9 @@ export interface ProgressBarProps extends JSX.HTMLAttributes<HTMLDivElement> {
   // LiveTimer push the live countdown into the right slot while the
   // total label sits on the left.
   rightLabel?: string;
+  // Explicit color signal — class-substring sniffing broke when COLOR_AMBER
+  // was tokenized (4f6ed40 dropped the literal "amber" from the class).
+  color?: ProgressColor;
   class?: string;
 }
 
@@ -163,6 +170,7 @@ const ProgressBar: Component<ProgressBarProps> = (props) => {
     "position",
     "hidePercentage",
     "rightLabel",
+    "color",
     "class",
   ]);
 
@@ -184,7 +192,12 @@ const ProgressBar: Component<ProgressBarProps> = (props) => {
     return { progress: Math.max(0, Math.min(100, raw)), overflow: Math.max(0, raw - 100) };
   });
 
-  const colorInfo = createMemo(() => extractColorInfo(classProp() ?? ""));
+  const colorInfo = createMemo(() => {
+    // Explicit color wins; fall back to class-substring sniffing for back-compat
+    // with every caller that still drives color via a "text-red-400"-style class.
+    if (local.color) return COLOR_MAP[local.color];
+    return extractColorInfo(classProp() ?? "");
+  });
   const iconSize = createMemo(() => extractTextSize(classProp() ?? ""));
 
   const containerClasses = createMemo(() =>
