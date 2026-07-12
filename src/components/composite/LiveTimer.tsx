@@ -11,7 +11,7 @@ import Play from "lucide-solid/icons/play";
 import AlertTriangle from "lucide-solid/icons/triangle-alert";
 import Check from "lucide-solid/icons/check";
 import Calendar from "lucide-solid/icons/calendar";
-import ProgressBar from "../base/ProgressBar";
+import ProgressBar, { type ProgressColor } from "../base/ProgressBar";
 
 export interface LiveTimerProps extends Omit<JSX.HTMLAttributes<HTMLDivElement>, "class"> {
   // Core timing
@@ -354,6 +354,29 @@ const LiveTimer: Component<LiveTimerProps> = (props) => {
     return staticConfig().colorClass;
   });
 
+  // Mirrors colorClass's scenario logic but returns a COLOR_MAP key for
+  // ProgressBar's `color` prop — the class strings above were tokenized
+  // (4f6ed40) so the fill's class-substring sniff can no longer recover
+  // the hue. COMPLETED had no color substring even pre-tokenization, so it
+  // relies on the explicit prop rather than ever reaching the back-compat path.
+  const colorName = createMemo<ProgressColor>(() => {
+    switch (scenario()) {
+      case SCENARIO_COUNTDOWN_TIMER: {
+        const p = progress();
+        return p <= 25 ? "green" : p <= 75 ? "amber" : "red";
+      }
+      case SCENARIO_COUNTDOWN_TO_START:
+        return "blue";
+      case SCENARIO_OPEN_TIMER:
+        return "green";
+      case SCENARIO_OVERDUE:
+        return "purple";
+      case SCENARIO_COMPLETED:
+      default:
+        return "slate";
+    }
+  });
+
   const finalClass = createMemo(() => {
     const user = local.class ?? "";
     if (user.includes("border-") && user.includes("text-")) return user;
@@ -410,6 +433,7 @@ const LiveTimer: Component<LiveTimerProps> = (props) => {
           position={staticConfig().position}
           hidePercentage={resolvedHidePercentage()}
           shimmer={staticConfig().shimmer}
+          color={colorName()}
           class={finalClass()}
           {...others}
         />
@@ -424,6 +448,7 @@ const LiveTimer: Component<LiveTimerProps> = (props) => {
         hidePercentage
         rightLabel={statusLabel()}
         shimmer={staticConfig().shimmer}
+        color={colorName()}
         class={finalClass()}
         {...others}
       />
