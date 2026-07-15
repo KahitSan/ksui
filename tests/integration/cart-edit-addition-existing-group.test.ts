@@ -8,8 +8,25 @@ import { request, setupCartEditFixtures } from "./cart-edit-fixtures.js";
 // on the SAME transaction_id (no child transaction is ever created) and
 // reprice that group correctly.
 
+// Resolved lazily by id (set from the real seeded fixture rows in beforeAll)
+// so the pre-BEGIN findVariantsByIds RPC the route now makes (B5) returns a
+// real variant instead of forcing every addition through the plugin-absent
+// 503 path.
+let variantAIdForMock = 0;
+let variantBIdForMock = 0;
+let packageIdForMock = 0;
+
 vi.mock("../../server/lib/peers.js", () => ({
-  findVariantsByIds: async () => null,
+  findVariantsByIds: async (ids: number[]) =>
+    ids.flatMap((id) => {
+      if (id === variantAIdForMock) {
+        return [{ id, package_id: packageIdForMock, name: "Call Booth", kind: "standard", price: "500.00", currency: "PHP", duration_value: "1", duration_unit: "hour", is_active: true }];
+      }
+      if (id === variantBIdForMock) {
+        return [{ id, package_id: packageIdForMock, name: "Inner Area", kind: "standard", price: "300.00", currency: "PHP", duration_value: "1", duration_unit: "hour", is_active: true }];
+      }
+      return [];
+    }),
   findPackagesByIds: async () => null,
   validateVoucher: async () => null,
   findVoucherByCode: async () => null,
@@ -40,6 +57,9 @@ beforeAll(async () => {
   packageId = fx.packageId;
   variantAId = fx.variantAId;
   variantBId = fx.variantBId;
+  packageIdForMock = fx.packageId;
+  variantAIdForMock = fx.variantAId;
+  variantBIdForMock = fx.variantBId;
 });
 
 afterAll(async () => {
@@ -95,13 +115,8 @@ describe("POST /:id/apply-cart-edit — addition to existing customer group (rea
           customer_group_id: groupId,
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantBId,
-              description: "Inner Area 1hr",
               quantity: 1,
-              unit_price: 300,
-              duration_value: 1,
-              duration_unit: "hour",
               anchor: "now",
             },
           ],
@@ -135,5 +150,44 @@ describe("POST /:id/apply-cart-edit — addition to existing customer group (rea
       [groupId],
     );
     expect(parseFloat(cgRow.rows[0].subtotal)).toBe(800);
+  });
+
+  // B5 regression: package_id/description/unit_price/duration_value/
+  // duration_unit are no longer part of the accepted shape — the route's
+  // validators don't reject unknown extra keys (isValidAdditionItem only
+  // checks package_variant_id/quantity/anchor), so a client that still sends
+  // a stray unit_price gets it silently ignored-and-overridden by the
+  // server-derived variant price, never trusted for pricing.
+  it("ignores a client-supplied unit_price and prices from the resolved variant instead", async () => {
+    if (!ready) return;
+    const { transactionId, groupId } = await seedSingleGroupSale();
+
+    const res = await request(honoApp, "POST", `/${transactionId}/apply-cart-edit`, {
+      edit_token: crypto.randomUUID(),
+      reason: "Attempted client-supplied price override",
+      additions: [
+        {
+          customer_group_id: groupId,
+          items: [
+            {
+              package_variant_id: variantBId,
+              quantity: 1,
+              unit_price: 1,
+              anchor: "now",
+            },
+          ],
+        },
+      ],
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    // variantB's real price (300) landed, not the client's spoofed 1.
+    expect(body.transaction.amount).toBe(800);
+
+    const newLine = await db.query<{ unit_price: string }>(
+      `SELECT unit_price FROM accounts.transaction_line_items WHERE id = $1`,
+      [body.added_line_item_ids[0]],
+    );
+    expect(parseFloat(newLine.rows[0].unit_price)).toBe(300);
   });
 });

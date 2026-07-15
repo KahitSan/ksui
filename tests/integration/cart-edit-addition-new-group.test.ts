@@ -9,8 +9,20 @@ import { request, setupCartEditFixtures } from "./cart-edit-fixtures.js";
 // groups row, retroactively assigns batch_code, and upserts the
 // transaction_customers pool row via ON CONFLICT.
 
+// Resolved lazily by id (set from the real seeded fixture rows in beforeAll)
+// so the pre-BEGIN findVariantsByIds RPC the route now makes (B5) returns a
+// real variant instead of forcing every addition through the plugin-absent
+// 503 path.
+let variantAIdForMock = 0;
+let packageIdForMock = 0;
+
 vi.mock("../../server/lib/peers.js", () => ({
-  findVariantsByIds: async () => null,
+  findVariantsByIds: async (ids: number[]) =>
+    ids.flatMap((id) =>
+      id === variantAIdForMock
+        ? [{ id, package_id: packageIdForMock, name: "Call Booth", kind: "standard", price: "500.00", currency: "PHP", duration_value: "1", duration_unit: "hour", is_active: true }]
+        : [],
+    ),
   findPackagesByIds: async () => null,
   validateVoucher: async () => null,
   findVoucherByCode: async () => null,
@@ -41,6 +53,8 @@ beforeAll(async () => {
   packageId = fx.packageId;
   variantAId = fx.variantAId;
   clientAId = fx.clientAId;
+  packageIdForMock = fx.packageId;
+  variantAIdForMock = fx.variantAId;
 });
 
 afterAll(async () => {
@@ -109,13 +123,8 @@ describe("POST /:id/apply-cart-edit — addition creating a new customer group (
           },
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantAId,
-              description: "Call Booth 1hr",
               quantity: 1,
-              unit_price: 500,
-              duration_value: 1,
-              duration_unit: "hour",
               anchor: "now",
             },
           ],
@@ -167,13 +176,8 @@ describe("POST /:id/apply-cart-edit — addition creating a new customer group (
           new_group: { client_id: null, display_name: "Friend A", note: null, voucher_id: null, started_at: null },
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantAId,
-              description: "Call Booth 1hr",
               quantity: 1,
-              unit_price: 500,
-              duration_value: 1,
-              duration_unit: "hour",
               anchor: "now",
             },
           ],
@@ -196,13 +200,8 @@ describe("POST /:id/apply-cart-edit — addition creating a new customer group (
           new_group: { client_id: null, display_name: "Friend B", note: null, voucher_id: null, started_at: null },
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantAId,
-              description: "Call Booth 1hr",
               quantity: 1,
-              unit_price: 500,
-              duration_value: 1,
-              duration_unit: "hour",
               anchor: "now",
             },
           ],

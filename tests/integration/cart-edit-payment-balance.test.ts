@@ -9,8 +9,20 @@ import { request, setupCartEditFixtures } from "./cart-edit-fixtures.js";
 // already_paid and payment_status = 'partial' — never spawning a fresh
 // $0-collected sibling transaction.
 
+// Resolved lazily by id (set from the real seeded fixture rows in beforeAll)
+// so the pre-BEGIN findVariantsByIds RPC the route now makes (B5) returns a
+// real variant instead of forcing every addition through the plugin-absent
+// 503 path.
+let variantAIdForMock = 0;
+let packageIdForMock = 0;
+
 vi.mock("../../server/lib/peers.js", () => ({
-  findVariantsByIds: async () => null,
+  findVariantsByIds: async (ids: number[]) =>
+    ids.flatMap((id) =>
+      id === variantAIdForMock
+        ? [{ id, package_id: packageIdForMock, name: "Call Booth", kind: "standard", price: "500.00", currency: "PHP", duration_value: "1", duration_unit: "hour", is_active: true }]
+        : [],
+    ),
   findPackagesByIds: async () => null,
   validateVoucher: async () => null,
   findVoucherByCode: async () => null,
@@ -39,6 +51,8 @@ beforeAll(async () => {
   ready = fx.ready;
   packageId = fx.packageId;
   variantAId = fx.variantAId;
+  packageIdForMock = fx.packageId;
+  variantAIdForMock = fx.variantAId;
 });
 
 afterAll(async () => {
@@ -100,13 +114,8 @@ describe("POST /:id/apply-cart-edit — balance after an addition to a paid tran
           customer_group_id: groupId,
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantAId,
-              description: "Extra hour",
               quantity: 1,
-              unit_price: 200,
-              duration_value: 1,
-              duration_unit: "hour",
               anchor: "now",
             },
           ],
@@ -115,8 +124,8 @@ describe("POST /:id/apply-cart-edit — balance after an addition to a paid tran
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.transaction.amount).toBe(600);
-    expect(body.transaction.balance).toBe(200);
+    expect(body.transaction.amount).toBe(900);
+    expect(body.transaction.balance).toBe(500);
     expect(body.transaction.payment_status).toBe("partial");
 
     const siblingRes = await db.query<{ n: string }>(

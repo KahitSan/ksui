@@ -29,8 +29,20 @@ const VOUCHER = {
   minimum_purchase: null,
 };
 
+// Resolved lazily by id (set from the real seeded fixture rows in beforeAll)
+// so the pre-BEGIN findVariantsByIds RPC the route now makes (B5) returns a
+// real variant instead of forcing every addition through the plugin-absent
+// 503 path.
+let variantAIdForMock = 0;
+let packageIdForMock = 0;
+
 vi.mock("../../server/lib/peers.js", () => ({
-  findVariantsByIds: async () => null,
+  findVariantsByIds: async (ids: number[]) =>
+    ids.flatMap((id) =>
+      id === variantAIdForMock
+        ? [{ id, package_id: packageIdForMock, name: "Call Booth", kind: "standard", price: "500.00", currency: "PHP", duration_value: "1", duration_unit: "hour", is_active: true }]
+        : [],
+    ),
   findPackagesByIds: async () => null,
   validateVoucher: async () => null,
   findVoucherByCode: async () => null,
@@ -116,6 +128,8 @@ beforeAll(async () => {
     [packageId],
   );
   variantAId = variantA.rows[0].id;
+  packageIdForMock = packageId;
+  variantAIdForMock = variantAId;
 
   const voucherRes = await db.query<{ id: number }>(
     `INSERT INTO packages.vouchers (workspace_id, code, type, value)
@@ -218,13 +232,11 @@ describe("POST /:id/apply-cart-edit — new-group attribution + per-group vouche
           },
           items: [
             {
-              package_id: packageId,
+              // quantity 2 x variantA's derived price (500) = 1000, matching
+              // the "20% off 1000" narrative below without a client-supplied
+              // price (B5).
               package_variant_id: variantAId,
-              description: "New guest booking",
-              quantity: 1,
-              unit_price: 1000,
-              duration_value: 1,
-              duration_unit: "hour",
+              quantity: 2,
               anchor: "now",
             },
           ],

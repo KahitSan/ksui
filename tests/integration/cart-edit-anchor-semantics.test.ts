@@ -11,8 +11,20 @@ import { request, setupCartEditFixtures } from "./cart-edit-fixtures.js";
 // chain_from_line_id pointing at a DIFFERENT transaction is rejected with
 // 400/404 (server resolves the anchor; the client never sends an ISO).
 
+// Resolved lazily by id (set from the real seeded fixture rows in beforeAll)
+// so the pre-BEGIN findVariantsByIds RPC the route now makes (B5) returns a
+// real variant instead of forcing every addition through the plugin-absent
+// 503 path.
+let variantAIdForMock = 0;
+let packageIdForMock = 0;
+
 vi.mock("../../server/lib/peers.js", () => ({
-  findVariantsByIds: async () => null,
+  findVariantsByIds: async (ids: number[]) =>
+    ids.flatMap((id) =>
+      id === variantAIdForMock
+        ? [{ id, package_id: packageIdForMock, name: "Call Booth", kind: "standard", price: "500.00", currency: "PHP", duration_value: "1", duration_unit: "hour", is_active: true }]
+        : [],
+    ),
   findPackagesByIds: async () => null,
   validateVoucher: async () => null,
   findVoucherByCode: async () => null,
@@ -41,6 +53,8 @@ beforeAll(async () => {
   ready = fx.ready;
   packageId = fx.packageId;
   variantAId = fx.variantAId;
+  packageIdForMock = fx.packageId;
+  variantAIdForMock = fx.variantAId;
 });
 
 afterAll(async () => {
@@ -98,13 +112,8 @@ describe("POST /:id/apply-cart-edit — per-item anchor semantics (real Postgres
           customer_group_id: groupId,
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantAId,
-              description: "Fresh add-on",
               quantity: 1,
-              unit_price: 100,
-              duration_value: null,
-              duration_unit: null,
               anchor: "now",
             },
           ],
@@ -135,13 +144,8 @@ describe("POST /:id/apply-cart-edit — per-item anchor semantics (real Postgres
           customer_group_id: groupId,
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantAId,
-              description: "Extension hour",
               quantity: 1,
-              unit_price: 500,
-              duration_value: 1,
-              duration_unit: "hour",
               anchor: { chain_from_line_id: lineId },
             },
           ],
@@ -171,13 +175,8 @@ describe("POST /:id/apply-cart-edit — per-item anchor semantics (real Postgres
           customer_group_id: groupId,
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantAId,
-              description: "Should be rejected",
               quantity: 1,
-              unit_price: 500,
-              duration_value: 1,
-              duration_unit: "hour",
               anchor: { chain_from_line_id: other.lineId },
             },
           ],

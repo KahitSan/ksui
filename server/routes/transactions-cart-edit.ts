@@ -14,6 +14,7 @@ import { ctxGet } from "../types.js";
 import { assertParentEditable, lockParentForReprice, repriceParentTransaction } from "../lib/reprice-parent-transaction.js";
 import { insertLineItemsForTransaction, insertNewCustomerGroup } from "../charge/insert-line-items.js";
 import type { ChargeLineInput, ValidUnit } from "../charge/validate.js";
+import { findVariantsByIds, type PackageVariantRow } from "../lib/peers.js";
 import { MAX_NUMERIC_12_2 } from "./shared.js";
 
 interface ReductionInput {
@@ -27,14 +28,14 @@ interface AdditionAnchorChain {
   chain_from_line_id: number;
 }
 
+// package_id/description/unit_price/duration_value/duration_unit are NEVER
+// accepted from the client (B5) — package_variant_id is the only cart ref,
+// resolved server-side through the packages RPC (findVariantsByIds) exactly
+// like /extend and /charge-overage, and every priced/duration field is
+// derived from that resolved row before insert.
 interface AdditionItem {
-  package_id: number;
   package_variant_id: number;
-  description: string;
   quantity: number;
-  unit_price: number;
-  duration_value: number | null;
-  duration_unit: ValidUnit | null;
   anchor: "now" | AdditionAnchorChain;
 }
 
@@ -44,6 +45,9 @@ interface NewGroupInput {
   note: string | null;
   voucher_id: number | null;
   is_payer?: boolean;
+  // Accepted + shape-validated for forward compat with the group-level
+  // anchor the client UI already exposes, but each item's own `anchor`
+  // (not the group's) governs started_at below — intentionally unused here.
   started_at: string | null;
 }
 
@@ -91,19 +95,15 @@ function isValidAdditionAnchor(anchor: unknown): anchor is "now" | AdditionAncho
   return typeof a.chain_from_line_id === "number" && Number.isInteger(a.chain_from_line_id) && a.chain_from_line_id > 0;
 }
 
+// Mirrors validate.ts's isValidChargeLine numeric discipline (finite, > 0 —
+// no integer requirement, since quantity here is "how many periods of the
+// resolved variant," matching /extend's own quantity contract).
 function isValidAdditionItem(item: unknown): item is AdditionItem {
   if (item == null || typeof item !== "object") return false;
   const v = item as Record<string, unknown>;
-  const pkgOk = typeof v.package_id === "number" && v.package_id > 0;
   const varOk = typeof v.package_variant_id === "number" && v.package_variant_id > 0;
-  const descOk = typeof v.description === "string" && v.description.trim().length > 0;
-  const qtyOk = typeof v.quantity === "number" && Number.isInteger(v.quantity) && v.quantity > 0;
-  const priceOk =
-    typeof v.unit_price === "number" && v.unit_price >= 0 && v.unit_price <= MAX_NUMERIC_12_2;
-  const durationValueOk = v.duration_value === null || typeof v.duration_value === "number";
-  const durationUnitOk =
-    v.duration_unit === null || v.duration_unit === "hour" || v.duration_unit === "day" || v.duration_unit === "month";
-  return pkgOk && varOk && descOk && qtyOk && priceOk && durationValueOk && durationUnitOk && isValidAdditionAnchor(v.anchor);
+  const qtyOk = typeof v.quantity === "number" && Number.isFinite(v.quantity) && v.quantity > 0;
+  return varOk && qtyOk && isValidAdditionAnchor(v.anchor);
 }
 
 function isValidNewGroupInput(ng: unknown): ng is NewGroupInput {
@@ -180,6 +180,42 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
       const workspaceId = ctxGet(c, "workspaceId");
       const userId = ctxGet(c, "user")?.id;
       const idh = identityHeaderOf(c);
+
+      // B5: every addition item's package_variant_id is resolved through the
+      // packages RPC BEFORE BEGIN — mirrors run-charge.ts/extend.ts. A cart
+      // that references a package_variant_id the RPC doesn't return (unknown
+      // id, foreign workspace, or the packages plugin being off) 400s here,
+      // before any row lock or DB write.
+      const additionVariantIds = [
+        ...new Set((additionsRaw ?? []).flatMap((entry) => entry.items.map((item) => item.package_variant_id))),
+      ];
+      const variantById = new Map<number, PackageVariantRow>();
+      if (additionVariantIds.length > 0) {
+        const variants = await findVariantsByIds(additionVariantIds, idh);
+        if (variants == null) {
+          return c.json(
+            {
+              error:
+                "This cart references packages, but the packages plugin is not available. Enable the packages plugin to add line items.",
+            },
+            503,
+          );
+        }
+        for (const v of variants) variantById.set(v.id, v);
+        for (const vid of additionVariantIds) {
+          const variant = variantById.get(vid);
+          if (variant == null) {
+            return c.json({ error: "package_variant_id must belong to this workspace" }, 400);
+          }
+          // Same 22003-avoidance as validate.ts's unit_price upper bound — a
+          // variant price already stored past NUMERIC(12,2) would otherwise
+          // 500 instead of cleanly 400ing here.
+          if (variant.price != null && parseFloat(String(variant.price)) > MAX_NUMERIC_12_2) {
+            return c.json({ error: "package_variant price exceeds the maximum allowed" }, 400);
+          }
+        }
+      }
+
       let dbClient: import("pg").PoolClient | null = null;
       try {
         dbClient = await pool.connect();
@@ -349,14 +385,19 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
           const items: ChargeLineInput[] = [];
           const perLineStartedAt: (string | null)[] = [];
           for (const item of addition.items) {
+            // Resolved pre-BEGIN (missing entries already 400'd the whole
+            // call before any lock was taken) — package_id/description/
+            // unit_price/duration are ALWAYS derived from the variant row,
+            // never the client, matching /extend's precedent.
+            const variant = variantById.get(item.package_variant_id) as PackageVariantRow;
             items.push({
-              package_id: item.package_id,
+              package_id: variant.package_id,
               package_variant_id: item.package_variant_id,
-              description: item.description,
+              description: variant.name,
               quantity: item.quantity,
-              unit_price: item.unit_price,
-              duration_value: item.duration_value,
-              duration_unit: item.duration_unit,
+              unit_price: parseFloat(String(variant.price ?? 0)),
+              duration_value: variant.duration_value != null ? parseFloat(String(variant.duration_value)) : null,
+              duration_unit: (variant.duration_unit as ValidUnit | null) ?? null,
             });
             if (item.anchor === "now") {
               // null forces NOW() in insertLineItemsForTransaction — a
@@ -411,9 +452,12 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
             addedLineItemIds.push(li.id as number);
           }
 
+          // Priced off the DERIVED items[] (server-resolved unit_price), not
+          // the raw client addition.items — the client no longer sends a
+          // price at all.
           let groupDelta = costDeltaByGroup.get(cgId) ?? 0;
-          for (const item of addition.items) {
-            groupDelta += item.quantity * item.unit_price;
+          for (const li of items) {
+            groupDelta += li.quantity * li.unit_price;
           }
           costDeltaByGroup.set(cgId, groupDelta);
         }

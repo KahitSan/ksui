@@ -8,20 +8,31 @@ import { request, setupCartEditFixtures } from "./cart-edit-fixtures.js";
 // the ENTIRE call — zero new customer_group rows, zero new line items,
 // original reductions un-applied.
 //
-// Deviation from the brief's literal "invalid package_variant_id" trigger:
-// package_variant_id carries no FK/RPC validation in this route (the brief's
-// own validation section only shape-checks it, and unlike run-charge.ts this
-// route never calls the packages findVariantsByIds RPC), so a shape-invalid
-// package_variant_id (<=0) only ever produces a pre-BEGIN 400 with zero DB
-// writes at all — trivially atomic, but not a "mid-additions" DB rollback.
-// The first `it` below covers that trivial case; the second forces a genuine
-// mid-transaction ROLLBACK via a second addition entry that targets a
-// customer_group_id belonging to a DIFFERENT transaction — that check only
-// runs inside BEGIN, after the first addition/reduction already mutated rows
-// in the same DB transaction, so it actually exercises the ROLLBACK path.
+// A shape-invalid package_variant_id (<=0) still only ever produces a
+// pre-BEGIN 400 with zero DB writes — trivially atomic, but not a
+// "mid-additions" DB rollback. Since B5, package_variant_id also goes
+// through a real findVariantsByIds RPC resolve before BEGIN (mocked below),
+// so the first `it` exercises the shape-check 400 specifically; the second
+// forces a genuine mid-transaction ROLLBACK via a second addition entry that
+// targets a customer_group_id belonging to a DIFFERENT transaction — that
+// check only runs inside BEGIN, after the first addition/reduction already
+// mutated rows in the same DB transaction, so it actually exercises the
+// ROLLBACK path.
+
+// Resolved lazily by id (set from the real seeded fixture rows in beforeAll)
+// so the pre-BEGIN findVariantsByIds RPC the route now makes (B5) returns a
+// real variant instead of forcing every addition through the plugin-absent
+// 503 path.
+let variantAIdForMock = 0;
+let packageIdForMock = 0;
 
 vi.mock("../../server/lib/peers.js", () => ({
-  findVariantsByIds: async () => null,
+  findVariantsByIds: async (ids: number[]) =>
+    ids.flatMap((id) =>
+      id === variantAIdForMock
+        ? [{ id, package_id: packageIdForMock, name: "Call Booth", kind: "standard", price: "500.00", currency: "PHP", duration_value: "1", duration_unit: "hour", is_active: true }]
+        : [],
+    ),
   findPackagesByIds: async () => null,
   validateVoucher: async () => null,
   findVoucherByCode: async () => null,
@@ -50,6 +61,8 @@ beforeAll(async () => {
   ready = fx.ready;
   packageId = fx.packageId;
   variantAId = fx.variantAId;
+  packageIdForMock = fx.packageId;
+  variantAIdForMock = fx.variantAId;
 });
 
 afterAll(async () => {
@@ -108,13 +121,8 @@ describe("POST /:id/apply-cart-edit — atomicity of a mixed reduce+add call (re
           customer_group_id: groupId,
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantAId,
-              description: "Valid entry",
               quantity: 1,
-              unit_price: 100,
-              duration_value: null,
-              duration_unit: null,
               anchor: "now",
             },
           ],
@@ -123,13 +131,8 @@ describe("POST /:id/apply-cart-edit — atomicity of a mixed reduce+add call (re
           customer_group_id: groupId,
           items: [
             {
-              package_id: packageId,
               package_variant_id: -1,
-              description: "Invalid entry",
               quantity: 1,
-              unit_price: 100,
-              duration_value: null,
-              duration_unit: null,
               anchor: "now",
             },
           ],
@@ -169,13 +172,8 @@ describe("POST /:id/apply-cart-edit — atomicity of a mixed reduce+add call (re
           new_group: { client_id: null, display_name: "New Guest", note: null, voucher_id: null, started_at: null },
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantAId,
-              description: "Would insert first",
               quantity: 1,
-              unit_price: 100,
-              duration_value: null,
-              duration_unit: null,
               anchor: "now",
             },
           ],
@@ -184,13 +182,8 @@ describe("POST /:id/apply-cart-edit — atomicity of a mixed reduce+add call (re
           customer_group_id: other.groupId,
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantAId,
-              description: "cg from a different transaction",
               quantity: 1,
-              unit_price: 100,
-              duration_value: null,
-              duration_unit: null,
               anchor: "now",
             },
           ],
@@ -213,5 +206,51 @@ describe("POST /:id/apply-cart-edit — atomicity of a mixed reduce+add call (re
       [transactionId],
     );
     expect(cgCount.rows[0].n).toBe("1");
+  });
+
+  // Fold-in: an addition-only call (no reduction alongside it) targeting a
+  // customer_group_id that belongs to a DIFFERENT transaction in the SAME
+  // workspace 404s and mutates nothing — isolates the guard from the
+  // combined reduce+add path above.
+  it("an addition-only call targeting a different transaction's customer_group_id 404s and mutates nothing", async () => {
+    if (!ready) return;
+    const { transactionId } = await seedSale();
+    const other = await seedSale();
+
+    const res = await request(honoApp, "POST", `/${transactionId}/apply-cart-edit`, {
+      edit_token: crypto.randomUUID(),
+      reason: "Attempted cross-transaction addition",
+      additions: [
+        {
+          customer_group_id: other.groupId,
+          items: [
+            {
+              package_variant_id: variantAId,
+              quantity: 1,
+              anchor: "now",
+            },
+          ],
+        },
+      ],
+    });
+    expect(res.status).toBe(404);
+
+    const cgCount = await db.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM accounts.transaction_customer_groups WHERE transaction_id = $1`,
+      [transactionId],
+    );
+    expect(cgCount.rows[0].n).toBe("1");
+
+    const lines = await db.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM accounts.transaction_line_items WHERE transaction_id = $1`,
+      [transactionId],
+    );
+    expect(lines.rows[0].n).toBe("1");
+
+    const otherLines = await db.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM accounts.transaction_line_items WHERE transaction_id = $1`,
+      [other.transactionId],
+    );
+    expect(otherLines.rows[0].n).toBe("1");
   });
 });

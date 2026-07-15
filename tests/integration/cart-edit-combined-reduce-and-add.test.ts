@@ -5,11 +5,24 @@ import type { FakePluginDb } from "@kahitsan/plugin-sdk/test";
 import { request, setupCartEditFixtures } from "./cart-edit-fixtures.js";
 
 // SAME-TX-EDIT-BRIEF.md test 3: combined reductions (down 99) + additions
-// (up 447) in one call nets the parent amount to +348, and each touched cg's
-// subtotal/discount_amount updates independently per repriceParentTransaction.
+// (up variantB's derived price, 300) in one call nets the parent amount to
+// +300, and each touched cg's subtotal/discount_amount updates independently
+// per repriceParentTransaction.
+
+// Resolved lazily by id (set from the real seeded fixture rows in beforeAll)
+// so the pre-BEGIN findVariantsByIds RPC the route now makes (B5) returns a
+// real variant instead of forcing every addition through the plugin-absent
+// 503 path.
+let variantBIdForMock = 0;
+let packageIdForMock = 0;
 
 vi.mock("../../server/lib/peers.js", () => ({
-  findVariantsByIds: async () => null,
+  findVariantsByIds: async (ids: number[]) =>
+    ids.flatMap((id) =>
+      id === variantBIdForMock
+        ? [{ id, package_id: packageIdForMock, name: "Inner Area", kind: "standard", price: "300.00", currency: "PHP", duration_value: "1", duration_unit: "hour", is_active: true }]
+        : [],
+    ),
   findPackagesByIds: async () => null,
   validateVoucher: async () => null,
   findVoucherByCode: async () => null,
@@ -40,6 +53,8 @@ beforeAll(async () => {
   packageId = fx.packageId;
   variantAId = fx.variantAId;
   variantBId = fx.variantBId;
+  packageIdForMock = fx.packageId;
+  variantBIdForMock = fx.variantBId;
 });
 
 afterAll(async () => {
@@ -84,7 +99,7 @@ describe("POST /:id/apply-cart-edit — combined reduce+add in one call (real Po
     expect(honoApp).toBeDefined();
   });
 
-  it("nets the parent to +348 and prices each touched cg independently", async () => {
+  it("nets the parent to +300 and prices each touched cg independently", async () => {
     if (!ready) return;
     const { transactionId, groupAId } = await seedPayerSale();
 
@@ -100,13 +115,8 @@ describe("POST /:id/apply-cart-edit — combined reduce+add in one call (real Po
           new_group: { client_id: null, display_name: "New Guest", note: null, voucher_id: null, started_at: null },
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantBId,
-              description: "Inner Area session",
               quantity: 1,
-              unit_price: 447,
-              duration_value: 1,
-              duration_unit: "hour",
               anchor: "now",
             },
           ],
@@ -115,7 +125,7 @@ describe("POST /:id/apply-cart-edit — combined reduce+add in one call (real Po
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.transaction.amount).toBe(447);
+    expect(body.transaction.amount).toBe(300);
     expect(body.voided_line_item_ids.length).toBe(1);
     expect(body.new_customer_group_ids.length).toBe(1);
     const newGroupId = body.new_customer_group_ids[0];
@@ -130,14 +140,14 @@ describe("POST /:id/apply-cart-edit — combined reduce+add in one call (real Po
       `SELECT subtotal, discount_amount FROM accounts.transaction_customer_groups WHERE id = $1`,
       [newGroupId],
     );
-    expect(parseFloat(cgBRow.rows[0].subtotal)).toBe(447);
+    expect(parseFloat(cgBRow.rows[0].subtotal)).toBe(300);
     expect(parseFloat(cgBRow.rows[0].discount_amount)).toBe(0);
 
     const txnRow = await db.query<{ amount: string; subtotal: string }>(
       `SELECT amount, subtotal FROM accounts.transactions WHERE id = $1`,
       [transactionId],
     );
-    expect(parseFloat(txnRow.rows[0].amount)).toBe(447);
-    expect(parseFloat(txnRow.rows[0].subtotal)).toBe(447);
+    expect(parseFloat(txnRow.rows[0].amount)).toBe(300);
+    expect(parseFloat(txnRow.rows[0].subtotal)).toBe(300);
   });
 });

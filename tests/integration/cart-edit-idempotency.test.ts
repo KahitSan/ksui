@@ -8,8 +8,20 @@ import { request, setupCartEditFixtures } from "./cart-edit-fixtures.js";
 // reductions AND additions in the body) returns the stored payload from
 // transaction_edits on the second call without re-inserting any row.
 
+// Resolved lazily by id (set from the real seeded fixture rows in beforeAll)
+// so the pre-BEGIN findVariantsByIds RPC the route now makes (B5) returns a
+// real variant instead of forcing every addition through the plugin-absent
+// 503 path.
+let variantAIdForMock = 0;
+let packageIdForMock = 0;
+
 vi.mock("../../server/lib/peers.js", () => ({
-  findVariantsByIds: async () => null,
+  findVariantsByIds: async (ids: number[]) =>
+    ids.flatMap((id) =>
+      id === variantAIdForMock
+        ? [{ id, package_id: packageIdForMock, name: "Call Booth", kind: "standard", price: "500.00", currency: "PHP", duration_value: "1", duration_unit: "hour", is_active: true }]
+        : [],
+    ),
   findPackagesByIds: async () => null,
   validateVoucher: async () => null,
   findVoucherByCode: async () => null,
@@ -38,6 +50,8 @@ beforeAll(async () => {
   ready = fx.ready;
   packageId = fx.packageId;
   variantAId = fx.variantAId;
+  packageIdForMock = fx.packageId;
+  variantAIdForMock = fx.variantAId;
 });
 
 afterAll(async () => {
@@ -97,13 +111,8 @@ describe("POST /:id/apply-cart-edit — idempotency of a mixed reduce+add call (
           customer_group_id: groupId,
           items: [
             {
-              package_id: packageId,
               package_variant_id: variantAId,
-              description: "New package",
               quantity: 1,
-              unit_price: 300,
-              duration_value: null,
-              duration_unit: null,
               anchor: "now" as const,
             },
           ],
