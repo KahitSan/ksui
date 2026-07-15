@@ -40,6 +40,14 @@ export interface CartEditFixtures {
   packageId: number;
   variantAId: number;
   variantBId: number;
+  // Real clients.clients rows — transaction_customer_groups.client_id (and
+  // transaction_line_items.client_id) carry a real FK in this shared schema
+  // (a legacy monolith artifact this plugin treats as a soft cross-plugin
+  // ref at the app layer, per the extend-voucher.test.ts precedent for
+  // packages.vouchers), so an addition test attributing lines to a new
+  // client needs a real row to reference, not an arbitrary integer.
+  clientAId: number | null;
+  clientBId: number | null;
 }
 
 export async function setupCartEditFixtures(testOrg: number, wsSlug: string): Promise<CartEditFixtures> {
@@ -70,6 +78,8 @@ export async function setupCartEditFixtures(testOrg: number, wsSlug: string): Pr
       packageId: 0,
       variantAId: 0,
       variantBId: 0,
+      clientAId: null,
+      clientBId: null,
     };
   }
 
@@ -111,6 +121,27 @@ export async function setupCartEditFixtures(testOrg: number, wsSlug: string): Pr
     [packageId],
   );
 
+  // clients.clients is a SEPARATE plugin's schema — a bare CI database
+  // doesn't have it, so this stays optional (null) rather than gating
+  // fixture readiness on it like packages/variants above.
+  let clientAId: number | null = null;
+  let clientBId: number | null = null;
+  const clientsCheck = await pool.query<{ clients_ok: string | null }>(
+    `SELECT to_regclass('clients.clients')::text AS clients_ok`,
+  );
+  if (clientsCheck.rows[0]?.clients_ok) {
+    const clientA = await db.query<{ id: number }>(
+      `INSERT INTO clients.clients (workspace_id, name_raw) VALUES ($1, 'Cart Edit Test Client A') RETURNING id`,
+      [testOrg],
+    );
+    clientAId = clientA.rows[0].id;
+    const clientB = await db.query<{ id: number }>(
+      `INSERT INTO clients.clients (workspace_id, name_raw) VALUES ($1, 'Cart Edit Test Client B') RETURNING id`,
+      [testOrg],
+    );
+    clientBId = clientB.rows[0].id;
+  }
+
   const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId: testOrg,
     userId,
@@ -139,5 +170,7 @@ export async function setupCartEditFixtures(testOrg: number, wsSlug: string): Pr
     packageId,
     variantAId: variantA.rows[0].id,
     variantBId: variantB.rows[0].id,
+    clientAId,
+    clientBId,
   };
 }

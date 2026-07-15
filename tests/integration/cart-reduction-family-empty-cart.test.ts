@@ -4,11 +4,14 @@ import type pg from "pg";
 import type { FakePluginDb } from "@kahitsan/plugin-sdk/test";
 import { request, setupCartEditFixtures } from "./cart-edit-fixtures.js";
 
-// Regression test for tx #8843: a cashier zeroes ALL of a parent's own lines
-// after redistributing them to other customers via /charge (each addition is
-// a CHILD transaction with parent_transaction_id set). The EMPTY_CART guard
-// must look at the whole receipt FAMILY (parent + non-voided children), not
-// just the parent's own remaining lines.
+// Was the family-aware EMPTY_CART guard (tx #8843): additions used to land on
+// a CHILD transaction (parent_transaction_id set) via /charge, so the guard
+// unioned the parent's own lines with any non-voided child's lines. Per
+// SAME-TX-EDIT-BRIEF.md, additions now land on the SAME transaction_id and
+// that union is deleted — so a child's lines no longer rescue an otherwise-
+// empty parent. This file is REWRITTEN (not deleted) to pin that the
+// simplified single-table guard actually behaves this way, rather than
+// leaving assertions for the deleted child-union behavior in place.
 
 vi.mock("../../server/lib/peers.js", () => ({
   findVariantsByIds: async () => null,
@@ -22,7 +25,6 @@ vi.mock("../../server/lib/peers.js", () => ({
 }));
 
 const TEST_ORG = 48;
-const OTHER_ORG = 49;
 
 let honoApp: Hono;
 let pool: pg.Pool;
@@ -31,6 +33,7 @@ let rollback: () => Promise<void>;
 let ready = false;
 let packageId: number;
 let variantAId: number;
+let variantBId: number;
 
 beforeAll(async () => {
   const fx = await setupCartEditFixtures(TEST_ORG, "ci-ws-48");
@@ -41,6 +44,7 @@ beforeAll(async () => {
   ready = fx.ready;
   packageId = fx.packageId;
   variantAId = fx.variantAId;
+  variantBId = fx.variantBId;
 });
 
 afterAll(async () => {
@@ -78,12 +82,11 @@ async function seedParentWithLines(lineCount: number): Promise<{ transactionId: 
   return { transactionId, lineIds };
 }
 
-/** Seeds a child transaction (parent_transaction_id set) with one line, in the given workspace. */
+/** Seeds a legacy-shaped child transaction (parent_transaction_id set) with one line. */
 async function seedChild(
   parentTransactionId: number,
-  opts: { workspaceId?: number; childStatus?: string; lineStatus?: string } = {},
+  opts: { childStatus?: string; lineStatus?: string } = {},
 ): Promise<{ transactionId: number; lineId: number }> {
-  const workspaceId = opts.workspaceId ?? TEST_ORG;
   const childStatus = opts.childStatus ?? "completed";
   const lineStatus = opts.lineStatus ?? "active";
   const txnRes = await db.query<{ id: number }>(
@@ -93,7 +96,7 @@ async function seedChild(
      VALUES ($1, 'sale', 'Sales - services', 500, $2, CURRENT_DATE, $3, $4, 500, 0, $5)
      RETURNING id`,
     [
-      workspaceId,
+      TEST_ORG,
       `cart-reduction-family-child-${Date.now()}-${seedCounter++}`,
       childStatus,
       "test-user-id",
@@ -108,7 +111,7 @@ async function seedChild(
         duration_value, duration_unit, started_at, ends_at, status, customer_group_id)
      VALUES ($1, $2, $3, $4, 'Redistributed line', 1, 500, 1, 'hour', NOW() - INTERVAL '1 hour', NOW(), $5, NULL)
      RETURNING id`,
-    [transactionId, workspaceId, packageId, variantAId, lineStatus],
+    [transactionId, TEST_ORG, packageId, variantAId, lineStatus],
   );
 
   return { transactionId, lineId: lineRes.rows[0].id };
@@ -117,32 +120,34 @@ async function seedChild(
 async function zeroOutParent(transactionId: number) {
   return request(honoApp, "POST", `/${transactionId}/apply-cart-edit`, {
     edit_token: crypto.randomUUID(),
-    reason: "Redistributed to other customers",
+    reason: "Zero the parent's own lines",
     reductions: [
       { customer_group_id: null, package_id: packageId, package_variant_id: variantAId, target_quantity: 0 },
     ],
   });
 }
 
-describe("POST /:id/apply-cart-edit — family-aware EMPTY_CART guard (real Postgres)", () => {
+describe("POST /:id/apply-cart-edit — same-tx-only EMPTY_CART guard (real Postgres)", () => {
   it("has the prerequisites seeded (else the suite is a no-op skip)", () => {
     if (!ready) return;
     expect(honoApp).toBeDefined();
   });
 
-  it("(a) allows zeroing the parent's lines when a non-voided child still has an active line", async () => {
+  it("409s EMPTY_CART even when a linked (parent_transaction_id-carrying) transaction has an active line", async () => {
     if (!ready) return;
-    const { transactionId, lineIds } = await seedParentWithLines(2);
+    const { transactionId, lineIds } = await seedParentWithLines(1);
     const child = await seedChild(transactionId);
 
     const res = await zeroOutParent(transactionId);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.code).toBe("EMPTY_CART");
 
     const lines = await db.query<{ status: string }>(
       `SELECT status FROM accounts.transaction_line_items WHERE id = ANY($1)`,
       [lineIds],
     );
-    expect(lines.rows.every((r) => r.status === "voided")).toBe(true);
+    expect(lines.rows.every((r) => r.status === "completed")).toBe(true);
 
     const childLine = await db.query<{ status: string }>(
       `SELECT status FROM accounts.transaction_line_items WHERE id = $1`,
@@ -151,7 +156,7 @@ describe("POST /:id/apply-cart-edit — family-aware EMPTY_CART guard (real Post
     expect(childLine.rows[0].status).toBe("active");
   });
 
-  it("(b) still 409s EMPTY_CART when the parent has no child at all, and mutates nothing", async () => {
+  it("409s EMPTY_CART when the parent has no linked transaction at all, and mutates nothing", async () => {
     if (!ready) return;
     const { transactionId, lineIds } = await seedParentWithLines(1);
 
@@ -173,45 +178,35 @@ describe("POST /:id/apply-cart-edit — family-aware EMPTY_CART guard (real Post
     expect(editRows.rows[0].n).toBe("0");
   });
 
-  it("(c) still 409s EMPTY_CART when the only child is voided", async () => {
+  it("passes when the parent still has an active line of its OWN left over, regardless of any linked transaction", async () => {
     if (!ready) return;
     const { transactionId, lineIds } = await seedParentWithLines(1);
+    // A second, DIFFERENT-package line on the parent itself — the guard must
+    // still see this one after the reduction voids the first, independent of
+    // whatever a linked transaction carries.
+    const otherLine = await db.query<{ id: number }>(
+      `INSERT INTO accounts.transaction_line_items
+         (transaction_id, workspace_id, package_id, package_variant_id, description, quantity, unit_price,
+          duration_value, duration_unit, started_at, ends_at, status, customer_group_id)
+       VALUES ($1, $2, $3, $4, 'Other line', 1, 300, 1, 'hour', NOW() - INTERVAL '1 hour', NOW(), 'active', NULL)
+       RETURNING id`,
+      [transactionId, TEST_ORG, packageId, variantBId],
+    );
     await seedChild(transactionId, { childStatus: "voided" });
 
     const res = await zeroOutParent(transactionId);
-    expect(res.status).toBe(409);
-    const body = await res.json();
-    expect(body.code).toBe("EMPTY_CART");
+    expect(res.status).toBe(200);
 
-    const lines = await db.query<{ status: string }>(
+    const voidedLines = await db.query<{ status: string }>(
       `SELECT status FROM accounts.transaction_line_items WHERE id = ANY($1)`,
       [lineIds],
     );
-    expect(lines.rows.every((r) => r.status === "completed")).toBe(true);
-  });
+    expect(voidedLines.rows.every((r) => r.status === "voided")).toBe(true);
 
-  it("(d) a child in a DIFFERENT workspace does not count toward the family", async () => {
-    if (!ready) return;
-    // `db` (not the raw `pool`) shares the single connection/transaction the
-    // route itself runs on (see cart-edit-fixtures withRollbackDb), so a row
-    // seeded here is visible to the route's queries within this test.
-    await db.query(
-      `INSERT INTO public.workspaces (id, name, slug) VALUES ($1, $2, $3)
-         ON CONFLICT (id) DO NOTHING`,
-      [OTHER_ORG, `CI Workspace ${OTHER_ORG}`, "ci-ws-49"],
+    const survivingLine = await db.query<{ status: string }>(
+      `SELECT status FROM accounts.transaction_line_items WHERE id = $1`,
+      [otherLine.rows[0].id],
     );
-    const { transactionId, lineIds } = await seedParentWithLines(1);
-    await seedChild(transactionId, { workspaceId: OTHER_ORG });
-
-    const res = await zeroOutParent(transactionId);
-    expect(res.status).toBe(409);
-    const body = await res.json();
-    expect(body.code).toBe("EMPTY_CART");
-
-    const lines = await db.query<{ status: string }>(
-      `SELECT status FROM accounts.transaction_line_items WHERE id = ANY($1)`,
-      [lineIds],
-    );
-    expect(lines.rows.every((r) => r.status === "completed")).toBe(true);
+    expect(survivingLine.rows[0].status).toBe("active");
   });
 });
