@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 1.4.0
+
+### Minor Changes
+
+- 3de0e54: Add POST /api/transactions/:id/apply-cart-edit for POS edit-cart — cashiers can now Save reductions (voiding or reducing original items) AND additions (new items on the existing customer group or a brand-new one, e.g. "a friend joined and grabbed a package too") on the SAME receipt in one atomic call, instead of spawning a separate child transaction. Every added item is priced and named server-side from the picked package variant — the cashier only picks a variant and a quantity; the price, description, and duration always come from the packages plugin, never the client. The recorded payment is preserved throughout and the balance is netted against the new total. The endpoint runs inside a single DB transaction with a FOR UPDATE lock, replays idempotently via edit_token, computes the line diff server-side, and writes transaction_edits audit rows. Guards against an empty resulting cart (EMPTY_CART) and against editing a transaction with a refund on it (REFUND_BLOCKED, refunds are intentionally out of scope). The same parent-lifecycle guard (voided/forfeited parent) now also covers line-item void, extend, and charge-overage.
+
 ## 1.3.4
 
 ### Patch Changes
