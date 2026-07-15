@@ -192,3 +192,82 @@ describe("PATCH /:id/customer-group-started-at (real Postgres)", () => {
     expect(after.rows[0].n).toBe(before.rows[0].n);
   });
 });
+
+describe("PATCH /:id/customer-group-started-at — legacy null customer_group_id (real Postgres)", () => {
+  const desc = `integ-counter-patch-legacy-${Date.now()}`;
+  let txnId: number;
+  let nullCgLineId: number;
+  let otherTxnLineId: number;
+
+  it("seeds a legacy/synthetic transaction whose lines never got a customer_group_id", async () => {
+    const res = await request(honoApp, "POST", "/", {
+      category: "sale",
+      amount: "100.00",
+      description: desc,
+      transaction_date: todayInOrgTimezone(),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(201);
+    txnId = body.id;
+
+    const line = await db.query<{ id: number }>(
+      `INSERT INTO accounts.transaction_line_items
+         (transaction_id, workspace_id, customer_group_id, description, quantity, unit_price,
+          status, duration_value, duration_unit, started_at, ends_at)
+       VALUES ($1, $2, NULL, 'Legacy Room', 1, 100.00, 'active', 1, 'hour', NOW() - INTERVAL '2 hour', NOW() - INTERVAL '1 hour')
+       RETURNING id`,
+      [txnId, TEST_ORG],
+    );
+    nullCgLineId = line.rows[0].id;
+
+    // A line on a DIFFERENT transaction, also customer_group_id NULL — proves
+    // the transaction_id scope, not just the NULL match, gates the update.
+    const otherRes = await request(honoApp, "POST", "/", {
+      category: "sale",
+      amount: "50.00",
+      description: `${desc}-other`,
+      transaction_date: todayInOrgTimezone(),
+    });
+    const otherBody = await otherRes.json();
+    const otherLine = await db.query<{ id: number }>(
+      `INSERT INTO accounts.transaction_line_items
+         (transaction_id, workspace_id, customer_group_id, description, quantity, unit_price,
+          status, duration_value, duration_unit, started_at, ends_at)
+       VALUES ($1, $2, NULL, 'Other Legacy Room', 1, 50.00, 'active', 1, 'hour', NOW() - INTERVAL '2 hour', NOW() - INTERVAL '1 hour')
+       RETURNING id`,
+      [otherBody.id, TEST_ORG],
+    );
+    otherTxnLineId = otherLine.rows[0].id;
+  });
+
+  it("customer_group_id: null updates every NULL-cg line on THIS transaction only", async () => {
+    const newStart = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const res = await request(honoApp, "PATCH", `/${txnId}/customer-group-started-at`, {
+      updates: [{ customer_group_id: null, started_at: newStart }],
+      reason: "Fix legacy transaction's start time",
+    });
+    expect(res.status).toBe(200);
+
+    const line = await db.query<{ started_at: Date }>(
+      `SELECT started_at FROM accounts.transaction_line_items WHERE id = $1`,
+      [nullCgLineId],
+    );
+    expect(new Date(line.rows[0].started_at).getTime()).toBe(new Date(newStart).getTime());
+
+    // The other transaction's NULL-cg line must be untouched — IS NOT
+    // DISTINCT FROM must not become an accidental cross-transaction wildcard.
+    const otherLine = await db.query<{ started_at: Date }>(
+      `SELECT started_at FROM accounts.transaction_line_items WHERE id = $1`,
+      [otherTxnLineId],
+    );
+    expect(new Date(otherLine.rows[0].started_at).getTime()).not.toBe(new Date(newStart).getTime());
+  });
+
+  it("a mismatched/foreign customer_group_id on the same transaction still 404s", async () => {
+    const res = await request(honoApp, "PATCH", `/${txnId}/customer-group-started-at`, {
+      updates: [{ customer_group_id: 999999999, started_at: new Date().toISOString() }],
+      reason: "Wrong id, should not match the NULL-cg line",
+    });
+    expect(res.status).toBe(404);
+  });
+});
