@@ -17,10 +17,11 @@
 // calls this last (after Edit), reproducing the original tail order.
 
 import { Hono } from "hono";
-import { tenant, readIdentity, applyTenantContext, makeDataSurface } from "@kahitsan/plugin-sdk";
+import { tenant, readIdentity, applyTenantContext, makeDataSurface, identityHeaderOf } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet } from "../types.js";
 import { LINE_ITEM_COLS, TRANSACTION_COLS } from "./shared.js";
+import { lockParentForReprice, repriceParentTransaction } from "../lib/reprice-parent-transaction.js";
 
 export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
@@ -396,26 +397,70 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
       if (!Number.isFinite(id) || !Number.isFinite(lineItemId)) {
         return c.json({ error: "Invalid id" }, 400);
       }
+      const { reason } = await c.req.json() ?? {};
+      if (!reason || !String(reason).trim()) {
+        return c.json({ error: "reason is required" }, 400);
+      }
+      const workspaceId = ctxGet(c, "workspaceId");
+      let dbClient: import("pg").PoolClient | null = null;
       try {
+        dbClient = await pool.connect();
+        await dbClient.query("BEGIN");
+        // makeDataSurface auto-injects workspace_id from the ambient tenant
+        // context; a raw client.query needs it explicit here since the
+        // BEGIN/COMMIT wrap requires this to move off the data surface.
+        await applyTenantContext(dbClient);
         // No BEFORE UPDATE trigger, so updated_at is set explicitly (TZ-safe
-        // absolute instant). RETURNING * → the full explicit column list so the
-        // response shape is unchanged.
-        const rows = await data.update(
-          "transaction_line_items",
-          { status: "voided", updated_at: new Date() },
-          {
-            where: "id = $1 AND transaction_id = $2 AND status != 'voided'",
-            params: [lineItemId, id],
-          },
-          LINE_ITEM_COLS,
+        // absolute instant). Allowlist status transition (Lens 12: no
+        // blocklist WHERE), matching the table's non-voided status set.
+        const result = await dbClient.query(
+          `UPDATE accounts.transaction_line_items
+              SET status = 'voided', updated_at = NOW()
+            WHERE id = $1 AND transaction_id = $2 AND workspace_id = $3
+              AND status IN ('active', 'completed', 'expired')
+            RETURNING ${LINE_ITEM_COLS.join(", ")}`,
+          [lineItemId, id, workspaceId],
         );
-        if (rows.length === 0) {
+        if (result.rows.length === 0) {
+          await dbClient.query("ROLLBACK");
           return c.json({ error: "Not found or already voided" }, 404);
         }
-        return c.json(rows[0]);
+        const voidedLine = result.rows[0] as {
+          quantity: string;
+          unit_price: string;
+          customer_group_id: number | null;
+        };
+        const costDelta = -(parseFloat(voidedLine.unit_price) * parseFloat(voidedLine.quantity));
+        const locked = await lockParentForReprice(dbClient, workspaceId, id, voidedLine.customer_group_id);
+        if (locked == null) {
+          await dbClient.query("ROLLBACK");
+          return c.json({ error: "Parent transaction not found in this workspace" }, 404);
+        }
+        await repriceParentTransaction(
+          dbClient,
+          identityHeaderOf(c),
+          workspaceId,
+          ctxGet(c, "user")?.id,
+          id,
+          costDelta,
+          locked,
+        );
+        // No idempotency_key — the status-allowlisted transition already makes
+        // a retry naturally idempotent (a second call 404s "already voided"
+        // instead of double-applying).
+        await dbClient.query(
+          `INSERT INTO accounts.transaction_edits (transaction_id, workspace_id, edited_by, reason, kind)
+             VALUES ($1, $2, $3, $4, 'line_item_void')`,
+          [id, workspaceId, ctxGet(c, "user")?.id ?? "", String(reason).trim()],
+        );
+        await dbClient.query("COMMIT");
+        return c.json(result.rows[0]);
       } catch (err) {
+        if (dbClient) await dbClient.query("ROLLBACK").catch(() => {});
         console.error("[transactions] line-item void error:", err);
         return c.json({ error: "Internal server error" }, 500);
+      } finally {
+        if (dbClient) dbClient.release();
       }
     },
   );
