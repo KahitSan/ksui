@@ -12,7 +12,7 @@ import type { RouterDeps } from "../routes.js";
 import { ctxGet } from "../types.js";
 import {
   lockParentForReprice,
-  repriceParentForCostIncrease,
+  repriceParentTransaction,
 } from "../lib/reprice-parent-transaction.js";
 import { LINE_ITEM_COLS } from "./shared.js";
 
@@ -155,7 +155,7 @@ export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): vo
         // the NEW subtotal, instead of blindly adding the raw overage cost —
         // otherwise a voucher-discounted booking silently loses its discount
         // on every overage charge.
-        await repriceParentForCostIncrease(
+        await repriceParentTransaction(
           client,
           idh,
           ctxGet(c, "workspaceId"),
@@ -318,7 +318,7 @@ export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): vo
         // the NEW subtotal, instead of blindly adding the raw extension cost —
         // otherwise a voucher-discounted booking silently loses its discount on
         // every extend.
-        await repriceParentForCostIncrease(
+        await repriceParentTransaction(
           client,
           idh,
           ctxGet(c, "workspaceId"),

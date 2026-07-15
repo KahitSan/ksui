@@ -451,7 +451,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         const variantById = new Map((variants ?? []).map((v) => [v.id, v]));
         const clientNameById = new Map<number, string>((clients ?? []).map((c) => [c.id, c.name]));
 
-        // Effective voucher per row, matching repriceParentForCostIncrease's
+        // Effective voucher per row, matching repriceParentTransaction's
         // precedence: a customer-group row's OWN voucher_id wins whenever the
         // line belongs to a group (even if it's null — that's "no discount"),
         // otherwise the transaction-level voucher_id applies. The counter

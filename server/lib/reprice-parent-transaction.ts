@@ -62,28 +62,30 @@ export async function lockParentForReprice(
 }
 
 /**
- * Bumps the parent transaction (and cg subtotal) by costIncrease, re-running
- * the attached voucher's discount (group-level takes precedence when a
- * customer group is set, matching run-charge.ts) against the new subtotal.
+ * Bumps the parent transaction (and cg subtotal) by costDelta (signed — a
+ * negative value reduces, matching a cart-edit void/quantity-decrease),
+ * re-running the attached voucher's discount (group-level takes precedence
+ * when a customer group is set, matching run-charge.ts) against the new
+ * subtotal.
  */
-export async function repriceParentForCostIncrease(
+export async function repriceParentTransaction(
   client: PoolClient,
   idh: IdentityHeader,
   workspaceId: number,
   userId: number,
   transactionId: number,
-  costIncrease: number,
+  costDelta: number,
   locked: LockedParentForReprice,
 ): Promise<void> {
   const { parentTxn, cgRow } = locked;
-  const newParentSubtotal = toNumberOrZero(parentTxn.subtotal ?? parentTxn.amount) + costIncrease;
+  const newParentSubtotal = toNumberOrZero(parentTxn.subtotal ?? parentTxn.amount) + costDelta;
   const oldParentDiscount = toNumberOrZero(parentTxn.discount_amount);
   let newParentDiscount = oldParentDiscount;
 
   if (cgRow != null) {
     const oldCgSubtotal = toNumberOrZero(cgRow.subtotal);
     const oldCgDiscount = toNumberOrZero(cgRow.discount_amount);
-    const newCgSubtotal = oldCgSubtotal + costIncrease;
+    const newCgSubtotal = oldCgSubtotal + costDelta;
     let newCgDiscount = oldCgDiscount;
     if (cgRow.voucher_id != null) {
       const voucher = await findVoucherById(cgRow.voucher_id, idh);
