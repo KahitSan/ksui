@@ -4,7 +4,8 @@
 // POST / (create), GET /:id (detail), PUT /:id (edit basic fields),
 // DELETE /:id (soft-delete → status='voided'), POST /:id/void, POST /:id/unvoid,
 // PUT /:id/visibility (replace per-user/per-role share grants),
-// GET /:id/line-items, and POST /:id/line-items/:lineItemId/void.
+// GET /:id/line-items, POST /:id/line-items/:lineItemId/void, and
+// POST /:id/apply-cart-edit (reduction half of the edit-cart flow).
 //
 // registerCounterPatchRoutes mounts the three counter PATCH routes
 // (/:id/client-pool, /:id/customer-group-started-at, /:id/customer-group-client),
@@ -29,6 +30,7 @@ import { validateSubcategory } from "../lib/transaction-subcategories.js";
 import { isBackdated } from "../lib/backdate.js";
 import { registerTransactionDetailRoute } from "./transactions-detail.js";
 import { registerTransactionStatusRoutes } from "./transactions-status.js";
+import { registerTransactionCartEditRoute } from "./transactions-cart-edit.js";
 import { assertOrgOwnsRow } from "../charge/insert-line-items.js";
 import { ChargeValidationError } from "../charge/validate.js";
 import { ctxGet, isWorkspaceElevated } from "../types.js";
@@ -855,6 +857,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
   // ./transactions-status.ts and register here last (after Edit), reproducing
   // the original tail order of these handlers.
   registerTransactionStatusRoutes(router, ctx);
+  registerTransactionCartEditRoute(router, ctx);
 }
 
 // The three counter PATCH routes live in ./transactions-counter-patch.ts and
