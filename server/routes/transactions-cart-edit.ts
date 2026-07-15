@@ -221,20 +221,33 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
              FROM accounts.transaction_payments WHERE transaction_id = $1 AND workspace_id = $2`,
           [id, workspaceId],
         );
-        // Stays parent-scoped (not family-wide like EMPTY_CART above): a child
-        // added via /charge carries its OWN amount + its OWN payments, so a
-        // reduction on the parent can never leave a child's payment stranded
-        // — the parent's own paid-vs-owed math is unaffected by the sibling.
+        // Family-aware like EMPTY_CART above: a cart addition to another
+        // customer lands as a CHILD transaction (parent_transaction_id = this
+        // id) carrying its own amount + payments, so comparing the PARENT's
+        // post-reduction total against only the PARENT's payments 409s on a
+        // reduction that a sibling child's amount already covers — the whole
+        // receipt family's total-vs-paid is what determines refund exposure.
         const newAmount = parseFloat(finalTxn.amount);
         const totalPaid = parseFloat(paidRes.rows[0].total_paid);
-        if (newAmount < totalPaid) {
+        const familyRes = await dbClient.query<{ child_total: string; child_paid: string }>(
+          `SELECT
+             COALESCE((SELECT SUM(t.amount) FROM accounts.transactions t
+                         WHERE t.workspace_id = $1 AND t.parent_transaction_id = $2 AND t.status != 'voided'), 0)::numeric(12,2) AS child_total,
+             COALESCE((SELECT SUM(tp.amount) FROM accounts.transaction_payments tp
+                         JOIN accounts.transactions t ON t.id = tp.transaction_id AND t.workspace_id = tp.workspace_id
+                         WHERE tp.workspace_id = $1 AND t.parent_transaction_id = $2 AND t.status != 'voided'), 0)::numeric(12,2) AS child_paid`,
+          [workspaceId, id],
+        );
+        const familyTotal = newAmount + parseFloat(familyRes.rows[0].child_total);
+        const familyPaid = totalPaid + parseFloat(familyRes.rows[0].child_paid);
+        if (familyTotal < familyPaid) {
           await dbClient.query("ROLLBACK");
           return c.json(
             {
-              error: `This would reduce the total below the ₱${totalPaid} already paid. Refunds are handled manually.`,
+              error: `This would reduce the total below the ₱${familyPaid} already paid. Refunds are handled manually.`,
               code: "REFUND_BLOCKED",
-              new_total: newAmount,
-              already_paid: totalPaid,
+              new_total: familyTotal,
+              already_paid: familyPaid,
             },
             409,
           );

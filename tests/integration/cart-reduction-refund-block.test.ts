@@ -78,6 +78,10 @@ describe("POST /:id/apply-cart-edit — refund-block guard (real Postgres)", () 
     expect(honoApp).toBeDefined();
   });
 
+  // Degenerate family case (no children) — the family-wide math in
+  // cart-reduction-family-refund-block.test.ts collapses to this same
+  // parent-only comparison when there's nothing to add, so the boundary
+  // this test proves still holds under the new guard.
   it("rejects with 409 REFUND_BLOCKED and rolls back when the new total drops below what's paid", async () => {
     if (!ready) return;
     const { transactionId, lineId } = await seedFullyPaidSale();
