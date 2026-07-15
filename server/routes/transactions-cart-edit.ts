@@ -1,14 +1,20 @@
-// POST /api/transactions/:id/apply-cart-edit — the reduction half of the
-// edit-cart flow (voids/quantity-decreases on the SAME paid transaction).
-// Kept out of run-charge.ts (INSERT-only by contract) and off makeDataSurface
-// (needs FOR UPDATE row locks + multi-statement control flow), matching the
-// line-items-extend.ts / transactions-status.ts /void precedent.
+// POST /api/transactions/:id/apply-cart-edit — the same-transaction edit-cart
+// Save: reductions (voids/quantity-decreases) AND additions (new lines on an
+// existing or brand-new customer group) apply atomically to the SAME paid
+// accounts.transactions row. No child transaction is ever created here — see
+// SAME-TX-EDIT-BRIEF.md. Kept out of run-charge.ts (INSERT-only by contract)
+// and off makeDataSurface (needs FOR UPDATE row locks + multi-statement
+// control flow), matching the line-items-extend.ts / transactions-status.ts
+// /void precedent.
 
 import { Hono } from "hono";
 import { applyTenantContext, identityHeaderOf } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet } from "../types.js";
 import { assertParentEditable, lockParentForReprice, repriceParentTransaction } from "../lib/reprice-parent-transaction.js";
+import { insertLineItemsForTransaction, insertNewCustomerGroup } from "../charge/insert-line-items.js";
+import type { ChargeLineInput, ValidUnit } from "../charge/validate.js";
+import { MAX_NUMERIC_12_2 } from "./shared.js";
 
 interface ReductionInput {
   customer_group_id: number | null;
@@ -17,10 +23,49 @@ interface ReductionInput {
   target_quantity: number;
 }
 
+interface AdditionAnchorChain {
+  chain_from_line_id: number;
+}
+
+interface AdditionItem {
+  package_id: number;
+  package_variant_id: number;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  duration_value: number | null;
+  duration_unit: ValidUnit | null;
+  anchor: "now" | AdditionAnchorChain;
+}
+
+interface NewGroupInput {
+  client_id: number | null;
+  display_name: string;
+  note: string | null;
+  voucher_id: number | null;
+  is_payer?: boolean;
+  started_at: string | null;
+}
+
+interface AdditionToExistingGroup {
+  customer_group_id: number;
+  new_group?: undefined;
+  items: AdditionItem[];
+}
+
+interface AdditionToNewGroup {
+  customer_group_id: null;
+  new_group: NewGroupInput;
+  items: AdditionItem[];
+}
+
+type AdditionEntry = AdditionToExistingGroup | AdditionToNewGroup;
+
 interface CartEditBody {
   edit_token?: string;
   reason?: string;
   reductions?: ReductionInput[];
+  additions?: AdditionEntry[];
 }
 
 interface LockedLineRow {
@@ -39,6 +84,56 @@ function isValidReduction(r: unknown): r is ReductionInput {
   return cgOk && pkgOk && varOk && qtyOk;
 }
 
+function isValidAdditionAnchor(anchor: unknown): anchor is "now" | AdditionAnchorChain {
+  if (anchor === "now") return true;
+  if (anchor == null || typeof anchor !== "object") return false;
+  const a = anchor as Record<string, unknown>;
+  return typeof a.chain_from_line_id === "number" && Number.isInteger(a.chain_from_line_id) && a.chain_from_line_id > 0;
+}
+
+function isValidAdditionItem(item: unknown): item is AdditionItem {
+  if (item == null || typeof item !== "object") return false;
+  const v = item as Record<string, unknown>;
+  const pkgOk = typeof v.package_id === "number" && v.package_id > 0;
+  const varOk = typeof v.package_variant_id === "number" && v.package_variant_id > 0;
+  const descOk = typeof v.description === "string" && v.description.trim().length > 0;
+  const qtyOk = typeof v.quantity === "number" && Number.isInteger(v.quantity) && v.quantity > 0;
+  const priceOk =
+    typeof v.unit_price === "number" && v.unit_price >= 0 && v.unit_price <= MAX_NUMERIC_12_2;
+  const durationValueOk = v.duration_value === null || typeof v.duration_value === "number";
+  const durationUnitOk =
+    v.duration_unit === null || v.duration_unit === "hour" || v.duration_unit === "day" || v.duration_unit === "month";
+  return pkgOk && varOk && descOk && qtyOk && priceOk && durationValueOk && durationUnitOk && isValidAdditionAnchor(v.anchor);
+}
+
+function isValidNewGroupInput(ng: unknown): ng is NewGroupInput {
+  if (ng == null || typeof ng !== "object") return false;
+  const v = ng as Record<string, unknown>;
+  const clientOk = v.client_id === null || typeof v.client_id === "number";
+  const nameOk = typeof v.display_name === "string" && v.display_name.trim().length > 0;
+  const noteOk = v.note === null || typeof v.note === "string";
+  const voucherOk = v.voucher_id === null || typeof v.voucher_id === "number";
+  const payerOk = v.is_payer === undefined || typeof v.is_payer === "boolean";
+  const startedOk = v.started_at === null || typeof v.started_at === "string";
+  return clientOk && nameOk && noteOk && voucherOk && payerOk && startedOk;
+}
+
+// Exactly one of customer_group_id (existing, non-null) or customer_group_id:
+// null + new_group (brand-new group) — never both, never neither.
+function isValidAdditionEntry(entry: unknown): entry is AdditionEntry {
+  if (entry == null || typeof entry !== "object") return false;
+  const v = entry as Record<string, unknown>;
+  const hasNewGroup = v.new_group !== undefined && v.new_group !== null;
+  if (v.customer_group_id === null) {
+    if (!hasNewGroup || !isValidNewGroupInput(v.new_group)) return false;
+  } else if (typeof v.customer_group_id === "number" && v.customer_group_id > 0) {
+    if (hasNewGroup) return false;
+  } else {
+    return false;
+  }
+  return Array.isArray(v.items) && v.items.length > 0 && v.items.every(isValidAdditionItem);
+}
+
 export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
@@ -55,18 +150,31 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
       const body = (await c.req.json().catch(() => ({}))) as CartEditBody;
       const editToken = body.edit_token;
       const reason = body.reason;
-      const reductions = body.reductions;
       if (!editToken || !String(editToken).trim()) {
         return c.json({ error: "edit_token is required" }, 400);
       }
       if (!reason || !String(reason).trim()) {
         return c.json({ error: "reason is required" }, 400);
       }
-      if (!Array.isArray(reductions) || reductions.length === 0) {
-        return c.json({ error: "reductions must be a non-empty array" }, 400);
-      }
-      if (!reductions.every(isValidReduction)) {
+
+      const reductions = Array.isArray(body.reductions) ? body.reductions : undefined;
+      if (reductions !== undefined && !reductions.every(isValidReduction)) {
         return c.json({ error: "Each reduction needs package_id, package_variant_id, and an integer target_quantity >= 0" }, 400);
+      }
+      // An empty additions array is a no-op, not a 400 — a Save with only
+      // reductions (or only pool/started-at/client PATCHes fired alongside
+      // this call) is a legitimate call with additions absent or empty.
+      const additionsRaw = Array.isArray(body.additions) ? body.additions : undefined;
+      if (additionsRaw !== undefined && !additionsRaw.every(isValidAdditionEntry)) {
+        return c.json(
+          { error: "Each addition needs exactly one of customer_group_id or new_group, and a non-empty valid items array" },
+          400,
+        );
+      }
+      const hasReductions = reductions !== undefined && reductions.length > 0;
+      const hasAdditions = additionsRaw !== undefined && additionsRaw.length > 0;
+      if (!hasReductions && !hasAdditions) {
+        return c.json({ error: "At least one of reductions or additions must be a non-empty array" }, 400);
       }
 
       const workspaceId = ctxGet(c, "workspaceId");
@@ -109,13 +217,17 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
         }
 
         // Per-customer-group signed cost delta, accumulated across every
-        // reduction entry that targets that group (including the synthetic
-        // `null` legacy/single-cg bucket).
+        // reduction entry (negative) and addition entry (positive) that
+        // targets that group (including the synthetic `null` legacy/single-cg
+        // bucket) — both loops feed this ONE map before any reprice call
+        // fires, so there is no cross-call ordering to sequence around.
         const costDeltaByGroup = new Map<number | null, number>();
         const voidedLineItemIds: number[] = [];
         const reducedLineItems: Array<{ id: number; quantity: number }> = [];
+        const addedLineItemIds: number[] = [];
+        const newCustomerGroupIds: number[] = [];
 
-        for (const reduction of reductions) {
+        for (const reduction of reductions ?? []) {
           const rowsRes = await dbClient.query<LockedLineRow>(
             `SELECT id, quantity, unit_price FROM accounts.transaction_line_items
                WHERE transaction_id = $1 AND workspace_id = $2
@@ -169,6 +281,156 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
           costDeltaByGroup.set(reduction.customer_group_id, groupDelta);
         }
 
+        // Gate for the retroactive batch_code assignment below — read BEFORE
+        // the additions loop mutates transaction_customer_groups, since it
+        // asks "was this a 1-cg (or 0-cg) transaction before this call".
+        const cgCountBeforeRes = await dbClient.query<{ n: string }>(
+          `SELECT COUNT(*)::text AS n FROM accounts.transaction_customer_groups
+             WHERE transaction_id = $1 AND workspace_id = $2`,
+          [id, workspaceId],
+        );
+        const wasSingleOrNoGroup = parseInt(cgCountBeforeRes.rows[0].n, 10) <= 1;
+        let createdNewGroup = false;
+
+        for (const addition of additionsRaw ?? []) {
+          let cgId: number;
+          let groupClientId: number | null;
+          if (addition.customer_group_id === null) {
+            const ng = addition.new_group;
+            const created = await insertNewCustomerGroup(
+              dbClient,
+              id,
+              workspaceId,
+              {
+                client_id: ng.client_id,
+                display_name: ng.display_name,
+                note: ng.note,
+                voucher_id: ng.voucher_id,
+                // Only an explicit is_payer:true flips it — a client that
+                // never sends the field leaves the original payer group as
+                // the sole payer (receipt-display convention, not a payment
+                // mechanism; no DB constraint enforces "exactly one payer").
+                is_payer: ng.is_payer === true,
+              },
+              idh,
+            );
+            cgId = created.id;
+            groupClientId = ng.client_id;
+            newCustomerGroupIds.push(cgId);
+            createdNewGroup = true;
+
+            if (ng.client_id != null) {
+              const poolPosRes = await dbClient.query<{ next_position: number }>(
+                `SELECT COALESCE(MAX(position), -1) + 1 AS next_position
+                   FROM accounts.transaction_customers WHERE transaction_id = $1`,
+                [id],
+              );
+              await dbClient.query(
+                `INSERT INTO accounts.transaction_customers (transaction_id, client_id, workspace_id, position)
+                   VALUES ($1, $2, $3, $4)
+                 ON CONFLICT (transaction_id, client_id) DO UPDATE SET position = EXCLUDED.position`,
+                [id, ng.client_id, workspaceId, poolPosRes.rows[0].next_position],
+              );
+            }
+          } else {
+            cgId = addition.customer_group_id;
+            const existsRes = await dbClient.query<{ client_id: number | null }>(
+              `SELECT client_id FROM accounts.transaction_customer_groups
+                 WHERE id = $1 AND transaction_id = $2 AND workspace_id = $3`,
+              [cgId, id, workspaceId],
+            );
+            if (existsRes.rows.length === 0) {
+              await dbClient.query("ROLLBACK");
+              return c.json({ error: "customer_group_id must belong to this transaction" }, 404);
+            }
+            groupClientId = existsRes.rows[0].client_id;
+          }
+
+          const items: ChargeLineInput[] = [];
+          const perLineStartedAt: (string | null)[] = [];
+          for (const item of addition.items) {
+            items.push({
+              package_id: item.package_id,
+              package_variant_id: item.package_variant_id,
+              description: item.description,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              duration_value: item.duration_value,
+              duration_unit: item.duration_unit,
+            });
+            if (item.anchor === "now") {
+              // null forces NOW() in insertLineItemsForTransaction — a
+              // brand-new package pick is a fresh charge, not an extension.
+              perLineStartedAt.push(null);
+              continue;
+            }
+            // Server resolves chain_from_line_id to the source's ends_at,
+            // matching /extend's existing precedent (the client never
+            // computes or sends an ISO) — cross-transaction chaining is
+            // refused since the source must belong to THIS transaction.
+            const chainRes = await dbClient.query<{ ends_at: Date | null }>(
+              `SELECT ends_at FROM accounts.transaction_line_items
+                 WHERE id = $1 AND transaction_id = $2 AND workspace_id = $3
+                 FOR UPDATE`,
+              [item.anchor.chain_from_line_id, id, workspaceId],
+            );
+            if (chainRes.rows.length === 0) {
+              await dbClient.query("ROLLBACK");
+              return c.json({ error: "chain_from_line_id must belong to this transaction" }, 404);
+            }
+            const srcEndsAt = chainRes.rows[0].ends_at;
+            if (srcEndsAt == null) {
+              await dbClient.query("ROLLBACK");
+              return c.json({ error: "chain_from_line_id has no ends_at to chain from" }, 400);
+            }
+            perLineStartedAt.push(new Date(srcEndsAt).toISOString());
+          }
+
+          const perLineCustomerGroupIds: (number | null)[] = new Array(items.length).fill(cgId);
+          const perLineClientIds: (number | null)[] = new Array(items.length).fill(groupClientId);
+
+          const insertedLines = await insertLineItemsForTransaction(
+            dbClient,
+            id,
+            workspaceId,
+            groupClientId,
+            items,
+            {
+              // Inert default: every line supplies an explicit
+              // perLineStartedAt entry (never undefined), so the global
+              // anchor field never actually fires — same pattern
+              // run-charge.ts's multi-customer path already uses.
+              anchor: "now",
+              initialStatus: "active",
+              perLineCustomerGroupIds,
+              perLineClientIds,
+              perLineStartedAt,
+            },
+          );
+          for (const li of insertedLines) {
+            addedLineItemIds.push(li.id as number);
+          }
+
+          let groupDelta = costDeltaByGroup.get(cgId) ?? 0;
+          for (const item of addition.items) {
+            groupDelta += item.quantity * item.unit_price;
+          }
+          costDeltaByGroup.set(cgId, groupDelta);
+        }
+
+        // Retroactive batch_code: an addition just turned a 1-cg (or 0-cg)
+        // transaction into a 2+-cg one. COALESCE keeps this idempotent-safe
+        // on replay and protects an already-2+-cg transaction from ever
+        // getting a second nextval() call.
+        if (createdNewGroup && wasSingleOrNoGroup) {
+          await dbClient.query(
+            `UPDATE accounts.transactions
+                SET batch_code = COALESCE(batch_code, nextval('accounts.transaction_batch_code_seq'))
+              WHERE id = $1 AND workspace_id = $2`,
+            [id, workspaceId],
+          );
+        }
+
         for (const [customerGroupId, costDelta] of costDeltaByGroup) {
           if (costDelta === 0) continue;
           const groupLock = await lockParentForReprice(dbClient, workspaceId, id, customerGroupId);
@@ -179,22 +441,12 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
           await repriceParentTransaction(dbClient, idh, workspaceId, userId, id, costDelta, groupLock);
         }
 
-        // Family-aware: the counter UI routes cart additions to OTHER customers
-        // through /charge as a CHILD transaction (parent_transaction_id = this
-        // id), then calls this route to void the parent's own originals — so a
-        // parent left with zero lines is not an empty RECEIPT if a linked,
-        // non-voided child still carries active lines. The availment card
-        // already renders parent+children as one receipt; this guard matches.
+        // Same-tx model: additions never land on a child transaction anymore,
+        // so both guards below compare against this transaction's own rows
+        // only — no family/child union.
         const remainingCount = await dbClient.query<{ n: string }>(
-          `SELECT COUNT(*)::text AS n FROM accounts.transaction_line_items li
-             WHERE li.workspace_id = $2 AND li.status IN ('active', 'completed', 'expired')
-               AND (
-                 li.transaction_id = $1
-                 OR li.transaction_id IN (
-                   SELECT t.id FROM accounts.transactions t
-                     WHERE t.workspace_id = $2 AND t.parent_transaction_id = $1 AND t.status != 'voided'
-                 )
-               )`,
+          `SELECT COUNT(*)::text AS n FROM accounts.transaction_line_items
+             WHERE transaction_id = $1 AND workspace_id = $2 AND status IN ('active', 'completed', 'expired')`,
           [id, workspaceId],
         );
         if (parseInt(remainingCount.rows[0].n, 10) === 0) {
@@ -221,33 +473,16 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
              FROM accounts.transaction_payments WHERE transaction_id = $1 AND workspace_id = $2`,
           [id, workspaceId],
         );
-        // Family-aware like EMPTY_CART above: a cart addition to another
-        // customer lands as a CHILD transaction (parent_transaction_id = this
-        // id) carrying its own amount + payments, so comparing the PARENT's
-        // post-reduction total against only the PARENT's payments 409s on a
-        // reduction that a sibling child's amount already covers — the whole
-        // receipt family's total-vs-paid is what determines refund exposure.
         const newAmount = parseFloat(finalTxn.amount);
         const totalPaid = parseFloat(paidRes.rows[0].total_paid);
-        const familyRes = await dbClient.query<{ child_total: string; child_paid: string }>(
-          `SELECT
-             COALESCE((SELECT SUM(t.amount) FROM accounts.transactions t
-                         WHERE t.workspace_id = $1 AND t.parent_transaction_id = $2 AND t.status != 'voided'), 0)::numeric(12,2) AS child_total,
-             COALESCE((SELECT SUM(tp.amount) FROM accounts.transaction_payments tp
-                         JOIN accounts.transactions t ON t.id = tp.transaction_id AND t.workspace_id = tp.workspace_id
-                         WHERE tp.workspace_id = $1 AND t.parent_transaction_id = $2 AND t.status != 'voided'), 0)::numeric(12,2) AS child_paid`,
-          [workspaceId, id],
-        );
-        const familyTotal = newAmount + parseFloat(familyRes.rows[0].child_total);
-        const familyPaid = totalPaid + parseFloat(familyRes.rows[0].child_paid);
-        if (familyTotal < familyPaid) {
+        if (newAmount < totalPaid) {
           await dbClient.query("ROLLBACK");
           return c.json(
             {
-              error: `This would reduce the total below the ₱${familyPaid} already paid. Refunds are handled manually.`,
+              error: `This would reduce the total below the ₱${totalPaid} already paid. Refunds are handled manually.`,
               code: "REFUND_BLOCKED",
-              new_total: familyTotal,
-              already_paid: familyPaid,
+              new_total: newAmount,
+              already_paid: totalPaid,
             },
             409,
           );
@@ -264,12 +499,18 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
           },
           voided_line_item_ids: voidedLineItemIds,
           reduced_line_items: reducedLineItems,
+          added_line_item_ids: addedLineItemIds,
+          new_customer_group_ids: newCustomerGroupIds,
         };
 
         // transaction_edits is INSERT/SELECT-only under RLS (append-only audit
         // trail, no UPDATE policy) — payload is stored WITHOUT edit_id (self-
         // referential, only known after this INSERT) and edit_id is merged
         // in from the row's own id on every read, matching the replay branch.
+        // kind stays 'cart_reduction' even for an additions-only or mixed
+        // call — it already reads as "an edit to the cart," and renaming it
+        // would touch the existing idempotency-replay/audit tests for no
+        // functional gain.
         const editRes = await dbClient.query<{ id: number }>(
           `INSERT INTO accounts.transaction_edits
              (transaction_id, workspace_id, edited_by, reason, kind, idempotency_key, payload)

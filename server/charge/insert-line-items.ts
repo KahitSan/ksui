@@ -20,6 +20,7 @@ import {
   type ValidUnit,
 } from "./validate.js";
 import { LINE_ITEM_COLS } from "../routes/shared.js";
+import { findVoucherById, type IdentityHeader } from "../lib/peers.js";
 
 type Queryable = Pick<PluginDb, "query">;
 
@@ -166,4 +167,69 @@ export async function insertLineItemsForTransaction(
     lineItems.push(liResult.rows[0]);
   }
   return lineItems;
+}
+
+/**
+ * Standalone insert for a brand-new customer_group row, written fresh for
+ * apply-cart-edit's use (NOT an extraction of run-charge.ts's inline
+ * multi-customer cg-insert block — that block stays byte-for-byte unchanged
+ * so CREATE-mode charging is untouched). Mirrors its column list and
+ * per-group voucher resolve-or-degrade so a dangling voucher_id never aborts
+ * an edit-cart Save.
+ *
+ * position is a plain MAX+1 read (no UNIQUE constraint on the column — see
+ * SAME-TX-EDIT-BRIEF.md settled question 1) — safe because the caller
+ * already holds the parent transaction's FOR UPDATE lock, which serializes
+ * concurrent apply-cart-edit calls on this transaction.
+ *
+ * Returns subtotal/discount_amount as 0 — the caller's own
+ * repriceParentTransaction call prices the group once its line items exist.
+ */
+export async function insertNewCustomerGroup(
+  client: PoolClient,
+  transactionId: number,
+  workspaceId: number,
+  input: {
+    client_id: number | null;
+    display_name: string;
+    note: string | null;
+    voucher_id: number | null;
+    is_payer: boolean;
+  },
+  idh: IdentityHeader,
+): Promise<{ id: number; subtotal: number; discount_amount: number }> {
+  const positionRes = await client.query<{ next_position: number }>(
+    `SELECT COALESCE(MAX(position), -1) + 1 AS next_position
+       FROM accounts.transaction_customer_groups
+      WHERE transaction_id = $1 AND workspace_id = $2`,
+    [transactionId, workspaceId],
+  );
+  const position = positionRes.rows[0].next_position;
+
+  // Unresolvable voucher_id is dropped, not persisted — an FK to vouchers(id)
+  // that doesn't resolve in this workspace would abort the insert.
+  let resolvedVoucherId: number | null = null;
+  if (input.voucher_id != null) {
+    const voucher = await findVoucherById(input.voucher_id, idh);
+    if (voucher != null) resolvedVoucherId = input.voucher_id;
+  }
+
+  const groupRes = await client.query<{ id: number }>(
+    `INSERT INTO accounts.transaction_customer_groups
+       (transaction_id, workspace_id, position, client_id, display_name, note, voucher_id, subtotal, discount_amount, is_payer)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 0, $8)
+     RETURNING id`,
+    [
+      transactionId,
+      workspaceId,
+      position,
+      input.client_id,
+      input.display_name.trim(),
+      input.note,
+      resolvedVoucherId,
+      input.is_payer,
+    ],
+  );
+
+  return { id: groupRes.rows[0].id, subtotal: 0, discount_amount: 0 };
 }
