@@ -11,6 +11,7 @@ import { findVariantsByIds } from "../lib/peers.js";
 import type { RouterDeps } from "../routes.js";
 import { ctxGet } from "../types.js";
 import {
+  assertParentEditable,
   lockParentForReprice,
   repriceParentTransaction,
 } from "../lib/reprice-parent-transaction.js";
@@ -98,6 +99,11 @@ export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): vo
         if (locked == null) {
           await client.query("ROLLBACK");
           return c.json({ error: "Parent transaction not found in this workspace" }, 404);
+        }
+        const editable = assertParentEditable(locked.parentTxn);
+        if (!editable.ok) {
+          await client.query("ROLLBACK");
+          return c.json({ error: editable.error }, 409);
         }
 
         const variants = await findVariantsByIds([package_variant_id], idh);
@@ -254,6 +260,11 @@ export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): vo
         if (locked == null) {
           await client.query("ROLLBACK");
           return c.json({ error: "Parent transaction not found in this workspace" }, 404);
+        }
+        const editable = assertParentEditable(locked.parentTxn);
+        if (!editable.ok) {
+          await client.query("ROLLBACK");
+          return c.json({ error: editable.error }, 409);
         }
 
         // Variant must belong to the same workspace (resolved over RPC), but NOT
