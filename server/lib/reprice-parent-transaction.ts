@@ -12,6 +12,8 @@ interface ParentTransactionRow {
   amount: string;
   discount_amount: string;
   voucher_id: number | null;
+  status: string;
+  forfeited_at: Date | null;
 }
 
 interface CustomerGroupRow {
@@ -38,7 +40,7 @@ export async function lockParentForReprice(
   customerGroupId: number | null,
 ): Promise<LockedParentForReprice | null> {
   const txnRes = await client.query(
-    `SELECT id, subtotal, amount, discount_amount, voucher_id
+    `SELECT id, subtotal, amount, discount_amount, voucher_id, status, forfeited_at
        FROM accounts.transactions
       WHERE id = $1 AND workspace_id = $2
       FOR UPDATE`,
@@ -59,6 +61,24 @@ export async function lockParentForReprice(
     cgRow = cgRes.rows[0] ?? null;
   }
   return { parentTxn, cgRow };
+}
+
+/**
+ * Rejects a cart edit against a parent already outside the editable
+ * lifecycle — voided/forfeited receipts are written-off records, and their
+ * line items stay in whatever status they had at that moment, so a reprice
+ * here would silently corrupt a closed book.
+ */
+export function assertParentEditable(
+  parentTxn: ParentTransactionRow,
+): { ok: true } | { ok: false; error: string } {
+  if (parentTxn.status === "voided") {
+    return { ok: false, error: "Transaction is voided and cannot be edited" };
+  }
+  if (parentTxn.forfeited_at != null) {
+    return { ok: false, error: "Transaction is forfeited and cannot be edited" };
+  }
+  return { ok: true };
 }
 
 /**

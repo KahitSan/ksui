@@ -21,7 +21,7 @@ import { tenant, readIdentity, applyTenantContext, makeDataSurface, identityHead
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet } from "../types.js";
 import { LINE_ITEM_COLS, TRANSACTION_COLS } from "./shared.js";
-import { lockParentForReprice, repriceParentTransaction } from "../lib/reprice-parent-transaction.js";
+import { assertParentEditable, lockParentForReprice, repriceParentTransaction } from "../lib/reprice-parent-transaction.js";
 
 export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
@@ -410,6 +410,39 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
         // context; a raw client.query needs it explicit here since the
         // BEGIN/COMMIT wrap requires this to move off the data surface.
         await applyTenantContext(dbClient);
+        // Lock the line item first (read-only) to learn its customer group
+        // without mutating it, so the parent lifecycle guard below runs
+        // before any write — voiding a line on an already-voided/forfeited
+        // parent would corrupt that written-off receipt's totals.
+        const srcRes = await dbClient.query<{
+          status: string;
+          quantity: string;
+          unit_price: string;
+          customer_group_id: number | null;
+        }>(
+          `SELECT status, quantity, unit_price, customer_group_id
+             FROM accounts.transaction_line_items
+            WHERE id = $1 AND transaction_id = $2 AND workspace_id = $3
+            FOR UPDATE`,
+          [lineItemId, id, workspaceId],
+        );
+        if (srcRes.rows.length === 0 || !["active", "completed", "expired"].includes(srcRes.rows[0].status)) {
+          await dbClient.query("ROLLBACK");
+          return c.json({ error: "Not found or already voided" }, 404);
+        }
+        const src = srcRes.rows[0];
+
+        const locked = await lockParentForReprice(dbClient, workspaceId, id, src.customer_group_id);
+        if (locked == null) {
+          await dbClient.query("ROLLBACK");
+          return c.json({ error: "Parent transaction not found in this workspace" }, 404);
+        }
+        const editable = assertParentEditable(locked.parentTxn);
+        if (!editable.ok) {
+          await dbClient.query("ROLLBACK");
+          return c.json({ error: editable.error }, 409);
+        }
+
         // No BEFORE UPDATE trigger, so updated_at is set explicitly (TZ-safe
         // absolute instant). Allowlist status transition (Lens 12: no
         // blocklist WHERE), matching the table's non-voided status set.
@@ -425,17 +458,7 @@ export function registerTransactionStatusRoutes(router: Hono, ctx: CoreRouteCtx)
           await dbClient.query("ROLLBACK");
           return c.json({ error: "Not found or already voided" }, 404);
         }
-        const voidedLine = result.rows[0] as {
-          quantity: string;
-          unit_price: string;
-          customer_group_id: number | null;
-        };
-        const costDelta = -(parseFloat(voidedLine.unit_price) * parseFloat(voidedLine.quantity));
-        const locked = await lockParentForReprice(dbClient, workspaceId, id, voidedLine.customer_group_id);
-        if (locked == null) {
-          await dbClient.query("ROLLBACK");
-          return c.json({ error: "Parent transaction not found in this workspace" }, 404);
-        }
+        const costDelta = -(parseFloat(src.unit_price) * parseFloat(src.quantity));
         await repriceParentTransaction(
           dbClient,
           identityHeaderOf(c),

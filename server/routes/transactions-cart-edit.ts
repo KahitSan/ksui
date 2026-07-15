@@ -8,7 +8,7 @@ import { Hono } from "hono";
 import { applyTenantContext, identityHeaderOf } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet } from "../types.js";
-import { lockParentForReprice, repriceParentTransaction } from "../lib/reprice-parent-transaction.js";
+import { assertParentEditable, lockParentForReprice, repriceParentTransaction } from "../lib/reprice-parent-transaction.js";
 
 interface ReductionInput {
   customer_group_id: number | null;
@@ -78,11 +78,26 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
         await dbClient.query("BEGIN");
         await applyTenantContext(dbClient);
 
-        // Replay check runs before any lock — a retried Save (network blip,
-        // double-tap) is a pure read, never a second void. transaction_edits
-        // is INSERT/SELECT-only under RLS (append-only audit trail, no UPDATE
-        // policy), so edit_id is merged in from the row's own id here rather
-        // than stored inside payload by a follow-up UPDATE.
+        // Parent FOR UPDATE lock acquired FIRST, before the replay check —
+        // two concurrent requests with the same edit_token both contend on
+        // this row, so the loser blocks until the winner's transaction_edits
+        // INSERT commits, then its replay lookup (below) finds that row
+        // instead of racing past it into a second void.
+        const locked = await lockParentForReprice(dbClient, workspaceId, id, null);
+        if (locked == null) {
+          await dbClient.query("ROLLBACK");
+          return c.json({ error: "Transaction not found in this workspace" }, 404);
+        }
+        const editable = assertParentEditable(locked.parentTxn);
+        if (!editable.ok) {
+          await dbClient.query("ROLLBACK");
+          return c.json({ error: editable.error }, 409);
+        }
+
+        // transaction_edits is INSERT/SELECT-only under RLS (append-only
+        // audit trail, no UPDATE policy), so edit_id is merged in from the
+        // row's own id here rather than stored inside payload by a
+        // follow-up UPDATE.
         const replay = await dbClient.query<{ id: number; payload: Record<string, unknown> }>(
           `SELECT id, payload FROM accounts.transaction_edits
              WHERE transaction_id = $1 AND workspace_id = $2 AND idempotency_key = $3`,
@@ -91,12 +106,6 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
         if (replay.rows.length > 0) {
           await dbClient.query("ROLLBACK");
           return c.json({ ...replay.rows[0].payload, edit_id: replay.rows[0].id });
-        }
-
-        const locked = await lockParentForReprice(dbClient, workspaceId, id, null);
-        if (locked == null) {
-          await dbClient.query("ROLLBACK");
-          return c.json({ error: "Transaction not found in this workspace" }, 404);
         }
 
         // Per-customer-group signed cost delta, accumulated across every
