@@ -179,9 +179,22 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
           await repriceParentTransaction(dbClient, idh, workspaceId, userId, id, costDelta, groupLock);
         }
 
+        // Family-aware: the counter UI routes cart additions to OTHER customers
+        // through /charge as a CHILD transaction (parent_transaction_id = this
+        // id), then calls this route to void the parent's own originals — so a
+        // parent left with zero lines is not an empty RECEIPT if a linked,
+        // non-voided child still carries active lines. The availment card
+        // already renders parent+children as one receipt; this guard matches.
         const remainingCount = await dbClient.query<{ n: string }>(
-          `SELECT COUNT(*)::text AS n FROM accounts.transaction_line_items
-             WHERE transaction_id = $1 AND workspace_id = $2 AND status IN ('active', 'completed', 'expired')`,
+          `SELECT COUNT(*)::text AS n FROM accounts.transaction_line_items li
+             WHERE li.workspace_id = $2 AND li.status IN ('active', 'completed', 'expired')
+               AND (
+                 li.transaction_id = $1
+                 OR li.transaction_id IN (
+                   SELECT t.id FROM accounts.transactions t
+                     WHERE t.workspace_id = $2 AND t.parent_transaction_id = $1 AND t.status != 'voided'
+                 )
+               )`,
           [id, workspaceId],
         );
         if (parseInt(remainingCount.rows[0].n, 10) === 0) {
@@ -208,6 +221,10 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
              FROM accounts.transaction_payments WHERE transaction_id = $1 AND workspace_id = $2`,
           [id, workspaceId],
         );
+        // Stays parent-scoped (not family-wide like EMPTY_CART above): a child
+        // added via /charge carries its OWN amount + its OWN payments, so a
+        // reduction on the parent can never leave a child's payment stranded
+        // — the parent's own paid-vs-owed math is unaffected by the sibling.
         const newAmount = parseFloat(finalTxn.amount);
         const totalPaid = parseFloat(paidRes.rows[0].total_paid);
         if (newAmount < totalPaid) {
