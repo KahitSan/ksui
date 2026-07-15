@@ -191,12 +191,17 @@ export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): vo
   // ── POST /api/transaction-line-items/:id/extend ──────────────────────────
   //
   // Appends a new 'active' line to the same parent transaction extending the
-  // rental by quantity units of the picked variant. started_at always chains
-  // off the source's ends_at so the counter UI can link the lines into a
-  // single entry. Bumps the parent transaction (and cg subtotal), re-running
-  // the attached voucher's discount against the new subtotal so an extension
-  // stays priced consistently with the original charge.
-  // Body: { package_variant_id: number, quantity: number }
+  // rental by quantity units of the picked variant. Default anchor "chain"
+  // starts the new line off the source's ends_at so the counter UI can link
+  // the lines into a single entry (true extensions). anchor "now" instead
+  // starts the line at the current time — a brand-new package added via
+  // edit-cart is a fresh charge, not an extension of the old one, and must
+  // not inherit a future ends_at from an unrelated source line (see
+  // insert-line-items.ts's anchor vocabulary, which this mirrors). Bumps the
+  // parent transaction (and cg subtotal), re-running the attached voucher's
+  // discount against the new subtotal so an extension stays priced
+  // consistently with the original charge.
+  // Body: { package_variant_id: number, quantity: number, anchor?: "chain" | "now" }
   router.post(
     "/api/transaction-line-items/:id/extend",
     requireAuth,
@@ -210,9 +215,10 @@ export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): vo
       if (!id) {
         return c.json({ error: "id is required" }, 400);
       }
-      const { package_variant_id, quantity } = await c.req.json() as {
+      const { package_variant_id, quantity, anchor } = await c.req.json() as {
         package_variant_id?: number;
         quantity?: number;
+        anchor?: string;
       };
       if (typeof package_variant_id !== "number" || package_variant_id <= 0) {
         return c.json({ error: "package_variant_id is required" }, 400);
@@ -220,6 +226,10 @@ export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): vo
       if (typeof quantity !== "number" || quantity <= 0) {
         return c.json({ error: "quantity must be > 0" }, 400);
       }
+      if (anchor !== undefined && anchor !== "chain" && anchor !== "now") {
+        return c.json({ error: "anchor must be 'chain' or 'now'" }, 400);
+      }
+      const effectiveAnchor: "chain" | "now" = anchor === "now" ? "now" : "chain";
 
       const idh = identityHeaderOf(c);
       let client: import("pg").PoolClient | null = null;
@@ -292,10 +302,13 @@ export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): vo
               ? "make_interval(days => $7)"
               : "make_interval(months => $7)";
 
-        // Chain the extension off the source's ends_at so the counter UI can
-        // link the lines into a single entry. When ends_at is null (shouldn't
-        // happen for rentals) fall back to NOW().
+        // The SQL text stays fixed ("chain off $8, or NOW() if null") — only
+        // what's bound to $8 varies, so anchor "now" passes null and rides
+        // the same COALESCE fallback instead of branching the query text
+        // (which would leave $8 unreferenced on that path and risk pg's
+        // "could not determine data type of parameter" error).
         const startedAtExpr = "COALESCE($8::timestamptz, NOW())";
+        const startedAtAnchorValue = effectiveAnchor === "now" ? null : (src.ends_at ?? null);
 
         const insertResult = await client.query(
           `INSERT INTO accounts.transaction_line_items
@@ -315,7 +328,7 @@ export function registerLineItemExtendRoutes(router: Hono, deps: RouterDeps): vo
             variant.name,
             quantity,
             totalUnits,
-            src.ends_at ?? null,
+            startedAtAnchorValue,
             unitPrice,
             durationValue,
             variant.duration_unit,

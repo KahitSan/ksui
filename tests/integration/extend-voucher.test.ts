@@ -310,3 +310,107 @@ describe("POST /:id/extend re-applies the attached voucher (real Postgres)", () 
     expect(parseFloat(txnRow.rows[0].amount)).toBe(1000);
   });
 });
+
+// Regression coverage for the edit-cart fresh-charge bug: a package added via
+// /extend was always chained off the source's ends_at, so a brand-new line
+// started hours in the future instead of now (tx 8694 line 8535). anchor
+// "now" fixes fresh charges; the default "chain" behavior must stay exactly
+// as-is so real extensions aren't broken by the fix.
+describe("POST /:id/extend anchor field", () => {
+  // The source line's ends_at is seeded far enough in the future that a
+  // "chain" started_at and a "now" started_at can never collide by accident.
+  const FUTURE_ENDS_AT_MS = Date.now() + 6 * 60 * 60 * 1000;
+
+  /** Inserts a parent transaction + source line whose ends_at is in the future. */
+  async function seedBookingWithFutureEndsAt(): Promise<{
+    lineItemId: number;
+    sourceEndsAt: Date;
+  }> {
+    const txnRes = await db.query<{ id: number }>(
+      `INSERT INTO accounts.transactions
+         (workspace_id, category, subcategory, amount, description, transaction_date,
+          status, created_by, subtotal, discount_amount)
+       VALUES ($1, 'sale', 'Sales - services', 500, $2, CURRENT_DATE,
+               'completed', $3, 500, 0)
+       RETURNING id`,
+      [TEST_ORG, `extend-anchor-test-${Date.now()}-${seedCounter++}`, "test-user-id"],
+    );
+    const transactionId = txnRes.rows[0].id;
+
+    const liRes = await db.query<{ id: number; ends_at: Date }>(
+      `INSERT INTO accounts.transaction_line_items
+         (transaction_id, workspace_id, package_id, description, quantity, unit_price,
+          duration_value, duration_unit, started_at, ends_at, status)
+       VALUES ($1, $2, $3, 'Day 1', 1, 500, 1, 'day', NOW(), $4, 'active')
+       RETURNING id, ends_at`,
+      [transactionId, TEST_ORG, variantPackageId, new Date(FUTURE_ENDS_AT_MS)],
+    );
+    return { lineItemId: liRes.rows[0].id, sourceEndsAt: liRes.rows[0].ends_at };
+  }
+
+  it("anchor 'now' starts the new line at the current time, not the source's ends_at", async () => {
+    if (!ready) return;
+    const { lineItemId, sourceEndsAt } = await seedBookingWithFutureEndsAt();
+    const before = Date.now();
+
+    const res = await request(honoApp, "POST", `/api/transaction-line-items/${lineItemId}/extend`, {
+      package_variant_id: variantRowId,
+      quantity: 1,
+      anchor: "now",
+    });
+    const after = Date.now();
+    expect(res.status).toBe(201);
+    const body = await res.json();
+
+    const startedAt = new Date(body.started_at).getTime();
+    const endsAt = new Date(body.ends_at).getTime();
+    // Tolerance window against the DB clock rather than an exact match — the
+    // request round-trip takes nonzero wall time.
+    expect(startedAt).toBeGreaterThanOrEqual(before - 2000);
+    expect(startedAt).toBeLessThanOrEqual(after + 2000);
+    expect(startedAt).not.toBe(sourceEndsAt.getTime());
+    // duration_unit is 'day' for VARIANT — ends_at is started_at + 1 day.
+    expect(endsAt - startedAt).toBe(24 * 60 * 60 * 1000);
+  });
+
+  it("anchor omitted chains started_at off the source's ends_at exactly", async () => {
+    if (!ready) return;
+    const { lineItemId, sourceEndsAt } = await seedBookingWithFutureEndsAt();
+
+    const res = await request(honoApp, "POST", `/api/transaction-line-items/${lineItemId}/extend`, {
+      package_variant_id: variantRowId,
+      quantity: 1,
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+
+    expect(new Date(body.started_at).getTime()).toBe(sourceEndsAt.getTime());
+  });
+
+  it("anchor 'chain' explicit chains started_at off the source's ends_at exactly", async () => {
+    if (!ready) return;
+    const { lineItemId, sourceEndsAt } = await seedBookingWithFutureEndsAt();
+
+    const res = await request(honoApp, "POST", `/api/transaction-line-items/${lineItemId}/extend`, {
+      package_variant_id: variantRowId,
+      quantity: 1,
+      anchor: "chain",
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+
+    expect(new Date(body.started_at).getTime()).toBe(sourceEndsAt.getTime());
+  });
+
+  it("anchor 'garbage' is rejected with 400", async () => {
+    if (!ready) return;
+    const { lineItemId } = await seedBookingWithFutureEndsAt();
+
+    const res = await request(honoApp, "POST", `/api/transaction-line-items/${lineItemId}/extend`, {
+      package_variant_id: variantRowId,
+      quantity: 1,
+      anchor: "garbage",
+    });
+    expect(res.status).toBe(400);
+  });
+});
