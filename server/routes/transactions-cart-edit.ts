@@ -371,10 +371,11 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
                 note: ng.note,
                 voucher_id: ng.voucher_id,
                 // Always inserted FALSE here, even when ng.is_payer is true:
-                // accounts.transaction_customer_groups carries a live partial
-                // unique index (one is_payer=TRUE row per transaction) that
-                // an existing payer group is still holding at this point in
-                // the loop — inserting TRUE here would 23505 before the
+                // accounts.transaction_customer_groups carries a partial
+                // unique index (one is_payer=TRUE row per transaction, added
+                // by migrations/20260716000000_add_transaction_customer_groups_single_payer_index.ts)
+                // that an existing payer group is still holding at this point
+                // in the loop — inserting TRUE here would 23505 before the
                 // atomic flip below ever runs. flaggedNewGroupId (below)
                 // carries the intent forward; the flip-UPDATE after the
                 // reprice loop is the ONLY statement that ever writes
