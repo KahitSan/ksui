@@ -98,8 +98,14 @@ export function registerCounterPatchRoutes(router: Hono, ctx: CoreRouteCtx): voi
         return c.json({ error: "updates must be a non-empty array" }, 400);
       }
       for (const u of updates) {
-        if (typeof u.customer_group_id !== "number" || !Number.isFinite(u.customer_group_id) || u.customer_group_id <= 0) {
-          return c.json({ error: "each update must have a valid customer_group_id" }, 400);
+        // null means "every line on the receipt" — the documented contract
+        // for legacy/synthetic transactions whose lines never got a
+        // customer_group_id (load-edit-transaction.ts, charge-gates.ts).
+        const cgOk =
+          u.customer_group_id === null ||
+          (typeof u.customer_group_id === "number" && Number.isFinite(u.customer_group_id) && u.customer_group_id > 0);
+        if (!cgOk) {
+          return c.json({ error: "each update must have a valid customer_group_id or null" }, 400);
         }
         if (typeof u.started_at !== "string" || Number.isNaN(Date.parse(u.started_at))) {
           return c.json({ error: "each update must have a valid ISO started_at" }, 400);
@@ -148,7 +154,7 @@ export function registerCounterPatchRoutes(router: Hono, ctx: CoreRouteCtx): voi
                       ELSE status
                     END,
                     updated_at = NOW()
-              WHERE customer_group_id = $2 AND transaction_id = $3 AND workspace_id = $4
+              WHERE customer_group_id IS NOT DISTINCT FROM $2 AND transaction_id = $3 AND workspace_id = $4
               RETURNING id`,
             [u.started_at, u.customer_group_id, id, ctxGet(c, "workspaceId")],
           );

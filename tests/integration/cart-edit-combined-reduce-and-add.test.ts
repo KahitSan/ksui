@@ -8,6 +8,11 @@ import { request, setupCartEditFixtures } from "./cart-edit-fixtures.js";
 // (up variantB's derived price, 300) in one call nets the parent amount to
 // +300, and each touched cg's subtotal/discount_amount updates independently
 // per repriceParentTransaction.
+//
+// The reduction empties the original payer group entirely, so this payload
+// also exercises EDIT-CART-FOLLOWUPS-BRIEF.md defect 3's guard: the new
+// group must claim is_payer:true or the save now 409 PAYER_REASSIGNMENT_REQUIREDs
+// (the emptied payer would otherwise strand billing attribution).
 
 // Resolved lazily by id (set from the real seeded fixture rows in beforeAll)
 // so the pre-BEGIN findVariantsByIds RPC the route now makes (B5) returns a
@@ -112,7 +117,7 @@ describe("POST /:id/apply-cart-edit — combined reduce+add in one call (real Po
       additions: [
         {
           customer_group_id: null,
-          new_group: { client_id: null, display_name: "New Guest", note: null, voucher_id: null, started_at: null },
+          new_group: { client_id: null, display_name: "New Guest", note: null, voucher_id: null, is_payer: true, started_at: null },
           items: [
             {
               package_variant_id: variantBId,

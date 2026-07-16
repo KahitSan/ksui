@@ -28,6 +28,10 @@ interface AdditionAnchorChain {
   chain_from_line_id: number;
 }
 
+interface AdditionAnchorStartedAt {
+  started_at: string;
+}
+
 // package_id/description/unit_price/duration_value/duration_unit are NEVER
 // accepted from the client (B5) — package_variant_id is the only cart ref,
 // resolved server-side through the packages RPC (findVariantsByIds) exactly
@@ -36,7 +40,7 @@ interface AdditionAnchorChain {
 interface AdditionItem {
   package_variant_id: number;
   quantity: number;
-  anchor: "now" | AdditionAnchorChain;
+  anchor: "now" | AdditionAnchorChain | AdditionAnchorStartedAt;
 }
 
 interface NewGroupInput {
@@ -70,6 +74,7 @@ interface CartEditBody {
   reason?: string;
   reductions?: ReductionInput[];
   additions?: AdditionEntry[];
+  reassign_payer_to?: number | null;
 }
 
 interface LockedLineRow {
@@ -88,11 +93,15 @@ function isValidReduction(r: unknown): r is ReductionInput {
   return cgOk && pkgOk && varOk && qtyOk;
 }
 
-function isValidAdditionAnchor(anchor: unknown): anchor is "now" | AdditionAnchorChain {
+function isValidAdditionAnchor(anchor: unknown): anchor is "now" | AdditionAnchorChain | AdditionAnchorStartedAt {
   if (anchor === "now") return true;
   if (anchor == null || typeof anchor !== "object") return false;
   const a = anchor as Record<string, unknown>;
-  return typeof a.chain_from_line_id === "number" && Number.isInteger(a.chain_from_line_id) && a.chain_from_line_id > 0;
+  if (typeof a.chain_from_line_id === "number") {
+    return Number.isInteger(a.chain_from_line_id) && a.chain_from_line_id > 0;
+  }
+  if (typeof a.started_at === "string") return !Number.isNaN(Date.parse(a.started_at));
+  return false;
 }
 
 // Mirrors validate.ts's isValidChargeLine numeric discipline (finite, > 0 —
@@ -171,10 +180,28 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
           400,
         );
       }
+      const reassignPayerTo = body.reassign_payer_to;
+      if (
+        reassignPayerTo !== undefined &&
+        reassignPayerTo !== null &&
+        (typeof reassignPayerTo !== "number" || !Number.isInteger(reassignPayerTo) || reassignPayerTo <= 0)
+      ) {
+        return c.json({ error: "reassign_payer_to must be a positive integer or null" }, 400);
+      }
+      const newGroupPayerCount = (additionsRaw ?? []).filter(
+        (a) => a.customer_group_id === null && a.new_group.is_payer === true,
+      ).length;
+      if (reassignPayerTo != null && newGroupPayerCount > 0) {
+        return c.json({ error: "reassign_payer_to and new_group.is_payer are mutually exclusive in one request" }, 400);
+      }
+      if (newGroupPayerCount > 1) {
+        return c.json({ error: "At most one addition may set new_group.is_payer" }, 400);
+      }
+
       const hasReductions = reductions !== undefined && reductions.length > 0;
       const hasAdditions = additionsRaw !== undefined && additionsRaw.length > 0;
-      if (!hasReductions && !hasAdditions) {
-        return c.json({ error: "At least one of reductions or additions must be a non-empty array" }, 400);
+      if (!hasReductions && !hasAdditions && reassignPayerTo == null) {
+        return c.json({ error: "At least one of reductions, additions, or reassign_payer_to must be provided" }, 400);
       }
 
       const workspaceId = ctxGet(c, "workspaceId");
@@ -327,6 +354,7 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
         );
         const wasSingleOrNoGroup = parseInt(cgCountBeforeRes.rows[0].n, 10) <= 1;
         let createdNewGroup = false;
+        let flaggedNewGroupId: number | null = null;
 
         for (const addition of additionsRaw ?? []) {
           let cgId: number;
@@ -342,11 +370,17 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
                 display_name: ng.display_name,
                 note: ng.note,
                 voucher_id: ng.voucher_id,
-                // Only an explicit is_payer:true flips it — a client that
-                // never sends the field leaves the original payer group as
-                // the sole payer (receipt-display convention, not a payment
-                // mechanism; no DB constraint enforces "exactly one payer").
-                is_payer: ng.is_payer === true,
+                // Always inserted FALSE here, even when ng.is_payer is true:
+                // accounts.transaction_customer_groups carries a partial
+                // unique index (one is_payer=TRUE row per transaction, added
+                // by migrations/20260716000000_add_transaction_customer_groups_single_payer_index.ts)
+                // that an existing payer group is still holding at this point
+                // in the loop — inserting TRUE here would 23505 before the
+                // atomic flip below ever runs. flaggedNewGroupId (below)
+                // carries the intent forward; the flip-UPDATE after the
+                // reprice loop is the ONLY statement that ever writes
+                // is_payer=TRUE for this route, so it never races the index.
+                is_payer: false,
               },
               idh,
             );
@@ -354,6 +388,7 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
             groupClientId = ng.client_id;
             newCustomerGroupIds.push(cgId);
             createdNewGroup = true;
+            if (ng.is_payer === true) flaggedNewGroupId = cgId;
 
             if (ng.client_id != null) {
               const poolPosRes = await dbClient.query<{ next_position: number }>(
@@ -403,6 +438,24 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
               // null forces NOW() in insertLineItemsForTransaction — a
               // brand-new package pick is a fresh charge, not an extension.
               perLineStartedAt.push(null);
+              continue;
+            }
+            if ("started_at" in item.anchor) {
+              const startedAtMs = Date.parse(item.anchor.started_at);
+              // Bounds are a judgment call — no existing convention in this
+              // codebase (checked validate.ts, transactions-counter-patch.ts,
+              // export.ts: all Date.parse-NaN-check only, no range). An
+              // anchor this far off is never a legitimate "this customer's
+              // original start" — it's a client bug or a stale hydrate
+              // snapshot, and should 400 rather than silently corrupt the
+              // line's timing.
+              const FIVE_YEARS_MS = 5 * 365 * 24 * 60 * 60 * 1000;
+              const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+              if (startedAtMs < Date.now() - FIVE_YEARS_MS || startedAtMs > Date.now() + ONE_DAY_MS) {
+                await dbClient.query("ROLLBACK");
+                return c.json({ error: "anchor.started_at is out of the allowed range" }, 400);
+              }
+              perLineStartedAt.push(new Date(startedAtMs).toISOString());
               continue;
             }
             // Server resolves chain_from_line_id to the source's ends_at,
@@ -483,6 +536,76 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
             return c.json({ error: "Transaction not found in this workspace" }, 404);
           }
           await repriceParentTransaction(dbClient, idh, workspaceId, userId, id, costDelta, groupLock);
+        }
+
+        // Resolve the single desired payer target: an explicit reassignment
+        // always wins; otherwise a brand-new group's own is_payer:true (set
+        // during insertNewCustomerGroup above) is already persisted and
+        // needs no further action here.
+        const payerTarget = reassignPayerTo ?? flaggedNewGroupId;
+        if (payerTarget != null) {
+          // Single UPDATE flips exactly one row to is_payer=TRUE and every
+          // other row on this transaction to FALSE — no separate "unset old,
+          // set new" pair, so there is no window where two rows (or zero
+          // rows) hold is_payer=TRUE even if this crashes mid-statement.
+          // transaction_customer_groups has no updated_at column (only
+          // created_at) — confirmed against migrations/20260527000000_create_transactions.ts.
+          const flip = await dbClient.query<{ id: number }>(
+            `UPDATE accounts.transaction_customer_groups
+                SET is_payer = (id = $1)
+              WHERE transaction_id = $2 AND workspace_id = $3
+              RETURNING id`,
+            [payerTarget, id, workspaceId],
+          );
+          if (!flip.rows.some((r) => r.id === payerTarget)) {
+            await dbClient.query("ROLLBACK");
+            return c.json({ error: "reassign_payer_to must belong to this transaction" }, 404);
+          }
+          // The receipt header/board-card billed-to tracks the PAYER's
+          // client, not whoever the counter-patch route last touched — this
+          // route is now the only place that flips is_payer for an existing
+          // group, so it must also re-sync transactions.client_id itself
+          // (transactions-counter-patch.ts's EXISTS(is_payer=TRUE) sync only
+          // fires from ITS OWN PATCH, not from this one).
+          await dbClient.query(
+            `UPDATE accounts.transactions t
+                SET client_id = cg.client_id
+               FROM accounts.transaction_customer_groups cg
+              WHERE t.id = $1 AND t.workspace_id = $2
+                AND cg.id = $3 AND cg.transaction_id = $1 AND cg.workspace_id = $2`,
+            [id, workspaceId, payerTarget],
+          );
+        }
+
+        // Payer-integrity guard: a save must never leave is_payer=TRUE on a
+        // customer_group with zero active lines while ANOTHER group on the
+        // same transaction still holds active lines and no reassignment
+        // resolved the conflict above. This is the server-side backstop for
+        // the client-side remove/zero block — belt-and-suspenders, since a
+        // stale client build or a direct API caller must not be able to
+        // strand billing attribution on a $0 group.
+        const payerRows = await dbClient.query<{ id: number; is_payer: boolean; has_active: boolean }>(
+          `SELECT cg.id, cg.is_payer,
+                  EXISTS (
+                    SELECT 1 FROM accounts.transaction_line_items li
+                     WHERE li.customer_group_id = cg.id AND li.transaction_id = $1 AND li.workspace_id = $2
+                       AND li.status IN ('active', 'completed', 'expired')
+                  ) AS has_active
+             FROM accounts.transaction_customer_groups cg
+            WHERE cg.transaction_id = $1 AND cg.workspace_id = $2`,
+          [id, workspaceId],
+        );
+        const payerRow = payerRows.rows.find((r) => r.is_payer);
+        const anyOtherHasActive = payerRows.rows.some((r) => !r.is_payer && r.has_active);
+        if (payerRow != null && !payerRow.has_active && anyOtherHasActive) {
+          await dbClient.query("ROLLBACK");
+          return c.json(
+            {
+              error: "The payer's items were all removed. Reassign the payer to a customer with active items.",
+              code: "PAYER_REASSIGNMENT_REQUIRED",
+            },
+            409,
+          );
         }
 
         // Same-tx model: additions never land on a child transaction anymore,

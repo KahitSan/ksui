@@ -191,4 +191,104 @@ describe("POST /:id/apply-cart-edit — per-item anchor semantics (real Postgres
     );
     expect(linesAfter.rows[0].n).toBe("1");
   });
+
+  it("anchor { started_at } lands the new line's started_at/ends_at exactly at the supplied ISO", async () => {
+    if (!ready) return;
+    const { transactionId, groupId } = await seedSaleWithFutureEndsAt();
+    const startedAt = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+
+    const res = await request(honoApp, "POST", `/${transactionId}/apply-cart-edit`, {
+      edit_token: crypto.randomUUID(),
+      reason: "New package anchored to the customer's original start",
+      additions: [
+        {
+          customer_group_id: groupId,
+          items: [
+            {
+              package_variant_id: variantAId,
+              quantity: 1,
+              anchor: { started_at: startedAt },
+            },
+          ],
+        },
+      ],
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    const newLine = await db.query<{ started_at: Date; ends_at: Date }>(
+      `SELECT started_at, ends_at FROM accounts.transaction_line_items WHERE id = $1`,
+      [body.added_line_item_ids[0]],
+    );
+    expect(new Date(newLine.rows[0].started_at).getTime()).toBe(new Date(startedAt).getTime());
+    expect(new Date(newLine.rows[0].ends_at).getTime()).toBe(new Date(startedAt).getTime() + 60 * 60 * 1000);
+  });
+
+  it("anchor { started_at } more than 5 years in the past 400s", async () => {
+    if (!ready) return;
+    const { transactionId, groupId } = await seedSaleWithFutureEndsAt();
+    const tooOld = new Date(Date.now() - 6 * 365 * 24 * 60 * 60 * 1000).toISOString();
+
+    const res = await request(honoApp, "POST", `/${transactionId}/apply-cart-edit`, {
+      edit_token: crypto.randomUUID(),
+      reason: "Out-of-range anchor",
+      additions: [
+        {
+          customer_group_id: groupId,
+          items: [{ package_variant_id: variantAId, quantity: 1, anchor: { started_at: tooOld } }],
+        },
+      ],
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("anchor { started_at } more than 24h in the future 400s", async () => {
+    if (!ready) return;
+    const { transactionId, groupId } = await seedSaleWithFutureEndsAt();
+    const tooFar = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+
+    const res = await request(honoApp, "POST", `/${transactionId}/apply-cart-edit`, {
+      edit_token: crypto.randomUUID(),
+      reason: "Out-of-range future anchor",
+      additions: [
+        {
+          customer_group_id: groupId,
+          items: [{ package_variant_id: variantAId, quantity: 1, anchor: { started_at: tooFar } }],
+        },
+      ],
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("the reduction loop never writes started_at/ends_at on any row it touches", async () => {
+    if (!ready) return;
+    const { transactionId, groupId, lineId } = await seedSaleWithFutureEndsAt();
+    const before = await db.query<{ started_at: Date; ends_at: Date }>(
+      `SELECT started_at, ends_at FROM accounts.transaction_line_items WHERE id = $1`,
+      [lineId],
+    );
+
+    const res = await request(honoApp, "POST", `/${transactionId}/apply-cart-edit`, {
+      edit_token: crypto.randomUUID(),
+      reason: "Reduce quantity, not timing",
+      additions: [
+        {
+          customer_group_id: groupId,
+          items: [{ package_variant_id: variantAId, quantity: 1, anchor: "now" }],
+        },
+      ],
+      reductions: [
+        { customer_group_id: groupId, package_id: packageId, package_variant_id: variantAId, target_quantity: 0 },
+      ],
+    });
+    expect(res.status).toBe(200);
+
+    const after = await db.query<{ started_at: Date; ends_at: Date; status: string }>(
+      `SELECT started_at, ends_at, status FROM accounts.transaction_line_items WHERE id = $1`,
+      [lineId],
+    );
+    expect(after.rows[0].status).toBe("voided");
+    expect(new Date(after.rows[0].started_at).getTime()).toBe(new Date(before.rows[0].started_at).getTime());
+    expect(new Date(after.rows[0].ends_at).getTime()).toBe(new Date(before.rows[0].ends_at).getTime());
+  });
 });
