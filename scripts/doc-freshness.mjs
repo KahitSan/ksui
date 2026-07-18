@@ -1,13 +1,14 @@
 #!/usr/bin/env node
-// Derives per-feature staleness of docs/BUSINESS-LOGIC.md from git history —
+// Rewrites the per-feature stamp lines in docs/BUSINESS-LOGIC.md in place —
 // answers "has the cited code/tests moved since this feature was last verified"
 // without trusting the doc's own prose. Run: node scripts/doc-freshness.mjs
 //
-// Deterministic by design: every date it prints comes from the doc's own
-// "Last verified" stamp or from git commit metadata — never from the wall
-// clock — so two runs against the same tree always print the same table.
+// Idempotent by design: "logic changed" / "tests changed" / drift come from
+// git; the "Verified" date and any "open: ..." note are read back from the
+// line itself and carried forward untouched. Re-running against a tree with
+// no new commits reproduces the exact same stamp lines.
 
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -115,31 +116,60 @@ function extractCitations(cell, isLogicColumn, state) {
 }
 
 const FEATURE_HEADING_RE = /^## (\d+)\. (.+)$/;
-const STAMP_RE = /Last verified:\s*(\d{4}-\d{2}-\d{2})/;
+// New format: "Verified 2026-07-19 · logic changed ... · tests ... [· ⚠ N row(s) unverified] [· open: ...]"
+// Old format (back-compat, in case a stamp line reverts by hand-edit):
+// "Last verified: 2026-07-19 (adversarial pass) — open gaps: Q1, Q2"
+const STAMP_LINE_RE = /^(?:Verified \d{4}-\d{2}-\d{2}|Last verified:\s*\d{4}-\d{2}-\d{2})/;
 
-function parseFeatures(doc) {
-  const lines = doc.split("\n");
+function parseFeatures(lines) {
   const features = [];
   let current = null;
-  for (const line of lines) {
+  lines.forEach((line, idx) => {
     const headingMatch = line.match(FEATURE_HEADING_RE);
     if (headingMatch) {
       current = {
         num: Number(headingMatch[1]),
         name: headingMatch[2].trim(),
+        startIdx: idx,
         rawLines: [],
-        verifiedDate: null,
+        stampLineIdx: null,
       };
       features.push(current);
-      continue;
+      return;
     }
     if (line.startsWith("## ")) {
       current = null; // a non-numbered "## " heading closes the last feature
-      continue;
+      return;
     }
-    if (current) current.rawLines.push(line);
-  }
+    if (current) {
+      if (current.stampLineIdx === null && STAMP_LINE_RE.test(line)) current.stampLineIdx = idx;
+      current.rawLines.push(line);
+    }
+  });
   return features;
+}
+
+// Extracts what must survive a rewrite: the human-set "Verified" date (never
+// derived from git — only a real re-verification pass may change it) and the
+// "open: ..." note (which Q numbers apply — not derivable from source at all).
+function parseExistingStamp(line) {
+  if (!line) return { verifiedDate: null, openNote: null };
+  const newFmt = line.match(/^Verified (\d{4}-\d{2}-\d{2})(.*)$/);
+  if (newFmt) {
+    const [, date, rest] = newFmt;
+    const openMatch = rest.match(/open:\s*([^·]+)/);
+    return { verifiedDate: date, openNote: openMatch ? openMatch[1].trim() : null };
+  }
+  const oldFmt = line.match(/^Last verified:\s*(\d{4}-\d{2}-\d{2})/);
+  if (oldFmt) {
+    const [, date] = oldFmt;
+    // split from the date match instead of one combined regex, and trim in JS
+    // rather than \s* + [^—]+ (adjacent quantifiers over overlapping char
+    // classes trip sonarjs/slow-regex) — same result, no backtracking risk
+    const gapsMatch = line.match(/open gaps:(.+)$/);
+    return { verifiedDate: date, openNote: gapsMatch ? gapsMatch[1].trim() : null };
+  }
+  return { verifiedDate: null, openNote: null };
 }
 
 function isTableRow(line) {
@@ -153,10 +183,7 @@ let unparsedRows = 0;
 
 function collectFeatureCitations(feature) {
   const state = { primaryFile: null }; // scoped to this feature only — see extractCitations
-  const stampMatch = feature.rawLines.join("\n").match(STAMP_RE);
-  feature.verifiedDate = stampMatch ? stampMatch[1] : null;
   feature.unverifiedRowCount = feature.rawLines.filter((l) => l.includes("⚠ unverified")).length;
-
   feature.logicCites = [];
   feature.testCites = [];
 
@@ -209,21 +236,16 @@ function dateForWholeFile(file) {
   return out || null;
 }
 
-// Resolves one citation to { date, drifted, resolvedFile } — the single
-// source of truth every date/drift decision downstream reads from.
+// Resolves one citation to { date, drifted, label } — the single source of
+// truth every date/drift decision downstream reads from.
 function resolveCitation(citation) {
   const { path: resolvedFile, ambiguous } = resolveFile(citation.file);
   if (!resolvedFile) {
-    return { date: null, drifted: true, label: `citation drifted: ${citation.raw}${ambiguous ? " (ambiguous basename)" : " (file not found)"}` };
+    return { date: null, drifted: true, label: `${citation.raw}${ambiguous ? " (ambiguous basename)" : " (file not found)"}` };
   }
   if (!citation.ranges) {
     const date = dateForWholeFile(resolvedFile);
-    return {
-      date,
-      drifted: date === null,
-      label: date === null ? `citation drifted: ${citation.raw} (no git history)` : null,
-      resolvedFile,
-    };
+    return { date, drifted: date === null, label: date === null ? `${citation.raw} (no git history)` : null };
   }
   let latest = null;
   let anyDrift = false;
@@ -236,79 +258,74 @@ function resolveCitation(citation) {
     if (!latest || d > latest) latest = d;
   }
   if (latest === null) {
-    return { date: null, drifted: true, label: `citation drifted: ${citation.raw} (range no longer resolves in ${resolvedFile})` };
+    return { date: null, drifted: true, label: `${citation.raw} (range no longer resolves in ${resolvedFile})` };
   }
-  return { date: latest, drifted: anyDrift, label: anyDrift ? `citation partially drifted: ${citation.raw}` : null, resolvedFile };
+  return { date: latest, drifted: anyDrift, label: anyDrift ? `${citation.raw} (partial drift)` : null };
 }
 
 function summarizeCitations(citations) {
-  if (citations.length === 0) return { date: null, drifted: [], files: [] };
+  if (citations.length === 0) return { date: null, driftLabels: [] };
   let latest = null;
-  const drifted = [];
-  const files = new Set();
+  const driftLabels = [];
   for (const c of citations) {
     const r = resolveCitation(c);
-    if (r.resolvedFile) files.add(r.resolvedFile);
-    if (r.label) drifted.push(r.label);
+    if (r.label) driftLabels.push(r.label);
     if (r.date && (!latest || r.date > latest)) latest = r.date;
   }
-  return { date: latest, drifted, files: [...files] };
-}
-
-function commitsSince(files, sinceDate) {
-  if (!files.length || !sinceDate) return null;
-  const out = runGit(["log", `--since=${sinceDate}`, "--format=%H", "--", ...files]);
-  if (out === null) return null;
-  return out ? out.split("\n").filter(Boolean).length : 0;
+  return { date: latest, driftLabels };
 }
 
 function fmtDate(d) {
   return d ? d.slice(0, 10) : "—";
 }
 
+// Builds the canonical stamp line: preserved facts first (Verified date,
+// open note), then everything derivable from git/the doc itself.
+function buildStampLine(feature, logic, tests, preserved) {
+  const verifiedDate = preserved.verifiedDate ?? "unstamped";
+  const parts = [`Verified ${verifiedDate}`, `logic changed ${fmtDate(logic.date)}`];
+  parts.push(feature.testCites.length === 0 ? "no tests cited" : `tests ${fmtDate(tests.date)}`);
+  if (feature.unverifiedRowCount > 0) {
+    const n = feature.unverifiedRowCount;
+    parts.push(`⚠ ${n} row${n === 1 ? "" : "s"} unverified`);
+  }
+  const driftCount = logic.driftLabels.length + tests.driftLabels.length;
+  if (driftCount > 0) {
+    const sample = [...logic.driftLabels, ...tests.driftLabels].slice(0, 1)[0];
+    const more = driftCount > 1 ? ` (+${driftCount - 1} more)` : "";
+    parts.push(`⚠ citation drifted: ${sample}${more}`);
+  }
+  if (preserved.openNote) parts.push(`open: ${preserved.openNote}`);
+  return parts.join(" · ");
+}
+
 function main() {
   const doc = readFileSync(DOC_PATH, "utf8");
-  const features = parseFeatures(doc);
+  const lines = doc.split("\n"); // split/join on "\n" round-trips a trailing newline for free
+  const features = parseFeatures(lines);
 
-  const rows = [];
+  let changed = 0;
+  const report = [];
   for (const feature of features) {
     collectFeatureCitations(feature);
     const logic = summarizeCitations(feature.logicCites);
     const tests = summarizeCitations(feature.testCites);
-    const allFiles = [...new Set([...logic.files, ...tests.files])];
-    const commits = commitsSince(allFiles, feature.verifiedDate);
+    const preserved = parseExistingStamp(feature.stampLineIdx === null ? null : lines[feature.stampLineIdx]);
+    const newLine = buildStampLine(feature, logic, tests, preserved);
 
-    const notes = [];
-    if (logic.drifted.length || tests.drifted.length) {
-      notes.push(...logic.drifted, ...tests.drifted);
+    if (feature.stampLineIdx === null) {
+      report.push(`#${feature.num} ${feature.name}: no stamp line found — skipped`);
+      continue;
     }
-    if (feature.unverifiedRowCount > 0) {
-      notes.push(`${feature.unverifiedRowCount} row(s) marked ⚠ unverified`);
+    if (lines[feature.stampLineIdx] !== newLine) {
+      lines[feature.stampLineIdx] = newLine;
+      changed++;
     }
-    if (!feature.verifiedDate) notes.push("no verification stamp found");
-
-    rows.push({
-      num: feature.num,
-      name: feature.name,
-      logicChanged: fmtDate(logic.date),
-      testsChanged: feature.testCites.length === 0 ? "no test citations" : fmtDate(tests.date),
-      verified: feature.verifiedDate ?? "unstamped",
-      commitsSince: commits === null ? "n/a" : String(commits),
-      notes: notes.length ? notes.join("; ") : "—",
-    });
   }
 
-  const header = "| # | Feature | Logic last changed | Tests last changed | Last verified | Commits touching cited files since verified | Notes |";
-  const sep = "|---|---|---|---|---|---|---|";
-  const lines = [header, sep];
-  for (const r of rows) {
-    lines.push(
-      `| ${r.num} | ${r.name} | ${r.logicChanged} | ${r.testsChanged} | ${r.verified} | ${r.commitsSince} | ${r.notes} |`,
-    );
-  }
-
-  console.log(lines.join("\n"));
-  console.error(`\n(${features.length} features, ${unparsedRows} unparsable row(s), ${ALL_FILES.length} source files indexed)`);
+  writeFileSync(DOC_PATH, lines.join("\n"), "utf8");
+  console.error(`doc-freshness: ${features.length} feature(s) scanned, ${changed} stamp line(s) updated, ${unparsedRows} unparsable row(s), ${ALL_FILES.length} source file(s) indexed.`);
+  for (const line of report) console.error(`  ${line}`);
 }
 
 main();
