@@ -25,9 +25,10 @@ import { insertTransactionRow, insertVisibilityShares } from "../lib/create-tran
 import { syncTransferFee } from "../lib/sync-transfer-fee.js";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
-import { findAccountsByIds, findPayeesByIds } from "../lib/peers.js";
+import { findAccountsByIds, findPackagesByIds, findPayeesByIds } from "../lib/peers.js";
 import { validateSubcategory } from "../lib/transaction-subcategories.js";
 import { isBackdated } from "../lib/backdate.js";
+import { ACTIVE_LINE_ROWS_SQL, summarizeActiveLines, type ActiveLineRow } from "../lib/active-line-summary.js";
 import { registerTransactionDetailRoute } from "./transactions-detail.js";
 import { registerTransactionStatusRoutes } from "./transactions-status.js";
 import { registerTransactionCartEditRoute } from "./transactions-cart-edit.js";
@@ -107,6 +108,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
             (SELECT COUNT(*) FROM accounts.transaction_attachments ta WHERE ta.transaction_id = t.id) AS attachment_count,
             paid.total_paid::numeric(12,2) AS amount_collected,
             (t.amount - paid.total_paid)::numeric(12,2) AS balance,
+            li_summary.lines AS active_lines,
             CASE
               WHEN t.category != 'sale' THEN NULL
               WHEN t.status = 'voided' THEN 'voided'
@@ -121,6 +123,18 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
             SELECT COALESCE(SUM(tp.amount), 0)::numeric(12,2) AS total_paid
               FROM accounts.transaction_payments tp WHERE tp.transaction_id = t.id
           ) paid ON true
+          LEFT JOIN LATERAL (
+            -- apply-cart-edit now regenerates t.description in the same
+            -- transaction as the swap (see transactions-cart-edit.ts), so
+            -- this LATERAL is belt-and-suspenders for rows edited BEFORE
+            -- that fix shipped — it heals them here without a backfill
+            -- migration. Package-name resolution can't happen in SQL
+            -- (packages lives in a separate plugin's schema, RPC-only —
+            -- see peers.ts), so this returns the raw active lines; the
+            -- code below labels them in JS via summarizeActiveLines, kept
+            -- in sync with active-line-summary.ts's deriveActiveLineSummary.
+            ${ACTIVE_LINE_ROWS_SQL}
+          ) li_summary ON true
           ${whereClause}
           ${orderClause}
           LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -136,6 +150,37 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
 
         // Enrich with account, payee, and user names.
         const idh = identityHeaderOf(c);
+
+        // Resolve the active-lines summary now that package names (RPC-only,
+        // see peers.ts) are reachable — batched once across every row rather
+        // than per-row, matching the account/payee enrichment below. A row
+        // with no active lines keeps its default t.description (already
+        // selected via TRANSACTION_COLS_T), reproducing the old SQL COALESCE.
+        const activeLinePackageIds = [
+          ...new Set(
+            result.rows.flatMap((r: { active_lines: ActiveLineRow[] }) =>
+              r.active_lines.map((l) => l.package_id).filter((id): id is number => id != null),
+            ),
+          ),
+        ];
+        const activeLinePackages =
+          activeLinePackageIds.length > 0 ? await findPackagesByIds(activeLinePackageIds, idh) : [];
+        const activeLinePackageNameById = new Map<number, string>(
+          (activeLinePackages ?? []).map((p) => [p.id, p.name]),
+        );
+        for (const row of result.rows) {
+          const lines = row.active_lines as ActiveLineRow[];
+          if (lines.length > 0) {
+            row.description = summarizeActiveLines(
+              lines.map((l) => ({
+                quantity: l.quantity,
+                description: l.description,
+                package_name: l.package_id != null ? (activeLinePackageNameById.get(l.package_id) ?? null) : null,
+              })),
+            );
+          }
+          delete row.active_lines;
+        }
 
         const accountIds = [
           ...new Set([

@@ -25,6 +25,7 @@ import {
 import { resolveUserNames, TRANSACTION_COLS_T } from "./shared.js";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet, isWorkspaceElevated } from "../types.js";
+import { summarizeActiveLines } from "../lib/active-line-summary.js";
 
 export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
@@ -104,11 +105,18 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
           ).rows;
         }
 
+        // Excludes voided lines: neither UI consumer of this field (the
+        // "Packages availed" summary in TransactionDetail.tsx, the PUT-edit
+        // form seed in useTransactionForm.ts) nor counter's receipt/edit
+        // views want a voided line rendered as if it were still on the
+        // receipt — counter's own load-edit-transaction.ts already filters
+        // status === "voided" client-side, so this filter is a no-op for it
+        // and a real fix for the two finance consumers that had none.
         const lineItemsResult = await pool.query(
           `SELECT id, package_id, package_variant_id, description, quantity, unit_price,
                   duration_value, duration_unit, started_at, ends_at, status, client_id, customer_group_id
              FROM accounts.transaction_line_items
-            WHERE transaction_id = $1 AND workspace_id = $2
+            WHERE transaction_id = $1 AND workspace_id = $2 AND status <> 'voided'
             ORDER BY id ASC`,
           [txn.id, ctxGet(c, "workspaceId")],
         );
@@ -135,6 +143,21 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
             client_name: r.client_id != null ? (lineClientName.get(r.client_id) ?? null) : null,
           };
         });
+
+        // Derived from the SAME already-enriched line_items the "Packages
+        // availed" pane renders (same 3-line cap, same id-ascending order as
+        // the list route's LATERAL) — package_name and description agree by
+        // construction instead of the title being a separate SQL derivation
+        // that can drift from the pane's resolution.
+        if (line_items.length > 0) {
+          txn.description = summarizeActiveLines(
+            line_items.slice(0, 3).map((li) => ({
+              quantity: li.quantity,
+              description: li.description,
+              package_name: li.package_name,
+            })),
+          );
+        }
 
         // Billed-to client name.
         let client_name: string | null = null;
