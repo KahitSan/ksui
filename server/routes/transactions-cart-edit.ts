@@ -14,7 +14,8 @@ import { ctxGet } from "../types.js";
 import { assertParentEditable, lockParentForReprice, repriceParentTransaction } from "../lib/reprice-parent-transaction.js";
 import { insertLineItemsForTransaction, insertNewCustomerGroup } from "../charge/insert-line-items.js";
 import type { ChargeLineInput, ValidUnit } from "../charge/validate.js";
-import { findVariantsByIds, type PackageVariantRow } from "../lib/peers.js";
+import { findVariantsByIds, findPackagesByIds, type PackageVariantRow } from "../lib/peers.js";
+import { deriveActiveLineSummary } from "../lib/active-line-summary.js";
 import { MAX_NUMERIC_12_2 } from "./shared.js";
 
 interface ReductionInput {
@@ -217,6 +218,12 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
         ...new Set((additionsRaw ?? []).flatMap((entry) => entry.items.map((item) => item.package_variant_id))),
       ];
       const variantById = new Map<number, PackageVariantRow>();
+      // PackageVariantRow carries no package name (see peers.ts), so it's
+      // resolved separately here — matches the "PackageName — VariantName"
+      // format build-charge-payload.ts:139 builds client-side at charge time,
+      // kept server-derived here since this route never accepts a
+      // client-supplied description (B5).
+      const packageNameById = new Map<number, string>();
       if (additionVariantIds.length > 0) {
         const variants = await findVariantsByIds(additionVariantIds, idh);
         if (variants == null) {
@@ -229,6 +236,11 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
           );
         }
         for (const v of variants) variantById.set(v.id, v);
+
+        const additionPackageIds = [...new Set(variants.map((v) => v.package_id))];
+        const packages = additionPackageIds.length > 0 ? await findPackagesByIds(additionPackageIds, idh) : [];
+        for (const p of packages ?? []) packageNameById.set(p.id, p.name);
+
         for (const vid of additionVariantIds) {
           const variant = variantById.get(vid);
           if (variant == null) {
@@ -425,10 +437,11 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
             // unit_price/duration are ALWAYS derived from the variant row,
             // never the client, matching /extend's precedent.
             const variant = variantById.get(item.package_variant_id) as PackageVariantRow;
+            const pkgName = packageNameById.get(variant.package_id);
             items.push({
               package_id: variant.package_id,
               package_variant_id: item.package_variant_id,
-              description: variant.name,
+              description: pkgName != null ? `${pkgName} — ${variant.name}` : variant.name,
               quantity: item.quantity,
               unit_price: parseFloat(String(variant.price ?? 0)),
               duration_value: variant.duration_value != null ? parseFloat(String(variant.duration_value)) : null,
@@ -621,6 +634,22 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
           return c.json(
             { error: "At least one item must remain on this receipt. Void the whole transaction instead.", code: "EMPTY_CART" },
             409,
+          );
+        }
+
+        // The detail modal title (TransactionsPage.tsx) and the edit-form
+        // seed (useTransactionForm.ts) both render the stored column
+        // directly, unlike the list route's own LATERAL derivation — a swap
+        // here left them showing the voided package's name until this
+        // regenerate. remainingCount above already guarantees at least one
+        // active line survives, so a null summary here would only mean a
+        // race with a concurrent void outside this transaction; NULL-safe
+        // COALESCE keeps the existing description rather than blank it.
+        const freshDescription = await deriveActiveLineSummary(dbClient, id, workspaceId, idh);
+        if (freshDescription != null) {
+          await dbClient.query(
+            `UPDATE accounts.transactions SET description = $1 WHERE id = $2 AND workspace_id = $3`,
+            [freshDescription, id, workspaceId],
           );
         }
 
