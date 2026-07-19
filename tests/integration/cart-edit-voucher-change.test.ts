@@ -230,6 +230,36 @@ describe("POST /:id/apply-cart-edit — voucher_changes (real Postgres)", () => 
     expect(parseFloat(txn.amount)).toBe(400);
   });
 
+  it("a non-integer or negative voucher_id 400s on shape before any RPC resolve or mutation", async () => {
+    if (!ready) return;
+    const { transactionId, groupId } = await seedSale(null);
+
+    const resNonInteger = await request(honoApp, "POST", `/${transactionId}/apply-cart-edit`, {
+      edit_token: crypto.randomUUID(),
+      reason: "Malformed voucher_id (fractional)",
+      voucher_changes: [{ customer_group_id: groupId, voucher_id: 1.5 }],
+    });
+    expect(resNonInteger.status).toBe(400);
+    const bodyNonInteger = await resNonInteger.json();
+    expect(bodyNonInteger.error).toBe("Each voucher_changes entry needs a customer_group_id and a voucher_id (number or null)");
+
+    const resNegative = await request(honoApp, "POST", `/${transactionId}/apply-cart-edit`, {
+      edit_token: crypto.randomUUID(),
+      reason: "Malformed voucher_id (negative)",
+      voucher_changes: [{ customer_group_id: groupId, voucher_id: -1 }],
+    });
+    expect(resNegative.status).toBe(400);
+
+    const { cg } = await readGroupAndTxn(transactionId, groupId);
+    expect(cg.voucher_id).toBeNull();
+
+    const editsAfter = await db.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM accounts.transaction_edits WHERE transaction_id = $1`,
+      [transactionId],
+    );
+    expect(editsAfter.rows[0].n).toBe("0");
+  });
+
   it("a foreign/unresolvable voucher_id 400s before any lock or mutation", async () => {
     if (!ready) return;
     const { transactionId, groupId } = await seedSale(null);
