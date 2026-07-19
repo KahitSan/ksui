@@ -180,6 +180,19 @@ the SAME receipt. It never creates a second receipt. Route: `POST /:id/apply-car
 | The line being chained off belongs to a DIFFERENT receipt. | Rejected — chaining only works within the same receipt. | — | `:484-487` | "rejects a chain_from_line_id pointing at a different transaction" |
 | The line being chained off has no end time. | Rejected — nothing to chain from. | — | `:489-491` | — |
 
+### Changing or removing a voucher on an existing group
+
+| Scenario | Business rule | Why | Enforced at | Pinned by test |
+|---|---|---|---|---|
+| A save wants to attach, swap, or remove the voucher on a customer group that already exists on the receipt. | Sent as its own `voucher_changes` list, separate from additions. | Additions are skipped entirely when their items list is empty, so a voucher-only change can't ride inside one — it needs its own path. Before this, there was no way to change an existing group's voucher at all; the only place a voucher_id was ever written was creating a brand-new group. | `:73-90,157-163` | `cart-edit-voucher-change.test.ts` |
+| A `voucher_changes` entry is missing a customer group, or its voucher_id isn't a number or null. | Rejected. | — | `:202-210` | `cart-edit-voucher-change.test.ts` |
+| A save's only content is a voucher change (no reductions/additions/payer reassignment). | Accepted — it's a legitimate reason to save on its own. | — | `:229-235` | `cart-edit-voucher-change.test.ts` |
+| A voucher_change names a voucher code that doesn't resolve in this workspace. | Rejected before anything is touched — unlike a brand-new group's voucher (which is quietly dropped so a bad reference can't block group creation), an explicit voucher change IS the point of the request, so a bad one must fail loudly. | — | `:289-301` | `cart-edit-voucher-change.test.ts` (400s, mutates nothing) |
+| A voucher_change's customer group doesn't belong to this receipt. | Rejected. | — | `:598-606` | `cart-edit-voucher-change.test.ts` |
+| A voucher is attached, swapped, or removed on a group. | The group's discount is recalculated against its current subtotal right away, even if nothing else about the group changed in this save. | Otherwise the new (or removed) voucher wouldn't actually take effect until some unrelated future edit touched the group's cost. | `:590-627` | `cart-edit-voucher-change.test.ts` |
+| A group's voucher is removed. | Its discount drops to zero — never left at its old value. | The old value belonged to the voucher that's now gone; leaving it would silently overcharge the discount. | `reprice-parent-transaction.ts:105-124` | `cart-edit-voucher-change.test.ts` ("voucher REMOVAL (null) zeroes the discount") |
+| A voucher change and a reduction land on the same group in the same save. | Both apply together — the discount is computed against the post-reduction subtotal. | — | `:590-627` | `cart-edit-voucher-change.test.ts` ("combined with a reduction") |
+
 ### Who's paying
 
 | Scenario | Business rule | Why | Enforced at | Pinned by test |
@@ -365,7 +378,7 @@ other plugins. Route: `GET /api/transactions`.
 
 ## 10. Transaction Detail
 
-Verified 2026-07-19 · logic changed 2026-07-19 · no tests cited · open: Q6
+Verified 2026-07-19 · logic changed 2026-07-20 · tests 2026-07-20 · open: Q6
 
 **What it does:** The full drill-down on one receipt — items, payments, customer groups, client
 pool, edit history, attachments, payee, and who it's shared with. Route:
@@ -379,6 +392,9 @@ pool, edit history, attachments, payee, and who it's shared with. Route:
 | A customer group has a real client attached. | Its displayed name is resolved live from the client record, overriding whatever was typed at checkout time; a true walk-in keeps the stored name. | A stored name goes stale the moment a client is renamed or reassigned; live lookup fixes that, with a graceful fallback if the client lookup service is down. | `:233-248` | — |
 | A receipt has a linked transfer fee. | The linked fee's amount is joined into the response. | — | `:50,65-67` | — |
 | A receipt's line items are shown. | The title is recomputed the exact same way as the list, capped to the first 3 items. | Guarantees the detail title and the itemized pane can never drift apart. | `:147-160` | — |
+| A customer group carries a voucher (`voucher_id` set). | The response attaches a resolved `voucher` object (`id`, `code`, `type`, `value`, `max_discount_amount`, `minimum_purchase`) alongside the raw `voucher_id`, resolved per group over the same vouchers-plugin RPC other peer lookups use. | The edit cart needs the real code and the two discount-math fields to preview a voucher change, not just the opaque id. | `:244-277` | `integration/transactions-detail-voucher.test.ts` |
+| A group's `voucher_id` doesn't resolve (vouchers plugin absent, or the id no longer exists). | `voucher` is `null`; the raw `voucher_id` column is left untouched. | Same graceful-degradation posture as every other peer lookup on this route — a down/missing peer never breaks the read. | `:244-262` | `integration/transactions-detail-voucher.test.ts` |
+| A legacy single-customer receipt (no `customer_group` rows) carries a top-level `voucher_id`. | The response also attaches a resolved top-level `voucher` object, same shape as a customer group's, resolved from the transaction's own `voucher_id` column. | Legacy receipts never got customer-group rows, so they were falling through the group resolution above entirely — the edit cart's synthetic single group reads `data.voucher` and needs the real fields, not just the id. | `:279-297` | `integration/transactions-detail-voucher.test.ts` |
 
 ---
 

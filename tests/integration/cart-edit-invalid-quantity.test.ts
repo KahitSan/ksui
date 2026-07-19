@@ -176,7 +176,9 @@ describe("POST /:id/apply-cart-edit — invalid addition quantities + empty body
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("At least one of reductions, additions, or reassign_payer_to must be provided");
+    expect(body.error).toBe(
+      "At least one of reductions, additions, voucher_changes, or reassign_payer_to must be provided",
+    );
     await expectNothingMutated(transactionId, lineId);
   });
 });

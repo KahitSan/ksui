@@ -12,6 +12,11 @@ import { applyTenantContext, identityHeaderOf } from "@kahitsan/plugin-sdk";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet } from "../types.js";
 import { assertParentEditable, lockParentForReprice, repriceParentTransaction } from "../lib/reprice-parent-transaction.js";
+import {
+  applyVoucherChanges,
+  findUnresolvableVoucherChangeId,
+  type VoucherChangeInput,
+} from "../lib/apply-voucher-changes.js";
 import { insertLineItemsForTransaction, insertNewCustomerGroup } from "../charge/insert-line-items.js";
 import type { ChargeLineInput, ValidUnit } from "../charge/validate.js";
 import { findVariantsByIds, findPackagesByIds, type PackageVariantRow } from "../lib/peers.js";
@@ -75,6 +80,11 @@ interface CartEditBody {
   reason?: string;
   reductions?: ReductionInput[];
   additions?: AdditionEntry[];
+  // A SEPARATE array from additions — an existing group's voucher can change
+  // (or be removed) without touching its line items at all, and additions are
+  // skipped entirely when items is empty, so a voucher-only change can't ride
+  // inside an addition entry.
+  voucher_changes?: VoucherChangeInput[];
   reassign_payer_to?: number | null;
 }
 
@@ -144,6 +154,63 @@ function isValidAdditionEntry(entry: unknown): entry is AdditionEntry {
   return Array.isArray(v.items) && v.items.length > 0 && v.items.every(isValidAdditionItem);
 }
 
+function isValidVoucherChange(v: unknown): v is VoucherChangeInput {
+  if (v == null || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  const cgOk = typeof o.customer_group_id === "number" && o.customer_group_id > 0;
+  const voucherOk = o.voucher_id === null || (typeof o.voucher_id === "number" && Number.isInteger(o.voucher_id) && o.voucher_id > 0);
+  return cgOk && voucherOk;
+}
+
+// Kept as its own function (rather than inlined into the route's compound
+// `if`) so this check's own branches count toward THIS function's
+// complexity, not the already-CRITICAL route handler's.
+function voucherChangesShapeInvalid(raw: VoucherChangeInput[] | undefined): boolean {
+  return raw !== undefined && !raw.every(isValidVoucherChange);
+}
+
+// Collapses the Array.isArray parse + shape-validity check into the route's
+// single `=== null` guard — null means malformed, undefined means "not
+// provided" (a legitimate no-op, mirroring additionsRaw's own rule).
+function parseVoucherChangesRaw(body: CartEditBody): VoucherChangeInput[] | undefined | null {
+  const raw = Array.isArray(body.voucher_changes) ? body.voucher_changes : undefined;
+  return voucherChangesShapeInvalid(raw) ? null : raw;
+}
+
+// Same rationale as voucherChangesShapeInvalid above.
+function hasVoucherChangesEntries(raw: VoucherChangeInput[] | undefined): boolean {
+  return raw !== undefined && raw.length > 0;
+}
+
+// Same rationale as voucherChangesShapeInvalid above — isolates the
+// "nothing to do" guard's branch count from the route handler.
+function noCartEditFieldsProvided(
+  hasReductions: boolean,
+  hasAdditions: boolean,
+  hasVoucherChanges: boolean,
+  reassignPayerTo: number | null | undefined,
+): boolean {
+  return !hasReductions && !hasAdditions && !hasVoucherChanges && reassignPayerTo == null;
+}
+
+// A group needs a reprice pass when its cost actually moved OR its voucher
+// changed (a voucher-only change has costDelta 0 but still needs the
+// discount recomputed against the new voucher_id).
+function groupNeedsReprice(costDelta: number, customerGroupId: number | null, voucherChangedGroupIds: Set<number | null>): boolean {
+  return costDelta !== 0 || voucherChangedGroupIds.has(customerGroupId);
+}
+
+// Extracted alongside the voucher_changes guards above for the same reason
+// (Lens 14 CRITICAL gate) — a provided, non-null reassign_payer_to must be a
+// positive integer.
+function isMalformedReassignPayerTo(reassignPayerTo: number | null | undefined): boolean {
+  return (
+    reassignPayerTo !== undefined &&
+    reassignPayerTo !== null &&
+    (typeof reassignPayerTo !== "number" || !Number.isInteger(reassignPayerTo) || reassignPayerTo <= 0)
+  );
+}
+
 export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
 
@@ -181,12 +248,21 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
           400,
         );
       }
+      // An empty/absent voucher_changes is likewise a legitimate no-op —
+      // mirrors additionsRaw's own empty-array-is-not-a-400 rule above.
+      const voucherChangesRaw = parseVoucherChangesRaw(body);
+      if (voucherChangesRaw === null) {
+        return c.json(
+          { error: "Each voucher_changes entry needs a customer_group_id and a voucher_id (number or null)" },
+          400,
+        );
+      }
+      // Normalized once here so the two downstream consumers (the pre-BEGIN
+      // resolve loop and applyVoucherChanges) share one `?? []` instead of
+      // each repeating it.
+      const voucherChangeEntries = voucherChangesRaw ?? [];
       const reassignPayerTo = body.reassign_payer_to;
-      if (
-        reassignPayerTo !== undefined &&
-        reassignPayerTo !== null &&
-        (typeof reassignPayerTo !== "number" || !Number.isInteger(reassignPayerTo) || reassignPayerTo <= 0)
-      ) {
+      if (isMalformedReassignPayerTo(reassignPayerTo)) {
         return c.json({ error: "reassign_payer_to must be a positive integer or null" }, 400);
       }
       const newGroupPayerCount = (additionsRaw ?? []).filter(
@@ -201,8 +277,12 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
 
       const hasReductions = reductions !== undefined && reductions.length > 0;
       const hasAdditions = additionsRaw !== undefined && additionsRaw.length > 0;
-      if (!hasReductions && !hasAdditions && reassignPayerTo == null) {
-        return c.json({ error: "At least one of reductions, additions, or reassign_payer_to must be provided" }, 400);
+      const hasVoucherChanges = hasVoucherChangesEntries(voucherChangesRaw);
+      if (noCartEditFieldsProvided(hasReductions, hasAdditions, hasVoucherChanges, reassignPayerTo)) {
+        return c.json(
+          { error: "At least one of reductions, additions, voucher_changes, or reassign_payer_to must be provided" },
+          400,
+        );
       }
 
       const workspaceId = ctxGet(c, "workspaceId");
@@ -253,6 +333,18 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
             return c.json({ error: "package_variant price exceeds the maximum allowed" }, 400);
           }
         }
+      }
+
+      // voucher_changes resolves before BEGIN too, matching additionVariantIds
+      // above — unlike insertNewCustomerGroup's silent-drop-on-unresolvable
+      // (a brand-new group's voucher is a nice-to-have that shouldn't block
+      // the group's creation), an EXPLICIT voucher change is the whole point
+      // of the request, so an unresolvable id here must 400, never degrade.
+      const voucherChangeIds = [
+        ...new Set(voucherChangeEntries.map((vc) => vc.voucher_id).filter((v): v is number => v != null)),
+      ];
+      if ((await findUnresolvableVoucherChangeId(voucherChangeIds, idh)) != null) {
+        return c.json({ error: "voucher_id must belong to this workspace" }, 400);
       }
 
       let dbClient: import("pg").PoolClient | null = null;
@@ -541,8 +633,23 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
           );
         }
 
+        // Applied here — inside the FOR UPDATE transaction, BEFORE the
+        // reprice loop below — so repriceParentTransaction's own fresh
+        // lockParentForReprice re-SELECT of the group (per costDeltaByGroup
+        // entry) already sees the NEW voucher_id and recomputes the discount
+        // against it. voucher_id is otherwise only ever written by
+        // insertNewCustomerGroup's INSERT (see insert-line-items.ts); this is
+        // the one place an EXISTING group's voucher_id is ever UPDATEd.
+        const voucherChangeResult = await applyVoucherChanges(dbClient, workspaceId, id, voucherChangeEntries, costDeltaByGroup);
+        if (!voucherChangeResult.ok) {
+          await dbClient.query("ROLLBACK");
+          return c.json({ error: voucherChangeResult.error }, voucherChangeResult.status as any);
+        }
+        const voucherChangedGroupIds = voucherChangeResult.voucherChangedGroupIds;
+        const voucherChangedGroupIdSet = new Set<number | null>(voucherChangedGroupIds);
+
         for (const [customerGroupId, costDelta] of costDeltaByGroup) {
-          if (costDelta === 0) continue;
+          if (!groupNeedsReprice(costDelta, customerGroupId, voucherChangedGroupIdSet)) continue;
           const groupLock = await lockParentForReprice(dbClient, workspaceId, id, customerGroupId);
           if (groupLock == null) {
             await dbClient.query("ROLLBACK");
@@ -697,6 +804,7 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
           reduced_line_items: reducedLineItems,
           added_line_item_ids: addedLineItemIds,
           new_customer_group_ids: newCustomerGroupIds,
+          voucher_changed_group_ids: voucherChangedGroupIds,
         };
 
         // transaction_edits is INSERT/SELECT-only under RLS (append-only audit

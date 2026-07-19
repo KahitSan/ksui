@@ -21,11 +21,49 @@ import {
   findVariantsByIds,
   findClientsByIds,
   findPayeesByIds,
+  findVoucherById,
+  type IdentityHeader,
+  type VoucherRow,
 } from "../lib/peers.js";
 import { resolveUserNames, TRANSACTION_COLS_T } from "./shared.js";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet, isWorkspaceElevated } from "../types.js";
 import { summarizeActiveLines } from "../lib/active-line-summary.js";
+
+interface VoucherSummary {
+  id: number;
+  code: string;
+  type: VoucherRow["type"];
+  value: VoucherRow["value"];
+  max_discount_amount: VoucherRow["max_discount_amount"] | null;
+  minimum_purchase: VoucherRow["minimum_purchase"] | null;
+}
+
+function shapeVoucherSummary(v: VoucherRow): VoucherSummary {
+  return {
+    id: v.id,
+    code: v.code,
+    type: v.type,
+    value: v.value,
+    max_discount_amount: v.max_discount_amount ?? null,
+    minimum_purchase: v.minimum_purchase ?? null,
+  };
+}
+
+// Legacy single-customer transactions have zero customer_group rows (counter
+// builds a synthetic group client-side from the top-level fields), so their
+// voucher never goes through the per-group cgVoucherById resolution below —
+// this mirrors the same resolved shape at the top level, matching that
+// block's own fetch-by-id + shape style, or load-edit-transaction.ts's
+// synthetic group falls back to the "Voucher #N" placeholder.
+async function resolveLegacyVoucherSummary(
+  voucherId: number | null,
+  idh: IdentityHeader,
+): Promise<VoucherSummary | null> {
+  if (voucherId == null) return null;
+  const voucher = await findVoucherById(voucherId, idh);
+  return voucher ? shapeVoucherSummary(voucher) : null;
+}
 
 export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
@@ -241,11 +279,40 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
         // falling back to the stored value only when the clients RPC is
         // unavailable. Walk-ins (client_id = NULL) keep their stored name
         // because there is no other source.
-        const customer_groups = customerGroups.map((g) => ({
-          ...g,
-          client_name: g.client_id != null ? (cgClientName.get(g.client_id) ?? null) : null,
-          display_name: g.client_id != null ? (cgClientName.get(g.client_id) ?? g.display_name) : (g.display_name ?? null),
-        }));
+        // Resolve each group's voucher over RPC (no batch endpoint exists on
+        // the vouchers peer, so loop the small distinct set) so the edit cart
+        // gets the real code/type/value plus the two fields its discount math
+        // needs (max_discount_amount, minimum_purchase) instead of the raw id
+        // alone — see load-edit-transaction.ts's placeholder comment. The raw
+        // voucher_id column stays on the row regardless of resolution.
+        const cgVoucherIds = [
+          ...new Set(customerGroups.map((g) => g.voucher_id as number | null).filter((v): v is number => v != null)),
+        ];
+        const cgVoucherEntries = await Promise.all(
+          cgVoucherIds.map(async (vid) => [vid, await findVoucherById(vid, idh)] as const),
+        );
+        const cgVoucherById = new Map<number, VoucherRow | null>(cgVoucherEntries);
+
+        const customer_groups = customerGroups.map((g) => {
+          const v = g.voucher_id != null ? (cgVoucherById.get(g.voucher_id) ?? null) : null;
+          return {
+            ...g,
+            client_name: g.client_id != null ? (cgClientName.get(g.client_id) ?? null) : null,
+            display_name: g.client_id != null ? (cgClientName.get(g.client_id) ?? g.display_name) : (g.display_name ?? null),
+            voucher: v
+              ? {
+                  id: v.id,
+                  code: v.code,
+                  type: v.type,
+                  value: v.value,
+                  max_discount_amount: v.max_discount_amount ?? null,
+                  minimum_purchase: v.minimum_purchase ?? null,
+                }
+              : null,
+          };
+        });
+
+        txn.voucher = await resolveLegacyVoucherSummary(txn.voucher_id as number | null, idh);
 
         const clientPoolRows = (
           await pool.query(
