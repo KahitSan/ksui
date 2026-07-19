@@ -116,7 +116,7 @@ along with (usually) a payment. Route: `POST /charge`.
 
 ## 2. Editing a Paid Receipt (Cart Edit)
 
-Verified 2026-07-19 · logic changed 2026-07-19 · tests 2026-07-19 · ⚠ citation drifted: cart-edit-voucher-change.test.ts (no git history) (+7 more) · open: Q5
+Verified 2026-07-19 · logic changed 2026-07-19 · tests 2026-07-19 · open: Q5
 
 **What it does:** Lets staff edit a receipt after checkout — remove or shrink items, add new
 items (to an existing customer or a brand-new one), and reassign who's paying — in one save on
