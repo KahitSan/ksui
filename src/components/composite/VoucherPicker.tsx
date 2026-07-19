@@ -1,9 +1,11 @@
 // Vendored into plugin remotes.
 //
-// Cross-plugin picker: fetches the SIBLING vouchers plugin's public API at
-// /api/vouchers and degrades gracefully: when the vouchers plugin isn't
-// deployed the popup shows a "couldn't load" notice and the sale records with
-// no voucher (the manual-discount field stays available).
+// Cross-plugin picker: fetches vouchers over HTTP and degrades gracefully:
+// when the endpoint isn't reachable the popup shows a "couldn't load" notice
+// and the sale records with no voucher (the manual-discount field stays
+// available). Defaults to the vouchers plugin's own public API
+// (/api/vouchers); `fetchUrl` overrides it for a consumer that reaches
+// vouchers through a peer proxy route instead (same response shape required).
 
 import { Portal } from "solid-js/web";
 import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX } from "solid-js";
@@ -24,6 +26,8 @@ export interface VoucherOption {
   is_active: boolean;
 }
 
+const DEFAULT_FETCH_URL = "/api/vouchers?status=active&limit=200";
+
 interface VoucherPickerProps {
   selected: VoucherOption | null;
   onChange: (next: VoucherOption | null) => void;
@@ -31,6 +35,10 @@ interface VoucherPickerProps {
   packageIds: number[];
   disabled?: boolean;
   compact?: boolean;
+  /** Same-shape endpoint override (defaults to the vouchers plugin's own API) —
+   *  a consumer with no `vouchers.view` grant can point this at a peer proxy
+   *  route instead. */
+  fetchUrl?: string;
 }
 
 const POPUP_MAX_HEIGHT = 360;
@@ -105,7 +113,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
     const token = ++activeFetchToken;
     setLoading(true);
     setError(null);
-    fetch("/api/vouchers?status=active&limit=200", { credentials: "include" })
+    fetch(props.fetchUrl ?? DEFAULT_FETCH_URL, { credentials: "include" })
       .then((r) => {
         if (!r.ok)
           throw new Error(
