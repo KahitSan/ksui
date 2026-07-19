@@ -22,12 +22,48 @@ import {
   findClientsByIds,
   findPayeesByIds,
   findVoucherById,
+  type IdentityHeader,
   type VoucherRow,
 } from "../lib/peers.js";
 import { resolveUserNames, TRANSACTION_COLS_T } from "./shared.js";
 import type { CoreRouteCtx } from "./transactions-core.js";
 import { ctxGet, isWorkspaceElevated } from "../types.js";
 import { summarizeActiveLines } from "../lib/active-line-summary.js";
+
+interface VoucherSummary {
+  id: number;
+  code: string;
+  type: VoucherRow["type"];
+  value: VoucherRow["value"];
+  max_discount_amount: VoucherRow["max_discount_amount"] | null;
+  minimum_purchase: VoucherRow["minimum_purchase"] | null;
+}
+
+function shapeVoucherSummary(v: VoucherRow): VoucherSummary {
+  return {
+    id: v.id,
+    code: v.code,
+    type: v.type,
+    value: v.value,
+    max_discount_amount: v.max_discount_amount ?? null,
+    minimum_purchase: v.minimum_purchase ?? null,
+  };
+}
+
+// Legacy single-customer transactions have zero customer_group rows (counter
+// builds a synthetic group client-side from the top-level fields), so their
+// voucher never goes through the per-group cgVoucherById resolution below —
+// this mirrors the same resolved shape at the top level, matching that
+// block's own fetch-by-id + shape style, or load-edit-transaction.ts's
+// synthetic group falls back to the "Voucher #N" placeholder.
+async function resolveLegacyVoucherSummary(
+  voucherId: number | null,
+  idh: IdentityHeader,
+): Promise<VoucherSummary | null> {
+  if (voucherId == null) return null;
+  const voucher = await findVoucherById(voucherId, idh);
+  return voucher ? shapeVoucherSummary(voucher) : null;
+}
 
 export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
@@ -276,26 +312,7 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
           };
         });
 
-        // Legacy single-customer transactions have zero customer_group rows
-        // (counter builds a synthetic group client-side from the top-level
-        // fields), so their voucher never went through the cgVoucherById
-        // resolution above — mirror the same resolved shape at the top
-        // level or load-edit-transaction.ts's synthetic group falls back to
-        // the "Voucher #N" placeholder.
-        const topVoucher =
-          txn.voucher_id != null
-            ? await findVoucherById(txn.voucher_id as number, idh)
-            : null;
-        txn.voucher = topVoucher
-          ? {
-              id: topVoucher.id,
-              code: topVoucher.code,
-              type: topVoucher.type,
-              value: topVoucher.value,
-              max_discount_amount: topVoucher.max_discount_amount ?? null,
-              minimum_purchase: topVoucher.minimum_purchase ?? null,
-            }
-          : null;
+        txn.voucher = await resolveLegacyVoucherSummary(txn.voucher_id as number | null, idh);
 
         const clientPoolRows = (
           await pool.query(
