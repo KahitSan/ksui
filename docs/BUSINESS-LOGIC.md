@@ -378,7 +378,7 @@ other plugins. Route: `GET /api/transactions`.
 
 ## 10. Transaction Detail
 
-Verified 2026-07-19 · logic changed 2026-07-19 · tests 2026-07-19 · open: Q6
+Verified 2026-07-19 · logic changed 2026-07-20 · tests 2026-07-20 · open: Q6
 
 **What it does:** The full drill-down on one receipt — items, payments, customer groups, client
 pool, edit history, attachments, payee, and who it's shared with. Route:
