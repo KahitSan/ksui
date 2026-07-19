@@ -109,6 +109,52 @@ async function seedSaleWithGroupVoucher(
   return { transactionId, groupId: cg.rows[0].id };
 }
 
+/** Seeds a legacy-shaped sale transaction: voucher_id lives only on the
+ *  top-level transactions row, zero customer_group rows — the shape counter
+ *  synthesizes a single group from client-side. */
+async function seedLegacySaleWithVoucher(
+  voucherId: number | null,
+): Promise<{ transactionId: number }> {
+  const txnRes = await db.query<{ id: number }>(
+    `INSERT INTO accounts.transactions
+       (workspace_id, category, subcategory, amount, description, transaction_date, status, created_by, subtotal, discount_amount, voucher_id)
+     VALUES ($1, 'sale', 'Sales - services', 500, $2, CURRENT_DATE, 'completed', $3, 500, 0, $4)
+     RETURNING id`,
+    [TEST_ORG, `detail-legacy-voucher-${Date.now()}-${seedCounter++}`, "test-user-id", voucherId],
+  );
+  return { transactionId: txnRes.rows[0].id };
+}
+
+describe("GET /:id legacy top-level voucher resolution", () => {
+  it("attaches the resolved voucher object at the top level for a legacy (no customer_group) transaction", async () => {
+    if (!ready || !vouchersSchemaReady) return;
+    const { transactionId } = await seedLegacySaleWithVoucher(RESOLVABLE_VOUCHER_ID);
+    const res = await request(honoApp, "GET", `/${transactionId}`);
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.customer_groups).toHaveLength(0);
+    expect(body.voucher_id).toBe(RESOLVABLE_VOUCHER_ID);
+    expect(body.voucher).toMatchObject({
+      id: RESOLVABLE_VOUCHER_ID,
+      code: "SAVE100",
+      type: "fixed_amount",
+      value: "100.00",
+      max_discount_amount: "100.00",
+      minimum_purchase: "300.00",
+    });
+  });
+
+  it("degrades to top-level voucher: null while keeping voucher_id when the id can't be resolved", async () => {
+    if (!ready || !vouchersSchemaReady) return;
+    const { transactionId } = await seedLegacySaleWithVoucher(ABSENT_VOUCHER_ID);
+    const res = await request(honoApp, "GET", `/${transactionId}`);
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.voucher_id).toBe(ABSENT_VOUCHER_ID);
+    expect(body.voucher).toBeNull();
+  });
+});
+
 describe("GET /:id customer_groups voucher resolution", () => {
   it("attaches the resolved voucher object when the vouchers plugin resolves the id", async () => {
     if (!ready || !vouchersSchemaReady) return;

@@ -276,6 +276,27 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
           };
         });
 
+        // Legacy single-customer transactions have zero customer_group rows
+        // (counter builds a synthetic group client-side from the top-level
+        // fields), so their voucher never went through the cgVoucherById
+        // resolution above — mirror the same resolved shape at the top
+        // level or load-edit-transaction.ts's synthetic group falls back to
+        // the "Voucher #N" placeholder.
+        const topVoucher =
+          txn.voucher_id != null
+            ? await findVoucherById(txn.voucher_id as number, idh)
+            : null;
+        txn.voucher = topVoucher
+          ? {
+              id: topVoucher.id,
+              code: topVoucher.code,
+              type: topVoucher.type,
+              value: topVoucher.value,
+              max_discount_amount: topVoucher.max_discount_amount ?? null,
+              minimum_purchase: topVoucher.minimum_purchase ?? null,
+            }
+          : null;
+
         const clientPoolRows = (
           await pool.query(
             `SELECT client_id, position FROM accounts.transaction_customers
