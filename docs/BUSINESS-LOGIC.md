@@ -378,7 +378,7 @@ other plugins. Route: `GET /api/transactions`.
 
 ## 10. Transaction Detail
 
-Verified 2026-07-19 · logic changed 2026-07-19 · no tests cited · open: Q6
+Verified 2026-07-19 · logic changed 2026-07-19 · tests — · ⚠ citation drifted: integration/transactions-detail-voucher.test.ts (no git history) (+1 more) · open: Q6
 
 **What it does:** The full drill-down on one receipt — items, payments, customer groups, client
 pool, edit history, attachments, payee, and who it's shared with. Route:
@@ -392,6 +392,8 @@ pool, edit history, attachments, payee, and who it's shared with. Route:
 | A customer group has a real client attached. | Its displayed name is resolved live from the client record, overriding whatever was typed at checkout time; a true walk-in keeps the stored name. | A stored name goes stale the moment a client is renamed or reassigned; live lookup fixes that, with a graceful fallback if the client lookup service is down. | `:233-248` | — |
 | A receipt has a linked transfer fee. | The linked fee's amount is joined into the response. | — | `:50,65-67` | — |
 | A receipt's line items are shown. | The title is recomputed the exact same way as the list, capped to the first 3 items. | Guarantees the detail title and the itemized pane can never drift apart. | `:147-160` | — |
+| A customer group carries a voucher (`voucher_id` set). | The response attaches a resolved `voucher` object (`id`, `code`, `type`, `value`, `max_discount_amount`, `minimum_purchase`) alongside the raw `voucher_id`, resolved per group over the same vouchers-plugin RPC other peer lookups use. | The edit cart needs the real code and the two discount-math fields to preview a voucher change, not just the opaque id. | `:244-277` | `integration/transactions-detail-voucher.test.ts` |
+| A group's `voucher_id` doesn't resolve (vouchers plugin absent, or the id no longer exists). | `voucher` is `null`; the raw `voucher_id` column is left untouched. | Same graceful-degradation posture as every other peer lookup on this route — a down/missing peer never breaks the read. | `:244-262` | `integration/transactions-detail-voucher.test.ts` |
 
 ---
 

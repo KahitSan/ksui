@@ -21,6 +21,8 @@ import {
   findVariantsByIds,
   findClientsByIds,
   findPayeesByIds,
+  findVoucherById,
+  type VoucherRow,
 } from "../lib/peers.js";
 import { resolveUserNames, TRANSACTION_COLS_T } from "./shared.js";
 import type { CoreRouteCtx } from "./transactions-core.js";
@@ -241,11 +243,38 @@ export function registerTransactionDetailRoute(router: Hono, ctx: CoreRouteCtx):
         // falling back to the stored value only when the clients RPC is
         // unavailable. Walk-ins (client_id = NULL) keep their stored name
         // because there is no other source.
-        const customer_groups = customerGroups.map((g) => ({
-          ...g,
-          client_name: g.client_id != null ? (cgClientName.get(g.client_id) ?? null) : null,
-          display_name: g.client_id != null ? (cgClientName.get(g.client_id) ?? g.display_name) : (g.display_name ?? null),
-        }));
+        // Resolve each group's voucher over RPC (no batch endpoint exists on
+        // the vouchers peer, so loop the small distinct set) so the edit cart
+        // gets the real code/type/value plus the two fields its discount math
+        // needs (max_discount_amount, minimum_purchase) instead of the raw id
+        // alone — see load-edit-transaction.ts's placeholder comment. The raw
+        // voucher_id column stays on the row regardless of resolution.
+        const cgVoucherIds = [
+          ...new Set(customerGroups.map((g) => g.voucher_id as number | null).filter((v): v is number => v != null)),
+        ];
+        const cgVoucherEntries = await Promise.all(
+          cgVoucherIds.map(async (vid) => [vid, await findVoucherById(vid, idh)] as const),
+        );
+        const cgVoucherById = new Map<number, VoucherRow | null>(cgVoucherEntries);
+
+        const customer_groups = customerGroups.map((g) => {
+          const v = g.voucher_id != null ? (cgVoucherById.get(g.voucher_id) ?? null) : null;
+          return {
+            ...g,
+            client_name: g.client_id != null ? (cgClientName.get(g.client_id) ?? null) : null,
+            display_name: g.client_id != null ? (cgClientName.get(g.client_id) ?? g.display_name) : (g.display_name ?? null),
+            voucher: v
+              ? {
+                  id: v.id,
+                  code: v.code,
+                  type: v.type,
+                  value: v.value,
+                  max_discount_amount: v.max_discount_amount ?? null,
+                  minimum_purchase: v.minimum_purchase ?? null,
+                }
+              : null,
+          };
+        });
 
         const clientPoolRows = (
           await pool.query(
