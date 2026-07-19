@@ -115,6 +115,12 @@ export async function repriceParentTransaction(
           voucher as unknown as VoucherForDiscount,
         ).discountAmount;
       }
+    } else {
+      // No voucher on the group → no discount, even if discount_amount was
+      // still holding a stale value from a voucher just removed by
+      // apply-cart-edit's voucher_changes (the only caller that can make
+      // voucher_id go non-null → null on an already-priced group).
+      newCgDiscount = 0;
     }
     newParentDiscount = oldParentDiscount + (newCgDiscount - oldCgDiscount);
     await client.query(

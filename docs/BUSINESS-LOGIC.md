@@ -116,7 +116,7 @@ along with (usually) a payment. Route: `POST /charge`.
 
 ## 2. Editing a Paid Receipt (Cart Edit)
 
-Verified 2026-07-19 · logic changed 2026-07-19 · tests 2026-07-19 · open: Q5
+Verified 2026-07-19 · logic changed 2026-07-19 · tests 2026-07-19 · ⚠ citation drifted: cart-edit-voucher-change.test.ts (no git history) (+7 more) · open: Q5
 
 **What it does:** Lets staff edit a receipt after checkout — remove or shrink items, add new
 items (to an existing customer or a brand-new one), and reassign who's paying — in one save on
@@ -179,6 +179,19 @@ the SAME receipt. It never creates a second receipt. Route: `POST /:id/apply-car
 | A new item's start-time instruction chains off another line on the receipt. | Starts exactly when that other line ends. | The client never has to compute or send a timestamp itself. | `:474-477` | "lands the new line at the source's ends_at" |
 | The line being chained off belongs to a DIFFERENT receipt. | Rejected — chaining only works within the same receipt. | — | `:484-487` | "rejects a chain_from_line_id pointing at a different transaction" |
 | The line being chained off has no end time. | Rejected — nothing to chain from. | — | `:489-491` | — |
+
+### Changing or removing a voucher on an existing group
+
+| Scenario | Business rule | Why | Enforced at | Pinned by test |
+|---|---|---|---|---|
+| A save wants to attach, swap, or remove the voucher on a customer group that already exists on the receipt. | Sent as its own `voucher_changes` list, separate from additions. | Additions are skipped entirely when their items list is empty, so a voucher-only change can't ride inside one — it needs its own path. Before this, there was no way to change an existing group's voucher at all; the only place a voucher_id was ever written was creating a brand-new group. | `:73-90,157-163` | `cart-edit-voucher-change.test.ts` |
+| A `voucher_changes` entry is missing a customer group, or its voucher_id isn't a number or null. | Rejected. | — | `:202-210` | `cart-edit-voucher-change.test.ts` |
+| A save's only content is a voucher change (no reductions/additions/payer reassignment). | Accepted — it's a legitimate reason to save on its own. | — | `:229-235` | `cart-edit-voucher-change.test.ts` |
+| A voucher_change names a voucher code that doesn't resolve in this workspace. | Rejected before anything is touched — unlike a brand-new group's voucher (which is quietly dropped so a bad reference can't block group creation), an explicit voucher change IS the point of the request, so a bad one must fail loudly. | — | `:289-301` | `cart-edit-voucher-change.test.ts` (400s, mutates nothing) |
+| A voucher_change's customer group doesn't belong to this receipt. | Rejected. | — | `:598-606` | `cart-edit-voucher-change.test.ts` |
+| A voucher is attached, swapped, or removed on a group. | The group's discount is recalculated against its current subtotal right away, even if nothing else about the group changed in this save. | Otherwise the new (or removed) voucher wouldn't actually take effect until some unrelated future edit touched the group's cost. | `:590-627` | `cart-edit-voucher-change.test.ts` |
+| A group's voucher is removed. | Its discount drops to zero — never left at its old value. | The old value belonged to the voucher that's now gone; leaving it would silently overcharge the discount. | `reprice-parent-transaction.ts:105-124` | `cart-edit-voucher-change.test.ts` ("voucher REMOVAL (null) zeroes the discount") |
+| A voucher change and a reduction land on the same group in the same save. | Both apply together — the discount is computed against the post-reduction subtotal. | — | `:590-627` | `cart-edit-voucher-change.test.ts` ("combined with a reduction") |
 
 ### Who's paying
 
