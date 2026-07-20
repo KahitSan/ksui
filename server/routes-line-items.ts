@@ -221,40 +221,112 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       const where = `WHERE ${conditions.join(" AND ")}`;
 
       try {
-        // availment_groups pre-aggregates the cross-day combined-end timestamp
-        // once per (transaction_id, client_key) subgroup with >=2 time-bound,
-        // non-voided siblings. The date filter reads ag.combined_end, so the
-        // filtering happens in `matched`; the payment CTEs are projection-only
-        // and scope to matched transactions instead of aggregating the whole
-        // workspace history (they were the dominant cost at prod volumes).
-        // The client pool is resolved via RPC below (clients.* is another
-        // plugin's schema — never joined in raw SQL here).
+        // availment_chain_flags/_ids detect a run of CONTINUOUS OCCUPANCY:
+        // (transaction_id, workspace_id, client) only — package_id is
+        // deliberately excluded because /extend explicitly allows binding a
+        // continuation line to a different variant/package
+        // (line-items-extend.ts), and cart-edit's "Add another block" takes
+        // package_id from client-supplied items[]; keying on package_id
+        // would split a genuine contiguous continuation into two 1-line
+        // chains and re-create the vanish bug. A chain breaks only on a real
+        // gap (started_at > previous ends_at, strictly) — equal-start,
+        // equal-boundary, and overlapping lines all continue the chain, so
+        // a base line + a same-NOW()-timestamped extension charged together
+        // (insert-line-items.ts fixes started_at to one transaction-wide
+        // NOW()) still combine. Every window orders by (started_at, ends_at,
+        // id) — a total order — so tied started_at values compare
+        // deterministically instead of against an arbitrary neighbour.
+        // line_combined_end maps each qualifying line id straight to its
+        // chain's combined_end so `matched` can join on li.id instead of a
+        // multi-column composite key — plus a second arm for non-time-bound
+        // siblings, which can't join the per-chain aggregate at all (they
+        // have no duration_value/duration_unit to qualify), falling back to
+        // their subgroup's latest chain via subgroup_combined_end.
+        // destination_account_id is deliberately NOT part of the chain key:
+        // it lives on accounts.transactions (one value per transaction_id),
+        // so within a CTE already scoped to one transaction_id it can never
+        // discriminate between siblings.
         const result = await pool.query(
-          `WITH availment_groups AS (
+          `WITH availment_chain_flags AS (
              SELECT
+               sib.id,
                sib.transaction_id,
                sib.workspace_id,
                COALESCE(sib.client_id, -1) AS client_key,
-               (
-                 MIN(sib.started_at)
-                 + COALESCE(SUM(CASE WHEN sib.duration_unit = 'hour'
-                                          THEN sib.duration_value * COALESCE(sib.quantity, 1)
-                                     END), 0) * INTERVAL '1 hour'
-                 + COALESCE(SUM(CASE WHEN sib.duration_unit = 'day'
-                                          THEN sib.duration_value * COALESCE(sib.quantity, 1)
-                                     END), 0) * INTERVAL '1 day'
-                 + COALESCE(SUM(CASE WHEN sib.duration_unit = 'month'
-                                          THEN sib.duration_value * COALESCE(sib.quantity, 1)
-                                     END), 0) * INTERVAL '1 month'
-               ) AS combined_end
+               sib.started_at,
+               sib.ends_at,
+               sib.duration_value,
+               sib.duration_unit,
+               sib.quantity,
+               -- Frontier is the running MAX(ends_at) over every prior sibling,
+               -- not just the immediately preceding row: a short line nested
+               -- inside a longer still-covering one (e.g. a same-transaction
+               -- add-on) must not reset the covered-until point for the next
+               -- row. MAX ignores NULLs, so an open-ended (NULL ends_at)
+               -- sibling contributes nothing to the frontier rather than
+               -- forcing a break. The three CASE arms are NOT collapsible:
+               -- an empty frame (COUNT = 0, genuine first row) starts a
+               -- chain, but a non-empty frame whose frontier is NULL (every
+               -- prior sibling open-ended) must NOT break — that predecessor
+               -- can't prove a gap — so it has to be distinguished from the
+               -- empty-frame case even though both yield MAX(ends_at) IS NULL.
+               CASE
+                 WHEN COUNT(*) OVER w = 0 THEN 1
+                 WHEN MAX(sib.ends_at) OVER w IS NULL THEN 0
+                 WHEN sib.started_at > MAX(sib.ends_at) OVER w THEN 1
+                 ELSE 0
+               END AS chain_break
              FROM accounts.transaction_line_items sib
              WHERE sib.workspace_id = $1
                AND sib.status != 'voided'
                AND sib.started_at IS NOT NULL
                AND sib.duration_value IS NOT NULL
                AND sib.duration_unit IS NOT NULL
-             GROUP BY sib.transaction_id, sib.workspace_id, COALESCE(sib.client_id, -1)
-             HAVING COUNT(*) >= 2
+             WINDOW w AS (
+               PARTITION BY sib.transaction_id, sib.workspace_id, COALESCE(sib.client_id, -1)
+               ORDER BY sib.started_at, sib.ends_at, sib.id
+               ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+             )
+           ), availment_chain_ids AS (
+             SELECT
+               id,
+               transaction_id,
+               workspace_id,
+               client_key,
+               started_at,
+               ends_at,
+               duration_value,
+               duration_unit,
+               quantity,
+               -- running total of chain_break within the same partition/order
+               -- as above turns each break into the start of a new chain id.
+               SUM(chain_break) OVER (
+                 PARTITION BY transaction_id, workspace_id, client_key
+                 ORDER BY started_at, ends_at, id
+                 ROWS UNBOUNDED PRECEDING
+               ) AS chain_id
+             FROM availment_chain_flags
+           ), availment_groups AS (
+             SELECT
+               transaction_id,
+               workspace_id,
+               client_key,
+               chain_id,
+               (
+                 MIN(started_at)
+                 + COALESCE(SUM(CASE WHEN duration_unit = 'hour'
+                                          THEN duration_value * COALESCE(quantity, 1)
+                                     END), 0) * INTERVAL '1 hour'
+                 + COALESCE(SUM(CASE WHEN duration_unit = 'day'
+                                          THEN duration_value * COALESCE(quantity, 1)
+                                     END), 0) * INTERVAL '1 day'
+                 + COALESCE(SUM(CASE WHEN duration_unit = 'month'
+                                          THEN duration_value * COALESCE(quantity, 1)
+                                     END), 0) * INTERVAL '1 month'
+               ) AS combined_end,
+               COUNT(*) AS chain_size
+             FROM availment_chain_ids
+             GROUP BY transaction_id, workspace_id, client_key, chain_id
              -- NOTE: payment_count_by_txn and payment_methods_by_txn both scan
              -- accounts.transaction_payments. PostgreSQL may inline them into one
              -- pass; the separate CTEs are kept because the Method CTE needs
@@ -262,6 +334,43 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              -- the unconditional COUNT(*) in a single aggregation. The planner
              -- handles this fine at current transaction volumes.
 
+           ), subgroup_combined_end AS (
+             -- One row per (transaction, workspace, client) subgroup that has
+             -- at least one qualifying chain, collapsing multiple disjoint
+             -- chains (the tx-7919 shape) to the latest-ending one — a
+             -- non-time-bound sibling has no window of its own to disambiguate
+             -- which chain it belongs to, so "most future" is the only
+             -- deterministic choice.
+             SELECT transaction_id, workspace_id, client_key, MAX(combined_end) AS combined_end
+             FROM availment_groups
+             WHERE chain_size >= 2
+             GROUP BY transaction_id, workspace_id, client_key
+           ), line_combined_end AS (
+             SELECT aci.id, aci.workspace_id, ag.combined_end
+             FROM availment_chain_ids aci
+             JOIN availment_groups ag
+               ON ag.transaction_id = aci.transaction_id
+              AND ag.workspace_id = aci.workspace_id
+              AND ag.client_key = aci.client_key
+              AND ag.chain_id = aci.chain_id
+             WHERE ag.chain_size >= 2
+             UNION ALL
+             -- Non-time-bound siblings (duration_value/duration_unit NULL —
+             -- e.g. a retail add-on, insert-line-items.ts:121) are excluded
+             -- from availment_chain_flags entirely, so they never join the
+             -- per-chain aggregate above and would otherwise stop inheriting
+             -- their subgroup's combined_end. ids are disjoint from the arm
+             -- above (duration_value NULL vs NOT NULL), so no row for the
+             -- same line id can come from both arms.
+             SELECT sib.id, sib.workspace_id, sce.combined_end
+             FROM accounts.transaction_line_items sib
+             JOIN subgroup_combined_end sce
+               ON sce.transaction_id = sib.transaction_id
+              AND sce.workspace_id = sib.workspace_id
+              AND sce.client_key = COALESCE(sib.client_id, -1)
+             WHERE sib.workspace_id = $1
+               AND sib.status != 'voided'
+               AND (sib.duration_value IS NULL OR sib.duration_unit IS NULL)
            ), matched AS (
              SELECT
                li.id,
@@ -305,10 +414,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              JOIN accounts.transactions t
                ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id
              LEFT JOIN accounts.transaction_customer_groups cg ON cg.id = li.customer_group_id
-             LEFT JOIN availment_groups ag
-               ON ag.transaction_id = li.transaction_id
-              AND ag.workspace_id = li.workspace_id
-              AND ag.client_key = COALESCE(li.client_id, -1)
+             LEFT JOIN line_combined_end ag ON ag.id = li.id AND ag.workspace_id = li.workspace_id
              ${where}
            ), payment_count_by_txn AS (
              SELECT tp.transaction_id,
