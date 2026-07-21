@@ -3,10 +3,7 @@ import { Hono } from "hono";
 import pg from "pg";
 import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { buildRouter } from "../../server/routes-accounts.js";
-import {
-  withRollbackDb,
-  stubMiddleware,
-} from "@kahitsan/plugin-sdk/test";
+import { withRollbackDb, stubMiddleware } from "@kahitsan/plugin-sdk/test";
 import { runWithTenantContext } from "@kahitsan/plugin-sdk";
 
 // One vi.mock per module — vitest keys mocks by specifier, so the cross-plugin
@@ -110,7 +107,9 @@ afterAll(async () => {
 describe("financial-accounts flow: list → create → detail → edit → archive → restore", () => {
   const accountName = `integ-fa-${Date.now()}`;
   const editedName = `${accountName}-edited`;
+  const fallbackName = `${accountName}-fallback`;
   let newId: number;
+  let fallbackId: number;
 
   it("lists existing financial accounts for the active org", async () => {
     const res = await runWithTenantContext(TENANT_CTX, () => app.request("/"));
@@ -132,7 +131,7 @@ describe("financial-accounts flow: list → create → detail → edit → archi
           icon: "landmark",
           color: "#0066cc",
         }),
-      }),
+      })
     );
     expect(res.status).toBe(201);
     const body = await res.json();
@@ -148,7 +147,7 @@ describe("financial-accounts flow: list → create → detail → edit → archi
 
   it("the new account appears in the org-scoped list", async () => {
     const res = await runWithTenantContext(TENANT_CTX, () =>
-      app.request(`/?search=${encodeURIComponent(accountName)}`),
+      app.request(`/?search=${encodeURIComponent(accountName)}`)
     );
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -160,7 +159,9 @@ describe("financial-accounts flow: list → create → detail → edit → archi
   });
 
   it("opens detail with 200", async () => {
-    const res = await runWithTenantContext(TENANT_CTX, () => app.request(`/${newId}`));
+    const res = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${newId}`)
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.id).toBe(newId);
@@ -169,12 +170,16 @@ describe("financial-accounts flow: list → create → detail → edit → archi
   });
 
   it("returns 404 for a non-existent account", async () => {
-    const res = await runWithTenantContext(TENANT_CTX, () => app.request("/999999"));
+    const res = await runWithTenantContext(TENANT_CTX, () =>
+      app.request("/999999")
+    );
     expect(res.status).toBe(404);
   });
 
   it("returns 400 (not 500) for a non-numeric id on the balance-enriched detail", async () => {
-    const res = await runWithTenantContext(TENANT_CTX, () => app.request("/abc"));
+    const res = await runWithTenantContext(TENANT_CTX, () =>
+      app.request("/abc")
+    );
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Invalid id");
@@ -186,7 +191,7 @@ describe("financial-accounts flow: list → create → detail → edit → archi
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name: editedName }),
-      }),
+      })
     );
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -199,23 +204,115 @@ describe("financial-accounts flow: list → create → detail → edit → archi
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ type: "e_wallet" }),
-      }),
+      })
     );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.type).toBe("e_wallet");
   });
 
+  it("sets the payment default and sort order", async () => {
+    const res = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${newId}/payment-settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ is_default_payment: true, sort_order: 1 }),
+      })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.is_default_payment).toBe(true);
+    expect(body.sort_order).toBe(1);
+  });
+
+  it("rejects invalid payment settings without changing the account", async () => {
+    const bad = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${newId}/payment-settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ is_default_payment: true, sort_order: -1 }),
+      })
+    );
+    expect(bad.status).toBe(400);
+
+    const detail = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${newId}`)
+    );
+    expect(detail.status).toBe(200);
+    const body = await detail.json();
+    expect(body.is_default_payment).toBe(true);
+    expect(body.sort_order).toBe(1);
+  });
+
+  it("returns 404 for payment settings on a missing account", async () => {
+    const res = await runWithTenantContext(TENANT_CTX, () =>
+      app.request("/999999/payment-settings", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ is_default_payment: true, sort_order: 1 }),
+      })
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("moves the payment default to another account and clears the previous default", async () => {
+    const createFallback = await runWithTenantContext(TENANT_CTX, () =>
+      app.request("/", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: fallbackName,
+          type: "cash",
+          sort_order: 0,
+        }),
+      })
+    );
+    expect(createFallback.status).toBe(201);
+    const created = await createFallback.json();
+    fallbackId = created.id;
+
+    const moveDefault = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${fallbackId}/payment-settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ is_default_payment: true, sort_order: 0 }),
+      })
+    );
+    expect(moveDefault.status).toBe(200);
+
+    const previous = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${newId}`)
+    );
+    const previousBody = await previous.json();
+    expect(previousBody.is_default_payment).toBe(false);
+
+    const current = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${fallbackId}`)
+    );
+    const currentBody = await current.json();
+    expect(currentBody.is_default_payment).toBe(true);
+  });
+
+  it("orders default payment account first in the active list", async () => {
+    const res = await runWithTenantContext(TENANT_CTX, () =>
+      app.request("/?status=active&limit=200")
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const first = (body.data as Array<{ id: number }>)[0];
+    expect(first?.id).toBe(fallbackId);
+  });
+
   it("archives (soft-deletes) the account", async () => {
     const res = await runWithTenantContext(TENANT_CTX, () =>
-      app.request(`/${newId}`, { method: "DELETE" }),
+      app.request(`/${newId}`, { method: "DELETE" })
     );
     expect(res.status).toBe(204);
   });
 
   it("archived account leaves the default active list", async () => {
     const res = await runWithTenantContext(TENANT_CTX, () =>
-      app.request(`/?search=${encodeURIComponent(editedName)}`),
+      app.request(`/?search=${encodeURIComponent(editedName)}`)
     );
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -230,7 +327,7 @@ describe("financial-accounts flow: list → create → detail → edit → archi
 
   it("archived account appears under archived filter", async () => {
     const res = await runWithTenantContext(TENANT_CTX, () =>
-      app.request(`/?status=archived&search=${encodeURIComponent(editedName)}`),
+      app.request(`/?status=archived&search=${encodeURIComponent(editedName)}`)
     );
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -242,7 +339,7 @@ describe("financial-accounts flow: list → create → detail → edit → archi
 
   it("restores the archived account", async () => {
     const res = await runWithTenantContext(TENANT_CTX, () =>
-      app.request(`/${newId}/restore`, { method: "PATCH" }),
+      app.request(`/${newId}/restore`, { method: "PATCH" })
     );
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -251,7 +348,7 @@ describe("financial-accounts flow: list → create → detail → edit → archi
 
   it("restored account reappears in the active list", async () => {
     const res = await runWithTenantContext(TENANT_CTX, () =>
-      app.request(`/?search=${encodeURIComponent(editedName)}`),
+      app.request(`/?search=${encodeURIComponent(editedName)}`)
     );
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -270,7 +367,7 @@ describe("financial-accounts flow: list → create → detail → edit → archi
           name: editedName, // same name, already exists
           type: "cash",
         }),
-      }),
+      })
     );
     expect(res.status).toBe(409);
     const body = await res.json();
@@ -286,7 +383,7 @@ describe("financial-accounts flow: list → create → detail → edit → archi
           name: "Bad Type Account",
           type: "invalid_type",
         }),
-      }),
+      })
     );
     expect(res.status).toBe(400);
     const body = await res.json();

@@ -45,23 +45,33 @@ function isClassifyQuery(text: string): boolean {
 }
 
 function recordingDb(
-  dataRows: QueryResultRow[] | ((text: string, params: readonly unknown[]) => QueryResultRow[]) = [],
+  dataRows:
+    | QueryResultRow[]
+    | ((text: string, params: readonly unknown[]) => QueryResultRow[]) = []
 ): PluginDb & { calls: RecordedQuery[] } {
   const calls: RecordedQuery[] = [];
   const resolveRows =
-    typeof dataRows === "function" ? dataRows : () => (Array.isArray(dataRows) ? dataRows : []);
+    typeof dataRows === "function"
+      ? dataRows
+      : () => (Array.isArray(dataRows) ? dataRows : []);
 
   const query = async <R extends QueryResultRow = QueryResultRow>(
     text: string,
-    params?: readonly unknown[],
+    params?: readonly unknown[]
   ): Promise<QueryResult<R>> => {
     const p = params ?? [];
     if (isClassifyQuery(text)) {
       if (text.includes("to_regclass")) {
-        return { rows: [{ oid: "12345" }] as unknown as R[], rowCount: 1 } as QueryResult<R>;
+        return {
+          rows: [{ oid: "12345" }] as unknown as R[],
+          rowCount: 1,
+        } as QueryResult<R>;
       }
       if (text.includes("pg_attribute")) {
-        return { rows: [{ "?column?": 1 }] as unknown as R[], rowCount: 1 } as QueryResult<R>;
+        return {
+          rows: [{ "?column?": 1 }] as unknown as R[],
+          rowCount: 1,
+        } as QueryResult<R>;
       }
       return { rows: [] as R[], rowCount: 0 } as QueryResult<R>;
     }
@@ -79,10 +89,20 @@ function recordingDb(
   } as unknown as PluginDb & { calls: RecordedQuery[] };
 }
 
-const TENANT_CTX = { wsId: TEST_WORKSPACE, userId: "test-user-id", role: "superuser", wsRole: "admin" };
+const TENANT_CTX = {
+  wsId: TEST_WORKSPACE,
+  userId: "test-user-id",
+  role: "superuser",
+  wsRole: "admin",
+};
 
 function makeApp(db = recordingDb()) {
-  const router = buildRouter({ db, requireAuth, requireWorkspace, requirePermission });
+  const router = buildRouter({
+    db,
+    requireAuth,
+    requireWorkspace,
+    requirePermission,
+  });
   const app = new Hono();
   app.use("*", (_c, next) => runWithTenantContext(TENANT_CTX, () => next()));
   app.route("/", router);
@@ -110,7 +130,11 @@ describe("VALID_ICONS", () => {
 describe("POST / — create validation", () => {
   it("rejects empty body", async () => {
     const { request } = makeApp();
-    const res = await request("/", { method: "POST", body: JSON.stringify({}), headers: { "Content-Type": "application/json" } });
+    const res = await request("/", {
+      method: "POST",
+      body: JSON.stringify({}),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/name is required/i);
@@ -118,7 +142,11 @@ describe("POST / — create validation", () => {
 
   it("rejects missing type", async () => {
     const { request } = makeApp();
-    const res = await request("/", { method: "POST", body: JSON.stringify({ name: "Test Account" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/", {
+      method: "POST",
+      body: JSON.stringify({ name: "Test Account" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/type must be one of/i);
@@ -126,7 +154,11 @@ describe("POST / — create validation", () => {
 
   it("rejects invalid type", async () => {
     const { request } = makeApp();
-    const res = await request("/", { method: "POST", body: JSON.stringify({ name: "Test", type: "crypto" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/", {
+      method: "POST",
+      body: JSON.stringify({ name: "Test", type: "crypto" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/type must be one of/i);
@@ -134,7 +166,11 @@ describe("POST / — create validation", () => {
 
   it("rejects invalid icon", async () => {
     const { request } = makeApp();
-    const res = await request("/", { method: "POST", body: JSON.stringify({ name: "Test", type: "bank", icon: "rocket" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/", {
+      method: "POST",
+      body: JSON.stringify({ name: "Test", type: "bank", icon: "rocket" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/icon must be null or one of/i);
@@ -142,7 +178,11 @@ describe("POST / — create validation", () => {
 
   it("rejects invalid color format", async () => {
     const { request } = makeApp();
-    const res = await request("/", { method: "POST", body: JSON.stringify({ name: "Test", type: "bank", color: "red" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/", {
+      method: "POST",
+      body: JSON.stringify({ name: "Test", type: "bank", color: "red" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/color must be a 7-character hex/i);
@@ -150,7 +190,11 @@ describe("POST / — create validation", () => {
 
   it("rejects color with too few hex chars", async () => {
     const { request } = makeApp();
-    const res = await request("/", { method: "POST", body: JSON.stringify({ name: "Test", type: "bank", color: "#abc" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/", {
+      method: "POST",
+      body: JSON.stringify({ name: "Test", type: "bank", color: "#abc" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/color must be a 7-character hex/i);
@@ -158,9 +202,15 @@ describe("POST / — create validation", () => {
 
   it("accepts valid color with uppercase hex", async () => {
     const { db, request } = makeApp(
-      recordingDb([{ id: 1, workspace_id: 3, name: "Test", type: "bank", is_active: true }]),
+      recordingDb([
+        { id: 1, workspace_id: 3, name: "Test", type: "bank", is_active: true },
+      ])
     );
-    const res = await request("/", { method: "POST", body: JSON.stringify({ name: "Test", type: "bank", color: "#ABC123" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/", {
+      method: "POST",
+      body: JSON.stringify({ name: "Test", type: "bank", color: "#ABC123" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(201);
     const createCall = db.calls.find((c) => c.text.includes("INSERT INTO"));
     expect(createCall).toBeDefined();
@@ -169,9 +219,21 @@ describe("POST / — create validation", () => {
 
   it("trims name before inserting", async () => {
     const { db, request } = makeApp(
-      recordingDb([{ id: 1, workspace_id: 3, name: "Trimmed", type: "bank", is_active: true }]),
+      recordingDb([
+        {
+          id: 1,
+          workspace_id: 3,
+          name: "Trimmed",
+          type: "bank",
+          is_active: true,
+        },
+      ])
     );
-    const res = await request("/", { method: "POST", body: JSON.stringify({ name: "  Trimmed  ", type: "bank" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/", {
+      method: "POST",
+      body: JSON.stringify({ name: "  Trimmed  ", type: "bank" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(201);
     const createCall = db.calls.find((c) => c.text.includes("INSERT INTO"));
     expect(createCall!.params).toContain("Trimmed");
@@ -179,9 +241,21 @@ describe("POST / — create validation", () => {
 
   it("passes null for omitted optional fields", async () => {
     const { db, request } = makeApp(
-      recordingDb([{ id: 1, workspace_id: 3, name: "Minimal", type: "cash", is_active: true }]),
+      recordingDb([
+        {
+          id: 1,
+          workspace_id: 3,
+          name: "Minimal",
+          type: "cash",
+          is_active: true,
+        },
+      ])
     );
-    const res = await request("/", { method: "POST", body: JSON.stringify({ name: "Minimal", type: "cash" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/", {
+      method: "POST",
+      body: JSON.stringify({ name: "Minimal", type: "cash" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(201);
     const createCall = db.calls.find((c) => c.text.includes("INSERT INTO"));
     expect(createCall!.params).toContain(null);
@@ -189,13 +263,19 @@ describe("POST / — create validation", () => {
   });
 
   it("sends 409 on unique violation", async () => {
-    const uniqueError = Object.assign(new Error("duplicate key"), { code: "23505" });
+    const uniqueError = Object.assign(new Error("duplicate key"), {
+      code: "23505",
+    });
     const db = recordingDb((text) => {
       if (text.includes("INSERT INTO")) throw uniqueError;
       return [];
     });
     const { request } = makeApp(db);
-    const res = await request("/", { method: "POST", body: JSON.stringify({ name: "Dup", type: "bank" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/", {
+      method: "POST",
+      body: JSON.stringify({ name: "Dup", type: "bank" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.error).toMatch(/already exists/i);
@@ -205,7 +285,11 @@ describe("POST / — create validation", () => {
 describe("PUT /:id — update validation via buildUpdateAssignments", () => {
   it("rejects empty update (no fields)", async () => {
     const { request } = makeApp();
-    const res = await request("/1", { method: "PUT", body: JSON.stringify({}), headers: { "Content-Type": "application/json" } });
+    const res = await request("/1", {
+      method: "PUT",
+      body: JSON.stringify({}),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/no fields to update/i);
@@ -213,7 +297,11 @@ describe("PUT /:id — update validation via buildUpdateAssignments", () => {
 
   it("rejects invalid type in update", async () => {
     const { request } = makeApp();
-    const res = await request("/1", { method: "PUT", body: JSON.stringify({ type: "bitcoin" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/1", {
+      method: "PUT",
+      body: JSON.stringify({ type: "bitcoin" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/type must be one of/i);
@@ -221,7 +309,11 @@ describe("PUT /:id — update validation via buildUpdateAssignments", () => {
 
   it("rejects invalid icon in update", async () => {
     const { request } = makeApp();
-    const res = await request("/1", { method: "PUT", body: JSON.stringify({ icon: "spaceship" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/1", {
+      method: "PUT",
+      body: JSON.stringify({ icon: "spaceship" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/icon must be null or one of/i);
@@ -229,7 +321,11 @@ describe("PUT /:id — update validation via buildUpdateAssignments", () => {
 
   it("rejects invalid color in update", async () => {
     const { request } = makeApp();
-    const res = await request("/1", { method: "PUT", body: JSON.stringify({ color: "not-a-color" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/1", {
+      method: "PUT",
+      body: JSON.stringify({ color: "not-a-color" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/color must be a 7-character hex/i);
@@ -237,7 +333,11 @@ describe("PUT /:id — update validation via buildUpdateAssignments", () => {
 
   it("rejects empty name in update", async () => {
     const { request } = makeApp();
-    const res = await request("/1", { method: "PUT", body: JSON.stringify({ name: "" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/1", {
+      method: "PUT",
+      body: JSON.stringify({ name: "" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/name cannot be empty/i);
@@ -245,7 +345,11 @@ describe("PUT /:id — update validation via buildUpdateAssignments", () => {
 
   it("rejects whitespace-only name in update", async () => {
     const { request } = makeApp();
-    const res = await request("/1", { method: "PUT", body: JSON.stringify({ name: "   " }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/1", {
+      method: "PUT",
+      body: JSON.stringify({ name: "   " }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/name cannot be empty/i);
@@ -253,33 +357,55 @@ describe("PUT /:id — update validation via buildUpdateAssignments", () => {
 
   it("accepts null icon (clears icon)", async () => {
     const { db, request } = makeApp(
-      recordingDb([{ id: 1, workspace_id: 3, name: "Acc", type: "bank", is_active: true }]),
+      recordingDb([
+        { id: 1, workspace_id: 3, name: "Acc", type: "bank", is_active: true },
+      ])
     );
-    const res = await request("/1", { method: "PUT", body: JSON.stringify({ icon: null }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/1", {
+      method: "PUT",
+      body: JSON.stringify({ icon: null }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(200);
-    const updateCall = db.calls.find((c) => c.text.includes("UPDATE") && c.text.includes("financial_accounts"));
+    const updateCall = db.calls.find(
+      (c) => c.text.includes("UPDATE") && c.text.includes("financial_accounts")
+    );
     expect(updateCall).toBeDefined();
     expect(updateCall!.params).toContain(null);
   });
 
   it("accepts valid icon in update", async () => {
     const { db, request } = makeApp(
-      recordingDb([{ id: 1, workspace_id: 3, name: "Acc", type: "bank", is_active: true }]),
+      recordingDb([
+        { id: 1, workspace_id: 3, name: "Acc", type: "bank", is_active: true },
+      ])
     );
-    const res = await request("/1", { method: "PUT", body: JSON.stringify({ icon: "wallet" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/1", {
+      method: "PUT",
+      body: JSON.stringify({ icon: "wallet" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(200);
-    const updateCall = db.calls.find((c) => c.text.includes("UPDATE") && c.text.includes("financial_accounts"));
+    const updateCall = db.calls.find(
+      (c) => c.text.includes("UPDATE") && c.text.includes("financial_accounts")
+    );
     expect(updateCall!.params).toContain("wallet");
   });
 
   it("sends 409 on unique violation during update", async () => {
-    const uniqueError = Object.assign(new Error("duplicate key"), { code: "23505" });
+    const uniqueError = Object.assign(new Error("duplicate key"), {
+      code: "23505",
+    });
     const db = recordingDb((text) => {
       if (text.includes("UPDATE")) throw uniqueError;
       return [];
     });
     const { request } = makeApp(db);
-    const res = await request("/1", { method: "PUT", body: JSON.stringify({ name: "Dup" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/1", {
+      method: "PUT",
+      body: JSON.stringify({ name: "Dup" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.error).toMatch(/already exists/i);
@@ -287,13 +413,21 @@ describe("PUT /:id — update validation via buildUpdateAssignments", () => {
 
   it("returns 404 when id does not match any row", async () => {
     const { request } = makeApp(recordingDb([]));
-    const res = await request("/999999", { method: "PUT", body: JSON.stringify({ name: "Updated" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/999999", {
+      method: "PUT",
+      body: JSON.stringify({ name: "Updated" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(404);
   });
 
   it("rejects non-numeric id", async () => {
     const { request } = makeApp();
-    const res = await request("/abc", { method: "PUT", body: JSON.stringify({ name: "X" }), headers: { "Content-Type": "application/json" } });
+    const res = await request("/abc", {
+      method: "PUT",
+      body: JSON.stringify({ name: "X" }),
+      headers: { "Content-Type": "application/json" },
+    });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/invalid id/i);
@@ -332,7 +466,9 @@ describe("GET /:id — detail", () => {
   it("passes the workspace from context to enforce org-scoping", async () => {
     const { db, request } = makeApp(recordingDb([{ id: 1 }]));
     await request("/1");
-    const detailCall = db.calls.find((c) => c.text.includes("FROM") && c.text.includes("financial_accounts"));
+    const detailCall = db.calls.find(
+      (c) => c.text.includes("FROM") && c.text.includes("financial_accounts")
+    );
     expect(detailCall).toBeDefined();
     expect(detailCall!.text).toContain("workspace_id");
     expect(detailCall!.params).toContain(TEST_WORKSPACE);
@@ -355,7 +491,12 @@ describe("DELETE /:id — archive", () => {
 
 describe("PATCH /:id/restore — restore", () => {
   it("returns restored account with is_active=true", async () => {
-    const restored = { id: 10, workspace_id: 3, name: "Restored", is_active: true };
+    const restored = {
+      id: 10,
+      workspace_id: 3,
+      name: "Restored",
+      is_active: true,
+    };
     const { request } = makeApp(recordingDb([restored]));
     const res = await request("/10/restore", { method: "PATCH" });
     expect(res.status).toBe(200);
@@ -374,14 +515,18 @@ describe("GET / — list filter params", () => {
   it("defaults to active-only when no status param", async () => {
     const { db, request } = makeApp(recordingDb([]));
     await request("/");
-    const listCall = db.calls.find((c) => c.text.includes("FROM") && c.text.includes("financial_accounts"));
+    const listCall = db.calls.find(
+      (c) => c.text.includes("FROM") && c.text.includes("financial_accounts")
+    );
     expect(listCall!.text).toContain("is_active = true");
   });
 
   it("filters by archived status", async () => {
     const { db, request } = makeApp(recordingDb([]));
     await request("/?status=archived");
-    const listCall = db.calls.find((c) => c.text.includes("FROM") && c.text.includes("financial_accounts"));
+    const listCall = db.calls.find(
+      (c) => c.text.includes("FROM") && c.text.includes("financial_accounts")
+    );
     expect(listCall!.text).toContain("is_active = false");
   });
 
@@ -419,7 +564,190 @@ describe("GET / — list filter params", () => {
     const { db, request } = makeApp(recordingDb([]));
     await request("/?sortBy=unknown_column");
     const listCall = db.calls.find((c) => c.text.includes("ORDER BY"));
-    expect(listCall!.text).toContain('ORDER BY "created_at" DESC');
+    expect(listCall!.text).toContain(
+      'ORDER BY "is_default_payment" DESC, "sort_order" ASC, "name" ASC, "id" ASC'
+    );
+  });
+
+  it("supports explicit sort-order sorting", async () => {
+    const { db, request } = makeApp(recordingDb([]));
+    await request("/?sortBy=sort_order&sortDir=ASC");
+    const listCall = db.calls.find((c) => c.text.includes("ORDER BY"));
+    expect(listCall!.text).toContain('ORDER BY "sort_order" ASC');
+  });
+});
+
+describe("PATCH /:id/payment-settings", () => {
+  function settingsDb(
+    rows: QueryResultRow[] = [{ id: 7 }]
+  ): PluginDb & { calls: RecordedQuery[] } {
+    const calls: RecordedQuery[] = [];
+    const client = {
+      query: vi.fn(async (text: string, params?: readonly unknown[]) => {
+        calls.push({ text, params: params ?? [] });
+        if (text.includes("RETURNING")) {
+          return { rows, rowCount: rows.length };
+        }
+        return { rows: [], rowCount: 0 };
+      }),
+      release: vi.fn(),
+    };
+    return {
+      calls,
+      query: async () =>
+        ({ rows: [], rowCount: 0 } as unknown as QueryResult<QueryResultRow>),
+      connect: async () => client,
+    } as unknown as PluginDb & { calls: RecordedQuery[] };
+  }
+
+  it("sets a single workspace default and sort order", async () => {
+    const db = settingsDb([
+      {
+        id: 7,
+        workspace_id: TEST_WORKSPACE,
+        name: "Cash on Office",
+        type: "cash",
+        is_default_payment: true,
+        sort_order: 1,
+      },
+    ]);
+    const { request } = makeApp(db);
+    const res = await request("/7/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_default_payment: true, sort_order: 1 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({
+      id: 7,
+      is_default_payment: true,
+      sort_order: 1,
+    });
+    const clearCall = db.calls.find((c) => c.text.includes("id <> $2"));
+    expect(clearCall).toBeDefined();
+    expect(clearCall!.params).toEqual([TEST_WORKSPACE, 7]);
+    const updateCall = db.calls.find((c) => c.text.includes("RETURNING"));
+    expect(updateCall!.text).toContain("workspace_id = $1 AND id = $2");
+    expect(updateCall!.params).toEqual([TEST_WORKSPACE, 7, true, 1]);
+  });
+
+  it("rejects invalid sort order", async () => {
+    const { request } = makeApp(settingsDb());
+    const res = await request("/7/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_default_payment: true, sort_order: -1 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/sort_order/i);
+  });
+
+  it("accepts the largest postgres integer sort order", async () => {
+    const db = settingsDb([
+      {
+        id: 7,
+        workspace_id: TEST_WORKSPACE,
+        name: "Cash on Office",
+        type: "cash",
+        is_default_payment: true,
+        sort_order: 2147483647,
+      },
+    ]);
+    const { request } = makeApp(db);
+    const res = await request("/7/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_default_payment: true,
+        sort_order: 2147483647,
+      }),
+    });
+    expect(res.status).toBe(200);
+    const updateCall = db.calls.find((c) => c.text.includes("RETURNING"));
+    expect(updateCall!.params).toEqual([
+      TEST_WORKSPACE,
+      7,
+      true,
+      2147483647,
+    ]);
+  });
+
+  it("rejects sort orders above the postgres integer range", async () => {
+    const db = settingsDb();
+    const { request } = makeApp(db);
+    const res = await request("/7/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_default_payment: true,
+        sort_order: 2147483648,
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/sort_order/i);
+    expect(db.calls).toHaveLength(0);
+  });
+
+  it("rejects malformed account ids before querying", async () => {
+    const db = settingsDb();
+    const { request } = makeApp(db);
+    const res = await request("/7abc/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_default_payment: true, sort_order: 1 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/invalid id/i);
+    expect(db.calls).toHaveLength(0);
+  });
+
+  it("rejects non-boolean default flag", async () => {
+    const { request } = makeApp(settingsDb());
+    const res = await request("/7/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_default_payment: "yes", sort_order: 1 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/is_default_payment/i);
+  });
+
+  it("does not clear another account when unsetting default", async () => {
+    const db = settingsDb([
+      {
+        id: 7,
+        workspace_id: TEST_WORKSPACE,
+        name: "Cash on Office",
+        type: "cash",
+        is_default_payment: false,
+        sort_order: 2,
+      },
+    ]);
+    const { request } = makeApp(db);
+    const res = await request("/7/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_default_payment: false, sort_order: 2 }),
+    });
+    expect(res.status).toBe(200);
+    expect(db.calls.some((c) => c.text.includes("id <> $2"))).toBe(false);
+    const updateCall = db.calls.find((c) => c.text.includes("RETURNING"));
+    expect(updateCall!.params).toEqual([TEST_WORKSPACE, 7, false, 2]);
+  });
+
+  it("returns 404 when the account is missing", async () => {
+    const { request } = makeApp(settingsDb([]));
+    const res = await request("/404/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_default_payment: true, sort_order: 1 }),
+    });
+    expect(res.status).toBe(404);
   });
 });
 
@@ -436,7 +764,12 @@ describe("permission gate", () => {
       ...noPerms,
     });
     const app = new Hono();
-    const ctx = { wsId: TEST_WORKSPACE, userId: "test", role: "admin", wsRole: "admin" };
+    const ctx = {
+      wsId: TEST_WORKSPACE,
+      userId: "test",
+      role: "admin",
+      wsRole: "admin",
+    };
     app.use("*", (_c, next) => runWithTenantContext(ctx, () => next()));
     app.route("/", router);
 
