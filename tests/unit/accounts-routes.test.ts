@@ -618,6 +618,12 @@ describe("PATCH /:id/payment-settings", () => {
       body: JSON.stringify({ is_default_payment: true, sort_order: 1 }),
     });
     expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({
+      id: 7,
+      is_default_payment: true,
+      sort_order: 1,
+    });
     const clearCall = db.calls.find((c) => c.text.includes("id <> $2"));
     expect(clearCall).toBeDefined();
     expect(clearCall!.params).toEqual([TEST_WORKSPACE, 7]);
