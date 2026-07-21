@@ -476,6 +476,7 @@ export function AccountForm(props: AccountFormProps) {
             type="number"
             min="0"
             step="1"
+            aria-label="Sort order"
             data-testid="accounts-form-sort-order"
             value={String(props.sortOrder)}
             onInput={(e) => {
