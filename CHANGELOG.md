@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 1.7.0
+
+### Minor Changes
+
+- a19e8d8: Add configurable financial-account payment defaults and manual sort order for account lists and payment pickers.
+
 ## 1.6.1
 
 ### Patch Changes
