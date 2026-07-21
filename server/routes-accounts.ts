@@ -130,6 +130,8 @@ const ACCOUNT_COLS = [
   "sort_order",
 ] as const;
 
+const PG_INT4_MAX = 2147483647;
+
 // A type alias (not an interface) so it satisfies pg's `QueryResultRow` index
 // constraint when passed as the surface's row generic.
 type AccountRow = {
@@ -469,11 +471,18 @@ function parseAccountSettings(
   if (
     typeof sortOrder !== "number" ||
     !Number.isInteger(sortOrder) ||
-    sortOrder < 0
+    sortOrder < 0 ||
+    sortOrder > PG_INT4_MAX
   ) {
-    return { error: "sort_order must be a non-negative integer" };
+    return { error: "sort_order must be a non-negative integer within range" };
   }
   return { is_default_payment: isDefault, sort_order: sortOrder };
+}
+
+function parsePositivePathId(raw: string | undefined): number | null {
+  if (!raw || !/^\d+$/.test(raw)) return null;
+  const id = Number(raw);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 function mountPaymentSettings(app: Hono, deps: RouterDeps): void {
@@ -484,8 +493,8 @@ function mountPaymentSettings(app: Hono, deps: RouterDeps): void {
     requireWorkspace,
     requirePermission("financial_accounts.edit"),
     async (c: Context) => {
-      const id = parseInt(String(c.req.param("id")), 10);
-      if (!Number.isFinite(id)) {
+      const id = parsePositivePathId(c.req.param("id"));
+      if (id === null) {
         return c.json({ error: "Invalid id" }, 400);
       }
 
@@ -528,7 +537,11 @@ function mountPaymentSettings(app: Hono, deps: RouterDeps): void {
         await client.query("COMMIT");
         return c.json(res.rows[0]);
       } catch (err) {
-        await client.query("ROLLBACK").catch(() => {});
+        try {
+          await client.query("ROLLBACK");
+        } catch (rollbackErr) {
+          console.error("[financial-accounts] payment settings rollback error:", rollbackErr);
+        }
         console.error("[financial-accounts] payment settings error:", err);
         return c.json({ error: "Internal server error" }, 500);
       } finally {

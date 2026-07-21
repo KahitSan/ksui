@@ -44,6 +44,7 @@ import {
 } from "../../server/flows-accounts.js";
 import { AccountForm } from "./components/AccountForm";
 import { AccountDetail } from "./components/AccountDetail";
+import { AccountDetailModalHeader } from "./components/AccountDetailModalHeader";
 import { TransactionDetailSkeleton } from "./components/TransactionDetail";
 import {
   RenameAccountDialog,
@@ -887,79 +888,15 @@ export default function AccountsPage() {
             before the fetch resolves, so the modal never waits on the network. */}
         <Show when={detailId() !== null}>
           <Modal onClose={() => closeDetail()} size="lg">
-            <div
-              data-testid="accounts-detail-modal"
-              class="flex items-center justify-between mb-6"
-            >
-              <Show
-                when={detailAccount()}
-                fallback={
-                  <>
-                    <div class="h-6 w-40 animate-pulse rounded bg-ks-fg/5" />
-                    <button
-                      data-testid="accounts-detail-close"
-                      onClick={() => closeDetail()}
-                      class="text-ks-fg-muted hover:text-ks-fg cursor-pointer p-1"
-                      aria-label="Close"
-                    >
-                      <X size={20} />
-                    </button>
-                  </>
-                }
-              >
-                {(account) => (
-                  <>
-                    <h2 class="text-lg font-semibold text-ks-fg">
-                      {editing() ? "Edit Account" : account().name}
-                    </h2>
-                    <div class="flex items-center gap-2">
-                      <Show when={!editing() && isAdmin()}>
-                        <button
-                          data-testid="accounts-edit-btn"
-                          onClick={startEdit}
-                          class="text-ks-fg-muted hover:text-ks-accent cursor-pointer p-1"
-                          title="Edit"
-                          aria-label="Edit account"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                      </Show>
-                      <Show when={!editing() && isAdmin()}>
-                        {account().is_active ? (
-                          <button
-                            data-testid="accounts-archive-btn"
-                            onClick={() => requestArchive(account())}
-                            class="text-ks-fg-muted hover:text-ks-danger cursor-pointer p-1"
-                            title="Archive"
-                            aria-label="Archive account"
-                          >
-                            <Archive size={16} />
-                          </button>
-                        ) : (
-                          <button
-                            data-testid="accounts-restore-btn"
-                            onClick={() => handleRestore(account().id)}
-                            class="text-ks-fg-muted hover:text-ks-success cursor-pointer p-1"
-                            title="Restore"
-                            aria-label="Restore account"
-                          >
-                            <ArchiveRestore size={16} />
-                          </button>
-                        )}
-                      </Show>
-                      <button
-                        data-testid="accounts-detail-close"
-                        onClick={() => closeDetail()}
-                        class="text-ks-fg-muted hover:text-ks-fg cursor-pointer p-1"
-                        aria-label="Close"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-                  </>
-                )}
-              </Show>
-            </div>
+            <AccountDetailModalHeader
+              account={detailAccount}
+              editing={editing}
+              isAdmin={isAdmin}
+              onEdit={startEdit}
+              onArchive={requestArchive}
+              onRestore={handleRestore}
+              onClose={closeDetail}
+            />
 
             <Show
               when={detailAccount()}

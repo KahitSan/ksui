@@ -644,6 +644,67 @@ describe("PATCH /:id/payment-settings", () => {
     expect(body.error).toMatch(/sort_order/i);
   });
 
+  it("accepts the largest postgres integer sort order", async () => {
+    const db = settingsDb([
+      {
+        id: 7,
+        workspace_id: TEST_WORKSPACE,
+        name: "Cash on Office",
+        type: "cash",
+        is_default_payment: true,
+        sort_order: 2147483647,
+      },
+    ]);
+    const { request } = makeApp(db);
+    const res = await request("/7/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_default_payment: true,
+        sort_order: 2147483647,
+      }),
+    });
+    expect(res.status).toBe(200);
+    const updateCall = db.calls.find((c) => c.text.includes("RETURNING"));
+    expect(updateCall!.params).toEqual([
+      TEST_WORKSPACE,
+      7,
+      true,
+      2147483647,
+    ]);
+  });
+
+  it("rejects sort orders above the postgres integer range", async () => {
+    const db = settingsDb();
+    const { request } = makeApp(db);
+    const res = await request("/7/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_default_payment: true,
+        sort_order: 2147483648,
+      }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/sort_order/i);
+    expect(db.calls).toHaveLength(0);
+  });
+
+  it("rejects malformed account ids before querying", async () => {
+    const db = settingsDb();
+    const { request } = makeApp(db);
+    const res = await request("/7abc/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_default_payment: true, sort_order: 1 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/invalid id/i);
+    expect(db.calls).toHaveLength(0);
+  });
+
   it("rejects non-boolean default flag", async () => {
     const { request } = makeApp(settingsDb());
     const res = await request("/7/payment-settings", {

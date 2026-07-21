@@ -3,6 +3,7 @@ type MigrationContext = { client: import("pg").PoolClient };
 const migration = {
   name: "transactions_0024_add_financial_account_payment_preferences",
   async up({ client }: MigrationContext) {
+    // Existing accounts opt out until admins choose the payment default.
     await client.query(`
       ALTER TABLE accounts.financial_accounts
         ADD COLUMN IF NOT EXISTS is_default_payment BOOLEAN NOT NULL DEFAULT FALSE,
