@@ -11,6 +11,8 @@ export interface FinancialAccount {
   icon: string | null;
   color: string | null;
   s3_link: string | null;
+  is_default_payment: boolean;
+  sort_order: number;
   // balance arrives as a string from the DB (NUMERIC) when the transactions
   // plugin is loaded; absent (undefined) when it is feature-flagged off.
   balance?: string | number;

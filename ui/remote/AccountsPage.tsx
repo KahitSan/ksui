@@ -63,6 +63,7 @@ import ArchiveRestore from "lucide-solid/icons/archive-restore";
 import Pencil from "lucide-solid/icons/pencil";
 import EllipsisVertical from "lucide-solid/icons/ellipsis-vertical";
 import Eye from "lucide-solid/icons/eye";
+import Star from "lucide-solid/icons/star";
 
 export default function AccountsPage() {
   const { activeWorkspace } = useActiveWorkspace();
@@ -135,6 +136,8 @@ export default function AccountsPage() {
   const [formDescription, setFormDescription] = createSignal("");
   const [formIcon, setFormIcon] = createSignal<AccountIconSlug | "">("");
   const [formColor, setFormColor] = createSignal("");
+  const [formDefaultPayment, setFormDefaultPayment] = createSignal(false);
+  const [formSortOrder, setFormSortOrder] = createSignal(0);
   const [formLogoBlob, setFormLogoBlob] = createSignal<Blob | null>(null);
   // Public object-storage URL (s3_link) of the saved logo, when there is one —
   // the sole reference for the edit preview now that logo_path is gone.
@@ -151,6 +154,8 @@ export default function AccountsPage() {
     setFormDescription("");
     setFormIcon("");
     setFormColor("");
+    setFormDefaultPayment(false);
+    setFormSortOrder(0);
     setFormLogoBlob(null);
     setFormLogoExistingS3(null);
     setFormLogoClear(false);
@@ -163,6 +168,8 @@ export default function AccountsPage() {
     setFormDescription(a.description || "");
     setFormIcon((a.icon as AccountIconSlug | null) ?? "");
     setFormColor(a.color ?? "");
+    setFormDefaultPayment(!!a.is_default_payment);
+    setFormSortOrder(a.sort_order ?? 0);
     setFormLogoBlob(null);
     setFormLogoExistingS3(a.s3_link);
     setFormLogoClear(false);
@@ -203,6 +210,31 @@ export default function AccountsPage() {
       const err = await res.json().catch(() => ({}));
       setFormError(
         (err as { error?: string }).error || "Failed to remove logo"
+      );
+      return null;
+    }
+    return (await res.json()) as FinancialAccount;
+  }
+
+  async function savePaymentSettings(
+    accountId: number
+  ): Promise<FinancialAccount | null> {
+    const res = await fetch(
+      `/api/financial-accounts/${accountId}/payment-settings`,
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...wsHeaders() },
+        body: JSON.stringify({
+          is_default_payment: formDefaultPayment(),
+          sort_order: formSortOrder(),
+        }),
+      }
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      setFormError(
+        (err as { error?: string }).error || "Failed to save payment settings"
       );
       return null;
     }
@@ -273,14 +305,17 @@ export default function AccountsPage() {
             const created = flowState.commit as FinancialAccount;
             const pendingBlob = formLogoBlob();
             let logoError: string | null = null;
-            let finalAccount: FinancialAccount = created;
-            if (pendingBlob) {
-              const withLogo = await uploadLogo(created.id, pendingBlob);
+            const withSettings = await savePaymentSettings(created.id);
+            let finalAccount: FinancialAccount = withSettings ?? created;
+            if (withSettings && pendingBlob) {
+              const withLogo = await uploadLogo(finalAccount.id, pendingBlob);
               if (withLogo) {
                 finalAccount = withLogo;
               } else {
                 logoError = formError() || "Logo failed to save";
               }
+            } else if (!withSettings) {
+              logoError = formError() || "Payment settings failed to save";
             }
 
             setCreateOpen(false);
@@ -333,7 +368,9 @@ export default function AccountsPage() {
         fetch: flowFetch,
         ui: {
           refresh: async () => {
-            let updated = flowState.commit as FinancialAccount;
+            const withSettings = await savePaymentSettings(a.id);
+            if (!withSettings) return;
+            let updated = withSettings;
 
             const pendingBlob = formLogoBlob();
             let logoFailed = false;
@@ -578,6 +615,30 @@ export default function AccountsPage() {
       },
     },
     {
+      data: "is_default_payment",
+      title: "Default",
+      orderable: true,
+      render: (_val, _type, row) => (
+        <Show
+          when={row.is_default_payment}
+          fallback={<span class="text-xs text-ks-fg-muted">-</span>}
+        >
+          <span class="inline-flex items-center gap-1 text-xs text-ks-accent">
+            <Star size={12} />
+            Payment
+          </span>
+        </Show>
+      ),
+    },
+    {
+      data: "sort_order",
+      title: "Sort",
+      orderable: true,
+      render: (_val, _type, row) => (
+        <span class="text-sm text-ks-fg-muted">{row.sort_order}</span>
+      ),
+    },
+    {
       data: "is_active",
       title: "Status",
       orderable: true,
@@ -808,6 +869,10 @@ export default function AccountsPage() {
               setColor={setFormColor}
               logoBlob={formLogoBlob()}
               setLogoBlob={setFormLogoBlob}
+              defaultPayment={formDefaultPayment()}
+              setDefaultPayment={setFormDefaultPayment}
+              sortOrder={formSortOrder()}
+              setSortOrder={setFormSortOrder}
               logoExistingS3={formLogoExistingS3()}
               logoClear={formLogoClear()}
               setLogoClear={setFormLogoClear}
@@ -896,7 +961,10 @@ export default function AccountsPage() {
               </Show>
             </div>
 
-            <Show when={detailAccount()} fallback={<TransactionDetailSkeleton />}>
+            <Show
+              when={detailAccount()}
+              fallback={<TransactionDetailSkeleton />}
+            >
               {(account) => (
                 <Show
                   when={editing()}
@@ -920,6 +988,10 @@ export default function AccountsPage() {
                     accountId={account().id}
                     logoBlob={formLogoBlob()}
                     setLogoBlob={setFormLogoBlob}
+                    defaultPayment={formDefaultPayment()}
+                    setDefaultPayment={setFormDefaultPayment}
+                    sortOrder={formSortOrder()}
+                    setSortOrder={setFormSortOrder}
                     logoExistingS3={formLogoExistingS3()}
                     logoClear={formLogoClear()}
                     setLogoClear={setFormLogoClear}

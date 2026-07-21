@@ -28,6 +28,10 @@ export interface AccountFormProps {
   setIcon: (v: AccountIconSlug | "") => void;
   color: string;
   setColor: (v: string) => void;
+  defaultPayment: boolean;
+  setDefaultPayment: (v: boolean) => void;
+  sortOrder: number;
+  setSortOrder: (v: number) => void;
   accountId?: number;
   logoBlob: Blob | null;
   setLogoBlob: (b: Blob | null) => void;
@@ -409,7 +413,9 @@ export function AccountForm(props: AccountFormProps) {
               </span>
             }
           >
-            <code class="text-xs text-ks-fg-muted font-mono">{props.color}</code>
+            <code class="text-xs text-ks-fg-muted font-mono">
+              {props.color}
+            </code>
             <button
               type="button"
               onClick={() => props.setColor("")}
@@ -450,6 +456,36 @@ export function AccountForm(props: AccountFormProps) {
           placeholder="Optional description..."
         />
       </FormField>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <FormField label="Payment default">
+          <label class="flex min-h-10 items-center gap-2 rounded-lg border border-ks-border-strong bg-ks-surface-raised/50 px-3 py-2 text-sm text-ks-fg">
+            <input
+              type="checkbox"
+              data-testid="accounts-form-default-payment"
+              checked={props.defaultPayment}
+              onChange={(e) => props.setDefaultPayment(e.currentTarget.checked)}
+              class="h-4 w-4"
+            />
+            <span>Default for payments</span>
+          </label>
+        </FormField>
+
+        <FormField label="Sort order">
+          <input
+            type="number"
+            min="0"
+            step="1"
+            data-testid="accounts-form-sort-order"
+            value={String(props.sortOrder)}
+            onInput={(e) => {
+              const next = parseInt(e.currentTarget.value, 10);
+              props.setSortOrder(Number.isFinite(next) && next >= 0 ? next : 0);
+            }}
+            class={inputClass}
+          />
+        </FormField>
+      </div>
 
       <div class="flex justify-end gap-3 pt-2">
         <Show when={props.onCancel}>

@@ -32,7 +32,11 @@
 
 import { Hono, type Context, type MiddlewareHandler } from "hono";
 import crypto from "node:crypto";
-import type { PluginDb, DefinedResource, PluginAssets } from "@kahitsan/plugin-sdk";
+import type {
+  PluginDb,
+  DefinedResource,
+  PluginAssets,
+} from "@kahitsan/plugin-sdk";
 import {
   Types,
   defineResource,
@@ -67,7 +71,14 @@ async function fetchBalances(
   return computeAccountBalances(db, workspaceId, accountIds);
 }
 
-const SORTABLE_COLUMNS = ["name", "type", "is_active", "created_at"];
+const SORTABLE_COLUMNS = [
+  "name",
+  "type",
+  "is_active",
+  "is_default_payment",
+  "sort_order",
+  "created_at",
+];
 
 // The five account types the monolith accepts. The migration's CHECK widens to
 // include all five so create/update validation and the DB agree.
@@ -115,6 +126,8 @@ const ACCOUNT_COLS = [
   "icon",
   "color",
   "s3_link",
+  "is_default_payment",
+  "sort_order",
 ] as const;
 
 // A type alias (not an interface) so it satisfies pg's `QueryResultRow` index
@@ -131,6 +144,8 @@ type AccountRow = {
   icon: string | null;
   color: string | null;
   s3_link: string | null;
+  is_default_payment: boolean;
+  sort_order: number;
 };
 
 // ── validators (shared between the spec's create record-validator and the unit
@@ -208,6 +223,8 @@ export const accountsResource: DefinedResource = defineResource({
     icon: Types.TEXT(),
     color: Types.TEXT(),
     s3_link: Types.TEXT(),
+    is_default_payment: Types.BOOLEAN({ notNull: true, default: false }),
+    sort_order: Types.INT({ notNull: true, default: 0 }),
   },
   softDelete: { column: "is_active", restore: true },
   touchOnWrite: "updated_at",
@@ -259,7 +276,18 @@ export const accountsResource: DefinedResource = defineResource({
   // A plain id→columns batch read (no shaping), so the generated service reader
   // expresses it exactly — columns match the monolith's RPC 1:1.
   services: {
-    findByIds: { columns: ["id", "name", "type", "icon", "color", "s3_link"] },
+    findByIds: {
+      columns: [
+        "id",
+        "name",
+        "type",
+        "icon",
+        "color",
+        "s3_link",
+        "is_default_payment",
+        "sort_order",
+      ],
+    },
   },
   // restore overridden to `.edit` — the manifest declares no `.restore` code and
   // the monolith gated restore on edit. view/create/edit/delete use defaults.
@@ -369,7 +397,9 @@ function mountList(app: Hono, deps: RouterDeps): void {
           // into unintended wildcards (Lens 12 hard rule).
           const escaped = search.trim().replace(/([\\%_])/g, "\\$1");
           conditions.push(
-            `(name ILIKE $${params.length + 1} ESCAPE '\\' OR description ILIKE $${
+            `(name ILIKE $${
+              params.length + 1
+            } ESCAPE '\\' OR description ILIKE $${
               params.length + 1
             } ESCAPE '\\')`
           );
@@ -379,7 +409,7 @@ function mountList(app: Hono, deps: RouterDeps): void {
         const where = conditions.length ? conditions.join(" AND ") : undefined;
         const sortColumn = SORTABLE_COLUMNS.includes(sortBy || "")
           ? sortBy!
-          : "created_at";
+          : null;
 
         const rows = await data.find<AccountRow>(
           "financial_accounts",
@@ -387,7 +417,9 @@ function mountList(app: Hono, deps: RouterDeps): void {
           {
             where,
             params,
-            orderBy: `${sortColumn} ${sortDir}`,
+            orderBy: sortColumn
+              ? `${sortColumn} ${sortDir}`
+              : "is_default_payment DESC, sort_order ASC, name ASC, id ASC",
             limit,
             offset,
           }
@@ -417,6 +449,90 @@ function mountList(app: Hono, deps: RouterDeps): void {
       } catch (err) {
         console.error("[financial-accounts] list error:", err);
         return c.json({ error: "Internal server error" }, 500);
+      }
+    }
+  );
+}
+
+function parseAccountSettings(
+  body: unknown
+): { is_default_payment: boolean; sort_order: number } | { error: string } {
+  if (!body || typeof body !== "object") {
+    return { error: "JSON body is required" };
+  }
+  const record = body as Record<string, unknown>;
+  const isDefault = record.is_default_payment;
+  if (typeof isDefault !== "boolean") {
+    return { error: "is_default_payment must be a boolean" };
+  }
+  const sortOrder = record.sort_order;
+  if (
+    typeof sortOrder !== "number" ||
+    !Number.isInteger(sortOrder) ||
+    sortOrder < 0
+  ) {
+    return { error: "sort_order must be a non-negative integer" };
+  }
+  return { is_default_payment: isDefault, sort_order: sortOrder };
+}
+
+function mountPaymentSettings(app: Hono, deps: RouterDeps): void {
+  const { requireAuth, requireWorkspace, requirePermission } = deps;
+  app.patch(
+    "/:id/payment-settings",
+    requireAuth,
+    requireWorkspace,
+    requirePermission("financial_accounts.edit"),
+    async (c: Context) => {
+      const id = parseInt(String(c.req.param("id")), 10);
+      if (!Number.isFinite(id)) {
+        return c.json({ error: "Invalid id" }, 400);
+      }
+
+      let rawBody: unknown;
+      try {
+        rawBody = await c.req.json();
+      } catch {
+        return c.json({ error: "JSON body is required" }, 400);
+      }
+      const parsed = parseAccountSettings(rawBody);
+      if ("error" in parsed) {
+        return c.json({ error: parsed.error }, 400);
+      }
+
+      const workspaceId = ctxGet(c, "workspaceId") as number;
+      const client = await deps.db.connect();
+      try {
+        await client.query("BEGIN");
+        if (parsed.is_default_payment) {
+          await client.query(
+            `UPDATE accounts.financial_accounts
+             SET is_default_payment = false, updated_at = NOW()
+             WHERE workspace_id = $1 AND id <> $2 AND is_default_payment = true`,
+            [workspaceId, id]
+          );
+        }
+        const res = await client.query<AccountRow>(
+          `UPDATE accounts.financial_accounts
+           SET is_default_payment = $3,
+               sort_order = $4,
+               updated_at = NOW()
+           WHERE workspace_id = $1 AND id = $2
+           RETURNING ${ACCOUNT_COLS.join(", ")}`,
+          [workspaceId, id, parsed.is_default_payment, parsed.sort_order]
+        );
+        if (res.rows.length === 0) {
+          await client.query("ROLLBACK");
+          return c.json({ error: "Not found" }, 404);
+        }
+        await client.query("COMMIT");
+        return c.json(res.rows[0]);
+      } catch (err) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("[financial-accounts] payment settings error:", err);
+        return c.json({ error: "Internal server error" }, 500);
+      } finally {
+        client.release();
       }
     }
   );
@@ -458,7 +574,10 @@ function mountGet(app: Hono, deps: RouterDeps): void {
           ctxGet(c, "workspaceId") as number,
           [account.id]
         );
-        return c.json({ ...account, balance: balances[account.id]?.balance ?? 0 });
+        return c.json({
+          ...account,
+          balance: balances[account.id]?.balance ?? 0,
+        });
       } catch (err) {
         console.error("[financial-accounts] get error:", err);
         return c.json({ error: "Internal server error" }, 500);
@@ -656,7 +775,7 @@ function mountLogoRaw(app: Hono, deps: RouterDeps): void {
         const row = await data.findOne<{ s3_link: string | null }>(
           "financial_accounts",
           ["s3_link"],
-          { where: "id = $1", params: [id] },
+          { where: "id = $1", params: [id] }
         );
         const key = row ? s3KeyFromUrl(row.s3_link) : null;
         if (!key) {
@@ -693,6 +812,7 @@ function mountLogoRaw(app: Hono, deps: RouterDeps): void {
 export function buildRouter(deps: RouterDeps): Hono {
   const app = new Hono();
   mountList(app, deps);
+  mountPaymentSettings(app, deps);
   mountGet(app, deps);
   mountLogoUpload(app, deps);
   mountLogoDelete(app, deps);
