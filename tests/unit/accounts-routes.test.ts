@@ -637,6 +637,51 @@ describe("PATCH /:id/payment-settings", () => {
     const body = await res.json();
     expect(body.error).toMatch(/sort_order/i);
   });
+
+  it("rejects non-boolean default flag", async () => {
+    const { request } = makeApp(settingsDb());
+    const res = await request("/7/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_default_payment: "yes", sort_order: 1 }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/is_default_payment/i);
+  });
+
+  it("does not clear another account when unsetting default", async () => {
+    const db = settingsDb([
+      {
+        id: 7,
+        workspace_id: TEST_WORKSPACE,
+        name: "Cash on Office",
+        type: "cash",
+        is_default_payment: false,
+        sort_order: 2,
+      },
+    ]);
+    const { request } = makeApp(db);
+    const res = await request("/7/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_default_payment: false, sort_order: 2 }),
+    });
+    expect(res.status).toBe(200);
+    expect(db.calls.some((c) => c.text.includes("id <> $2"))).toBe(false);
+    const updateCall = db.calls.find((c) => c.text.includes("RETURNING"));
+    expect(updateCall!.params).toEqual([TEST_WORKSPACE, 7, false, 2]);
+  });
+
+  it("returns 404 when the account is missing", async () => {
+    const { request } = makeApp(settingsDb([]));
+    const res = await request("/404/payment-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_default_payment: true, sort_order: 1 }),
+    });
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("permission gate", () => {

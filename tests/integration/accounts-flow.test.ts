@@ -107,7 +107,9 @@ afterAll(async () => {
 describe("financial-accounts flow: list → create → detail → edit → archive → restore", () => {
   const accountName = `integ-fa-${Date.now()}`;
   const editedName = `${accountName}-edited`;
+  const fallbackName = `${accountName}-fallback`;
   let newId: number;
+  let fallbackId: number;
 
   it("lists existing financial accounts for the active org", async () => {
     const res = await runWithTenantContext(TENANT_CTX, () => app.request("/"));
@@ -223,6 +225,74 @@ describe("financial-accounts flow: list → create → detail → edit → archi
     expect(body.sort_order).toBe(1);
   });
 
+  it("rejects invalid payment settings without changing the account", async () => {
+    const bad = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${newId}/payment-settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ is_default_payment: true, sort_order: -1 }),
+      })
+    );
+    expect(bad.status).toBe(400);
+
+    const detail = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${newId}`)
+    );
+    expect(detail.status).toBe(200);
+    const body = await detail.json();
+    expect(body.is_default_payment).toBe(true);
+    expect(body.sort_order).toBe(1);
+  });
+
+  it("returns 404 for payment settings on a missing account", async () => {
+    const res = await runWithTenantContext(TENANT_CTX, () =>
+      app.request("/999999/payment-settings", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ is_default_payment: true, sort_order: 1 }),
+      })
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("moves the payment default to another account and clears the previous default", async () => {
+    const createFallback = await runWithTenantContext(TENANT_CTX, () =>
+      app.request("/", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: fallbackName,
+          type: "cash",
+          sort_order: 0,
+        }),
+      })
+    );
+    expect(createFallback.status).toBe(201);
+    const created = await createFallback.json();
+    fallbackId = created.id;
+
+    const moveDefault = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${fallbackId}/payment-settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ is_default_payment: true, sort_order: 0 }),
+      })
+    );
+    expect(moveDefault.status).toBe(200);
+
+    const previous = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${newId}`)
+    );
+    const previousBody = await previous.json();
+    expect(previousBody.is_default_payment).toBe(false);
+
+    const current = await runWithTenantContext(TENANT_CTX, () =>
+      app.request(`/${fallbackId}`)
+    );
+    const currentBody = await current.json();
+    expect(currentBody.is_default_payment).toBe(true);
+  });
+
   it("orders default payment account first in the active list", async () => {
     const res = await runWithTenantContext(TENANT_CTX, () =>
       app.request("/?status=active&limit=200")
@@ -230,7 +300,7 @@ describe("financial-accounts flow: list → create → detail → edit → archi
     expect(res.status).toBe(200);
     const body = await res.json();
     const first = (body.data as Array<{ id: number }>)[0];
-    expect(first?.id).toBe(newId);
+    expect(first?.id).toBe(fallbackId);
   });
 
   it("archives (soft-deletes) the account", async () => {
