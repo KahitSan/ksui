@@ -20,35 +20,6 @@ it. A citation that no longer resolves shows as "citation drifted" in that same 
 strongest signal that row needs a human look. `node scripts/doc-freshness.mjs` refreshes these
 stamp lines in place; run it whenever code or tests change.
 
-## Verification
-
-Five agents independently re-verified this document on 2026-07-19, each working blind to the
-others' output. Three adversarial verifiers re-derived a slice of the tables directly from
-source: `verify-charge` covered Features 1, 4, 5, 6, 7, 8; `verify-edit` covered Features 2, 3,
-4; `verify-other` covered Features 9–20. Two blind inventories worked with zero visibility into
-this document: `enum-code` listed every behavior found in the plugin's route/lib code,
-`enum-tests` listed every behavior found in the test suite. Both inventories were then diffed
-against this document's tables to catch behaviors the original mapping pass missed.
-
-- **Rows confirmed as written:** the large majority — every feature not called out below checked
-  out against both code and (where cited) test assertions.
-- **Rows corrected:** 11. 5 had wrong code-line citations (pointing at a comment or an unrelated
-  block, not the real enforcement). 1 had a wrong rule claim (a subcategory "active-list" check
-  that doesn't actually filter on active). 1 had a mischaracterized formula (EWT rounding —
-  flagged as suspicious, but algebraically the standard round-to-cents order). 1 was an
-  unverifiable-without-UI-code claim, now flagged as such. 1 resolved a false open question (the
-  single-payer DB constraint test does contain the assertion in question). 2 rows got test
-  citations they were missing.
-- **Rows added:** 3 new feature sections the original pass never reached — `GET /outstanding`,
-  CSV export, and the live-board SSE stream, all real HTTP surface with no prior coverage — plus
-  corrections/new rows folded into Features 2, 3, 11, 13, 15, 18, and 20.
-- **Rows still unverified:** 1. Feature 18's "balance computation unavailable → dash" row needs
-  a UI-code check this pass didn't do; flagged inline as `⚠ unverified`.
-- New open questions from the verifiers are folded into **Open questions** below (items 15–18).
-  Two previously-open questions — the single-payer DB rule and `/extend`/`/charge-overage` test
-  coverage — were resolved with citations during this pass and pruned from the list; their
-  resolutions live in Features 20 and 3.
-
 ## Feature index
 
 | # | Feature | What it covers |
@@ -116,7 +87,7 @@ along with (usually) a payment. Route: `POST /charge`.
 
 ## 2. Editing a Paid Receipt (Cart Edit)
 
-Verified 2026-07-19 · logic changed 2026-07-19 · tests 2026-07-19 · open: Q5
+Verified 2026-07-19 · logic changed 2026-07-20 · tests 2026-07-20 · open: Q5
 
 **What it does:** Lets staff edit a receipt after checkout — remove or shrink items, add new
 items (to an existing customer or a brand-new one), and reassign who's paying — in one save on
@@ -197,7 +168,7 @@ the SAME receipt. It never creates a second receipt. Route: `POST /:id/apply-car
 
 | Scenario | Business rule | Why | Enforced at | Pinned by test |
 |---|---|---|---|---|
-| A save both explicitly reassigns the payer AND has a brand-new group flagged as payer. | The explicit reassignment wins. | — | `:554-558` | — |
+| A save both explicitly reassigns the payer AND has a brand-new group flagged as payer. | Rejected — mutually exclusive. | Two conflicting instructions about who's paying can't both be honored. | `transactions-cart-edit.ts:268-276` | `cart-edit-payer-reassignment.test.ts` |
 | The payer changes. | It's one single all-or-nothing switch across every group on the receipt. | There's never a moment where two groups (or zero) are marked payer, even if the save crashes mid-way. | `:559-564` | — |
 | The new payer target doesn't belong to this receipt. | Rejected. | — | `:573-576` | — |
 | The payer changes. | The receipt's own top-level "billed to" name is updated to match automatically. | This route is the only place that flips who's marked payer for an existing group, so it also owns keeping the receipt's own name in sync. | `:577-590` | `cart-edit-payer-reassignment.test.ts` |
@@ -217,7 +188,7 @@ the SAME receipt. It never creates a second receipt. Route: `POST /:id/apply-car
 | Scenario | Business rule | Why | Enforced at | Pinned by test |
 |---|---|---|---|---|
 | Any save that changes the active items on a receipt. | The receipt's stored title/description is regenerated from what's currently active on it. | The detail view and the edit form both read the stored title directly, unlike the list (which recomputes live) — without this, they'd keep showing a removed package's name. | `:640-654` | `transactions-list-summary-after-cart-edit.test.ts` |
-| A save is payer-reassignment-only (nothing else changed). | The stored title is left as-is. | — | — | same test file |
+| A save is payer-reassignment-only (nothing else changed). | The stored title/description is still regenerated from the active items. | The route regenerates the receipt display text after every successful save, not only item-changing saves. | `transactions-cart-edit.ts:747-760` | same test file |
 | A customer group (or the receipt itself) has a discount code attached, and its subtotal changes. | The discount is recalculated against the NEW subtotal rather than just adding the raw cost — group-level takes precedence over receipt-level when both exist. | Otherwise a discounted booking would silently lose its discount partway through an edit. | `reprice-parent-transaction.ts:1-4,84-90` | `cart-reduction-voucher.test.ts`; combined-call isolation in `cart-edit-combined-reduce-and-add.test.ts` |
 | That same recalculation runs, but the attached voucher can no longer be resolved (deleted, or the vouchers plugin is down). | The existing discount amount is left completely unchanged — never zeroed out, never an error. | Losing the ability to look up a voucher shouldn't silently strip a discount the customer was already promised. | `reprice-parent-transaction.ts:110-118,127-133` | — |
 | Anything fails partway through a save (a bad reference in the second of several additions, etc.). | Everything in that save is undone, including earlier reductions/additions processed in the same call — the whole save is all-or-nothing. | — | — | `cart-edit-atomicity.test.ts` |
@@ -293,7 +264,7 @@ a paper trail) and a permanent write-off of an unpaid balance.
 
 ## 6. How "Paid / Partial / Unpaid" Is Decided
 
-Verified 2026-07-19 · logic changed 2026-07-19 · no tests cited
+Verified 2026-07-19 · logic changed 2026-07-20 · no tests cited
 
 **What it does:** One shared rule decides the payment-status label shown everywhere a receipt
 appears — the list, detail view, and export. It's never stored as its own column; it's worked
@@ -307,7 +278,7 @@ out fresh every time.
 | A receipt's total is zero, or fully covered by payments. | Labeled "paid." | — | same | — |
 | A receipt has some, but not all, of its total covered. | Labeled "partial." | — | same | — |
 | A receipt has no payments at all. | Labeled "unpaid." | — | same | — |
-| This exact rule (and its exact order) is duplicated across the list, the detail view, and the export. | Kept identical by hand in three places — a change to one must be made in all three. | — | `transactions-core.ts:104-121`, `transactions-detail.ts:~59`, `export.ts:~240` | — |
+| This rule is repeated anywhere payment status is shown. | List and detail keep the voided/forfeited order; export has its own CASE and does not carry the explicit voided branch because voided rows are filtered from the export query. | A change to one status path still needs the other display paths checked. | `transactions-core.ts:112-120`, `transactions-detail.ts:~59`, `export.ts:233-240` | — |
 
 ---
 
@@ -536,20 +507,23 @@ Exposed as a cross-plugin lookup, not an HTTP route.
 
 ## 18. Financial Accounts
 
-Verified 2026-07-19 · logic changed 2026-07-11 · tests 2026-07-11 · ⚠ 1 row unverified · open: Q18
+Verified 2026-07-22 · logic changed 2026-07-22 · tests 2026-07-22 · open: Q18
 
 **What it does:** Manages the bank/e-wallet/cash/external/capital ledgers a business tracks
 money against, their computed running balances, and their logos.
 
 | Scenario | Business rule | Why | Enforced at | Pinned by test |
 |---|---|---|---|---|
-| An account is created or edited. | Type must be one of bank/e-wallet/cash/external/capital; icon must be one of a fixed 10-option list; color must be a valid 6-digit hex code. | — | `routes-accounts.ts:74-99` | `unit/accounts-routes.test.ts` |
+| An account is created or edited. | Type must be one of bank/e-wallet/cash/external/capital; icon must be one of a fixed 10-option list; color must be a valid 6-digit hex code. | — | `routes-accounts.ts:74-110` | `unit/accounts-routes.test.ts` |
 | An account's name matches another account in the same workspace (case-insensitive). | Rejected with a message naming the conflicting account — enforced as a hard database rule, not just app logic. | — | `:189-191,231-240` | `unit/accounts-routes.test.ts` |
+| The account list is requested without an explicit sort. | Default payment account first, then sort order, then name/id. | A newly-created account should not accidentally become the payment default just because it sorts newest-first. | `routes-accounts.ts:74-81,411-424` | `unit/accounts-routes.test.ts:563-577`; `integration/accounts-flow.test.ts:296-304` |
+| An admin sets payment settings on an account. | `is_default_payment` must be a boolean and `sort_order` must be a non-negative Postgres integer. Malformed ids are rejected before querying. | The payment picker needs a clear default plus an admin-controlled order. | `routes-accounts.ts:459-509` | `unit/accounts-routes.test.ts:635-718`; `integration/accounts-flow.test.ts:214-245` |
+| An admin marks an account as the payment default. | Any prior default in the same workspace is cleared in the same transaction; the database also allows only one default per workspace. | Payment forms must have one stable default, not whichever account was created last. | `routes-accounts.ts:512-538`; `migrations/20260722000000_add_financial_account_payment_preferences.ts:25-41` | `unit/accounts-routes.test.ts:603-633`; `integration/accounts-flow.test.ts:258-304` |
+| An admin clears the default flag from an account. | That account is updated, but no other account is cleared. | Unsetting one default should not silently disturb another account's settings. | `routes-accounts.ts:512-538` | `unit/accounts-routes.test.ts:720-741` |
 | An account's balance is computed. | Counts every payment credited to it, plus anything routed the older way. A sale is never counted through both paths at once. Voided entries never count in either. | — | `account-balances.ts:5-27` | Reconciled byte-for-byte against a 300k-row synthetic dataset — `account-balances.reconcile.test.ts` |
 | A sale is split across two or more accounts. | Each account is credited only its own share. | This is the entire reason the balance is computed via two separate paths. | module comment | — |
 | An account logo is uploaded. | Stored privately, only ever served through an authenticated route that streams the bytes — never a public/signed link. Logos from before this rule existed remain cached publicly until a manual cache flush. | — | `:525-533` | `logo-raw.test.ts` — "returns bytes, never a JSON url/source field" |
 | A logo is replaced or removed. | The old file is best-effort cleaned up afterward; cleanup failure never blocks the save. | — | `:554-567,615-626` | `logo-raw.test.ts` (idempotent delete when nothing to clean up) |
-| The balance-computation logic is unavailable. | ⚠ unverified. Since payees/balances folded in-process, `fetchBalances` is now a direct DB call wrapped in one flat try/catch (any error → 500) — no distinct soft-degrade-to-dash branch was found at the cited lines. The "shows a dash" behavior, if real, more likely lives client-side (rendering a null/missing balance as "—") than as a server guarantee. | — | `routes-accounts.ts` (no distinct branch found at `:397-399` as described) | — |
 | A soft-deleted account is restored. | Uses the same permission as editing — there's no separate "restore" permission by design. | — | `:264-269` | — |
 
 ---
@@ -628,7 +602,7 @@ polling. Routes: `POST /export`, `GET /export/:jobId/progress`, `GET /export/:jo
 
 ## 23. Live Board Updates
 
-Verified 2026-07-19 · logic changed 2026-07-19 · no tests cited
+Verified 2026-07-19 · logic changed 2026-07-20 · tests 2026-07-20
 
 **What it does:** Lets the front-desk board refresh itself when another terminal changes a
 receipt — charge, void, extend, forfeit — without a manual reload. Route:
