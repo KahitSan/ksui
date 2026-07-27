@@ -1,5 +1,7 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX } from "solid-js";
 import { Portal } from "solid-js/web";
+import { useTopLayer } from "../../utils/top-layer";
+import { usePopoverMount } from "../../utils/modal-layer";
 import ChevronsUpDown from "lucide-solid/icons/chevrons-up-down";
 import X from "lucide-solid/icons/x";
 
@@ -38,6 +40,7 @@ const POPUP_FLIP_THRESHOLD = 200;
 // with `overflow: hidden` (e.g. the rounded table cards) and flip upward when
 // there's not enough room below the trigger.
 export default function SearchableSelect(props: SearchableSelectProps): JSX.Element {
+  const popoverMount = usePopoverMount();
   const [open, setOpen] = createSignal(false);
   const [query, setQuery] = createSignal("");
   const [busy, setBusy] = createSignal(false);
@@ -166,9 +169,12 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
         <ChevronsUpDown size={12} class="text-[var(--ks-fg-subtle,#71717a)] shrink-0" />
       </button>
       <Show when={open()}>
-        <Portal>
+        <Portal mount={popoverMount()}>
           <div
-            ref={popupRef}
+            ref={(el) => {
+              popupRef = el;
+              onCleanup(useTopLayer(el));
+            }}
             class="z-[10000] rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
           >

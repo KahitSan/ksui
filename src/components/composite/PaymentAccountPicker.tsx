@@ -1,4 +1,6 @@
 import { Portal } from "solid-js/web";
+import { useTopLayer } from "../../utils/top-layer";
+import { usePopoverMount } from "../../utils/modal-layer";
 import {
   createEffect,
   createMemo,
@@ -65,6 +67,7 @@ function groupAndSort(accounts: PaymentAccountOption[]): Array<[string, PaymentA
 }
 
 export default function PaymentAccountPicker(props: PaymentAccountPickerProps): JSX.Element {
+  const popoverMount = usePopoverMount();
   const [open, setOpen] = createSignal(false);
   const [accounts, setAccounts] = createSignal<PaymentAccountOption[]>([]);
   const [loading, setLoading] = createSignal(true);
@@ -238,9 +241,12 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
       </button>
 
       <Show when={open()}>
-        <Portal>
+        <Portal mount={popoverMount()}>
           <div
-            ref={popupRef}
+            ref={(el) => {
+              popupRef = el;
+              onCleanup(useTopLayer(el));
+            }}
             data-testid="payment-account-picker-popup"
             class="z-[100] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}

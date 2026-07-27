@@ -3,6 +3,8 @@
 
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Portal } from "solid-js/web";
+import { useTopLayer } from "../../utils/top-layer";
+import { usePopoverMount } from "../../utils/modal-layer";
 import Plus from "lucide-solid/icons/plus";
 import Camera from "lucide-solid/icons/camera";
 import FileIcon from "lucide-solid/icons/file";
@@ -14,6 +16,7 @@ interface Props {
 }
 
 export default function AddAttachmentTile(props: Props) {
+  const popoverMount = usePopoverMount();
   const [open, setOpen] = createSignal(false);
   const [pos, setPos] = createSignal({ top: 0, left: 0 });
   let btn: HTMLButtonElement | undefined;
@@ -60,9 +63,12 @@ export default function AddAttachmentTile(props: Props) {
         <span class="text-[10px] uppercase tracking-wider">{props.uploading ? "Uploading" : "Add"}</span>
       </button>
       <Show when={open()}>
-        <Portal>
+        <Portal mount={popoverMount()}>
           <div
-            ref={menu}
+            ref={(el) => {
+              menu = el;
+              onCleanup(useTopLayer(el));
+            }}
             style={{ top: `${pos().top}px`, left: `${pos().left}px` }}
             class="fixed z-[60] min-w-[160px] rounded-lg border border-[var(--ks-border-strong,#3f3f46)] bg-[var(--ks-surface-raised,#1a1a1a)] shadow-2xl p-1 ks-hud-clip-top-left-bottom-right"
           >

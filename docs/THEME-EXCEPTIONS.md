@@ -31,7 +31,7 @@ recognized as exclusions.
   palette array itself is exempt — the rest of the file's surface/text
   literals (e.g. the `text-zinc-300` fallback-initial styling) still need
   tokens.
-- `src/components/base/DatePicker.tsx:132` — the toggle-switch knob is
+- `src/components/base/DatePicker.tsx:134` — the toggle-switch knob is
   intentionally solid white (`background:#ffffff`) regardless of theme, like
   a native OS switch: it must read against both the off-track
   (`--ks-border-strong`) and on-track (`--ks-primary`, color-mixed) colors in
@@ -85,11 +85,11 @@ recognized as exclusions.
   rgba(0,0,0,0.4)`) don't match any `--ks-shadow-*` token as a whole value
   (rule 5); every surface/border/text color feeding these rules is already
   tokenized.
-- `src/components/base/Modal.tsx:47-49` — the dialog/sheet card box-shadow
+- `src/components/base/Modal.tsx:48-50` — the dialog/sheet card box-shadow
   (`0 25px 50px -12px rgba(0,0,0,0.6)`, both the sheet and dialog variants)
   doesn't match any `--ks-shadow-*` token as a whole value (rule 5); the
   backdrop scrim on the same block is tokenized (`--ks-overlay`).
-- `src/components/base/DatePicker.tsx:91` — the popover's elevation shadow
+- `src/components/base/DatePicker.tsx:93` — the popover's elevation shadow
   (`0 25px 50px -12px rgba(0,0,0,0.5)`) doesn't match any `--ks-shadow-*`
   token as a whole value (rule 5); every surface/border color on the same
   rule is tokenized.

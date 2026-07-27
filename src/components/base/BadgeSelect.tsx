@@ -1,5 +1,7 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX } from "solid-js";
 import { Portal } from "solid-js/web";
+import { useTopLayer } from "../../utils/top-layer";
+import { usePopoverMount } from "../../utils/modal-layer";
 
 export interface BadgeSelectOption {
   /** Stable identity of the option (what `value` matches and `onChange` emits). */
@@ -54,6 +56,7 @@ const DEFAULT_SEARCH_THRESHOLD = 5;
 // not a form-control picker. Kept separate so neither component grows a
 // trigger-shape/styling switch; do not merge them.
 export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
+  const popoverMount = usePopoverMount();
   const [open, setOpen] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
   const [query, setQuery] = createSignal("");
@@ -172,9 +175,12 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
         {busy() ? "…" : currentLabel()}
       </button>
       <Show when={open()}>
-        <Portal>
+        <Portal mount={popoverMount()}>
           <div
-            ref={popupRef}
+            ref={(el) => {
+              popupRef = el;
+              onCleanup(useTopLayer(el));
+            }}
             role="listbox"
             class="z-[100] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}

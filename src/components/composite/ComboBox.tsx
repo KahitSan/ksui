@@ -20,7 +20,9 @@
 //     and `lockedIds` anchors specific chips.
 
 import { Portal } from "solid-js/web";
-import { createEffect, createSignal, For, onMount, Show, type JSX } from "solid-js";
+import { createEffect, createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js";
+import { useTopLayer } from "../../utils/top-layer";
+import { usePopoverMount } from "../../utils/modal-layer";
 import { highlightMatch } from "../../utils/highlight";
 import UserPlus from "lucide-solid/icons/user-plus";
 import Search from "lucide-solid/icons/search";
@@ -108,6 +110,7 @@ export default function ComboBox<T>(props: ComboBoxProps<T>): JSX.Element {
 // Single-select — button trigger + popup with its own search input.
 // ---------------------------------------------------------------------------
 function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
+  const popoverMount = usePopoverMount();
   let triggerRef: HTMLButtonElement | undefined;
   let popupRef: HTMLDivElement | undefined;
   let inputRef: HTMLInputElement | undefined;
@@ -201,9 +204,12 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
       </button>
 
       <Show when={eng.open()}>
-        <Portal>
+        <Portal mount={popoverMount()}>
           <div
-            ref={popupRef}
+            ref={(el) => {
+              popupRef = el;
+              onCleanup(useTopLayer(el));
+            }}
             data-testid={tid("popup")}
             class="z-[10000] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={eng.popupStyle()}
@@ -316,6 +322,7 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
 type DisplayOption<T> = { create: true; name: string } | { create: false; item: T };
 
 function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
+  const popoverMount = usePopoverMount();
   let wrapperRef: HTMLDivElement | undefined;
   let popupRef: HTMLDivElement | undefined;
   let inputRef: HTMLInputElement | undefined;
@@ -545,9 +552,12 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
       </div>
 
       <Show when={eng.open() && !props.disabled}>
-        <Portal>
+        <Portal mount={popoverMount()}>
           <div
-            ref={popupRef}
+            ref={(el) => {
+              popupRef = el;
+              onCleanup(useTopLayer(el));
+            }}
             data-testid={tid("popup")}
             role="listbox"
             aria-label={`${props.noun} search results`}
