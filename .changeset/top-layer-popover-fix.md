@@ -1,5 +1,0 @@
----
-"@kahitsan/ksui": patch
----
-
-Fix Portal'd popup panels (DatePicker, BadgeSelect, ComboBox, MentionTextarea, PaymentAccountPicker, SearchableSelect, VoucherPicker, AddAttachmentTile) painting under a native `<dialog>` modal, and — the deeper bug — being unclickable even after that fix. Each panel promotes itself into the browser top layer via the Popover API (`popover="manual"` + `showPopover()`), which paints above a `showModal()` dialog regardless of z-index. But `showModal()` also marks everything OUTSIDE the dialog's flat-tree subtree inert, and inertness is computed on the flat tree, not paint order — so a panel Portaled to `document.body` from inside an open dialog was visually on top yet excluded from hit-testing. Every panel now mounts into the ancestor dialog's own `<dialog>` element (via a new `ModalLayerContext` Modal.tsx provides) when one exists, keeping it inside the non-inert subtree; it still falls back to `document.body` for standalone usage and for the sheet Modal variant (a plain `<div>`, never `showModal()`'d, so no inertness barrier exists there).
