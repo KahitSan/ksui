@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
-import DatePicker from "./DatePicker";
+import DatePicker, { type DateRangeValue } from "./DatePicker";
 
 // DatePicker is the shared calendar popover used by every plugin's date input
 // and by DataTable's date filter. The key behaviors: renders a trigger button
@@ -47,5 +47,62 @@ describe("DatePicker", () => {
     render(() => <DatePicker value={null} onChange={() => {}} disabled />);
     const trigger = screen.getByText("Pick date").closest("button")!;
     expect(trigger.disabled).toBe(true);
+  });
+
+  // Regression: a completed selection must close the popover, or the
+  // top-layer-promoted panel keeps intercepting clicks meant for whatever's
+  // underneath (e.g. a modal's submit button) after the user is done with it.
+  it("closes the popover and refocuses the trigger after a day is clicked", async () => {
+    const onChange = vi.fn();
+    render(() => <DatePicker value="2026-06-15" onChange={onChange} />);
+    const trigger = screen.getByText("Jun 15").closest("button")!;
+    await fireEvent.click(trigger);
+    expect(screen.getByTestId("datepicker-popover")).toBeTruthy();
+
+    const day20 = screen.getByText("20", { exact: true });
+    await fireEvent.click(day20);
+
+    expect(onChange).toHaveBeenCalledWith("2026-06-20");
+    expect(screen.queryByTestId("datepicker-popover")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("closes the popover after a quick-pick button is clicked", async () => {
+    const onChange = vi.fn();
+    render(() => <DatePicker value={null} onChange={onChange} />);
+    await fireEvent.click(screen.getByText("Pick date"));
+    expect(screen.getByTestId("datepicker-popover")).toBeTruthy();
+
+    await fireEvent.click(screen.getByText("Yesterday"));
+
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(screen.queryByTestId("datepicker-popover")).toBeNull();
+  });
+
+  it("keeps the popover open after the first pick in active range mode", async () => {
+    const [range, setRange] = createSignal<DateRangeValue>({ start: null, end: null });
+    render(() => <DatePicker range value={range()} onChange={setRange} />);
+    await fireEvent.click(screen.getByText("Pick date"));
+    // Range mode needs two clicks (start, then end); turning the toggle on
+    // is what puts the calendar into that two-click mode.
+    await fireEvent.click(screen.getByTestId("datepicker-end-date-toggle"));
+
+    const day20 = screen.getByText("20", { exact: true });
+    await fireEvent.click(day20);
+
+    // Only one bound is set so far — the popover must stay open for the second pick.
+    expect(screen.getByTestId("datepicker-popover")).toBeTruthy();
+  });
+
+  it("closes the popover after a range quick-pick button (atomic, both bounds set)", async () => {
+    const [range, setRange] = createSignal<DateRangeValue>({ start: null, end: null });
+    render(() => <DatePicker range value={range()} onChange={setRange} />);
+    await fireEvent.click(screen.getByText("Pick date"));
+    expect(screen.getByTestId("datepicker-popover")).toBeTruthy();
+
+    await fireEvent.click(screen.getByText("Yesterday"));
+
+    expect(range().start).toBe(range().end);
+    expect(screen.queryByTestId("datepicker-popover")).toBeNull();
   });
 });
