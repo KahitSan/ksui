@@ -18,6 +18,7 @@
 import { JSX, onCleanup, onMount, splitProps } from "solid-js";
 import { autoFocusOnMount, lockPullToRefresh, unlockPullToRefresh, useFocusTrap } from "../../utils/dom";
 import { injectCSS } from "../../utils/inject-css";
+import { ModalLayerProvider } from "../../utils/modal-layer";
 
 export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "5xl" | "7xl";
 export type ModalTone = "default" | "danger";
@@ -145,7 +146,10 @@ function DialogModal(local: LocalProps): JSX.Element {
         class={`ksui-modal-card${local.tone === "danger" ? " danger" : ""}`}
         style={{ "max-width": SIZE_MAX_WIDTH[local.size ?? "lg"] }}
       >
-        {local.children}
+        {/* Value is a closure over dialogEl, not its value at Provider-creation
+            time — dialogEl is still undefined here (ref hasn't fired yet), but
+            every popover reads this accessor lazily, well after mount. */}
+        <ModalLayerProvider value={() => dialogEl ?? null}>{local.children}</ModalLayerProvider>
       </div>
     </dialog>
   );
@@ -170,6 +174,10 @@ function SheetModal(local: LocalProps, size?: ModalSize): JSX.Element {
     local.onClose();
   };
 
+  // No ModalLayerProvider here: a sheet is a plain <div>, never showModal()'d,
+  // so it introduces no inertness barrier of its own — children keep whatever
+  // ModalLayerContext value is already ambient (an outer DialogModal's
+  // dialogEl if nested inside one, otherwise the default null/document.body).
   return (
     <div class="ksui-modal-sheet-overlay">
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
