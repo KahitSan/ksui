@@ -43,6 +43,8 @@ import {
   type ParsedDate,
 } from "../../utils/parse-date";
 import { injectCSS } from "../../utils/inject-css";
+import { useTopLayer } from "../../utils/top-layer";
+import { usePopoverMount } from "../../utils/modal-layer";
 
 // ---------------------------------------------------------------------------
 // Injected CSS
@@ -249,6 +251,7 @@ const QUICK_OPTIONS_RANGE: RangeQuickOption[] = [
 
 export default function DatePicker(props: DatePickerProps) {
   ensureDatePickerStyle();
+  const popoverMount = usePopoverMount();
 
   const isRange = (): boolean => (props as DatePickerProps).range === true;
 
@@ -378,6 +381,9 @@ export default function DatePicker(props: DatePickerProps) {
     emitSingle(dateStr);
     setInputValue(formatDateEditable(dateStr));
     setPreview(null);
+    // withTime needs the popover to stay open so the user can still edit the
+    // time field below; otherwise the day pick IS the whole selection.
+    if (!props.withTime) closePicker();
   }
 
   function selectDateRange(dateStr: string) {
@@ -416,6 +422,10 @@ export default function DatePicker(props: DatePickerProps) {
     setInputValue(nextStart ? formatDateEditable(nextStart) : "");
     setEndInputValue(nextEnd ? formatDateEditable(nextEnd) : "");
     setPreview(null);
+    // Deliberately does NOT close: range mode picks two dates across two
+    // clicks (start, then end), so the popover must stay open between them.
+    // Closing here would strand the user after the first click with no way
+    // to pick the second bound.
   }
 
   /**
@@ -428,6 +438,10 @@ export default function DatePicker(props: DatePickerProps) {
     emitRange({ start: dateStr, end: dateStr });
     setInputValue(formatDateEditable(dateStr));
     setPreview(null);
+    // The End-date toggle is off, so this click IS a completed single-day
+    // pick (no withTime row exists in range mode — see the `!isRange()` guard
+    // on the time section below), unlike selectDateSingle's withTime check.
+    closePicker();
   }
 
   function selectDate(dateStr: string) {
@@ -444,6 +458,9 @@ export default function DatePicker(props: DatePickerProps) {
     setInputValue(range.start ? formatDateEditable(range.start) : "");
     setEndInputValue(range.end ? formatDateEditable(range.end) : "");
     setPreview(null);
+    // A quick-range preset sets both bounds atomically in one click, unlike a
+    // day-cell pick in selectDateRange — there's no second date left to pick.
+    closePicker();
   }
 
   function clear(e?: MouseEvent) {
@@ -514,6 +531,18 @@ export default function DatePicker(props: DatePickerProps) {
       inputRef?.focus();
       inputRef?.select();
     });
+  }
+
+  /**
+   * Closes the popover after a completed selection and returns focus to the
+   * trigger. Distinct from the outside-click/Escape close paths (which stay
+   * untouched): those close in response to the user looking elsewhere, so
+   * stealing focus back to the trigger there would fight whatever they just
+   * clicked (e.g. a modal's submit button) — the exact bug this fixes.
+   */
+  function closePicker() {
+    setOpen(false);
+    triggerRef?.focus();
   }
 
   // ── Text input handling ────────────────────────────────────────────────────
@@ -712,12 +741,16 @@ export default function DatePicker(props: DatePickerProps) {
         </button>
       </Show>
 
-      {/* Popover — portaled to document.body so ancestor clip-path / overflow
+      {/* Popover — portaled to document.body (or the ancestor dialog's
+          element, see modal-layer.ts) so ancestor clip-path / overflow
           (sheet modals use clip-path corners) doesn't clip the calendar. */}
       <Show when={open()}>
-        <Portal>
+        <Portal mount={popoverMount()}>
           <div
-            ref={popoverPanelRef}
+            ref={(el) => {
+              popoverPanelRef = el;
+              onCleanup(useTopLayer(el));
+            }}
             data-testid="datepicker-popover"
             class="ksui-datepicker-popover"
             style={{

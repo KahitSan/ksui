@@ -8,6 +8,8 @@
 // vouchers through a peer proxy route instead (same response shape required).
 
 import { Portal } from "solid-js/web";
+import { useTopLayer } from "../../utils/top-layer";
+import { usePopoverMount } from "../../utils/modal-layer";
 import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX } from "solid-js";
 import Ticket from "lucide-solid/icons/ticket";
 import X from "lucide-solid/icons/x";
@@ -98,6 +100,7 @@ function formatVoucherDescription(v: VoucherOption): string {
 }
 
 export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
+  const popoverMount = usePopoverMount();
   const [open, setOpen] = createSignal(false);
   const [vouchers, setVouchers] = createSignal<VoucherOption[]>([]);
   const [loading, setLoading] = createSignal(false);
@@ -264,9 +267,12 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
       </button>
 
       <Show when={open()}>
-        <Portal>
+        <Portal mount={popoverMount()}>
           <div
-            ref={popupRef}
+            ref={(el) => {
+              popupRef = el;
+              onCleanup(useTopLayer(el));
+            }}
             data-testid="voucher-picker-popup"
             class="z-[100] rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}

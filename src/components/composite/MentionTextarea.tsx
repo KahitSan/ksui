@@ -7,6 +7,8 @@
 // still works as a plain notes editor.
 
 import { Portal } from "solid-js/web";
+import { useTopLayer } from "../../utils/top-layer";
+import { usePopoverMount } from "../../utils/modal-layer";
 import { createEffect, createSignal, createUniqueId, For, onCleanup, onMount, Show, type JSX } from "solid-js";
 import UserRound from "lucide-solid/icons/user-round";
 import Loader2 from "lucide-solid/icons/loader-2";
@@ -122,6 +124,7 @@ function findTrigger(
 }
 
 export default function MentionTextarea(props: MentionTextareaProps): JSX.Element {
+  const popoverMount = usePopoverMount();
   const listboxId = createUniqueId();
   const optionId = (clientId: number) => `${listboxId}-option-${clientId}`;
   const [open, setOpen] = createSignal(false);
@@ -426,9 +429,12 @@ export default function MentionTextarea(props: MentionTextareaProps): JSX.Elemen
       </div>
 
       <Show when={open()}>
-        <Portal>
+        <Portal mount={popoverMount()}>
           <div
-            ref={popupRef}
+            ref={(el) => {
+              popupRef = el;
+              onCleanup(useTopLayer(el));
+            }}
             data-testid="mention-popup"
             class="z-[120] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
