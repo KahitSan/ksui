@@ -191,11 +191,9 @@ export const archiveFlow: ExecFlow = {
     {
       id: "ok",
       kind: "condition",
-      // The soft-delete returns HTTP 204 (empty body), so the body-based
-      // commit-truthiness check used by the other flows can't distinguish
-      // success here — the UI's fetch wrapper records res.ok into ctx.state.ok.
+      // DELETE returns 204 (empty body) — branch on the ok-signal, not the body.
       label: "Deleted ok?",
-      when: (ctx: FlowContext) => (ctx.state.ok ? "yes" : "no"),
+      when: (ctx: FlowContext) => (ctx.state.commit__ok ? "yes" : "no"),
       out: [
         { id: "yes", to: "done", label: "yes" },
         { id: "no", to: "end", label: "no (leave open)" },

@@ -478,21 +478,15 @@ export default function AccountsPage() {
   }
 
   async function confirmArchive() {
-    // §9 EXECUTION: archiveFlow — yes → commit (DELETE) → ok? → refresh. The
-    // soft-delete returns 204 (empty body), so the fetch wrapper records res.ok
-    // into flowState.ok for the condition to branch on (a null body can't).
+    // §9 EXECUTION: archiveFlow — yes → commit (DELETE) → ok? → refresh.
     const target = confirmTarget();
     if (!target) return;
     setConfirmBusy(true);
-    const flowState: Record<string, unknown> = { id: target.id, ok: false };
+    const flowState: Record<string, unknown> = { id: target.id };
     try {
       await runFlow(archiveFlow, "yes", {
         state: flowState,
-        fetch: async (url: string, init?: RequestInit) => {
-          const res = await flowFetch(url, init);
-          flowState.ok = res.ok;
-          return res;
-        },
+        fetch: flowFetch,
         ui: {
           refresh: () => {
             if (detailId() === target.id) closeDetail();

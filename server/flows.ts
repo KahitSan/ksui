@@ -75,7 +75,8 @@ export const deletePaymentFlow: ExecFlow = {
       id: "ok",
       kind: "condition",
       label: "Delete OK?",
-      when: (ctx: FlowContext) => (ctx.state.commit ? "yes" : "no"),
+      // DELETE returns 204 (empty body) — branch on the ok-signal, not the body.
+      when: (ctx: FlowContext) => (ctx.state.commit__ok ? "yes" : "no"),
       out: [
         { id: "yes", to: "refresh", label: "yes" },
         { id: "no", to: "error", label: "no" },
@@ -127,7 +128,8 @@ export const deleteAttachmentFlow: ExecFlow = {
       id: "ok",
       kind: "condition",
       label: "Delete OK?",
-      when: (ctx: FlowContext) => (ctx.state.commit ? "yes" : "no"),
+      // DELETE returns 204 (empty body) — branch on the ok-signal, not the body.
+      when: (ctx: FlowContext) => (ctx.state.commit__ok ? "yes" : "no"),
       out: [
         { id: "yes", to: "refresh", label: "yes" },
         { id: "no", to: "error", label: "no" },
