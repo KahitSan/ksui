@@ -1,5 +1,12 @@
 # @kahitsan/kplugin_transactions
 
+## 1.7.1
+
+### Patch Changes
+
+- 2317d4a: Bump @kahitsan/ksui to 0.37.1 for the popover/modal top-layer fix.
+- 6c725f8: Deleting a payment or attachment no longer reports failure when it actually succeeded.
+
 ## 1.7.0
 
 ### Minor Changes
