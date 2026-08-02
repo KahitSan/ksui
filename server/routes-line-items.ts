@@ -43,6 +43,48 @@ import { bumpBoardVersion } from "./lib/board-events.js";
 import { registerLineItemEventsRoute } from "./routes/line-items-events.js";
 import { registerLineItemExtendRoutes } from "./routes/line-items-extend.js";
 
+function buildProjectionSql(
+  legacySql: string,
+  baseConditions: string[],
+  projectionDateClauses: string[],
+  pageSize: number,
+): string {
+  const marker = "           ), matched AS (";
+  const markerAt = legacySql.indexOf(marker);
+  if (markerAt < 0) throw new Error("transaction-line-items SQL marker missing");
+
+  const baseWhere = baseConditions.join(" AND ");
+  const branches = projectionDateClauses.map(
+    (dateClause) => `
+             (
+               SELECT pm.line_item_id AS id, pm.workspace_id, pm.combined_end
+               FROM accounts.availment_chain_members pm
+               JOIN accounts.transaction_line_items li ON li.id = pm.line_item_id
+               JOIN accounts.transactions t
+                 ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id
+               WHERE ${baseWhere}
+                 AND ${dateClause.replaceAll("ag.combined_end", "pm.combined_end")}
+               ORDER BY
+                 CASE WHEN li.status = 'active' AND li.ends_at IS NOT NULL THEN 0 ELSE 1 END,
+                 li.ends_at ASC NULLS LAST,
+                 t.transaction_date DESC,
+                 li.id DESC
+               LIMIT ${pageSize}
+             )`,
+  );
+  const projectionPrefix = `WITH projection_candidates_raw AS (
+             ${branches.join("\n             UNION ALL")}
+           ), projection_candidates AS (
+             SELECT DISTINCT ON (id, workspace_id) id, workspace_id, combined_end
+             FROM projection_candidates_raw
+             ORDER BY workspace_id, id
+           ), line_combined_end AS (
+             SELECT id, workspace_id, combined_end
+             FROM projection_candidates
+           ),`;
+  return projectionPrefix + legacySql.slice(markerAt + "           ),".length);
+}
+
 export function buildLineItemsRouter(deps: RouterDeps): Hono {
   const router = new Hono();
   const { db: pool, requireAuth, requireWorkspace, requirePermission } = deps;
@@ -92,6 +134,12 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       const includeTodayTxns = c.req.query("include_today_transactions") !== "false";
       const includeUpcoming = c.req.query("include_upcoming") === "true";
       const includeVoided = c.req.query("include_voided") === "true";
+      const requestedLimit = Number.parseInt(c.req.query("limit") ?? "", 10);
+      const projectionMode =
+        process.env.AVAILMENT_PROJECTION === "true" &&
+        Number.isInteger(requestedLimit) &&
+        requestedLimit > 0;
+      const projectionPageSize = projectionMode ? Math.min(requestedLimit, 200) : 0;
       const statusList = (c.req.query("status") as string | undefined)
         ?.split(",")
         .map((s) => s.trim())
@@ -138,6 +186,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         conditions.push(`li.status = ANY($${idx++}::text[])`);
         params.push(filteredStatuses);
       }
+
+      // Projection candidates must apply every non-date gate before limiting.
+      const baseConditions = [...conditions];
 
       // Date scope: OR group of (today's-transaction) and (active-carryover).
       const dateClauses: string[] = [];
@@ -246,8 +297,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         // it lives on accounts.transactions (one value per transaction_id),
         // so within a CTE already scoped to one transaction_id it can never
         // discriminate between siblings.
-        const result = await pool.query(
-          `WITH availment_chain_flags AS (
+        const legacySql = `WITH availment_chain_flags AS (
              SELECT
                sib.id,
                sib.transaction_id,
@@ -306,27 +356,35 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
                  ROWS UNBOUNDED PRECEDING
                ) AS chain_id
              FROM availment_chain_flags
-           ), availment_groups AS (
+           ), availment_chain_metrics AS (
              SELECT
+               aci.*,
+               (
+                 MIN(started_at) OVER chain_window
+                 + COALESCE(SUM(CASE WHEN duration_unit = 'hour'
+                                          THEN duration_value * COALESCE(quantity, 1)
+                                     END) OVER chain_window, 0) * INTERVAL '1 hour'
+                 + COALESCE(SUM(CASE WHEN duration_unit = 'day'
+                                          THEN duration_value * COALESCE(quantity, 1)
+                                     END) OVER chain_window, 0) * INTERVAL '1 day'
+                 + COALESCE(SUM(CASE WHEN duration_unit = 'month'
+                                          THEN duration_value * COALESCE(quantity, 1)
+                                     END) OVER chain_window, 0) * INTERVAL '1 month'
+               ) AS combined_end,
+               COUNT(*) OVER chain_window AS chain_size
+             FROM availment_chain_ids aci
+             WINDOW chain_window AS (
+               PARTITION BY transaction_id, workspace_id, client_key, chain_id
+             )
+           ), availment_groups AS (
+             SELECT DISTINCT
                transaction_id,
                workspace_id,
                client_key,
                chain_id,
-               (
-                 MIN(started_at)
-                 + COALESCE(SUM(CASE WHEN duration_unit = 'hour'
-                                          THEN duration_value * COALESCE(quantity, 1)
-                                     END), 0) * INTERVAL '1 hour'
-                 + COALESCE(SUM(CASE WHEN duration_unit = 'day'
-                                          THEN duration_value * COALESCE(quantity, 1)
-                                     END), 0) * INTERVAL '1 day'
-                 + COALESCE(SUM(CASE WHEN duration_unit = 'month'
-                                          THEN duration_value * COALESCE(quantity, 1)
-                                     END), 0) * INTERVAL '1 month'
-               ) AS combined_end,
-               COUNT(*) AS chain_size
-             FROM availment_chain_ids
-             GROUP BY transaction_id, workspace_id, client_key, chain_id
+               combined_end,
+               chain_size
+             FROM availment_chain_metrics
              -- NOTE: payment_count_by_txn and payment_methods_by_txn both scan
              -- accounts.transaction_payments. PostgreSQL may inline them into one
              -- pass; the separate CTEs are kept because the Method CTE needs
@@ -346,14 +404,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              WHERE chain_size >= 2
              GROUP BY transaction_id, workspace_id, client_key
            ), line_combined_end AS (
-             SELECT aci.id, aci.workspace_id, ag.combined_end
-             FROM availment_chain_ids aci
-             JOIN availment_groups ag
-               ON ag.transaction_id = aci.transaction_id
-              AND ag.workspace_id = aci.workspace_id
-              AND ag.client_key = aci.client_key
-              AND ag.chain_id = aci.chain_id
-             WHERE ag.chain_size >= 2
+             SELECT id, workspace_id, combined_end
+             FROM availment_chain_metrics
+             WHERE chain_size >= 2
              UNION ALL
              -- Non-time-bound siblings (duration_value/duration_unit NULL —
              -- e.g. a retail add-on, insert-line-items.ts:121) are excluded
@@ -495,7 +548,12 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              CASE WHEN m.line_status = 'active' AND m.ends_at IS NOT NULL THEN 0 ELSE 1 END,
              m.ends_at ASC NULLS LAST,
              m.transaction_date DESC,
-             m.id DESC`,
+             m.id DESC`;
+
+        const result = await pool.query(
+          projectionMode
+            ? buildProjectionSql(legacySql, baseConditions, dateClauses, projectionPageSize)
+            : legacySql,
           params,
         );
 
