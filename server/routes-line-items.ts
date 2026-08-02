@@ -145,15 +145,18 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       const includeUpcoming = c.req.query("include_upcoming") === "true";
       const includeVoided = c.req.query("include_voided") === "true";
       const requestedLimit = Number.parseInt(c.req.query("limit") ?? "", 10);
-      const projectionMode =
-        process.env.AVAILMENT_PROJECTION === "true" &&
-        Number.isInteger(requestedLimit) &&
-        requestedLimit > 0;
-      const projectionPageSize = projectionMode ? Math.min(requestedLimit, 200) : 0;
       const statusList = (c.req.query("status") as string | undefined)
         ?.split(",")
         .map((s) => s.trim())
         .filter(Boolean);
+      const validStatuses = ["active", "completed", "expired", "voided"];
+      const filteredStatuses = statusList?.filter((s) => validStatuses.includes(s));
+      const projectionMode =
+        process.env.AVAILMENT_PROJECTION === "true" &&
+        Number.isInteger(requestedLimit) &&
+        requestedLimit > 0 &&
+        !filteredStatuses?.includes("voided");
+      const projectionPageSize = projectionMode ? Math.min(requestedLimit, 200) : 0;
 
       let activeOn: string;
       if (activeOnRaw && /^\d{4}-\d{2}-\d{2}$/.test(activeOnRaw)) {
@@ -190,8 +193,6 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         conditions.push(`t.status != 'voided'`);
       }
 
-      const validStatuses = ["active", "completed", "expired", "voided"];
-      const filteredStatuses = statusList?.filter((s) => validStatuses.includes(s));
       if (filteredStatuses && filteredStatuses.length > 0) {
         conditions.push(`li.status = ANY($${idx++}::text[])`);
         params.push(filteredStatuses);
