@@ -81,11 +81,11 @@ function buildProjectionSql(
   );
   const projectionPrefix = `WITH projection_candidates_raw AS (
              ${branches.join("\n             UNION ALL")}
-           ), projection_candidates AS (
+           ), projection_candidates AS MATERIALIZED (
              SELECT DISTINCT ON (id, workspace_id) id, workspace_id, combined_end
              FROM projection_candidates_raw
              ORDER BY workspace_id, id
-           ), line_combined_end AS (
+           ), line_combined_end AS MATERIALIZED (
              SELECT id, workspace_id, combined_end
              FROM projection_candidates
            ),`;
@@ -318,8 +318,10 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       }
 
       const where = `WHERE ${conditions.join(" AND ")}`;
+      const queryWhere = projectionMode ? `${where} AND ag.id IS NOT NULL` : where;
 
       try {
+        const timingStart = performance.now();
         // availment_chain_flags/_ids detect a run of CONTINUOUS OCCUPANCY:
         // (transaction_id, workspace_id, client) only — package_id is
         // deliberately excluded because /extend explicitly allows binding a
@@ -516,7 +518,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
                ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id
              LEFT JOIN accounts.transaction_customer_groups cg ON cg.id = li.customer_group_id
              LEFT JOIN line_combined_end ag ON ag.id = li.id AND ag.workspace_id = li.workspace_id
-             ${where}
+             ${queryWhere}
            ), payment_count_by_txn AS (
              SELECT tp.transaction_id,
                     tp.workspace_id,
@@ -609,6 +611,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
             : legacySql,
           params,
         );
+        if (process.env.AVAILMENT_TIMING === "true") {
+          console.error("[availment-timing] mode", projectionMode, "sql rows", result.rows.length, Math.round(performance.now() - timingStart));
+        }
 
         const idh = identityHeaderOf(c);
 
@@ -645,6 +650,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
             [...new Set(result.rows.map((r) => r.transaction_id as number))],
           ],
         );
+        if (process.env.AVAILMENT_TIMING === "true") {
+          console.error("[availment-timing] pool rows", poolRows.rows.length, Math.round(performance.now() - timingStart));
+        }
         const billedToIds = result.rows
           .map((r) => r.client_id as number | null)
           .filter((id): id is number => id != null);
@@ -664,6 +672,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           variantIds.length > 0 ? findVariantsByIds(variantIds, idh) : Promise.resolve([]),
           clientIds.length > 0 ? findClientsByIds(clientIds, idh) : Promise.resolve([]),
         ]);
+        if (process.env.AVAILMENT_TIMING === "true") {
+          console.error("[availment-timing] peer batch", packageIds.length, variantIds.length, clientIds.length, Math.round(performance.now() - timingStart));
+        }
         const packageNameById = new Map<number, string>((packages ?? []).map((p) => [p.id, p.name]));
         const variantById = new Map((variants ?? []).map((v) => [v.id, v]));
         const clientNameById = new Map<number, string>((clients ?? []).map((c) => [c.id, c.name]));
@@ -688,6 +699,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         const voucherEntries = await Promise.all(
           effectiveVoucherIds.map(async (id) => [id, await findVoucherById(id, idh)] as const),
         );
+        if (process.env.AVAILMENT_TIMING === "true") {
+          console.error("[availment-timing] vouchers", effectiveVoucherIds.length, Math.round(performance.now() - timingStart));
+        }
         const voucherById = new Map(voucherEntries);
 
         // Build the per-transaction client pool, in pool order. The counter UI
