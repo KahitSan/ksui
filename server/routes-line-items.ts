@@ -616,17 +616,24 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              m.transaction_date DESC,
              m.id DESC`;
 
-        const result = await pool.query(
-          projectionMode
-            ? buildProjectionSql(
-                legacySql,
-                baseConditions,
-                projectionDateClauses,
-                projectionPageSize,
-              )
-            : legacySql,
-          params,
-        );
+        const runListingQuery = (pageSize: number) =>
+          pool.query(
+            projectionMode
+              ? buildProjectionSql(
+                  legacySql,
+                  baseConditions,
+                  projectionDateClauses,
+                  pageSize,
+                )
+              : legacySql,
+            params,
+          );
+        let result = await runListingQuery(projectionPageSize);
+        // Hidden/private rows can consume the bounded candidate window. Refill
+        // once so visibility filtering cannot silently under-fill a page.
+        if (projectionMode && result.rows.length < projectionPageSize) {
+          result = await runListingQuery(Math.min(projectionPageSize * 20, 2_000));
+        }
 
         const idh = identityHeaderOf(c);
 
