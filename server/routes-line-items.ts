@@ -287,13 +287,14 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           `(pm.transaction_date = $${idx}::date)`,
         );
         projectionDateClauses.push(
-          `(pm.combined_end IS NOT NULL
-            AND (pm.combined_end AT TIME ZONE 'Asia/Manila')::date = $${idx}::date)`,
+          `(pm.combined_end >= ($${idx}::date::timestamp AT TIME ZONE 'Asia/Manila')
+            AND pm.combined_end < (($${idx}::date + 1)::timestamp AT TIME ZONE 'Asia/Manila'))`,
         );
         projectionDateClauses.push(
           `(pm.combined_end IS NULL
             AND pm.line_ends_at IS NOT NULL
-            AND (pm.line_ends_at AT TIME ZONE 'Asia/Manila')::date = $${idx}::date)`,
+            AND pm.line_ends_at >= ($${idx}::date::timestamp AT TIME ZONE 'Asia/Manila')
+            AND pm.line_ends_at < (($${idx}::date + 1)::timestamp AT TIME ZONE 'Asia/Manila'))`,
         );
       }
       if (includeCarryover) {
@@ -316,8 +317,8 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           if (includeTodayTxns) {
             probeClauses.push(
               `pm.transaction_date = $2::date`,
-              `(pm.combined_end IS NOT NULL AND (pm.combined_end AT TIME ZONE 'Asia/Manila')::date = $2::date)`,
-              `(pm.combined_end IS NULL AND pm.line_ends_at IS NOT NULL AND (pm.line_ends_at AT TIME ZONE 'Asia/Manila')::date = $2::date)`,
+              `(pm.combined_end >= ($2::date::timestamp AT TIME ZONE 'Asia/Manila')
+                AND pm.combined_end < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Manila'))`,
             );
           }
           if (includeCarryover) probeClauses.push(`pm.combined_end > NOW()`);
