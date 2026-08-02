@@ -65,10 +65,10 @@ function buildProjectionSql(
                WHERE ${baseWhere}
                  AND ${dateClause.replaceAll("ag.combined_end", "pm.combined_end")}
                ORDER BY
-                 CASE WHEN li.status = 'active' AND li.ends_at IS NOT NULL THEN 0 ELSE 1 END,
-                 li.ends_at ASC NULLS LAST,
-                 t.transaction_date DESC,
-                 li.id DESC
+                 pm.sort_bucket,
+                 pm.sort_end ASC NULLS LAST,
+                 pm.transaction_date DESC,
+                 pm.line_item_id DESC
                LIMIT ${pageSize}
              )`,
   );
