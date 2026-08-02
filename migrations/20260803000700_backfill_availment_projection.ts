@@ -4,9 +4,9 @@ const migration = {
   name: "availment_0008_backfill_chain_projection",
   async up({ client }: MigrationContext) {
     const existing = await client.query<{ present: boolean }>(`
-      SELECT EXISTS (
-        SELECT 1 FROM accounts.availment_chain_groups LIMIT 1
-      ) AS present
+      SELECT EXISTS (SELECT 1 FROM accounts.availment_chain_groups LIMIT 1)
+          OR EXISTS (SELECT 1 FROM accounts.availment_chain_members LIMIT 1)
+        AS present
     `);
     if (existing.rows[0]?.present) return;
 
