@@ -55,21 +55,29 @@ function buildProjectionSql(
 
   const baseWhere = baseConditions.join(" AND ");
   const branches = projectionDateClauses.map(
-    (dateClause) => `
+    (dateClause) => {
+      const needsLineJoin = dateClause.includes("li.");
+      const from = needsLineJoin
+        ? `
+               JOIN accounts.transaction_line_items li ON li.id = pm.line_item_id
+               JOIN accounts.transactions t
+                 ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id`
+        : "";
+      const gate = needsLineJoin ? baseWhere : "pm.line_status != 'voided'";
+      return `
              (
                SELECT pm.line_item_id AS id, pm.workspace_id, pm.combined_end
                FROM accounts.availment_chain_members pm
-               JOIN accounts.transaction_line_items li ON li.id = pm.line_item_id
-               JOIN accounts.transactions t
-                 ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id
+               ${from}
                WHERE pm.workspace_id = $1
-                 AND ${baseWhere}
+                 AND ${gate}
                  AND ${dateClause.replaceAll("ag.combined_end", "pm.combined_end")}
                -- Candidate pagination is seekable; final display ordering is
                -- applied only after the bounded IDs are materialized.
                ORDER BY pm.line_item_id DESC
-               LIMIT ${pageSize}
-             )`,
+               LIMIT ${pageSize * 10}
+             )`;
+    },
   );
   const projectionPrefix = `WITH projection_candidates_raw AS (
              ${branches.join("\n             UNION ALL")}
@@ -81,7 +89,7 @@ function buildProjectionSql(
              SELECT id, workspace_id, combined_end
              FROM projection_candidates
            ),`;
-  return projectionPrefix + legacySql.slice(markerAt + "           ),".length);
+  return `${projectionPrefix}${legacySql.slice(markerAt + "           ),".length)} LIMIT ${pageSize}`;
 }
 
 export function buildLineItemsRouter(deps: RouterDeps): Hono {
