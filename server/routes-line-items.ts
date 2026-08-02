@@ -89,7 +89,10 @@ function buildProjectionSql(
              SELECT id, workspace_id, combined_end
              FROM projection_candidates
            ),`;
-  return `${projectionPrefix}${legacySql.slice(markerAt + "           ),".length)} LIMIT ${pageSize}`;
+  const suffix = legacySql
+    .slice(markerAt + "           ),".length)
+    .replace("LEFT JOIN line_combined_end ag", "JOIN line_combined_end ag");
+  return `${projectionPrefix}${suffix} LIMIT ${pageSize}`;
 }
 
 export function buildLineItemsRouter(deps: RouterDeps): Hono {
