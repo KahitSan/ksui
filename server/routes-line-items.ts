@@ -628,12 +628,14 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
               : legacySql,
             params,
           );
-        let result = await runListingQuery(projectionPageSize);
+        let result = await runListingQuery(projectionMode ? projectionPageSize + 1 : projectionPageSize);
         // Hidden/private rows can consume the bounded candidate window. Refill
         // once so visibility filtering cannot silently under-fill a page.
         if (projectionMode && result.rows.length < projectionPageSize) {
-          result = await runListingQuery(Math.min(projectionPageSize * 20, 2_000));
+          result = await runListingQuery(Math.min(projectionPageSize * 20 + 1, 2_001));
         }
+        const hasMore = projectionMode && result.rows.length > projectionPageSize;
+        if (hasMore) result.rows = result.rows.slice(0, projectionPageSize);
 
         const idh = identityHeaderOf(c);
 
@@ -765,7 +767,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           };
         });
 
-        return c.json({ data: rows, active_on: activeOn });
+        return c.json({ data: rows, active_on: activeOn, ...(projectionMode ? { has_more: hasMore } : {}) });
       } catch (err) {
         console.error("[transaction-line-items] list error:", err);
         return c.json({ error: "Internal server error" }, 500);
