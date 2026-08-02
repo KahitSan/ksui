@@ -269,6 +269,47 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       conditions.push(`(${dateClauses.join(" OR ")})`);
       params.push(activeOn);
 
+      // Candidate predicates stay index-friendly; the legacy date clauses
+      // below remain the final correctness filter after the bounded page.
+      const projectionDateClauses: string[] = [];
+      if (includeTodayTxns) {
+        projectionDateClauses.push(
+          `(pm.transaction_date = $${idx}::date)`,
+        );
+        projectionDateClauses.push(
+          `(pm.combined_end IS NOT NULL
+            AND (pm.combined_end AT TIME ZONE 'Asia/Manila')::date = $${idx}::date)`,
+        );
+        projectionDateClauses.push(
+          `(pm.combined_end IS NULL
+            AND li.ends_at IS NOT NULL
+            AND (li.ends_at AT TIME ZONE 'Asia/Manila')::date = $${idx}::date)`,
+        );
+      }
+      if (includeCarryover) {
+        projectionDateClauses.push(
+          `(pm.combined_end IS NOT NULL AND pm.combined_end > NOW())`,
+        );
+        projectionDateClauses.push(
+          `(li.started_at IS NOT NULL AND li.started_at < $${idx}::date AND EXISTS (
+             SELECT 1 FROM accounts.transaction_line_items sib
+              WHERE sib.transaction_id = li.transaction_id
+                AND sib.workspace_id = li.workspace_id
+                AND COALESCE(sib.client_id, -1) = COALESCE(li.client_id, -1)
+                AND sib.status != 'voided'
+                AND sib.ends_at IS NOT NULL AND sib.ends_at > NOW()
+           ))`,
+        );
+        projectionDateClauses.push(
+          `(li.started_at IS NULL AND li.ends_at IS NOT NULL AND li.ends_at > NOW())`,
+        );
+      }
+      if (includeUpcoming) {
+        projectionDateClauses.push(
+          `(li.started_at IS NOT NULL AND li.started_at > NOW())`,
+        );
+      }
+
       const where = `WHERE ${conditions.join(" AND ")}`;
 
       try {
@@ -552,7 +593,12 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
 
         const result = await pool.query(
           projectionMode
-            ? buildProjectionSql(legacySql, baseConditions, dateClauses, projectionPageSize)
+            ? buildProjectionSql(
+                legacySql,
+                baseConditions,
+                projectionDateClauses,
+                projectionPageSize,
+              )
             : legacySql,
           params,
         );
