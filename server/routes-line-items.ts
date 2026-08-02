@@ -62,13 +62,12 @@ function buildProjectionSql(
                JOIN accounts.transaction_line_items li ON li.id = pm.line_item_id
                JOIN accounts.transactions t
                  ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id
-               WHERE ${baseWhere}
+               WHERE pm.workspace_id = $1
+                 AND ${baseWhere}
                  AND ${dateClause.replaceAll("ag.combined_end", "pm.combined_end")}
-               ORDER BY
-                 pm.sort_bucket,
-                 pm.sort_end ASC NULLS LAST,
-                 pm.transaction_date DESC,
-                 pm.line_item_id DESC
+               -- Candidate pagination is seekable; final display ordering is
+               -- applied only after the bounded IDs are materialized.
+               ORDER BY pm.line_item_id DESC
                LIMIT ${pageSize}
              )`,
   );
