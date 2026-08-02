@@ -62,7 +62,6 @@ createPluginServer({
   // A1: opt into the kernel object store for account logos (ctx.assets).
   assets: true,
   configure: async (_app, { pool }) => {
-    if (process.env.AVAILMENT_PROJECTION !== "true") return;
     let refreshRunning = false;
     const refresh = async () => {
       if (refreshRunning) return;

@@ -152,7 +152,6 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       const validStatuses = ["active", "completed", "expired", "voided"];
       const filteredStatuses = statusList?.filter((s) => validStatuses.includes(s));
       const projectionMode =
-        process.env.AVAILMENT_PROJECTION === "true" &&
         Number.isInteger(requestedLimit) &&
         requestedLimit > 0 &&
         !filteredStatuses?.includes("voided");
