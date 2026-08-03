@@ -259,7 +259,8 @@ const migration = {
     `);
     await client.query(`
       CREATE OR REPLACE FUNCTION accounts.process_availment_projection_dirty(
-        p_limit integer DEFAULT 20
+        p_limit integer DEFAULT 20,
+        p_workspace_id integer DEFAULT NULL
       ) RETURNS integer
       LANGUAGE plpgsql
       SECURITY DEFINER
@@ -272,6 +273,7 @@ const migration = {
         FOR item IN
           SELECT workspace_id, transaction_id, client_key
             FROM accounts.availment_projection_dirty
+           WHERE p_workspace_id IS NULL OR workspace_id = p_workspace_id
            ORDER BY dirty_at
            FOR UPDATE SKIP LOCKED
            LIMIT GREATEST(1, LEAST(p_limit, 100))
@@ -293,7 +295,7 @@ const migration = {
   async down({ client }: MigrationContext) {
     await client.query(`DROP TRIGGER IF EXISTS trg_availment_projection_dirty ON accounts.transaction_line_items`);
     await client.query(`DROP TRIGGER IF EXISTS trg_availment_transaction_date_dirty ON accounts.transactions`);
-    await client.query(`DROP FUNCTION IF EXISTS accounts.process_availment_projection_dirty(integer)`);
+    await client.query(`DROP FUNCTION IF EXISTS accounts.process_availment_projection_dirty(integer, integer)`);
     await client.query(`DROP FUNCTION IF EXISTS accounts.refresh_availment_projection_key(integer, integer, integer)`);
     await client.query(`DROP FUNCTION IF EXISTS accounts.mark_availment_transaction_date_dirty()`);
     await client.query(`DROP FUNCTION IF EXISTS accounts.mark_availment_projection_dirty()`);
