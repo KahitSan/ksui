@@ -95,7 +95,7 @@ const migration = {
       SELECT DISTINCT workspace_id, transaction_id, client_key, chain_id,
                       transaction_date, combined_end, chain_size
       FROM _availment_projection_metrics
-      WHERE chain_size >= 2
+      WHERE chain_size >= 1
       ON CONFLICT (workspace_id, transaction_id, client_key, chain_id)
       DO UPDATE SET transaction_date = EXCLUDED.transaction_date,
                     combined_end = EXCLUDED.combined_end,
@@ -114,14 +114,14 @@ const migration = {
        AND g.transaction_id = m.transaction_id
        AND g.client_key = m.client_key
        AND g.chain_id = m.chain_id
-      WHERE m.chain_size >= 2
+      WHERE m.chain_size >= 1
     `);
     await client.query(`
       WITH latest_subgroup AS (
         SELECT DISTINCT ON (workspace_id, transaction_id, client_key)
                workspace_id, transaction_id, client_key, chain_id, combined_end
         FROM _availment_projection_metrics
-        WHERE chain_size >= 2
+        WHERE chain_size >= 1
         ORDER BY workspace_id, transaction_id, client_key, combined_end DESC NULLS LAST, chain_id DESC
       )
       INSERT INTO accounts.availment_chain_members

@@ -205,7 +205,7 @@ const migration = {
         SELECT DISTINCT workspace_id, transaction_id, client_key, chain_id,
                         transaction_date, combined_end, chain_size
           FROM _availment_refresh_metrics
-         WHERE chain_size >= 2;
+         WHERE chain_size >= 1;
 
         INSERT INTO accounts.availment_chain_members
           (workspace_id, line_item_id, transaction_id, client_key, group_id,
@@ -220,13 +220,13 @@ const migration = {
            AND g.transaction_id = m.transaction_id
            AND g.client_key = m.client_key
            AND g.chain_id = m.chain_id
-         WHERE m.chain_size >= 2;
+         WHERE m.chain_size >= 1;
 
         WITH latest_subgroup AS (
           SELECT DISTINCT ON (workspace_id, transaction_id, client_key)
                  workspace_id, transaction_id, client_key, chain_id, combined_end
             FROM _availment_refresh_metrics
-           WHERE chain_size >= 2
+           WHERE chain_size >= 1
            ORDER BY workspace_id, transaction_id, client_key, combined_end DESC NULLS LAST, chain_id DESC
         )
         INSERT INTO accounts.availment_chain_members
