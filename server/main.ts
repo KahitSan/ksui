@@ -61,6 +61,23 @@ createPluginServer({
   flows: [...flows, ...accountFlows],
   // A1: opt into the kernel object store for account logos (ctx.assets).
   assets: true,
+  configure: async (_app, { pool }) => {
+    let refreshRunning = false;
+    const refresh = async () => {
+      if (refreshRunning) return;
+      refreshRunning = true;
+      try {
+        await pool.query("SELECT accounts.process_availment_projection_dirty($1)", [20]);
+      } catch (error) {
+        console.error("[availment-projection] refresh failed:", error);
+      } finally {
+        refreshRunning = false;
+      }
+    };
+    const timer = setInterval(refresh, 100);
+    (timer as unknown as { unref?: () => void }).unref?.();
+    await refresh();
+  },
   // ── Producer side: transactions.service ──────────────────────────────────
   // Secret-gated POST /_internal/services/:method, identity parsed so each
   // handler is workspace-scoped via req.workspaceId. These are the methods the

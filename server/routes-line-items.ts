@@ -43,6 +43,65 @@ import { bumpBoardVersion } from "./lib/board-events.js";
 import { registerLineItemEventsRoute } from "./routes/line-items-events.js";
 import { registerLineItemExtendRoutes } from "./routes/line-items-extend.js";
 
+function buildProjectionSql(
+  legacySql: string,
+  baseConditions: string[],
+  projectionDateClauses: string[],
+  pageSize: number,
+  includeVoided: boolean,
+): string {
+  const marker = "           ), matched AS (";
+  const markerAt = legacySql.indexOf(marker);
+  if (markerAt < 0) throw new Error("transaction-line-items SQL marker missing");
+
+  const baseWhere = baseConditions.join(" AND ");
+  const branches = projectionDateClauses.map(
+    (dateClause) => {
+      const needsLineJoin = dateClause.includes("li.");
+      const from = needsLineJoin
+        ? `
+               JOIN accounts.transaction_line_items li ON li.id = pm.line_item_id
+               JOIN accounts.transactions t
+                 ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id`
+        : "";
+      // Voided lines have member rows but must only surface when the caller
+      // asked for them; the final matched WHERE still applies every other gate.
+      const gate = needsLineJoin
+        ? baseWhere
+        : includeVoided
+          ? "TRUE"
+          : "pm.line_status != 'voided'";
+      return `
+             (
+               SELECT pm.line_item_id AS id, pm.workspace_id, pm.combined_end
+               FROM accounts.availment_chain_members pm
+               ${from}
+               WHERE pm.workspace_id = $1
+                 AND ${gate}
+                 AND ${dateClause.replaceAll("ag.combined_end", "pm.combined_end")}
+               -- Candidate pagination is seekable; final display ordering is
+               -- applied only after the bounded IDs are materialized.
+               ORDER BY pm.line_item_id DESC
+               LIMIT ${pageSize * 10}
+             )`;
+    },
+  );
+  const projectionPrefix = `WITH projection_candidates_raw AS (
+             ${branches.join("\n             UNION ALL")}
+           ), projection_candidates AS MATERIALIZED (
+             SELECT DISTINCT ON (id, workspace_id) id, workspace_id, combined_end
+             FROM projection_candidates_raw
+             ORDER BY workspace_id, id
+           ), line_combined_end AS MATERIALIZED (
+             SELECT id, workspace_id, combined_end
+             FROM projection_candidates
+           ),`;
+  const suffix = legacySql
+    .slice(markerAt + "           ),".length)
+    .replace("LEFT JOIN line_combined_end ag", "JOIN line_combined_end ag");
+  return `${projectionPrefix}${suffix} LIMIT ${pageSize}`;
+}
+
 export function buildLineItemsRouter(deps: RouterDeps): Hono {
   const router = new Hono();
   const { db: pool, requireAuth, requireWorkspace, requirePermission } = deps;
@@ -92,10 +151,18 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       const includeTodayTxns = c.req.query("include_today_transactions") !== "false";
       const includeUpcoming = c.req.query("include_upcoming") === "true";
       const includeVoided = c.req.query("include_voided") === "true";
+      const requestedLimit = Number.parseInt(c.req.query("limit") ?? "", 10);
       const statusList = (c.req.query("status") as string | undefined)
         ?.split(",")
         .map((s) => s.trim())
         .filter(Boolean);
+      const validStatuses = ["active", "completed", "expired", "voided"];
+      const filteredStatuses = statusList?.filter((s) => validStatuses.includes(s));
+      const projectionMode =
+        Number.isInteger(requestedLimit) &&
+        requestedLimit > 0 &&
+        !filteredStatuses?.includes("voided");
+      const projectionPageSize = projectionMode ? Math.min(requestedLimit, 200) : 0;
 
       let activeOn: string;
       if (activeOnRaw && /^\d{4}-\d{2}-\d{2}$/.test(activeOnRaw)) {
@@ -132,12 +199,13 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         conditions.push(`t.status != 'voided'`);
       }
 
-      const validStatuses = ["active", "completed", "expired", "voided"];
-      const filteredStatuses = statusList?.filter((s) => validStatuses.includes(s));
       if (filteredStatuses && filteredStatuses.length > 0) {
         conditions.push(`li.status = ANY($${idx++}::text[])`);
         params.push(filteredStatuses);
       }
+
+      // Projection candidates must apply every non-date gate before limiting.
+      const baseConditions = [...conditions];
 
       // Date scope: OR group of (today's-transaction) and (active-carryover).
       const dateClauses: string[] = [];
@@ -218,9 +286,65 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       conditions.push(`(${dateClauses.join(" OR ")})`);
       params.push(activeOn);
 
+      // Candidate predicates stay index-friendly; the legacy date clauses
+      // below remain the final correctness filter after the bounded page.
+      const projectionDateClauses: string[] = [];
+      if (includeTodayTxns) {
+        projectionDateClauses.push(
+          `(pm.transaction_date = $${idx}::date)`,
+        );
+        projectionDateClauses.push(
+          `(pm.combined_end >= ($${idx}::date::timestamp AT TIME ZONE 'Asia/Manila')
+            AND pm.combined_end < (($${idx}::date + 1)::timestamp AT TIME ZONE 'Asia/Manila'))`,
+        );
+        projectionDateClauses.push(
+          `(pm.combined_end IS NULL
+            AND pm.line_ends_at IS NOT NULL
+            AND pm.line_ends_at >= ($${idx}::date::timestamp AT TIME ZONE 'Asia/Manila')
+            AND pm.line_ends_at < (($${idx}::date + 1)::timestamp AT TIME ZONE 'Asia/Manila'))`,
+        );
+      }
+      if (includeCarryover) {
+        projectionDateClauses.push(
+          `(pm.combined_end IS NOT NULL AND pm.combined_end > NOW())`,
+        );
+      }
+      if (includeUpcoming) {
+        projectionDateClauses.push(
+          `(pm.line_started_at IS NOT NULL AND pm.line_started_at > NOW())`,
+        );
+      }
+
       const where = `WHERE ${conditions.join(" AND ")}`;
+      const queryWhere = projectionMode ? `${where} AND ag.id IS NOT NULL` : where;
 
       try {
+        if (projectionMode) {
+          const probeClauses: string[] = [];
+          if (includeTodayTxns) {
+            probeClauses.push(
+              `pm.transaction_date = $2::date`,
+              `(pm.combined_end >= ($2::date::timestamp AT TIME ZONE 'Asia/Manila')
+                AND pm.combined_end < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Manila'))`,
+            );
+          }
+          if (includeCarryover) probeClauses.push(`pm.combined_end > NOW()`);
+          if (includeUpcoming) probeClauses.push(`pm.line_started_at > NOW()`);
+          const probe = await pool.query(
+            `SELECT (
+               ${probeClauses
+                 .map(
+                   (clause) =>
+                     `EXISTS (SELECT 1 FROM accounts.availment_chain_members pm WHERE pm.workspace_id = $1 AND ${clause})`,
+                 )
+                 .join(" OR ")}
+             ) AS found`,
+            [ctxGet(c, "workspaceId"), activeOn],
+          );
+          if (!probe.rows[0]?.found) {
+            return c.json({ data: [], active_on: activeOn });
+          }
+        }
         // availment_chain_flags/_ids detect a run of CONTINUOUS OCCUPANCY:
         // (transaction_id, workspace_id, client) only — package_id is
         // deliberately excluded because /extend explicitly allows binding a
@@ -246,8 +370,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
         // it lives on accounts.transactions (one value per transaction_id),
         // so within a CTE already scoped to one transaction_id it can never
         // discriminate between siblings.
-        const result = await pool.query(
-          `WITH availment_chain_flags AS (
+        const legacySql = `WITH availment_chain_flags AS (
              SELECT
                sib.id,
                sib.transaction_id,
@@ -306,27 +429,35 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
                  ROWS UNBOUNDED PRECEDING
                ) AS chain_id
              FROM availment_chain_flags
-           ), availment_groups AS (
+           ), availment_chain_metrics AS (
              SELECT
+               aci.*,
+               (
+                 MIN(started_at) OVER chain_window
+                 + COALESCE(SUM(CASE WHEN duration_unit = 'hour'
+                                          THEN duration_value * COALESCE(quantity, 1)
+                                     END) OVER chain_window, 0) * INTERVAL '1 hour'
+                 + COALESCE(SUM(CASE WHEN duration_unit = 'day'
+                                          THEN duration_value * COALESCE(quantity, 1)
+                                     END) OVER chain_window, 0) * INTERVAL '1 day'
+                 + COALESCE(SUM(CASE WHEN duration_unit = 'month'
+                                          THEN duration_value * COALESCE(quantity, 1)
+                                     END) OVER chain_window, 0) * INTERVAL '1 month'
+               ) AS combined_end,
+               COUNT(*) OVER chain_window AS chain_size
+             FROM availment_chain_ids aci
+             WINDOW chain_window AS (
+               PARTITION BY transaction_id, workspace_id, client_key, chain_id
+             )
+           ), availment_groups AS (
+             SELECT DISTINCT
                transaction_id,
                workspace_id,
                client_key,
                chain_id,
-               (
-                 MIN(started_at)
-                 + COALESCE(SUM(CASE WHEN duration_unit = 'hour'
-                                          THEN duration_value * COALESCE(quantity, 1)
-                                     END), 0) * INTERVAL '1 hour'
-                 + COALESCE(SUM(CASE WHEN duration_unit = 'day'
-                                          THEN duration_value * COALESCE(quantity, 1)
-                                     END), 0) * INTERVAL '1 day'
-                 + COALESCE(SUM(CASE WHEN duration_unit = 'month'
-                                          THEN duration_value * COALESCE(quantity, 1)
-                                     END), 0) * INTERVAL '1 month'
-               ) AS combined_end,
-               COUNT(*) AS chain_size
-             FROM availment_chain_ids
-             GROUP BY transaction_id, workspace_id, client_key, chain_id
+               combined_end,
+               chain_size
+             FROM availment_chain_metrics
              -- NOTE: payment_count_by_txn and payment_methods_by_txn both scan
              -- accounts.transaction_payments. PostgreSQL may inline them into one
              -- pass; the separate CTEs are kept because the Method CTE needs
@@ -346,14 +477,9 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              WHERE chain_size >= 2
              GROUP BY transaction_id, workspace_id, client_key
            ), line_combined_end AS (
-             SELECT aci.id, aci.workspace_id, ag.combined_end
-             FROM availment_chain_ids aci
-             JOIN availment_groups ag
-               ON ag.transaction_id = aci.transaction_id
-              AND ag.workspace_id = aci.workspace_id
-              AND ag.client_key = aci.client_key
-              AND ag.chain_id = aci.chain_id
-             WHERE ag.chain_size >= 2
+             SELECT id, workspace_id, combined_end
+             FROM availment_chain_metrics
+             WHERE chain_size >= 2
              UNION ALL
              -- Non-time-bound siblings (duration_value/duration_unit NULL —
              -- e.g. a retail add-on, insert-line-items.ts:121) are excluded
@@ -415,7 +541,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
                ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id
              LEFT JOIN accounts.transaction_customer_groups cg ON cg.id = li.customer_group_id
              LEFT JOIN line_combined_end ag ON ag.id = li.id AND ag.workspace_id = li.workspace_id
-             ${where}
+             ${queryWhere}
            ), payment_count_by_txn AS (
              SELECT tp.transaction_id,
                     tp.workspace_id,
@@ -495,9 +621,29 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
              CASE WHEN m.line_status = 'active' AND m.ends_at IS NOT NULL THEN 0 ELSE 1 END,
              m.ends_at ASC NULLS LAST,
              m.transaction_date DESC,
-             m.id DESC`,
-          params,
-        );
+             m.id DESC`;
+
+        const runListingQuery = (pageSize: number) =>
+          pool.query(
+            projectionMode
+              ? buildProjectionSql(
+                  legacySql,
+                  baseConditions,
+                  projectionDateClauses,
+                  pageSize,
+                  includeVoided,
+                )
+              : legacySql,
+            params,
+          );
+        let result = await runListingQuery(projectionMode ? projectionPageSize + 1 : projectionPageSize);
+        // Hidden/private rows can consume the bounded candidate window. Refill
+        // once so visibility filtering cannot silently under-fill a page.
+        if (projectionMode && result.rows.length < projectionPageSize) {
+          result = await runListingQuery(Math.min(projectionPageSize * 20 + 1, 2_001));
+        }
+        const hasMore = projectionMode && result.rows.length > projectionPageSize;
+        if (hasMore) result.rows = result.rows.slice(0, projectionPageSize);
 
         const idh = identityHeaderOf(c);
 
@@ -629,7 +775,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
           };
         });
 
-        return c.json({ data: rows, active_on: activeOn });
+        return c.json({ data: rows, active_on: activeOn, ...(projectionMode ? { has_more: hasMore } : {}) });
       } catch (err) {
         console.error("[transaction-line-items] list error:", err);
         return c.json({ error: "Internal server error" }, 500);

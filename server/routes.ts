@@ -66,7 +66,14 @@ export function buildRouter(deps: RouterDeps): Hono {
     await next();
     if (c.req.method !== "GET" && c.req.method !== "HEAD" && c.res.status < 400) {
       const wsId = ctxGet(c, "workspaceId");
-      if (wsId != null) bumpBoardVersion(wsId);
+      if (wsId != null) {
+        // Project this workspace before its event so same-tab reads see the write.
+        await pool.query(
+          "SELECT accounts.process_availment_projection_dirty($1, $2)",
+          [100, wsId],
+        );
+        bumpBoardVersion(wsId);
+      }
     }
   });
 
