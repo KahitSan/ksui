@@ -48,6 +48,7 @@ function buildProjectionSql(
   baseConditions: string[],
   projectionDateClauses: string[],
   pageSize: number,
+  includeVoided: boolean,
 ): string {
   const marker = "           ), matched AS (";
   const markerAt = legacySql.indexOf(marker);
@@ -63,7 +64,13 @@ function buildProjectionSql(
                JOIN accounts.transactions t
                  ON t.id = li.transaction_id AND t.workspace_id = li.workspace_id`
         : "";
-      const gate = needsLineJoin ? baseWhere : "pm.line_status != 'voided'";
+      // Voided lines have member rows but must only surface when the caller
+      // asked for them; the final matched WHERE still applies every other gate.
+      const gate = needsLineJoin
+        ? baseWhere
+        : includeVoided
+          ? "TRUE"
+          : "pm.line_status != 'voided'";
       return `
              (
                SELECT pm.line_item_id AS id, pm.workspace_id, pm.combined_end
@@ -624,6 +631,7 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
                   baseConditions,
                   projectionDateClauses,
                   pageSize,
+                  includeVoided,
                 )
               : legacySql,
             params,
