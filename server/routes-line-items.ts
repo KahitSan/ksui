@@ -151,17 +151,20 @@ export function buildLineItemsRouter(deps: RouterDeps): Hono {
       const includeTodayTxns = c.req.query("include_today_transactions") !== "false";
       const includeUpcoming = c.req.query("include_upcoming") === "true";
       const includeVoided = c.req.query("include_voided") === "true";
-      const requestedLimit = Number.parseInt(c.req.query("limit") ?? "", 10);
+      const rawLimit = c.req.query("limit");
+      const parsedLimit = Number.parseInt(rawLimit ?? "", 10);
+      // Board clients predate the bounded fetch, so a missing/invalid limit
+      // must not silently fall back to the legacy full scan — default to the
+      // projection page size instead.
+      const requestedLimit =
+        rawLimit && Number.isInteger(parsedLimit) && parsedLimit > 0 ? parsedLimit : 200;
       const statusList = (c.req.query("status") as string | undefined)
         ?.split(",")
         .map((s) => s.trim())
         .filter(Boolean);
       const validStatuses = ["active", "completed", "expired", "voided"];
       const filteredStatuses = statusList?.filter((s) => validStatuses.includes(s));
-      const projectionMode =
-        Number.isInteger(requestedLimit) &&
-        requestedLimit > 0 &&
-        !filteredStatuses?.includes("voided");
+      const projectionMode = !filteredStatuses?.includes("voided");
       const projectionPageSize = projectionMode ? Math.min(requestedLimit, 200) : 0;
 
       let activeOn: string;
