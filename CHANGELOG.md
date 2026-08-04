@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 1.8.1
+
+### Patch Changes
+
+- 0af54cb: The counter board now serves through the availment projection even when the client omits the `limit` parameter, so older counter builds stay fast instead of falling back to the legacy recursive query.
+
 ## 1.8.0
 
 ### Minor Changes
