@@ -331,16 +331,20 @@ const migration = {
       REVOKE ALL ON FUNCTION accounts.mark_availment_transaction_date_dirty() FROM PUBLIC;
       REVOKE ALL ON FUNCTION accounts.refresh_availment_projection_key(integer, integer, integer) FROM PUBLIC;
       REVOKE ALL ON FUNCTION accounts.process_availment_projection_dirty(integer, integer) FROM PUBLIC;
-      GRANT EXECUTE ON FUNCTION accounts.refresh_availment_projection_key(integer, integer, integer) TO app_service_role;
-      GRANT EXECUTE ON FUNCTION accounts.process_availment_projection_dirty(integer, integer) TO app_service_role;
+      GRANT EXECUTE ON FUNCTION accounts.refresh_availment_projection_key(integer, integer, integer)
+        TO app_authenticated, app_service_role, postgres;
+      GRANT EXECUTE ON FUNCTION accounts.process_availment_projection_dirty(integer, integer)
+        TO app_authenticated, app_service_role, postgres;
       GRANT USAGE ON SCHEMA accounts TO app_service_role;
     `);
   },
   async down({ client }: MigrationContext) {
     await client.query(`
       REVOKE USAGE ON SCHEMA accounts FROM app_service_role;
-      REVOKE EXECUTE ON FUNCTION accounts.process_availment_projection_dirty(integer, integer) FROM app_service_role;
-      REVOKE EXECUTE ON FUNCTION accounts.refresh_availment_projection_key(integer, integer, integer) FROM app_service_role;
+      REVOKE EXECUTE ON FUNCTION accounts.process_availment_projection_dirty(integer, integer)
+        FROM app_authenticated, app_service_role, postgres;
+      REVOKE EXECUTE ON FUNCTION accounts.refresh_availment_projection_key(integer, integer, integer)
+        FROM app_authenticated, app_service_role, postgres;
       GRANT ALL ON FUNCTION accounts.process_availment_projection_dirty(integer, integer) TO PUBLIC;
       GRANT ALL ON FUNCTION accounts.refresh_availment_projection_key(integer, integer, integer) TO PUBLIC;
       GRANT ALL ON FUNCTION accounts.mark_availment_transaction_date_dirty() TO PUBLIC;
