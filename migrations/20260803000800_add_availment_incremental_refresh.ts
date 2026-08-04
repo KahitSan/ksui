@@ -95,7 +95,7 @@ const migration = {
       BEGIN
         IF NEW.transaction_date IS DISTINCT FROM OLD.transaction_date THEN
           INSERT INTO accounts.availment_projection_dirty (workspace_id, transaction_id, client_key)
-          SELECT li.workspace_id, li.transaction_id, COALESCE(li.client_id, -1)
+          SELECT DISTINCT li.workspace_id, li.transaction_id, COALESCE(li.client_id, -1)
             FROM accounts.transaction_line_items li
            WHERE li.workspace_id = NEW.workspace_id
              AND li.transaction_id = NEW.id
@@ -324,8 +324,28 @@ const migration = {
       END
       $fn$
     `);
+
+    // Only the service role may invoke the definer refresh path.
+    await client.query(`
+      REVOKE ALL ON FUNCTION accounts.mark_availment_projection_dirty() FROM PUBLIC;
+      REVOKE ALL ON FUNCTION accounts.mark_availment_transaction_date_dirty() FROM PUBLIC;
+      REVOKE ALL ON FUNCTION accounts.refresh_availment_projection_key(integer, integer, integer) FROM PUBLIC;
+      REVOKE ALL ON FUNCTION accounts.process_availment_projection_dirty(integer, integer) FROM PUBLIC;
+      GRANT EXECUTE ON FUNCTION accounts.refresh_availment_projection_key(integer, integer, integer) TO app_service_role;
+      GRANT EXECUTE ON FUNCTION accounts.process_availment_projection_dirty(integer, integer) TO app_service_role;
+      GRANT USAGE ON SCHEMA accounts TO app_service_role;
+    `);
   },
   async down({ client }: MigrationContext) {
+    await client.query(`
+      REVOKE USAGE ON SCHEMA accounts FROM app_service_role;
+      REVOKE EXECUTE ON FUNCTION accounts.process_availment_projection_dirty(integer, integer) FROM app_service_role;
+      REVOKE EXECUTE ON FUNCTION accounts.refresh_availment_projection_key(integer, integer, integer) FROM app_service_role;
+      GRANT ALL ON FUNCTION accounts.process_availment_projection_dirty(integer, integer) TO PUBLIC;
+      GRANT ALL ON FUNCTION accounts.refresh_availment_projection_key(integer, integer, integer) TO PUBLIC;
+      GRANT ALL ON FUNCTION accounts.mark_availment_transaction_date_dirty() TO PUBLIC;
+      GRANT ALL ON FUNCTION accounts.mark_availment_projection_dirty() TO PUBLIC;
+    `);
     await client.query(`DROP TRIGGER IF EXISTS trg_availment_projection_dirty ON accounts.transaction_line_items`);
     await client.query(`DROP TRIGGER IF EXISTS trg_availment_transaction_date_dirty ON accounts.transactions`);
     await client.query(`DROP FUNCTION IF EXISTS accounts.process_availment_projection_dirty(integer, integer)`);

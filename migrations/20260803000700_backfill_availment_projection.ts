@@ -164,11 +164,11 @@ const migration = {
     `);
     await client.query(`
       INSERT INTO accounts.availment_chain_members
-        (workspace_id, line_item_id, transaction_id, client_key, group_id,
-         combined_end, transaction_date, line_status, sort_end, sort_bucket,
+        (workspace_id, line_item_id, group_id, combined_end, transaction_date,
+         line_status, sort_end, sort_bucket,
          line_started_at, line_ends_at)
-      SELECT li.workspace_id, li.id, li.transaction_id, COALESCE(li.client_id, -1),
-             g.id, NULL::timestamptz, t.transaction_date, li.status, li.ends_at,
+      SELECT li.workspace_id, li.id, g.id, NULL::timestamptz, t.transaction_date,
+             li.status, li.ends_at,
              CASE WHEN li.status = 'active' AND li.ends_at IS NOT NULL THEN 0 ELSE 1 END::smallint,
              li.started_at, li.ends_at
       FROM accounts.transaction_line_items li
