@@ -64,19 +64,26 @@ beforeAll(async () => {
   db = rdb.db;
 
   // The extend handler resolves variants over the (mocked) kernel RPC, but
-  // the INSERT it runs still hits the packages FK — seed the referenced rows
-  // (ids match the peers mock + request body below).
-  await rdb.db.query(
-    `INSERT INTO packages.packages (id, workspace_id, name, type, effective_from, lineage_slug)
-     VALUES (576, $1, 'Proj Drain Pkg', 'hourly', CURRENT_DATE, 'proj-drain-lineage')
-     ON CONFLICT (id) DO NOTHING`,
-    [TEST_ORG],
+  // its INSERT carries package_id/package_variant_id. Where the packages
+  // plugin's migrations have run (prod-shaped DBs) those columns carry a FK
+  // to packages.packages, so seed the referenced rows there — CI runs only
+  // finance migrations, where the FK is absent and the schema may not exist.
+  const pkgTables = await rdb.db.query<{ exists: boolean }>(
+    `SELECT to_regclass('packages.packages') IS NOT NULL AS exists`,
   );
-  await rdb.db.query(
-    `INSERT INTO packages.package_variants (id, package_id, name, duration_value, duration_unit, price)
-     VALUES (524, 576, '1 Hour', 1, 'hour', 80)
-     ON CONFLICT (id) DO NOTHING`,
-  );
+  if (pkgTables.rows[0]?.exists) {
+    await rdb.db.query(
+      `INSERT INTO packages.packages (id, workspace_id, name, type, effective_from, lineage_slug)
+       VALUES (576, $1, 'Proj Drain Pkg', 'hourly', CURRENT_DATE, 'proj-drain-lineage')
+       ON CONFLICT (id) DO NOTHING`,
+      [TEST_ORG],
+    );
+    await rdb.db.query(
+      `INSERT INTO packages.package_variants (id, package_id, name, duration_value, duration_unit, price)
+       VALUES (524, 576, '1 Hour', 1, 'hour', 80)
+       ON CONFLICT (id) DO NOTHING`,
+    );
+  }
 
   const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId: TEST_ORG,
