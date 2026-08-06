@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 1.8.2
+
+### Patch Changes
+
+- cf498d1: Drain the availment projection on line-items writes (extend, charge-overage) so a read issued right after the write sees the new line instead of racing the background refresh.
+
 ## 1.8.1
 
 ### Patch Changes
