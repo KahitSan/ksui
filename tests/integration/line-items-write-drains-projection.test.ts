@@ -9,11 +9,24 @@ import { todayInOrgTimezone } from "../../server/lib/backdate.js";
 
 // Name resolution rides the kernel RPC, absent in the test process — a
 // fixture variant lets the extend handler price the appended line, the rest
-// degrade gracefully like the sibling suites.
+// degrade gracefully like the sibling suites. package/variant ids are per-run
+// (RUN_ID+1/+2, never fixed constants) so the mock stays in sync with the
+// seeded FK rows no matter what ids this run generates.
+const variantsById = new Map<number, { id: number; package_id: number }>();
+
 vi.mock("../../server/lib/peers.js", () => ({
-  findVariantsByIds: async () => [
-    { id: 524, package_id: 576, name: "1 Hour", duration_value: 1, duration_unit: "hour", price: 80 },
-  ],
+  findVariantsByIds: async (ids: number[]) =>
+    ids
+      .map((id) => variantsById.get(id))
+      .filter((v): v is { id: number; package_id: number } => v != null)
+      .map((v) => ({
+        id: v.id,
+        package_id: v.package_id,
+        name: "1 Hour",
+        duration_value: 1,
+        duration_unit: "hour",
+        price: 80,
+      })),
   findPackagesByIds: async () => null,
   validateVoucher: async () => null,
   findVoucherByCode: async () => null,
@@ -23,7 +36,13 @@ vi.mock("../../server/lib/peers.js", () => ({
   findPayeesByIds: async () => null,
 }));
 
-const TEST_ORG = 3;
+// Every run seeds its OWN workspace AND its own package/variant FK rows —
+// no fixed id collides with real tenants or real dump rows in the shared DB.
+// eslint-disable-next-line sonarjs/pseudo-random -- test-only uniqueness, not unpredictability
+const RUN_ID = 1_000_000 + Math.floor(Math.random() * 800_000_000);
+const TEST_ORG = RUN_ID;
+const PACKAGE_ID = RUN_ID + 1;
+const VARIANT_ID = RUN_ID + 2;
 const SCHEMAS = ["accounts"];
 
 let honoApp: Hono;
@@ -49,9 +68,9 @@ beforeAll(async () => {
   );
   await pool.query(
     `INSERT INTO public.workspaces (id, name, slug)
-     VALUES ($1, 'CI Workspace', 'ci-ws-projection-drain')
+     VALUES ($1, $2, $3)
      ON CONFLICT (id) DO NOTHING`,
-    [TEST_ORG],
+    [TEST_ORG, `CI Workspace ${TEST_ORG}`, `ci-ws-${TEST_ORG}`],
   );
   const userRow = await pool.query<{ id: string }>(
     `SELECT id FROM public."user" WHERE role = 'superuser' LIMIT 1`,
@@ -74,16 +93,18 @@ beforeAll(async () => {
   if (pkgTables.rows[0]?.exists) {
     await rdb.db.query(
       `INSERT INTO packages.packages (id, workspace_id, name, type, effective_from, lineage_slug)
-       VALUES (576, $1, 'Proj Drain Pkg', 'hourly', CURRENT_DATE, 'proj-drain-lineage')
+       VALUES ($1, $2, 'Proj Drain Pkg', 'hourly', CURRENT_DATE, 'proj-drain-lineage')
        ON CONFLICT (id) DO NOTHING`,
-      [TEST_ORG],
+      [PACKAGE_ID, TEST_ORG],
     );
     await rdb.db.query(
       `INSERT INTO packages.package_variants (id, package_id, name, duration_value, duration_unit, price)
-       VALUES (524, 576, '1 Hour', 1, 'hour', 80)
+       VALUES ($1, $2, '1 Hour', 1, 'hour', 80)
        ON CONFLICT (id) DO NOTHING`,
+      [VARIANT_ID, PACKAGE_ID],
     );
   }
+  variantsById.set(VARIANT_ID, { id: VARIANT_ID, package_id: PACKAGE_ID });
 
   const { requireAuth, requireWorkspace, requirePermission } = stubMiddleware({
     workspaceId: TEST_ORG,
@@ -126,10 +147,10 @@ describe("line-items writes drain the projection before responding", () => {
       `INSERT INTO accounts.transaction_line_items
          (transaction_id, workspace_id, package_id, package_variant_id, description,
           quantity, unit_price, duration_value, duration_unit, started_at, ends_at, status)
-       VALUES ($1, $2, 576, 524, 'Base', 1, 80, 1, 'hour',
+       VALUES ($1, $2, $3, $4, 'Base', 1, 80, 1, 'hour',
                NOW() - INTERVAL '1 hour', NOW() + INTERVAL '1 hour', 'active')
        RETURNING id`,
-      [txnId, TEST_ORG],
+      [txnId, TEST_ORG, PACKAGE_ID, VARIANT_ID],
     );
     const lineId = lineRes.rows[0]!.id;
     // The seed insert dirtied the key; drain it so the assertion below is
@@ -139,7 +160,7 @@ describe("line-items writes drain the projection before responding", () => {
     const extend = await honoApp.request(`/api/transaction-line-items/${lineId}/extend`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ package_variant_id: 524, quantity: 1 }),
+      body: JSON.stringify({ package_variant_id: VARIANT_ID, quantity: 1 }),
     });
     expect(extend.status).toBe(201);
 

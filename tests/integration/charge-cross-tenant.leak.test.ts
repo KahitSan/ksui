@@ -50,8 +50,12 @@ vi.mock("../../server/lib/peers.js", () => ({
   findPayeesByIds: async () => null,
 }));
 
-const WS_A = 3;
-const WS_B = 4;
+// Every run seeds its OWN pair of workspaces — no fixed ids 3/4 (real prod
+// tenants in the shared snapshot DB) are ever touched.
+// eslint-disable-next-line sonarjs/pseudo-random -- test-only uniqueness, not unpredictability
+const RUN_ID = 1_000_000 + Math.floor(Math.random() * 800_000_000);
+const WS_A = RUN_ID;
+const WS_B = RUN_ID + 1;
 
 let honoApp: Hono;
 let pool: pg.Pool;
@@ -76,14 +80,14 @@ beforeAll(async () => {
      ON CONFLICT DO NOTHING`,
   );
   await pool.query(
-    `INSERT INTO public.workspaces (id, name, slug) VALUES ($1, 'CI Workspace A', 'ci-ws-a')
+    `INSERT INTO public.workspaces (id, name, slug) VALUES ($1, $2, $3)
        ON CONFLICT (id) DO NOTHING`,
-    [WS_A],
+    [WS_A, 'CI Workspace A', `ci-ws-${WS_A}`],
   );
   await pool.query(
-    `INSERT INTO public.workspaces (id, name, slug) VALUES ($1, 'CI Workspace B', 'ci-ws-b')
+    `INSERT INTO public.workspaces (id, name, slug) VALUES ($1, $2, $3)
        ON CONFLICT (id) DO NOTHING`,
-    [WS_B],
+    [WS_B, 'CI Workspace B', `ci-ws-${WS_B}`],
   );
 
   const userRow = await pool.query<{ id: string }>(

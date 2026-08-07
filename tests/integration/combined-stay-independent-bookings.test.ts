@@ -15,9 +15,16 @@ import { runWithTenantContext } from "@kahitsan/plugin-sdk";
 // The fix scopes availment_groups to a run of CONTINUOUS OCCUPANCY per
 // (transaction/client) ONLY — package_id is not in the key, because /extend
 // allows a cross-package continuation — breaking a chain only on a real gap
-// (started_at > previous ends_at). Unrelated bookings under one transaction
-// stay separate; a genuine /extend chain still combines even across
-// packages, and simultaneous siblings (identical started_at) combine too.
+// (started_at > previous ends_at). Unrelated transactions under one
+// workspace stay separate; a genuine /extend chain still combines even
+// across packages, and simultaneous siblings (identical started_at) combine too.
+//
+// STATELESS: the suite's direct-SQL seeds (seedTransaction/seedLine) fire the
+// AFTER-INSERT trigger trg_availment_projection_dirty but nothing processes the
+// dirty key unless the router middleware (POST /extend) or an explicit
+// process_availment_projection_dirty call runs — so every test drains the
+// projection for its own RUN_ID workspace right before the GET assertions
+// (mirrors line-items-write-drains-projection.test.ts).
 
 // package_id AND package_variant_id both carry a real FK in this shared
 // schema (the plugin's own fresh migration doesn't declare either, but the
@@ -74,7 +81,11 @@ async function request(
   return { status: res.status, json: () => res.json() };
 }
 
-const TEST_ORG = 7919;
+// Every run seeds its OWN workspace (RUN_ID, never the fixed test id 7919)
+// so the suite never depends on pre-existing scratch rows in the worktree DB.
+// eslint-disable-next-line sonarjs/pseudo-random -- test-only uniqueness, not unpredictability
+const RUN_ID = 1_000_000 + Math.floor(Math.random() * 800_000_000);
+const TEST_ORG = RUN_ID;
 const SCHEMAS = ["accounts", "clients"];
 
 let honoApp: Hono;
@@ -114,9 +125,9 @@ beforeAll(async () => {
   );
   await pool.query(
     `INSERT INTO public.workspaces (id, name, slug)
-     VALUES ($1, 'CI Workspace 7919', 'ci-ws-7919')
+     VALUES ($1, $2, $3)
      ON CONFLICT (id) DO NOTHING`,
-    [TEST_ORG],
+    [TEST_ORG, `CI Workspace ${TEST_ORG}`, `ci-ws-${TEST_ORG}`],
   );
 
   const userRow = await pool.query<{ id: string }>(
@@ -208,6 +219,17 @@ afterAll(async () => {
   }
   await pool.end();
 });
+
+/**
+ * The AFTER-INSERT trigger marks the workspace's availment key dirty for every
+ * seedTransaction/seedLine we do directly in SQL; only POST /extend's router
+ * middleware (or an explicit call like this one) drains it. The GET-only tests
+ * need an explicit drain right before their read assertions, exactly like
+ * line-items-write-drains-projection.test.ts does after seeding.
+ */
+async function drainAvailmentProjection(): Promise<void> {
+  await db.query("SELECT accounts.process_availment_projection_dirty(100, $1)", [TEST_ORG]);
+}
 
 let seedCounter = 0;
 
@@ -369,6 +391,8 @@ describe("GET /api/transaction-line-items — independent same-transaction booki
     }
     expect(todayLineId).toBeGreaterThan(0);
 
+    await drainAvailmentProjection();
+
     const today = todayInOrgTimezone();
     const res = await request(
       honoApp,
@@ -410,6 +434,8 @@ describe("GET /api/transaction-line-items — genuine /extend chain still combin
     );
     expect(extendRes.status).toBe(201);
 
+    await drainAvailmentProjection();
+
     const today = todayInOrgTimezone();
     // include_carryover=false + include_upcoming=false isolates the
     // today's-transaction CASE arm so only ag.combined_end (not the
@@ -444,6 +470,8 @@ describe("GET /api/transaction-line-items — genuine /extend chain still combin
     );
     expect(extendRes.status).toBe(201);
 
+    await drainAvailmentProjection();
+
     const today = todayInOrgTimezone();
     const res = await request(
       honoApp,
@@ -471,6 +499,8 @@ describe("GET /api/transaction-line-items — simultaneous siblings combine (rea
     const sharedStartedAt = new Date(now - 10 * dayMs);
     const { lineItemId: baseId } = await seedLine(transactionId, sharedStartedAt, 1);
     await seedLine(transactionId, sharedStartedAt, 241);
+
+    await drainAvailmentProjection();
 
     const today = todayInOrgTimezone();
     const res = await request(
@@ -504,6 +534,8 @@ describe("GET /api/transaction-line-items — tied started_at grouping is determ
       seedLine(transactionId, sharedStartedAt, 241),
     ]);
     const seededIds = seeded.map((s) => s.lineItemId);
+
+    await drainAvailmentProjection();
 
     const today = todayInOrgTimezone();
     const query = `/api/transaction-line-items?active_on=${today}&include_carryover=false&include_upcoming=false`;
@@ -543,6 +575,8 @@ describe("GET /api/transaction-line-items — nested shorter sibling doesn't res
     const aId = await seedLineExplicit(transactionId, aStart, aEnd, 1, "hour");
     await seedLineExplicit(transactionId, bStart, bEnd, 0.25, "hour");
     await seedLineExplicit(transactionId, cStart, cEnd, 264, "hour");
+
+    await drainAvailmentProjection();
 
     const today = todayInOrgTimezone();
     // include_carryover=false + include_upcoming=false isolates the
@@ -585,6 +619,8 @@ describe("GET /api/transaction-line-items — a NULL-ends_at sibling doesn't for
     const pId = await seedLineExplicit(transactionId, pStart, pEnd, 1, "hour");
     await seedLineExplicit(transactionId, qStart, null, 5, "hour");
     await seedLineExplicit(transactionId, rStart, rEnd, 264, "hour");
+
+    await drainAvailmentProjection();
 
     const today = todayInOrgTimezone();
     const res = await request(
@@ -632,6 +668,8 @@ describe("GET /api/transaction-line-items — a NULL-ends_at sibling doesn't for
     const qId = await seedLineExplicit(transactionId, qStart, null, 1, "hour");
     await seedLineExplicit(transactionId, rStart, rEnd, 238, "hour");
 
+    await drainAvailmentProjection();
+
     const today = todayInOrgTimezone();
     const res = await request(
       honoApp,
@@ -677,6 +715,8 @@ describe("GET /api/transaction-line-items — a non-time-bound sibling inherits 
     // per-chain aggregate directly, so it must fall back to the subgroup's
     // combined_end via subgroup_combined_end.
     const retailId = await seedLineExplicit(transactionId, aStart, null, null, null);
+
+    await drainAvailmentProjection();
 
     const today = todayInOrgTimezone();
     const res = await request(

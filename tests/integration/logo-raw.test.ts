@@ -49,8 +49,12 @@ const assetsStub: PluginAssets = {
   delete: deleteSpy,
 };
 
-const WS_A = 3;
-const WS_B = 4;
+// Every run seeds its OWN pair of workspaces — no fixed ids 3/4 (real prod
+// tenants in the shared DB) collide with real data.
+// eslint-disable-next-line sonarjs/pseudo-random -- test-only uniqueness, not unpredictability
+const RUN_ID = 1_000_000 + Math.floor(Math.random() * 800_000_000);
+const WS_A = RUN_ID;
+const WS_B = RUN_ID + 1;
 const ALL_PERMISSIONS = [
   "financial_accounts.view",
   "financial_accounts.create",
@@ -105,8 +109,9 @@ beforeAll(async () => {
   );
   await pool.query(
     `INSERT INTO public.workspaces (id, name, slug)
-     VALUES (3, 'WS A', 'ws-a'), (4, 'WS B', 'ws-b')
-     ON CONFLICT (id) DO NOTHING`
+     VALUES ($1, 'WS A', $2), ($3, 'WS B', $4)
+     ON CONFLICT (id) DO NOTHING`,
+    [WS_A, `ci-ws-${WS_A}`, WS_B, `ci-ws-${WS_B}`],
   );
 
   rdb = await withRollbackDb(pool, ["accounts"]);
@@ -165,7 +170,7 @@ describe("GET /:id/logo/raw — A1 proxy/blob logo streaming", () => {
 
   it("streams the object's bytes with its content-type when s3_link is set", async () => {
     await patchRow(acctId, {
-      s3_link: "https://cdn.example.com/uploads/financial-accounts/3/logo.webp",
+      s3_link: `https://cdn.example.com/uploads/financial-accounts/${WS_A}/logo.webp`,
       asset_id: 999,
     });
     const res = await runWithTenantContext(CTX_A, () => appA.request(`/${acctId}/logo/raw`));
