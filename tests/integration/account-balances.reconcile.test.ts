@@ -9,9 +9,13 @@ import { computeAccountBalances } from "../../server/lib/account-balances.js";
 // This fixture exercises every branch the two formulas could diverge on:
 // split payment legs, an unpaid sale (legacy_sums fallback), a voided sale
 // (excluded), a plain expense leg, a two-account transfer, and a
-// self-transfer (source == destination, nets to zero either way).
+// self-transfer (source == destination, net to zero regardless).
 
-const TEST_ORG = 3;
+// Every run seeds its OWN workspace id — no fixed id collides with real
+// tenants in the shared snapshot DB, so the fixture is fully self-contained.
+// eslint-disable-next-line sonarjs/pseudo-random -- test-only uniqueness, not unpredictability
+const RUN_ID = 1_000_000 + Math.floor(Math.random() * 800_000_000);
+const TEST_ORG = RUN_ID;
 
 let pool: pg.Pool;
 let db: PluginDb;
@@ -79,8 +83,8 @@ beforeAll(async () => {
   );
   await pool.query(
     `INSERT INTO public.workspaces (id, name, slug)
-     VALUES ($1, 'CI Workspace', 'ci-workspace') ON CONFLICT (id) DO NOTHING`,
-    [TEST_ORG]
+     VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING`,
+    [TEST_ORG, `CI Workspace ${TEST_ORG}`, `ci-ws-${TEST_ORG}`]
   );
 
   const rdb = await withRollbackDb(pool, ["accounts"]);

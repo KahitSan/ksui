@@ -134,21 +134,18 @@ beforeAll(async () => {
   );
   userId = usr.rows[0]?.id ?? "gate4b-user";
 
-  // Two real workspaces. Prefer two that already exist (prod snapshot); fall
-  // back to seeding a dedicated pair so CI's empty DB still has W != V.
-  const ws = await pool.query<{ id: number }>(`SELECT id FROM workspaces ORDER BY id LIMIT 2`);
-  if (ws.rows.length >= 2) {
-    wsW = ws.rows[0].id;
-    wsV = ws.rows[1].id;
-  } else {
-    await pool.query(
-      `INSERT INTO public.workspaces (id, name, slug)
-       VALUES (910001, 'Gate4b W', 'gate4b-w'), (910002, 'Gate4b V', 'gate4b-v')
-       ON CONFLICT (id) DO NOTHING`,
-    );
-    wsW = 910001;
-    wsV = 910002;
-  }
+  // Two real workspaces, self-seeded per run — never borrowed from the
+  // shared snapshot DB where fixed ids could collide with real tenants.
+  // eslint-disable-next-line sonarjs/pseudo-random -- test-only uniqueness, not unpredictability
+  const RUN_ID = 1_000_000 + Math.floor(Math.random() * 800_000_000);
+  wsW = RUN_ID;
+  wsV = RUN_ID + 1;
+  await pool.query(
+    `INSERT INTO public.workspaces (id, name, slug)
+     VALUES ($1, 'Gate4b W', $2), ($3, 'Gate4b V', $4)
+     ON CONFLICT (id) DO NOTHING`,
+    [wsW, `gate4b-w-${wsW}`, wsV, `gate4b-v-${wsV}`],
+  );
 
   const rdb = await withRollbackDb(pool, SCHEMAS);
   rollback = rdb.rollback;

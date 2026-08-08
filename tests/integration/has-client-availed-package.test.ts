@@ -20,8 +20,12 @@ const pool = new pg.Pool({
 });
 
 const TAG = "__f_hcap__";
-let wsA = 0;
-let wsB = 0;
+// Every run seeds its OWN pair of workspaces — never borrows any two that
+// could collide with real workspaces in the shared snapshot DB.
+// eslint-disable-next-line sonarjs/pseudo-random -- test-only uniqueness, not unpredictability
+const RUN_ID = 1_000_000 + Math.floor(Math.random() * 800_000_000);
+let wsA = RUN_ID;
+let wsB = RUN_ID + 1;
 let CLIENT_ID = 0;
 let OTHER_CLIENT_ID = 0;
 let LINEAGE_PACKAGE_IDS: number[] = [];
@@ -44,10 +48,12 @@ beforeAll(async () => {
   );
   if (!schemaCheck.rows[0]?.clients_ok || !schemaCheck.rows[0]?.packages_ok) return;
 
-  const ws = await pool.query<{ id: number }>(`SELECT id FROM workspaces ORDER BY id LIMIT 2`);
-  if (ws.rows.length < 2) return;
-  wsA = ws.rows[0].id;
-  wsB = ws.rows[1].id;
+  await pool.query(
+    `INSERT INTO public.workspaces (id, name, slug)
+     VALUES ($1, 'CI Workspace A', $2), ($3, 'CI Workspace B', $4)
+     ON CONFLICT (id) DO NOTHING`,
+    [wsA, `ci-ws-${wsA}`, wsB, `ci-ws-${wsB}`],
+  );
 
   // accounts.transactions.created_by FKs public.user — reuse the seeded CI
   // superuser instead of an arbitrary string.

@@ -14,8 +14,8 @@ import { makeDataSurface } from "@kahitsan/plugin-sdk";
 // wall must be tested as a plain member. The injected `AND workspace_id` filter
 // is the primary gate; this asserts the second wall holds independently of it.
 //
-// Self-skips when the prerequisites (the table + its RLS policy + >=2
-// workspaces) are absent, so a bare DB never false-fails.
+// Self-skips when the prerequisites (the table + its RLS policy) are absent,
+// so a bare DB never false-fails. The two workspaces are always self-seeded.
 
 const pool = new pg.Pool({
   host: process.env.DB_HOST || "localhost",
@@ -26,8 +26,12 @@ const pool = new pg.Pool({
 });
 
 const TAG = "__f3_txn_leak__";
-let wsA = 0;
-let wsB = 0;
+// Every run seeds its OWN pair of workspaces — never borrows any two that
+// could collide with real workspaces in the shared snapshot DB.
+// eslint-disable-next-line sonarjs/pseudo-random -- test-only uniqueness, not unpredictability
+const RUN_ID = 1_000_000 + Math.floor(Math.random() * 800_000_000);
+let wsA = RUN_ID;
+let wsB = RUN_ID + 1;
 let aRowId = 0;
 let bRowId = 0;
 let leakUserId = "";
@@ -41,12 +45,15 @@ beforeAll(async () => {
                                    AND policyname='transactions_org_isolation'
      ) AS exists`,
   );
-  const ws = await pool.query<{ id: number }>(`SELECT id FROM workspaces ORDER BY id LIMIT 2`);
   // created_by carries a FK to public."user", so a real user must exist.
   const usr = await pool.query<{ id: string }>(`SELECT id FROM public."user" ORDER BY id LIMIT 1`);
-  if (!ok.rows[0]?.exists || ws.rows.length < 2 || usr.rows.length < 1) return;
-  wsA = ws.rows[0].id;
-  wsB = ws.rows[1].id;
+  if (!ok.rows[0]?.exists || usr.rows.length < 1) return;
+  await pool.query(
+    `INSERT INTO public.workspaces (id, name, slug)
+     VALUES ($1, 'CI Workspace A', $2), ($3, 'CI Workspace B', $4)
+     ON CONFLICT (id) DO NOTHING`,
+    [wsA, `ci-ws-${wsA}`, wsB, `ci-ws-${wsB}`],
+  );
   leakUserId = usr.rows[0].id;
 
   // Seed one transaction per workspace on the OWNER connection (bypasses RLS).

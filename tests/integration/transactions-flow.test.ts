@@ -42,12 +42,15 @@ vi.mock("../../server/lib/peers.js", () => ({
   findPayeesByIds: async () => null,
 }));
 
-// Workspace 3 carries the richest real data in the prod snapshot (7877
-// transactions, 7778 active) so the list/detail assertions are meaningful
-// rather than vacuous. Every handler step exercises the route's explicit
-// `WHERE workspace_id = $N` gate — the ONLY tenant gate that holds for a
-// process-isolated plugin (RLS is dormant here).
-const TEST_ORG = 3;
+// Every run seeds its OWN workspace — no fixed id collides with real tenants
+// in the shared snapshot DB, so the list/detail assertions are meaningful
+// against this run's own seeded rows rather than any prod snapshot. Every
+// handler step exercises the route's explicit `WHERE workspace_id = $N`
+// gate — the ONLY tenant gate that holds for a process-isolated plugin (RLS
+// is dormant here).
+// eslint-disable-next-line sonarjs/pseudo-random -- test-only uniqueness, not unpredictability
+const RUN_ID = 1_000_000 + Math.floor(Math.random() * 800_000_000);
+const TEST_ORG = RUN_ID;
 const SCHEMAS = ["accounts"];
 
 let honoApp: Hono;
@@ -76,8 +79,9 @@ beforeAll(async () => {
   );
   await pool.query(
     `INSERT INTO public.workspaces (id, name, slug)
-     VALUES (3, 'CI Workspace', 'CI Workspace')
+     VALUES ($1, 'CI Workspace', $2)
      ON CONFLICT (id) DO NOTHING`,
+    [TEST_ORG, `ci-ws-${TEST_ORG}`],
   );
 
   // Resolve the superuser created by migrations+seeds. Done on the raw pool

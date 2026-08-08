@@ -33,7 +33,11 @@ vi.mock("@kahitsan/plugin-sdk", async (importOriginal) => {
 // leaves active list → restore → verify restored appears. All inside one
 // rolled-back transaction. No peer RPC — mocked to null above.
 
-const TEST_ORG = 3;
+// Every run seeds its OWN workspace so no fixed id collides with real tenants
+// in the shared snapshot DB — the suite only ever sees what it created.
+// eslint-disable-next-line sonarjs/pseudo-random -- test-only uniqueness, not unpredictability
+const RUN_ID = 1_000_000 + Math.floor(Math.random() * 800_000_000);
+const TEST_ORG = RUN_ID;
 
 const ALL_PERMISSIONS = [
   "financial_accounts.view",
@@ -75,8 +79,9 @@ beforeAll(async () => {
   );
   await pool.query(
     `INSERT INTO public.workspaces (id, name, slug)
-     VALUES (3, 'CI Workspace', 'ci-workspace')
-     ON CONFLICT (id) DO NOTHING`
+     VALUES ($1, $2, $3)
+     ON CONFLICT (id) DO NOTHING`,
+    [TEST_ORG, `CI Workspace ${TEST_ORG}`, `ci-ws-${TEST_ORG}`]
   );
 
   const rdb = await withRollbackDb(pool, ["accounts"]);
