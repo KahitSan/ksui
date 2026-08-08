@@ -1,6 +1,6 @@
 {
   "name": "@kahitsan/kplugin_finance",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "private": true,
   "type": "module",
   "description": "ksERP plugin: finance (transactions, payees, analytics, and financial accounts under one process). Runs as its own pm2 process; the kserp kernel reverse-proxies to it and brokers cross-plugin RPC to packages/vouchers/clients.",

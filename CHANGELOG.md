@@ -1,5 +1,11 @@
 # @kahitsan/kplugin_transactions
 
+## 1.8.3
+
+### Patch Changes
+
+- 9ef4728: Make integration suites stateless (self-seeded per-run workspaces) and pin charge/voucher/board/subcategory rules with flow-free unit tests; no user-facing behavior change.
+
 ## 1.8.2
 
 ### Patch Changes
