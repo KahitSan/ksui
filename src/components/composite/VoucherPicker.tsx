@@ -27,6 +27,10 @@ export interface VoucherOption {
   valid_from: string | null;
   valid_until: string | null;
   is_active: boolean;
+  /** Redemptions so far. Absent on endpoints that don't expose usage. */
+  usage_count?: number | null;
+  /** Total redemptions allowed; null/absent means unlimited. */
+  usage_limit_total?: number | null;
 }
 
 const DEFAULT_FETCH_URL = "/api/vouchers?status=active&limit=200";
@@ -71,6 +75,28 @@ function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(amount);
 }
 
+/** True once every allowed redemption is spent. Unlimited codes never exhaust. */
+function usageExhausted(v: VoucherOption): boolean {
+  const limit = v.usage_limit_total;
+  if (limit == null || limit <= 0) return false;
+  return (v.usage_count ?? 0) >= limit;
+}
+
+/** "3/10 used" — null when the endpoint omits usage or the code is unlimited. */
+function formatUsage(v: VoucherOption): string | null {
+  const limit = v.usage_limit_total;
+  if (limit == null || limit <= 0) return null;
+  return `${v.usage_count ?? 0}/${limit} used`;
+}
+
+/** Few enough redemptions left that the cashier should notice. */
+function nearlyUsedUp(v: VoucherOption): boolean {
+  const limit = v.usage_limit_total;
+  if (limit == null || limit <= 0) return false;
+  const left = limit - (v.usage_count ?? 0);
+  return left > 0 && left <= Math.max(1, Math.ceil(limit * 0.2));
+}
+
 /** Null when the voucher can be applied; otherwise the shopper-facing reason it can't. */
 function ineligibilityReason(
   voucher: VoucherOption,
@@ -83,6 +109,9 @@ function ineligibilityReason(
     return `Starts ${toDay(voucher.valid_from)}`;
   if (voucher.valid_until && todayIso > toDay(voucher.valid_until))
     return `Expired ${toDay(voucher.valid_until)}`;
+  // Mirrors the server's usage gate — without it an exhausted code looks
+  // selectable here and is only rejected at charge time.
+  if (usageExhausted(voucher)) return "Fully redeemed";
   if (asNumber(voucher.minimum_purchase) > subtotal)
     return `Needs ${formatCurrency(asNumber(voucher.minimum_purchase))} minimum`;
   if (voucher.applicable_packages && voucher.applicable_packages.length > 0) {
@@ -338,17 +367,19 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
     onCleanup(() => document.removeEventListener("keydown", swallowEscape, true));
   });
 
-  const metaLine = (v: VoucherOption): string => {
-    const expiry = formatExpiry(v.valid_until, today());
-    const desc = formatVoucherDescription(v);
-    return expiry ? `${desc} · ${expiry}` : desc;
-  };
+  const metaLine = (v: VoucherOption): string =>
+    [formatVoucherDescription(v), formatExpiry(v.valid_until, today()), formatUsage(v)]
+      .filter(Boolean)
+      .join(" · ");
 
   const expiresSoon = (v: VoucherOption): boolean => {
     if (!v.valid_until) return false;
     const days = daysUntil(toDay(v.valid_until), today());
     return days >= 0 && days <= 7;
   };
+
+  // Either scarcity signal warrants the amber treatment on the meta line.
+  const runningOut = (v: VoucherOption): boolean => expiresSoon(v) || nearlyUsedUp(v);
 
   return (
     <>
@@ -480,14 +511,14 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                             {highlightMatch(v.code, debouncedQuery())}
                           </span>
                           <span class="flex items-center gap-1 text-xs text-[var(--ks-fg-subtle,#71717a)] min-w-0">
-                            <Show when={expiresSoon(v)}>
+                            <Show when={runningOut(v)}>
                               <CalendarClock
                                 size={12}
                                 class="shrink-0 text-[var(--ks-warning-fg,#fbbf24)]"
                                 aria-hidden="true"
                               />
                             </Show>
-                            <span class="truncate" classList={{ "text-[var(--ks-warning-fg,#fbbf24)]": expiresSoon(v) }}>
+                            <span class="truncate" classList={{ "text-[var(--ks-warning-fg,#fbbf24)]": runningOut(v) }}>
                               {metaLine(v)}
                             </span>
                           </span>

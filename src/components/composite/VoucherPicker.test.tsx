@@ -203,6 +203,45 @@ describe("VoucherPicker dialog", () => {
     expect(text).not.toContain("T16:00:00");
   });
 
+  it("shows how many redemptions are used against the limit", async () => {
+    mockPagedFetch([
+      voucher({ id: 20, code: "LIMITED", usage_count: 3, usage_limit_total: 10 }),
+    ]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() => expect(getByTestId("voucher-picker-result-20")).toBeTruthy());
+    expect(getByTestId("voucher-picker-result-20").textContent).toContain("3/10 used");
+  });
+
+  it("omits the usage line for an unlimited voucher", async () => {
+    mockPagedFetch([voucher({ id: 21, code: "UNLIMITED", usage_count: 42 })]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() => expect(getByTestId("voucher-picker-result-21")).toBeTruthy());
+    expect(getByTestId("voucher-picker-result-21").textContent).not.toContain("used");
+  });
+
+  it("blocks a fully-redeemed voucher the same way the server does", async () => {
+    mockPagedFetch([
+      voucher({ id: 22, code: "SPENT", usage_count: 10, usage_limit_total: 10 }),
+    ]);
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-22")).toBeTruthy());
+    // Never selectable — it would be rejected at charge time.
+    expect(queryByTestId("voucher-picker-result-22")).toBeNull();
+    expect(getByTestId("voucher-picker-inapplicable-22").textContent).toContain("Fully redeemed");
+  });
+
   it("explains why an ineligible voucher can't be used", async () => {
     mockPagedFetch([voucher({ id: 7, code: "BIGSPEND", minimum_purchase: 5000 })]);
     const { getByTestId } = render(() => (
