@@ -152,6 +152,8 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
   const [debouncedQuery, setDebouncedQuery] = createSignal("");
   const [page, setPage] = createSignal(1);
   const [total, setTotal] = createSignal(0);
+  // Staged choice. `props.selected` only changes on Confirm.
+  const [draft, setDraft] = createSignal<VoucherOption | null>(null);
 
   // Signal, not a plain ref: the sentinel mounts only once the first page
   // reveals there are more, which is after the observer effect first runs.
@@ -276,13 +278,20 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
     setVouchers([]);
     setPage(1);
     setTotal(0);
+    setDraft(props.selected);
     setOpen(true);
   };
 
   const close = () => setOpen(false);
 
-  const select = (v: VoucherOption | null) => {
-    props.onChange(v);
+  // Picking a row only stages it; nothing reaches the cart until Confirm, so a
+  // mis-tap on a touch screen can be corrected without re-opening the dialog.
+  const stage = (v: VoucherOption) => {
+    setDraft((current) => (current?.id === v.id ? null : v));
+  };
+
+  const confirm = () => {
+    props.onChange(draft());
     close();
   };
 
@@ -292,6 +301,12 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
   };
 
   const previewDiscount = createMemo(() => calculateDiscount(props.selected, props.subtotal));
+
+  // A fixed_amount description already reads "₱X off"; repeating the computed
+  // figure beside it just says the same thing twice.
+  const showTriggerAmount = createMemo(
+    () => previewDiscount() > 0 && props.selected?.type !== "fixed_amount",
+  );
 
   // Nothing priced yet: preview against the cheapest/priciest total the cart
   // could still reach, so the row shows a real range instead of a bare zero.
@@ -354,7 +369,9 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
             <span class="block truncate text-[var(--ks-fg,#ffffff)] font-medium">{props.selected!.code}</span>
             <span class="block truncate text-[11px] text-[var(--ks-success-fg,#34d399)]">
               {formatVoucherDescription(props.selected!)}
-              <Show when={previewDiscount() > 0}> · {formatCurrency(previewDiscount())} off</Show>
+              {/* A fixed-amount voucher already names the peso figure — appending
+                  the computed one would just repeat it. */}
+              <Show when={showTriggerAmount()}> · {formatCurrency(previewDiscount())} off</Show>
             </span>
           </span>
           <button
@@ -444,13 +461,13 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
               </Show>
               <For each={applicable()}>
                 {(v) => {
-                  const selected = () => props.selected?.id === v.id;
+                  const selected = () => draft()?.id === v.id;
                   return (
                     <li role="option" aria-selected={selected()}>
                       <button
                         type="button"
                         data-testid={`voucher-picker-result-${v.id}`}
-                        onClick={() => select(v)}
+                        onClick={() => stage(v)}
                         class="w-full text-left px-3 py-3 mb-1 rounded-lg border transition-colors flex items-center gap-3 cursor-pointer border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_40%,transparent)] hover:border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_8%,transparent)]"
                         classList={{
                           "border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_60%,transparent)] bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_12%,transparent)]":
@@ -535,19 +552,53 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
               </Show>
             </ul>
 
-            <Show when={props.selected}>
-              <div class="shrink-0 mt-3 pt-3 border-t border-[var(--ks-border-strong,#3f3f46)]">
+            {/* Bled to the card edges so the rule spans the full width, matching
+                the header. */}
+            <div class="-mx-6 -mb-6 mt-4 px-5 sm:px-6 py-3 border-t border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] flex items-center justify-between gap-3 shrink-0">
+              <span
+                data-testid="voucher-picker-draft-summary"
+                class="text-xs text-[var(--ks-fg-subtle,#71717a)] min-w-0 truncate"
+              >
+                <Show when={draft()} fallback="No voucher selected">
+                  <span class="text-[var(--ks-fg,#ffffff)]">{draft()!.code}</span>
+                  {" · "}
+                  {discountLabel(draft()!).replace("−", "")} off
+                </Show>
+              </span>
+              <div class="flex items-center gap-2 shrink-0">
+                <Show when={props.selected && draft()}>
+                  <button
+                    type="button"
+                    data-testid="voucher-picker-clear-from-list"
+                    onClick={() => setDraft(null)}
+                    class="px-3 py-2 rounded-lg text-sm text-[var(--ks-danger-fg,#f87171)] hover:bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_10%,transparent)] transition-colors cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                </Show>
                 <button
                   type="button"
-                  data-testid="voucher-picker-clear-from-list"
-                  onClick={() => select(null)}
-                  class="w-full px-3 py-2.5 rounded-lg text-sm text-[var(--ks-danger-fg,#f87171)] hover:bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_10%,transparent)] transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  data-testid="voucher-picker-cancel"
+                  onClick={close}
+                  class="px-3 py-2 rounded-lg text-sm text-[var(--ks-fg-muted,#a1a1aa)] hover:text-[var(--ks-fg,#ffffff)] hover:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] transition-colors cursor-pointer"
                 >
-                  <X size={14} />
-                  <span>Remove voucher</span>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  data-testid="voucher-picker-confirm"
+                  onClick={confirm}
+                  disabled={draft()?.id === props.selected?.id}
+                  class="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--ks-primary,#c9a961)] text-[var(--ks-fg-on-accent,#0a0a0a)] hover:opacity-90 transition-opacity cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Show when={props.selected} fallback="Apply voucher">
+                    <Show when={draft()} fallback="Remove voucher">
+                      Change voucher
+                    </Show>
+                  </Show>
                 </button>
               </div>
-            </Show>
+            </div>
           </div>
         </Modal>
       </Show>

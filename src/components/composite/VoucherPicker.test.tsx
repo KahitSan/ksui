@@ -99,7 +99,7 @@ describe("VoucherPicker fetchUrl", () => {
 });
 
 describe("VoucherPicker dialog", () => {
-  it("opens a dialog rather than an inline listbox, and closes on selection", async () => {
+  it("opens a dialog and only commits the pick on Confirm", async () => {
     mockPagedFetch([voucher({ id: 1, code: "SAVE20" })]);
     const onChange = vi.fn();
     const { getByTestId, queryByTestId } = render(() => (
@@ -112,9 +112,45 @@ describe("VoucherPicker dialog", () => {
     await waitFor(() => expect(getByTestId("voucher-picker-result-1")).toBeTruthy());
     expect(getByTestId("voucher-picker-popup").closest("dialog")).not.toBeNull();
 
+    // Staging a row must not reach the consumer yet.
     fireEvent.click(getByTestId("voucher-picker-result-1"));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(getByTestId("voucher-picker-draft-summary").textContent).toContain("SAVE20");
+
+    fireEvent.click(getByTestId("voucher-picker-confirm"));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: 1, code: "SAVE20" }));
     await waitFor(() => expect(queryByTestId("voucher-picker-popup")).toBeNull());
+  });
+
+  it("discards the staged pick on Cancel", async () => {
+    mockPagedFetch([voucher({ id: 1, code: "SAVE20" })]);
+    const onChange = vi.fn();
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={onChange} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-result-1")).toBeTruthy());
+
+    fireEvent.click(getByTestId("voucher-picker-result-1"));
+    fireEvent.click(getByTestId("voucher-picker-cancel"));
+
+    expect(onChange).not.toHaveBeenCalled();
+    await waitFor(() => expect(queryByTestId("voucher-picker-popup")).toBeNull());
+  });
+
+  it("re-tapping the staged row unstages it", async () => {
+    mockPagedFetch([voucher({ id: 1, code: "SAVE20" })]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-result-1")).toBeTruthy());
+
+    fireEvent.click(getByTestId("voucher-picker-result-1"));
+    expect(getByTestId("voucher-picker-draft-summary").textContent).toContain("SAVE20");
+
+    fireEvent.click(getByTestId("voucher-picker-result-1"));
+    expect(getByTestId("voucher-picker-draft-summary").textContent).toContain("No voucher selected");
   });
 
   it("delegates the search to the server and highlights the match", async () => {
