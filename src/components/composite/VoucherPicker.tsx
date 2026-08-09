@@ -243,24 +243,30 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
       <Show when={open()}>
         <Modal onClose={close} size="xl" ariaLabel="Select a voucher">
           <div data-testid="voucher-picker-popup" class="flex flex-col max-h-[70vh]">
-            <div class="flex items-center gap-2 shrink-0">
-              <Ticket size={18} class="text-[var(--ks-fg-muted,#a1a1aa)] shrink-0" aria-hidden="true" />
-              <h2 class="m-0 text-base font-semibold text-[var(--ks-fg,#ffffff)]">Select a voucher</h2>
-              <Show when={loading()}>
-                <Loader2 size={16} class="animate-spin text-[var(--ks-fg-subtle,#71717a)] shrink-0" />
-              </Show>
+            {/* Bled to the card edges (the card owns the padding) so the rule
+                under the title spans the full width. */}
+            <div class="-mx-6 -mt-6 px-5 sm:px-6 py-3 border-b border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] flex items-center justify-between gap-3 shrink-0">
+              <div class="flex items-center gap-2 min-w-0">
+                <Ticket size={16} class="text-[var(--ks-fg-muted,#a1a1aa)] shrink-0" aria-hidden="true" />
+                <h2 class="m-0 text-base font-semibold text-[var(--ks-fg,#ffffff)] truncate">
+                  Select a voucher
+                </h2>
+                <Show when={loading()}>
+                  <Loader2 size={14} class="animate-spin text-[var(--ks-fg-subtle,#71717a)] shrink-0" />
+                </Show>
+              </div>
               <button
                 type="button"
                 data-testid="voucher-picker-close"
                 onClick={close}
-                class="ml-auto shrink-0 p-1.5 rounded-lg text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-fg,#ffffff)] hover:bg-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_50%,transparent)] transition-colors cursor-pointer"
-                aria-label="Close voucher picker"
+                class="w-8 h-8 flex items-center justify-center rounded text-[var(--ks-fg-muted,#a1a1aa)] hover:text-[var(--ks-fg,#ffffff)] hover:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] transition-colors cursor-pointer shrink-0"
+                aria-label="Close"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            <div class="mt-3 shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_60%,transparent)] bg-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_25%,transparent)] focus-within:border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_50%,transparent)] transition-colors">
+            <div class="mt-4 shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_60%,transparent)] bg-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_25%,transparent)] focus-within:border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_50%,transparent)] transition-colors">
               <Search size={16} class="shrink-0 text-[var(--ks-fg-subtle,#71717a)]" aria-hidden="true" />
               <input
                 type="text"
