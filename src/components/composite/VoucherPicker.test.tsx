@@ -1,26 +1,34 @@
-// fetchUrl prop threading — the default stays the vouchers plugin's own API so
-// existing consumers are unaffected; a consumer without vouchers.view can
-// point the picker at a peer proxy route with the same response shape.
+// The picker pages the list in from the server (page/limit) and delegates the
+// search to it, so these assert the request contract as well as the rendering.
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, waitFor } from "@solidjs/testing-library";
 import VoucherPicker, { type VoucherOption } from "./VoucherPicker";
 
-function mockFetchOnce(): typeof fetch {
-  const impl = vi.fn(async () => ({
-    ok: true,
-    json: async () => ({ data: [] }),
-  })) as unknown as typeof fetch;
+/** Captures every requested URL and serves pages out of `rows`. */
+function mockPagedFetch(rows: VoucherOption[]) {
+  const calls: string[] = [];
+  const impl = vi.fn(async (url: string) => {
+    calls.push(url);
+    const parsed = new URL(url, "http://localhost");
+    const page = Number(parsed.searchParams.get("page") ?? "1");
+    const limit = Number(parsed.searchParams.get("limit") ?? "25");
+    const search = (parsed.searchParams.get("search") ?? "").toLowerCase();
+    const matched = search
+      ? rows.filter((r) => r.code.toLowerCase().includes(search))
+      : rows;
+    const start = (page - 1) * limit;
+    return {
+      ok: true,
+      json: async () => ({
+        data: matched.slice(start, start + limit),
+        total: matched.length,
+        page,
+        limit,
+      }),
+    };
+  }) as unknown as typeof fetch;
   vi.stubGlobal("fetch", impl);
-  return impl;
-}
-
-function mockFetchWith(data: VoucherOption[]): typeof fetch {
-  const impl = vi.fn(async () => ({
-    ok: true,
-    json: async () => ({ data }),
-  })) as unknown as typeof fetch;
-  vi.stubGlobal("fetch", impl);
-  return impl;
+  return { impl, calls };
 }
 
 function voucher(over: Partial<VoucherOption> & Pick<VoucherOption, "id" | "code">): VoucherOption {
@@ -37,23 +45,27 @@ function voucher(over: Partial<VoucherOption> & Pick<VoucherOption, "id" | "code
   };
 }
 
+function manyVouchers(n: number): VoucherOption[] {
+  return Array.from({ length: n }, (_, i) =>
+    voucher({ id: i + 1, code: `BULK_${String(i + 1).padStart(3, "0")}` }),
+  );
+}
+
 describe("VoucherPicker fetchUrl", () => {
   it("defaults to the vouchers plugin's own API when fetchUrl is omitted", async () => {
-    const fetchMock = mockFetchOnce();
+    const { calls } = mockPagedFetch([]);
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={100} packageIds={[]} />
     ));
     fireEvent.click(getByTestId("voucher-picker-trigger"));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/vouchers?status=active&limit=200",
-      expect.objectContaining({ credentials: "include" }),
-    );
+    await waitFor(() => expect(calls.length).toBeGreaterThan(0));
+    expect(calls[0]).toContain("/api/vouchers");
+    expect(calls[0]).toContain("status=active");
   });
 
   it("fetches the overridden URL when fetchUrl is provided", async () => {
-    const fetchMock = mockFetchOnce();
+    const { calls } = mockPagedFetch([]);
     const { getByTestId } = render(() => (
       <VoucherPicker
         selected={null}
@@ -65,17 +77,30 @@ describe("VoucherPicker fetchUrl", () => {
     ));
     fireEvent.click(getByTestId("voucher-picker-trigger"));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/counter/vouchers",
-      expect.objectContaining({ credentials: "include" }),
+    await waitFor(() => expect(calls.length).toBeGreaterThan(0));
+    expect(calls[0]).toContain("/api/counter/vouchers");
+  });
+
+  it("requests only the first page up front, not the whole table", async () => {
+    const { calls } = mockPagedFetch(manyVouchers(120));
+    const { getByTestId, getAllByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() =>
+      expect(getAllByTestId(/^voucher-picker-result-/).length).toBeGreaterThan(0),
     );
+    expect(calls[0]).toContain("page=1");
+    expect(calls[0]).toContain("limit=25");
+    // 120 rows exist but only the first page is mounted.
+    expect(getAllByTestId(/^voucher-picker-result-/).length).toBe(25);
   });
 });
 
 describe("VoucherPicker dialog", () => {
   it("opens a dialog rather than an inline listbox, and closes on selection", async () => {
-    mockFetchWith([voucher({ id: 1, code: "SAVE20" })]);
+    mockPagedFetch([voucher({ id: 1, code: "SAVE20" })]);
     const onChange = vi.fn();
     const { getByTestId, queryByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={onChange} subtotal={1000} packageIds={[]} />
@@ -85,7 +110,6 @@ describe("VoucherPicker dialog", () => {
     fireEvent.click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-1")).toBeTruthy());
-    // The picker surface is now inside a real dialog element.
     expect(getByTestId("voucher-picker-popup").closest("dialog")).not.toBeNull();
 
     fireEvent.click(getByTestId("voucher-picker-result-1"));
@@ -93,8 +117,8 @@ describe("VoucherPicker dialog", () => {
     await waitFor(() => expect(queryByTestId("voucher-picker-popup")).toBeNull());
   });
 
-  it("filters the list by code as the cashier types", async () => {
-    mockFetchWith([
+  it("delegates the search to the server and highlights the match", async () => {
+    const { calls } = mockPagedFetch([
       voucher({ id: 1, code: "SAVE20" }),
       voucher({ id: 2, code: "PARTNER_ACES" }),
     ]);
@@ -106,12 +130,45 @@ describe("VoucherPicker dialog", () => {
 
     fireEvent.input(getByTestId("voucher-picker-search"), { target: { value: "partner" } });
 
+    await waitFor(() => expect(calls.some((u) => u.includes("search=partner"))).toBe(true));
     await waitFor(() => expect(queryByTestId("voucher-picker-result-1")).toBeNull());
-    expect(getByTestId("voucher-picker-result-2")).toBeTruthy();
+
+    const row = getByTestId("voucher-picker-result-2");
+    const mark = row.querySelector("mark");
+    expect(mark).not.toBeNull();
+    expect(mark!.textContent?.toLowerCase()).toBe("partner");
+  });
+
+  it("shows when a voucher expires", async () => {
+    const soon = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+    mockPagedFetch([voucher({ id: 9, code: "ENDINGSOON", valid_until: soon })]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() => expect(getByTestId("voucher-picker-result-9")).toBeTruthy());
+    expect(getByTestId("voucher-picker-result-9").textContent).toContain("Expires in 3 days");
+  });
+
+  it("reads a full timestamp date the same as a bare date", async () => {
+    const soon = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+    mockPagedFetch([
+      voucher({ id: 10, code: "TIMESTAMPED", valid_until: `${soon}T16:00:00.000Z` }),
+    ]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() => expect(getByTestId("voucher-picker-result-10")).toBeTruthy());
+    const text = getByTestId("voucher-picker-result-10").textContent ?? "";
+    expect(text).toContain("Expires in 3 days");
+    expect(text).not.toContain("T16:00:00");
   });
 
   it("explains why an ineligible voucher can't be used", async () => {
-    mockFetchWith([voucher({ id: 7, code: "BIGSPEND", minimum_purchase: 5000 })]);
+    mockPagedFetch([voucher({ id: 7, code: "BIGSPEND", minimum_purchase: 5000 })]);
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
@@ -122,7 +179,7 @@ describe("VoucherPicker dialog", () => {
   });
 
   it("previews a discount range while nothing is priced yet", async () => {
-    mockFetchWith([voucher({ id: 3, code: "SAVE20" })]);
+    mockPagedFetch([voucher({ id: 3, code: "SAVE20" })]);
     const { getByTestId } = render(() => (
       <VoucherPicker
         selected={null}
@@ -136,13 +193,11 @@ describe("VoucherPicker dialog", () => {
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-3")).toBeTruthy());
     // 20% of 99 and of 118, both rounded the same way the server rounds.
-    expect(getByTestId("voucher-picker-result-3").textContent).toContain(
-      "₱20.00 to ₱24.00",
-    );
+    expect(getByTestId("voucher-picker-result-3").textContent).toContain("₱20.00 to ₱24.00");
   });
 
   it("shows a single amount once the cart has a real subtotal", async () => {
-    mockFetchWith([voucher({ id: 4, code: "SAVE20" })]);
+    mockPagedFetch([voucher({ id: 4, code: "SAVE20" })]);
     const { getByTestId } = render(() => (
       <VoucherPicker
         selected={null}
@@ -161,7 +216,7 @@ describe("VoucherPicker dialog", () => {
   });
 
   it("keeps Escape from reaching an ancestor's document-level dismiss handler", async () => {
-    mockFetchWith([]);
+    mockPagedFetch([]);
     const ancestorEsc = vi.fn();
     document.addEventListener("keydown", ancestorEsc);
 

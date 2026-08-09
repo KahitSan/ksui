@@ -8,11 +8,13 @@
 // vouchers through a peer proxy route instead (same response shape required).
 
 import { Modal } from "../base/Modal";
+import { highlightMatch } from "../../utils/highlight";
 import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX } from "solid-js";
 import Ticket from "lucide-solid/icons/ticket";
 import X from "lucide-solid/icons/x";
 import Search from "lucide-solid/icons/search";
 import Loader2 from "lucide-solid/icons/loader-2";
+import CalendarClock from "lucide-solid/icons/calendar-clock";
 
 export interface VoucherOption {
   id: number;
@@ -77,10 +79,10 @@ function ineligibilityReason(
   todayIso: string,
 ): string | null {
   if (!voucher.is_active) return "Inactive";
-  if (voucher.valid_from && todayIso < voucher.valid_from)
-    return `Starts ${voucher.valid_from}`;
-  if (voucher.valid_until && todayIso > voucher.valid_until)
-    return `Expired ${voucher.valid_until}`;
+  if (voucher.valid_from && todayIso < toDay(voucher.valid_from))
+    return `Starts ${toDay(voucher.valid_from)}`;
+  if (voucher.valid_until && todayIso > toDay(voucher.valid_until))
+    return `Expired ${toDay(voucher.valid_until)}`;
   if (asNumber(voucher.minimum_purchase) > subtotal)
     return `Needs ${formatCurrency(asNumber(voucher.minimum_purchase))} minimum`;
   if (voucher.applicable_packages && voucher.applicable_packages.length > 0) {
@@ -112,21 +114,71 @@ function formatVoucherDescription(v: VoucherOption): string {
   }
   return "";
 }
+
+/** A date column may serialize as a bare date or a full timestamp; keep the day. */
+function toDay(value: string): string {
+  return value.slice(0, 10);
+}
+
+/** Whole days from today to `day`; negative once it's in the past. */
+function daysUntil(day: string, todayIso: string): number {
+  return Math.round((Date.parse(`${day}T00:00:00Z`) - Date.parse(`${todayIso}T00:00:00Z`)) / 86400000);
+}
+
+/** Short human expiry for the row's meta line. Null when the voucher never expires. */
+function formatExpiry(validUntil: string | null, todayIso: string): string | null {
+  if (!validUntil) return null;
+  const day = toDay(validUntil);
+  if (day < todayIso) return `Expired ${day}`;
+  const days = daysUntil(day, todayIso);
+  if (days === 0) return "Expires today";
+  if (days === 1) return "Expires tomorrow";
+  if (days <= 30) return `Expires in ${days} days`;
+  return `Expires ${day}`;
+}
+
+// Server page size. The list is paged in on scroll so an account with hundreds
+// of codes doesn't ship (or mount) all of them just to open the picker.
+const PAGE_SIZE = 25;
+const SEARCH_DEBOUNCE_MS = 200;
+
 export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
   const [open, setOpen] = createSignal(false);
   const [vouchers, setVouchers] = createSignal<VoucherOption[]>([]);
   const [loading, setLoading] = createSignal(false);
+  const [loadingMore, setLoadingMore] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [query, setQuery] = createSignal("");
+  const [debouncedQuery, setDebouncedQuery] = createSignal("");
+  const [page, setPage] = createSignal(1);
+  const [total, setTotal] = createSignal(0);
+
+  // Signal, not a plain ref: the sentinel mounts only once the first page
+  // reveals there are more, which is after the observer effect first runs.
+  const [sentinel, setSentinel] = createSignal<HTMLDivElement | undefined>();
 
   let activeFetchToken = 0;
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-  createEffect(() => {
-    if (!open()) return;
+  const baseUrl = () => props.fetchUrl ?? DEFAULT_FETCH_URL;
+
+  // The endpoint may already carry query params; append rather than assume "?".
+  const pageUrl = (p: number, search: string): string => {
+    const [path, existing] = baseUrl().split("?");
+    const qs = new URLSearchParams(existing ?? "");
+    qs.set("page", String(p));
+    qs.set("limit", String(PAGE_SIZE));
+    if (search) qs.set("search", search);
+    else qs.delete("search");
+    return `${path}?${qs.toString()}`;
+  };
+
+  const loadPage = (p: number, search: string, append: boolean) => {
     const token = ++activeFetchToken;
-    setLoading(true);
+    if (append) setLoadingMore(true);
+    else setLoading(true);
     setError(null);
-    fetch(props.fetchUrl ?? DEFAULT_FETCH_URL, { credentials: "include" })
+    fetch(pageUrl(p, search), { credentials: "include" })
       .then((r) => {
         if (!r.ok)
           throw new Error(
@@ -140,37 +192,77 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
       })
       .then((json) => {
         if (token !== activeFetchToken) return;
-        setVouchers((json.data || []) as VoucherOption[]);
+        const rows = (json.data || []) as VoucherOption[];
+        setTotal(typeof json.total === "number" ? json.total : rows.length);
+        setPage(p);
+        setVouchers((prev) => (append ? [...prev, ...rows] : rows));
       })
       .catch((e) => {
         if (token !== activeFetchToken) return;
         setError(e instanceof Error ? e.message : "Failed to load");
-        setVouchers([]);
+        if (!append) setVouchers([]);
       })
       .finally(() => {
         if (token !== activeFetchToken) return;
         setLoading(false);
+        setLoadingMore(false);
       });
+  };
+
+  // Debounce the keystrokes into a server-side search, so filtering spans the
+  // whole table rather than only the pages already pulled down.
+  createEffect(() => {
+    const q = query();
+    if (!open()) return;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => setDebouncedQuery(q.trim()), SEARCH_DEBOUNCE_MS);
+  });
+  onCleanup(() => clearTimeout(debounceTimer));
+
+  // Refetch from page 1 whenever the dialog opens or the search term settles.
+  createEffect(() => {
+    if (!open()) return;
+    const search = debouncedQuery();
+    loadPage(1, search, false);
+  });
+
+  const hasMore = createMemo(() => vouchers().length < total());
+
+  const loadNext = () => {
+    if (loading() || loadingMore() || !hasMore()) return;
+    loadPage(page() + 1, debouncedQuery(), true);
+  };
+
+  // Scroll sentinel: pull the next page when the end of the list comes into view.
+  // Re-created after every append — an observer only reports a CHANGE in
+  // intersection, so a sentinel that stays on screen (list still shorter than
+  // the viewport) would never fire again and paging would stall.
+  createEffect(() => {
+    const loadedCount = vouchers().length;
+    if (!open() || loadedCount === 0) return;
+    const el = sentinel();
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) loadNext();
+      },
+      { rootMargin: "120px" },
+    );
+    io.observe(el);
+    onCleanup(() => io.disconnect());
   });
 
   const today = () => new Date().toISOString().slice(0, 10);
 
-  const matchesQuery = (v: VoucherOption) => {
-    const q = query().trim().toLowerCase();
-    return q === "" || v.code.toLowerCase().includes(q);
-  };
-
   const applicable = createMemo(() => {
     const today_ = today();
-    return vouchers().filter(
-      (v) => matchesQuery(v) && isApplicable(v, props.subtotal, props.packageIds, today_),
-    );
+    return vouchers().filter((v) => isApplicable(v, props.subtotal, props.packageIds, today_));
   });
 
   const inapplicable = createMemo(() => {
     const today_ = today();
     return vouchers()
-      .filter((v) => matchesQuery(v) && !isApplicable(v, props.subtotal, props.packageIds, today_))
+      .filter((v) => !isApplicable(v, props.subtotal, props.packageIds, today_))
       .map((v) => ({
         voucher: v,
         reason: ineligibilityReason(v, props.subtotal, props.packageIds, today_) ?? "",
@@ -180,6 +272,10 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
   const openPicker = () => {
     if (props.disabled) return;
     setQuery("");
+    setDebouncedQuery("");
+    setVouchers([]);
+    setPage(1);
+    setTotal(0);
     setOpen(true);
   };
 
@@ -226,6 +322,18 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
     document.addEventListener("keydown", swallowEscape, true);
     onCleanup(() => document.removeEventListener("keydown", swallowEscape, true));
   });
+
+  const metaLine = (v: VoucherOption): string => {
+    const expiry = formatExpiry(v.valid_until, today());
+    const desc = formatVoucherDescription(v);
+    return expiry ? `${desc} · ${expiry}` : desc;
+  };
+
+  const expiresSoon = (v: VoucherOption): boolean => {
+    if (!v.valid_until) return false;
+    const days = daysUntil(toDay(v.valid_until), today());
+    return days >= 0 && days <= 7;
+  };
 
   return (
     <>
@@ -328,8 +436,8 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
               >
                 <li>
                   <div role="status" class="px-3 py-8 text-sm text-[var(--ks-fg-subtle,#71717a)] text-center">
-                    <Show when={query().trim() !== ""} fallback="No vouchers available.">
-                      No voucher matches “{query()}”.
+                    <Show when={debouncedQuery() !== ""} fallback="No vouchers available.">
+                      No voucher matches “{debouncedQuery()}”.
                     </Show>
                   </div>
                 </li>
@@ -351,9 +459,20 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                       >
                         <Ticket size={18} class="shrink-0 text-[var(--ks-success-fg,#34d399)]" aria-hidden="true" />
                         <span class="flex-1 min-w-0">
-                          <span class="block text-sm font-medium text-[var(--ks-fg,#ffffff)] truncate">{v.code}</span>
-                          <span class="block text-xs text-[var(--ks-fg-subtle,#71717a)] truncate">
-                            {formatVoucherDescription(v)}
+                          <span class="block text-sm font-medium text-[var(--ks-fg,#ffffff)] truncate">
+                            {highlightMatch(v.code, debouncedQuery())}
+                          </span>
+                          <span class="flex items-center gap-1 text-xs text-[var(--ks-fg-subtle,#71717a)] min-w-0">
+                            <Show when={expiresSoon(v)}>
+                              <CalendarClock
+                                size={12}
+                                class="shrink-0 text-[var(--ks-warning-fg,#fbbf24)]"
+                                aria-hidden="true"
+                              />
+                            </Show>
+                            <span class="truncate" classList={{ "text-[var(--ks-warning-fg,#fbbf24)]": expiresSoon(v) }}>
+                              {metaLine(v)}
+                            </span>
                           </span>
                         </span>
                         <span class="text-sm text-[var(--ks-success-fg,#34d399)] shrink-0 font-mono">
@@ -383,9 +502,11 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                       >
                         <Ticket size={18} class="shrink-0 text-[var(--ks-fg-subtle,#71717a)]" aria-hidden="true" />
                         <span class="flex-1 min-w-0">
-                          <span class="block text-sm text-[var(--ks-fg,#ffffff)] truncate">{entry.voucher.code}</span>
+                          <span class="block text-sm text-[var(--ks-fg,#ffffff)] truncate">
+                            {highlightMatch(entry.voucher.code, debouncedQuery())}
+                          </span>
                           <span class="block text-xs text-[var(--ks-fg-subtle,#71717a)] truncate">
-                            {formatVoucherDescription(entry.voucher)}
+                            {metaLine(entry.voucher)}
                           </span>
                         </span>
                         <span class="text-xs text-[var(--ks-warning-fg,#fbbf24)] shrink-0 text-right max-w-[45%] truncate">
@@ -395,6 +516,22 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                     </li>
                   )}
                 </For>
+              </Show>
+
+              {/* Sentinel: intersecting pulls the next page. */}
+              <Show when={hasMore()}>
+                <li>
+                  <div
+                    ref={setSentinel}
+                    data-testid="voucher-picker-sentinel"
+                    class="px-3 py-3 flex items-center justify-center gap-2 text-xs text-[var(--ks-fg-subtle,#71717a)]"
+                  >
+                    <Show when={loadingMore()} fallback={<span>Scroll for more</span>}>
+                      <Loader2 size={14} class="animate-spin shrink-0" />
+                      <span>Loading more…</span>
+                    </Show>
+                  </div>
+                </li>
               </Show>
             </ul>
 
