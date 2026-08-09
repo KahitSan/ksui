@@ -290,6 +290,68 @@ describe("VoucherPicker dialog", () => {
     expect(text).not.toContain("₱24.00");
   });
 
+  it("names the specific reason each ineligible voucher can't be used", async () => {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    mockPagedFetch([
+      voucher({ id: 30, code: "TOO_SMALL", minimum_purchase: 5000 }),
+      voucher({ id: 31, code: "GONE", valid_until: yesterday }),
+      voucher({ id: 32, code: "NOT_YET", valid_from: nextWeek }),
+      voucher({ id: 33, code: "OFF", is_active: false }),
+      voucher({ id: 34, code: "OTHER_ITEMS", applicable_packages: [99] }),
+    ]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[1]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-30")).toBeTruthy());
+    expect(getByTestId("voucher-picker-inapplicable-30").textContent).toContain("minimum");
+    expect(getByTestId("voucher-picker-inapplicable-31").textContent).toContain("Expired");
+    expect(getByTestId("voucher-picker-inapplicable-32").textContent).toContain("Starts");
+    expect(getByTestId("voucher-picker-inapplicable-33").textContent).toContain("Inactive");
+    expect(getByTestId("voucher-picker-inapplicable-34").textContent).toContain(
+      "Doesn't cover every item",
+    );
+  });
+
+  it("surfaces a load failure instead of rendering an empty list", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 403, json: async () => ({}) })) as unknown as typeof fetch,
+    );
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() =>
+      expect(getByTestId("voucher-picker-popup").textContent).toContain("Permission denied"),
+    );
+    // The misleading "nothing here" copy must not stand in for a real failure.
+    expect(queryByTestId("voucher-picker-popup")!.textContent).not.toContain(
+      "No vouchers available.",
+    );
+  });
+
+  it("reopening discards a pick that was staged but never confirmed", async () => {
+    mockPagedFetch([voucher({ id: 40, code: "STAGED" }), voucher({ id: 41, code: "OTHER" })]);
+    const onChange = vi.fn();
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={onChange} subtotal={1000} packageIds={[]} />
+    ));
+
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-result-40")).toBeTruthy());
+    fireEvent.click(getByTestId("voucher-picker-result-40"));
+    fireEvent.click(getByTestId("voucher-picker-cancel"));
+
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-result-40")).toBeTruthy());
+    expect(getByTestId("voucher-picker-draft-summary").textContent).toContain("No voucher selected");
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("keeps Escape from reaching an ancestor's document-level dismiss handler", async () => {
     mockPagedFetch([]);
     const ancestorEsc = vi.fn();
