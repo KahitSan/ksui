@@ -1,5 +1,53 @@
 # @kahitsan/ksui
 
+## 0.38.0
+
+### Minor Changes
+
+- 0ec7bb2: VoucherPicker: confirm the pick before it applies
+
+  Tapping a row now stages it — the choice reaches `onChange` only when Confirm is
+  pressed, so a mis-tap can be corrected in place and Cancel discards the whole
+  edit. The footer names the staged voucher and its discount, the button reads
+  Apply / Change / Remove to match what pressing it will do, and it stays disabled
+  until the staged pick actually differs from what the cart already has. Re-tapping
+  the staged row unstages it. Also stops the trigger repeating the peso figure for
+  a fixed-amount voucher.
+
+- 2f9f958: VoucherPicker: open a dialog instead of an anchored dropdown
+
+  The trigger now opens a centered modal with a code search box, roomier rows,
+  and a per-voucher reason explaining why an ineligible voucher can't be applied
+  (below minimum, wrong items, expired, not yet started, inactive) instead of an
+  unexplained greyed-out row. `aria-haspopup` moves from `listbox` to `dialog`;
+  existing test ids are unchanged.
+
+- 07f6ec9: VoucherPicker: page the list in on scroll, show expiry, highlight the search match
+
+  The picker fetched the whole table (`limit=200`) and filtered in the browser.
+  It now requests 25 at a time and pulls the next page when the end of the list
+  scrolls into view, and the search box is debounced into the server's `search`
+  param so a match is found across every page rather than only the rows already
+  downloaded. Rows carry the voucher's expiry ("Expires in 3 days", "Expires
+  2026-09-01"), tinted with a clock icon inside the last week, and the matched
+  substring is highlighted with the shared `highlightMatch` helper. Date fields
+  that arrive as full timestamps are read as their calendar day.
+
+- aec96e0: VoucherPicker: preview a discount range before anything is priced
+
+  New optional `subtotalRange` prop. While `subtotal` is still 0 the rows show the
+  span the discount could land in (e.g. −₱20.00 to ₱24.00) instead of a meaningless
+  −₱0.00; once the cart has a real subtotal the row collapses back to the single
+  exact amount. Omitting the prop keeps today's behavior.
+
+- ad46d64: VoucherPicker: show redemptions used against the limit, and block exhausted codes
+
+  Rows now read "3/10 used" alongside the discount and expiry, tinted amber once
+  the remaining redemptions run low. A code with no `usage_limit_total` is
+  unlimited and shows nothing. A fully-redeemed code moves to "Not applicable"
+  with a "Fully redeemed" reason instead of staying selectable — the server
+  already rejects it, so it previously failed only at charge time.
+
 ## 0.37.1
 
 ### Patch Changes
