@@ -40,6 +40,10 @@ interface VoucherPickerProps {
    *  a consumer with no `vouchers.view` grant can point this at a peer proxy
    *  route instead. */
   fetchUrl?: string;
+  /** Cheapest/priciest total still reachable from what the cart offers. Used to
+   *  preview a discount RANGE while `subtotal` is still 0, instead of a
+   *  meaningless zero. */
+  subtotalRange?: { min: number; max: number };
 }
 
 function asNumber(v: string | number | null | undefined): number {
@@ -193,6 +197,22 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
 
   const previewDiscount = createMemo(() => calculateDiscount(props.selected, props.subtotal));
 
+  // Nothing priced yet: preview against the cheapest/priciest total the cart
+  // could still reach, so the row shows a real range instead of a bare zero.
+  const rangePreview = createMemo(() => {
+    const r = props.subtotalRange;
+    if (props.subtotal > 0 || !r || r.max <= 0) return null;
+    return r;
+  });
+
+  const discountLabel = (v: VoucherOption): string => {
+    const r = rangePreview();
+    if (!r) return `−${formatCurrency(calculateDiscount(v, props.subtotal))}`;
+    const lo = calculateDiscount(v, r.min);
+    const hi = calculateDiscount(v, r.max);
+    return lo === hi ? `−${formatCurrency(hi)}` : `−${formatCurrency(lo)}–${formatCurrency(hi)}`;
+  };
+
   // An ancestor may close itself on a document-level Escape; the dialog handles
   // its own dismissal, so keep the key from reaching that listener.
   const swallowEscape = (e: KeyboardEvent) => {
@@ -314,7 +334,6 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
               </Show>
               <For each={applicable()}>
                 {(v) => {
-                  const discount = () => calculateDiscount(v, props.subtotal);
                   const selected = () => props.selected?.id === v.id;
                   return (
                     <li role="option" aria-selected={selected()}>
@@ -336,7 +355,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                           </span>
                         </span>
                         <span class="text-sm text-[var(--ks-success-fg,#34d399)] shrink-0 font-mono">
-                          −{formatCurrency(discount())}
+                          {discountLabel(v)}
                         </span>
                         <Show when={selected()}>
                           <span class="text-[var(--ks-accent,#fbbf24)] shrink-0" aria-hidden="true">✓</span>

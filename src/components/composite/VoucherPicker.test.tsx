@@ -121,6 +121,44 @@ describe("VoucherPicker dialog", () => {
     expect(getByTestId("voucher-picker-inapplicable-7").textContent).toContain("minimum");
   });
 
+  it("previews a discount range while nothing is priced yet", async () => {
+    mockFetchWith([voucher({ id: 3, code: "SAVE20" })]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={0}
+        subtotalRange={{ min: 99, max: 118 }}
+        packageIds={[]}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() => expect(getByTestId("voucher-picker-result-3")).toBeTruthy());
+    // 20% of 99 and of 118, both rounded the same way the server rounds.
+    expect(getByTestId("voucher-picker-result-3").textContent).toContain("₱20.00");
+    expect(getByTestId("voucher-picker-result-3").textContent).toContain("₱24.00");
+  });
+
+  it("shows a single amount once the cart has a real subtotal", async () => {
+    mockFetchWith([voucher({ id: 4, code: "SAVE20" })]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={99}
+        subtotalRange={{ min: 99, max: 118 }}
+        packageIds={[]}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() => expect(getByTestId("voucher-picker-result-4")).toBeTruthy());
+    const text = getByTestId("voucher-picker-result-4").textContent ?? "";
+    expect(text).toContain("₱20.00");
+    expect(text).not.toContain("₱24.00");
+  });
+
   it("keeps Escape from reaching an ancestor's document-level dismiss handler", async () => {
     mockFetchWith([]);
     const ancestorEsc = vi.fn();
