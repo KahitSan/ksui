@@ -210,7 +210,9 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
     if (!r) return `−${formatCurrency(calculateDiscount(v, props.subtotal))}`;
     const lo = calculateDiscount(v, r.min);
     const hi = calculateDiscount(v, r.max);
-    return lo === hi ? `−${formatCurrency(hi)}` : `−${formatCurrency(lo)}–${formatCurrency(hi)}`;
+    return lo === hi
+      ? `−${formatCurrency(hi)}`
+      : `−${formatCurrency(lo)} to ${formatCurrency(hi)}`;
   };
 
   // An ancestor may close itself on a document-level Escape; the dialog handles

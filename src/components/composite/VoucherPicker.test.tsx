@@ -136,8 +136,9 @@ describe("VoucherPicker dialog", () => {
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-3")).toBeTruthy());
     // 20% of 99 and of 118, both rounded the same way the server rounds.
-    expect(getByTestId("voucher-picker-result-3").textContent).toContain("₱20.00");
-    expect(getByTestId("voucher-picker-result-3").textContent).toContain("₱24.00");
+    expect(getByTestId("voucher-picker-result-3").textContent).toContain(
+      "₱20.00 to ₱24.00",
+    );
   });
 
   it("shows a single amount once the cart has a real subtotal", async () => {
