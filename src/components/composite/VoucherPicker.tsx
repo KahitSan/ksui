@@ -185,6 +185,10 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
   const [total, setTotal] = createSignal(0);
   // Staged choice. `props.selected` only changes on Confirm.
   const [draft, setDraft] = createSignal<VoucherOption | null>(null);
+  // Footer description popup: clamped to two lines, "More" only when it overflows.
+  const [descOpen, setDescOpen] = createSignal(false);
+  const [descOverflowing, setDescOverflowing] = createSignal(false);
+  let descEl: HTMLSpanElement | undefined;
 
   // Signal, not a plain ref: the sentinel mounts only once the first page
   // reveals there are more, which is after the observer effect first runs.
@@ -379,6 +383,18 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
   const draftNotes = createMemo(() => {
     const n = draft()?.notes?.trim();
     return n ? n : null;
+  });
+
+  // The footer clamps the description to two lines; offer "More" only when the
+  // text actually overflowed. Re-measured whenever the staged description changes.
+  createEffect(() => {
+    const notes = draftNotes();
+    const el = descEl;
+    if (!notes || !el) {
+      setDescOverflowing(false);
+      return;
+    }
+    setDescOverflowing(el.scrollHeight > el.clientHeight);
   });
 
   const expiresSoon = (v: VoucherOption): boolean => {
@@ -615,20 +631,40 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
             {/* Bled to the card edges so the rule spans the full width, matching
                 the header. */}
             <div class="-mx-6 -mb-6 mt-4 px-5 sm:px-6 py-3 border-t border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] flex items-center justify-between gap-3 shrink-0">
-              <span
-                data-testid="voucher-picker-draft-summary"
-                class="text-xs text-[var(--ks-fg-subtle,#71717a)] min-w-0 truncate"
-              >
-                <Show when={draft()} fallback="No voucher selected">
-                  <span class="text-[var(--ks-fg,#ffffff)]">{draft()!.code}</span>
-                  <Show when={draftNotes()}>
+              <div class="min-w-0 flex flex-col gap-1">
+                <span
+                  data-testid="voucher-picker-draft-summary"
+                  class="text-xs text-[var(--ks-fg-subtle,#71717a)] min-w-0 truncate"
+                >
+                  <Show when={draft()} fallback="No voucher selected">
+                    <span class="text-[var(--ks-fg,#ffffff)]">{draft()!.code}</span>
                     {" · "}
-                    <span class="text-[var(--ks-fg-muted,#a1a1aa)]">{draftNotes()}</span>
+                    {discountLabel(draft()!).replace("−", "")} off
                   </Show>
-                  {" · "}
-                  {discountLabel(draft()!).replace("−", "")} off
+                </span>
+                <Show when={draftNotes()}>
+                  <span class="flex items-start gap-1.5 text-xs text-[var(--ks-fg-muted,#a1a1aa)] min-w-0">
+                    <span
+                      ref={descEl}
+                      data-testid="voucher-picker-draft-description"
+                      class="min-w-0 flex-1 whitespace-pre-line line-clamp-2"
+                    >
+                      {draftNotes()}
+                    </span>
+                    <Show when={descOverflowing()}>
+                      <button
+                        type="button"
+                        data-testid="voucher-picker-expand-description"
+                        onClick={() => setDescOpen(true)}
+                        class="shrink-0 rounded px-1 -m-1 text-[var(--ks-primary,#c9a961)] hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_12%,transparent)] transition-colors cursor-pointer"
+                        aria-label="Show full description"
+                      >
+                        More
+                      </button>
+                    </Show>
+                  </span>
                 </Show>
-              </span>
+              </div>
               <div class="flex items-center gap-2 shrink-0">
                 <Show when={props.selected && draft()}>
                   <button
@@ -662,6 +698,43 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                   </Show>
                 </button>
               </div>
+            </div>
+          </div>
+        </Modal>
+      </Show>
+
+      {/* Full-description popup: "More" in the footer only appears when the
+          clamped text overflowed, but the popup itself is reachable whenever a
+          staged description exists. */}
+      <Show when={descOpen() && draftNotes()}>
+        <Modal onClose={() => setDescOpen(false)} size="md" ariaLabel="Voucher description">
+          <div data-testid="voucher-picker-description-popup" class="flex flex-col gap-4">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="m-0 text-base font-semibold text-[var(--ks-fg,#ffffff)]">
+                Voucher description
+              </h2>
+              <button
+                type="button"
+                data-testid="voucher-picker-close-description"
+                onClick={() => setDescOpen(false)}
+                class="w-8 h-8 flex items-center justify-center rounded text-[var(--ks-fg-muted,#a1a1aa)] hover:text-[var(--ks-fg,#ffffff)] hover:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] transition-colors cursor-pointer shrink-0"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p class="m-0 text-sm text-[var(--ks-fg,#ffffff)] whitespace-pre-line">
+              {draftNotes()}
+            </p>
+            <div class="flex justify-end">
+              <button
+                type="button"
+                data-testid="voucher-picker-description-close"
+                onClick={() => setDescOpen(false)}
+                class="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--ks-primary,#c9a961)] text-[var(--ks-fg-on-accent,#0a0a0a)] hover:opacity-90 transition-opacity cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
         </Modal>

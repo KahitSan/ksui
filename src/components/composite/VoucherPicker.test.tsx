@@ -175,7 +175,7 @@ describe("VoucherPicker dialog", () => {
     expect(mark!.textContent?.toLowerCase()).toBe("partner");
   });
 
-  it("shows the voucher description in the row and the staged summary", async () => {
+  it("shows the voucher description in the row and the footer draft", async () => {
     mockPagedFetch([
       voucher({ id: 50, code: "PARTNER_ACES", notes: "BISCAST ACES outreach discount" }),
     ]);
@@ -190,7 +190,8 @@ describe("VoucherPicker dialog", () => {
     );
 
     fireEvent.click(getByTestId("voucher-picker-result-50"));
-    expect(getByTestId("voucher-picker-draft-summary").textContent).toContain(
+    // The footer shows the description under the summary, beside the buttons.
+    expect(getByTestId("voucher-picker-draft-description").textContent).toContain(
       "BISCAST ACES outreach discount",
     );
   });
