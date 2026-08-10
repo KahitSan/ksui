@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.38.2
+
+### Patch Changes
+
+- e2a06a8: VoucherPicker: stack the voucher type label (`20% off`) under the ticket glyph in list rows, and show the staged voucher's description in the picker footer clamped to two lines with a "See more" popup for the full text.
+
 ## 0.38.1
 
 ### Patch Changes
