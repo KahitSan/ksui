@@ -31,6 +31,8 @@ export interface VoucherOption {
   usage_count?: number | null;
   /** Total redemptions allowed; null/absent means unlimited. */
   usage_limit_total?: number | null;
+  /** Free-text description; absent on endpoints that don't expose it. */
+  notes?: string | null;
 }
 
 const DEFAULT_FETCH_URL = "/api/vouchers?status=active&limit=200";
@@ -372,6 +374,13 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
       .filter(Boolean)
       .join(" · ");
 
+  // Staged description, trimmed — the footer read it twice, and a signal call
+  // in JSX doesn't narrow across re-evaluations.
+  const draftNotes = createMemo(() => {
+    const n = draft()?.notes?.trim();
+    return n ? n : null;
+  });
+
   const expiresSoon = (v: VoucherOption): boolean => {
     if (!v.valid_until) return false;
     const days = daysUntil(toDay(v.valid_until), today());
@@ -522,6 +531,11 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                               {metaLine(v)}
                             </span>
                           </span>
+                          <Show when={v.notes && v.notes.trim()}>
+                            <span class="block text-xs text-[var(--ks-fg-subtle,#71717a)] truncate">
+                              {highlightMatch(v.notes!, debouncedQuery())}
+                            </span>
+                          </Show>
                         </span>
                         <span class="text-sm text-[var(--ks-success-fg,#34d399)] shrink-0 font-mono">
                           {discountLabel(v)}
@@ -556,6 +570,11 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                           <span class="block text-xs text-[var(--ks-fg-subtle,#71717a)] truncate">
                             {metaLine(entry.voucher)}
                           </span>
+                          <Show when={entry.voucher.notes && entry.voucher.notes.trim()}>
+                            <span class="block text-xs text-[var(--ks-fg-subtle,#71717a)] truncate">
+                              {highlightMatch(entry.voucher.notes!, debouncedQuery())}
+                            </span>
+                          </Show>
                         </span>
                         <span class="text-xs text-[var(--ks-warning-fg,#fbbf24)] shrink-0 text-right max-w-[45%] truncate">
                           {entry.reason}
@@ -592,6 +611,10 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
               >
                 <Show when={draft()} fallback="No voucher selected">
                   <span class="text-[var(--ks-fg,#ffffff)]">{draft()!.code}</span>
+                  <Show when={draftNotes()}>
+                    {" · "}
+                    <span class="text-[var(--ks-fg-muted,#a1a1aa)]">{draftNotes()}</span>
+                  </Show>
                   {" · "}
                   {discountLabel(draft()!).replace("−", "")} off
                 </Show>

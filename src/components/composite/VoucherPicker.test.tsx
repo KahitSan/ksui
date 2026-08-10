@@ -14,7 +14,7 @@ function mockPagedFetch(rows: VoucherOption[]) {
     const limit = Number(parsed.searchParams.get("limit") ?? "25");
     const search = (parsed.searchParams.get("search") ?? "").toLowerCase();
     const matched = search
-      ? rows.filter((r) => r.code.toLowerCase().includes(search))
+      ? rows.filter((r) => `${r.code} ${r.notes ?? ""}`.toLowerCase().includes(search))
       : rows;
     const start = (page - 1) * limit;
     return {
@@ -173,6 +173,67 @@ describe("VoucherPicker dialog", () => {
     const mark = row.querySelector("mark");
     expect(mark).not.toBeNull();
     expect(mark!.textContent?.toLowerCase()).toBe("partner");
+  });
+
+  it("shows the voucher description in the row and the staged summary", async () => {
+    mockPagedFetch([
+      voucher({ id: 50, code: "PARTNER_ACES", notes: "BISCAST ACES outreach discount" }),
+    ]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() => expect(getByTestId("voucher-picker-result-50")).toBeTruthy());
+    expect(getByTestId("voucher-picker-result-50").textContent).toContain(
+      "BISCAST ACES outreach discount",
+    );
+
+    fireEvent.click(getByTestId("voucher-picker-result-50"));
+    expect(getByTestId("voucher-picker-draft-summary").textContent).toContain(
+      "BISCAST ACES outreach discount",
+    );
+  });
+
+  it("finds a voucher by its description and highlights the match in it", async () => {
+    const { calls } = mockPagedFetch([
+      voucher({ id: 51, code: "PARTNER_UAPGA", notes: "UAPGA Camarines Chapter discount" }),
+      voucher({ id: 52, code: "GENERIC" }),
+    ]);
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-result-51")).toBeTruthy());
+
+    fireEvent.input(getByTestId("voucher-picker-search"), {
+      target: { value: "camarines" },
+    });
+
+    await waitFor(() => expect(calls.some((u) => u.includes("search=camarines"))).toBe(true));
+    await waitFor(() => expect(queryByTestId("voucher-picker-result-52")).toBeNull());
+
+    const row = getByTestId("voucher-picker-result-51");
+    const mark = row.querySelector("mark");
+    expect(mark).not.toBeNull();
+    expect(mark!.textContent?.toLowerCase()).toBe("camarines");
+  });
+
+  it("skips the description line for a blank description", async () => {
+    mockPagedFetch([
+      voucher({ id: 53, code: "PLAIN", notes: "   " }),
+      voucher({ id: 54, code: "PLAIN" }),
+    ]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+
+    await waitFor(() => expect(getByTestId("voucher-picker-result-53")).toBeTruthy());
+    // Identical rows — a whitespace-only description must render nothing extra.
+    expect(getByTestId("voucher-picker-result-53").textContent).toBe(
+      getByTestId("voucher-picker-result-54").textContent,
+    );
   });
 
   it("shows when a voucher expires", async () => {
