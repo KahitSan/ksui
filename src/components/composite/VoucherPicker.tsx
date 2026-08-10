@@ -632,37 +632,39 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                 the header. */}
             <div class="-mx-6 -mb-6 mt-4 px-5 sm:px-6 py-3 border-t border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] flex items-center justify-between gap-3 shrink-0">
               <div class="min-w-0 flex flex-col gap-1">
-                <span
-                  data-testid="voucher-picker-draft-summary"
-                  class="text-xs text-[var(--ks-fg-subtle,#71717a)] min-w-0 truncate"
-                >
-                  <Show when={draft()} fallback="No voucher selected">
-                    <span class="text-[var(--ks-fg,#ffffff)]">{draft()!.code}</span>
-                    {" · "}
-                    {discountLabel(draft()!).replace("−", "")} off
-                  </Show>
-                </span>
-                <Show when={draftNotes()}>
-                  <span class="flex items-start gap-1.5 text-xs text-[var(--ks-fg-muted,#a1a1aa)] min-w-0">
+                <Show
+                  when={draft()}
+                  fallback={
                     <span
-                      ref={descEl}
-                      data-testid="voucher-picker-draft-description"
-                      class="min-w-0 flex-1 whitespace-pre-line line-clamp-2"
+                      data-testid="voucher-picker-draft-summary"
+                      class="text-xs text-[var(--ks-fg-subtle,#71717a)]"
                     >
-                      {draftNotes()}
+                      No voucher selected
                     </span>
-                    <Show when={descOverflowing()}>
-                      <button
-                        type="button"
-                        data-testid="voucher-picker-expand-description"
-                        onClick={() => setDescOpen(true)}
-                        class="shrink-0 rounded px-1 -m-1 text-[var(--ks-primary,#c9a961)] hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_12%,transparent)] transition-colors cursor-pointer"
-                        aria-label="Show full description"
+                  }
+                >
+                  <Show when={draftNotes()}>
+                    <span class="flex flex-col items-start gap-0.5 min-w-0">
+                      <span
+                        ref={descEl}
+                        data-testid="voucher-picker-draft-description"
+                        class="min-w-0 text-xs text-[var(--ks-fg-muted,#a1a1aa)] whitespace-pre-line line-clamp-2"
                       >
-                        More
-                      </button>
-                    </Show>
-                  </span>
+                        {draftNotes()}
+                      </span>
+                      <Show when={descOverflowing()}>
+                        <button
+                          type="button"
+                          data-testid="voucher-picker-expand-description"
+                          onClick={() => setDescOpen(true)}
+                          class="text-xs leading-tight text-[var(--ks-primary,#c9a961)] hover:underline transition-colors cursor-pointer"
+                          aria-label="Show full description"
+                        >
+                          See more
+                        </button>
+                      </Show>
+                    </span>
+                  </Show>
                 </Show>
               </div>
               <div class="flex items-center gap-2 shrink-0">
