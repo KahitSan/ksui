@@ -112,10 +112,11 @@ describe("VoucherPicker dialog", () => {
     await waitFor(() => expect(getByTestId("voucher-picker-result-1")).toBeTruthy());
     expect(getByTestId("voucher-picker-popup").closest("dialog")).not.toBeNull();
 
-    // Staging a row must not reach the consumer yet.
+    // Staging a row must not reach the consumer yet; the footer no longer
+    // repeats the code (it's in the listing), so the confirm enabling is the signal.
     fireEvent.click(getByTestId("voucher-picker-result-1"));
     expect(onChange).not.toHaveBeenCalled();
-    expect(getByTestId("voucher-picker-draft-summary").textContent).toContain("SAVE20");
+    expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(false);
 
     fireEvent.click(getByTestId("voucher-picker-confirm"));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: 1, code: "SAVE20" }));
@@ -147,9 +148,10 @@ describe("VoucherPicker dialog", () => {
     await waitFor(() => expect(getByTestId("voucher-picker-result-1")).toBeTruthy());
 
     fireEvent.click(getByTestId("voucher-picker-result-1"));
-    expect(getByTestId("voucher-picker-draft-summary").textContent).toContain("SAVE20");
+    expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(false);
 
     fireEvent.click(getByTestId("voucher-picker-result-1"));
+    expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(true);
     expect(getByTestId("voucher-picker-draft-summary").textContent).toContain("No voucher selected");
   });
 
@@ -175,7 +177,7 @@ describe("VoucherPicker dialog", () => {
     expect(mark!.textContent?.toLowerCase()).toBe("partner");
   });
 
-  it("shows the voucher description in the row and the staged summary", async () => {
+  it("shows the voucher description in the row and the footer draft", async () => {
     mockPagedFetch([
       voucher({ id: 50, code: "PARTNER_ACES", notes: "BISCAST ACES outreach discount" }),
     ]);
@@ -190,7 +192,8 @@ describe("VoucherPicker dialog", () => {
     );
 
     fireEvent.click(getByTestId("voucher-picker-result-50"));
-    expect(getByTestId("voucher-picker-draft-summary").textContent).toContain(
+    // The footer shows the description under the summary, beside the buttons.
+    expect(getByTestId("voucher-picker-draft-description").textContent).toContain(
       "BISCAST ACES outreach discount",
     );
   });
