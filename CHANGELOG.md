@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.38.1
+
+### Patch Changes
+
+- 8ff52a9: VoucherPicker: show the voucher's free-text description (`notes`) as a line in each picker row (highlighted on search) and beside the code in the staged draft summary.
+
 ## 0.38.0
 
 ### Minor Changes
