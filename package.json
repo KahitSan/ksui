@@ -17,7 +17,7 @@
     "version": "changeset version"
   },
   "dependencies": {
-    "@kahitsan/ksui": "^0.38.0",
+    "@kahitsan/ksui": "^0.38.2",
     "@kahitsan/plugin-sdk": "^0.7.2",
     "dotenv": "^16.5.0",
     "hono": "^4.12.0",
