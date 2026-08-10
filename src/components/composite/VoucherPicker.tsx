@@ -370,7 +370,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
   });
 
   const metaLine = (v: VoucherOption): string =>
-    [formatVoucherDescription(v), formatExpiry(v.valid_until, today()), formatUsage(v)]
+    [formatExpiry(v.valid_until, today()), formatUsage(v)]
       .filter(Boolean)
       .join(" · ");
 
@@ -514,7 +514,12 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                             selected(),
                         }}
                       >
-                        <Ticket size={18} class="shrink-0 text-[var(--ks-success-fg,#34d399)]" aria-hidden="true" />
+                        <span class="flex flex-col items-center gap-1 shrink-0">
+                          <Ticket size={18} class="text-[var(--ks-success-fg,#34d399)]" aria-hidden="true" />
+                          <span class="text-[11px] leading-tight text-center text-[var(--ks-success-fg,#34d399)]">
+                            {formatVoucherDescription(v)}
+                          </span>
+                        </span>
                         <span class="flex-1 min-w-0">
                           <span class="block text-sm font-medium text-[var(--ks-fg,#ffffff)] truncate">
                             {highlightMatch(v.code, debouncedQuery())}
@@ -562,7 +567,12 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                         class="w-full text-left px-3 py-3 mb-1 rounded-lg border border-transparent flex items-center gap-3 opacity-60 cursor-not-allowed"
                         aria-disabled="true"
                       >
-                        <Ticket size={18} class="shrink-0 text-[var(--ks-fg-subtle,#71717a)]" aria-hidden="true" />
+                        <span class="flex flex-col items-center gap-1 shrink-0">
+                          <Ticket size={18} class="text-[var(--ks-fg-subtle,#71717a)]" aria-hidden="true" />
+                          <span class="text-[11px] leading-tight text-center text-[var(--ks-fg-subtle,#71717a)]">
+                            {formatVoucherDescription(entry.voucher)}
+                          </span>
+                        </span>
                         <span class="flex-1 min-w-0">
                           <span class="block text-sm text-[var(--ks-fg,#ffffff)] truncate">
                             {highlightMatch(entry.voucher.code, debouncedQuery())}
