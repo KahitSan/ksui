@@ -673,14 +673,19 @@ export default function TransactionForm(props: TransactionFormProps) {
                   }}
                 />
               </FormField>
-              <FormField label="Receipt / Ref #">
+              <FormField label={props.category === "sale" ? "Invoice ID" : "Receipt / Ref #"}>
                 <input
                   type="text"
                   value={props.refNumber}
                   onInput={(e) => props.setRefNumber(e.currentTarget.value)}
                   class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
-                  placeholder="OR#, SI#, or ref number"
+                  placeholder={props.category === "sale" ? "Auto-assigned; enter to override" : "OR#, SI#, or ref number"}
                 />
+                <Show when={props.category === "sale"}>
+                  <p class="mt-1 text-[10px] text-[var(--ks-fg-subtle,#71717a)]">
+                    Leave blank for automatic numbering. Backdated sales can use a custom ID.
+                  </p>
+                </Show>
               </FormField>
             </div>
           </Show>
