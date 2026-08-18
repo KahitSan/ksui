@@ -74,12 +74,14 @@ export default function TransactionsPage() {
   const canBackdate = () => perms.has("transactions.backdate");
   const canShare = () => perms.hasAny("members.list_basic", "members.view");
   const [showInvoiceId, setShowInvoiceId] = createSignal(false);
-  onMount(() => {
-    void fetch("/api/transactions/invoice-settings", {
+  onMount(async () => {
+    const res = await fetch("/api/transactions/invoice-settings", {
       credentials: "include",
       headers: { "X-Workspace-Id": String(activeWorkspace()?.ws_id) },
-    }).then((res) => res.ok ? res.json() : null)
-      .then((data: { enabled?: boolean } | null) => setShowInvoiceId(data?.enabled === true));
+    });
+    if (!res.ok) return;
+    const data = (await res.json()) as { enabled?: boolean };
+    setShowInvoiceId(data.enabled === true);
   });
 
   const [groupSalesByDay, setGroupSalesByDay] = createSignal(false);

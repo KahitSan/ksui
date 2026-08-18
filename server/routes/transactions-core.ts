@@ -119,9 +119,13 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
         );
         const last = result.rows[0]?.reference_number?.trim();
         if (!last) return c.json({ invoiceId: "INV-0001" });
-        const match = last.match(/^(.*?)(\d+)$/);
-        if (!match) return c.json({ invoiceId: `${last}-1` });
-        const [, prefix, digits] = match;
+        let digitStart = last.length;
+        while (digitStart > 0 && last.charCodeAt(digitStart - 1) >= 48 && last.charCodeAt(digitStart - 1) <= 57) {
+          digitStart--;
+        }
+        if (digitStart === last.length) return c.json({ invoiceId: `${last}-1` });
+        const digits = last.slice(digitStart);
+        const prefix = last.slice(0, digitStart);
         const next = String(Number(digits) + 1).padStart(digits.length, "0");
         return c.json({ invoiceId: `${prefix}${next}` });
       } catch (err) {

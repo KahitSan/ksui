@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import pg from "pg";
 import { allocateInvoiceNumber } from "../../server/lib/invoice-number.js";
@@ -10,7 +11,7 @@ const pool = new pg.Pool({
   password: process.env.DB_PASSWORD || "postgres",
 });
 
-const workspaceId = 2_000_000 + Math.floor(Math.random() * 800_000_000);
+const workspaceId = 2_000_000 + crypto.randomInt(800_000_000);
 let ready = false;
 
 beforeAll(async () => {
