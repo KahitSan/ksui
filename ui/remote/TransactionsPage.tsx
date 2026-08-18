@@ -3,7 +3,7 @@
 // stays under the LOC budget; behavior is unchanged. styles.css is imported
 // once by the bundle entry (index.tsx), so it is not re-imported here.
 
-import { createSignal, Show } from "solid-js";
+import { createSignal, Show, onMount } from "solid-js";
 
 import Plus from "lucide-solid/icons/plus";
 import Download from "lucide-solid/icons/download";
@@ -73,6 +73,14 @@ export default function TransactionsPage() {
   const isAdmin = () => perms.has("transactions.delete");
   const canBackdate = () => perms.has("transactions.backdate");
   const canShare = () => perms.hasAny("members.list_basic", "members.view");
+  const [showInvoiceId, setShowInvoiceId] = createSignal(false);
+  onMount(() => {
+    void fetch("/api/transactions/invoice-settings", {
+      credentials: "include",
+      headers: { "X-Workspace-Id": String(activeWorkspace()?.ws_id) },
+    }).then((res) => res.ok ? res.json() : null)
+      .then((data: { enabled?: boolean } | null) => setShowInvoiceId(data?.enabled === true));
+  });
 
   const [groupSalesByDay, setGroupSalesByDay] = createSignal(false);
   let resetAndRefetchFn: (() => void) | undefined;
@@ -410,6 +418,7 @@ export default function TransactionsPage() {
     peersUnavailable,
     accountsIndex,
     creatorName,
+    showInvoiceId,
   });
 
   return (
@@ -420,6 +429,13 @@ export default function TransactionsPage() {
         actions={
           <>
             <PageShareButton module="transactions" moduleLabel="Transactions" />
+            <a
+              href="/workspace-settings?tab=display"
+              class="inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-ks-fg-muted border border-ks-border hover:text-ks-fg hover:border-ks-border-strong transition-colors"
+              data-testid="transactions-settings-link"
+            >
+              Settings
+            </a>
             <Button
               intent="secondary"
               variant="clip2"

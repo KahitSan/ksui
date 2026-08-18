@@ -664,20 +664,24 @@ export function registerTransactionCartEditRoute(router: Hono, ctx: CoreRouteCtx
         // needs no further action here.
         const payerTarget = reassignPayerTo ?? flaggedNewGroupId;
         if (payerTarget != null) {
-          // Single UPDATE flips exactly one row to is_payer=TRUE and every
-          // other row on this transaction to FALSE — no separate "unset old,
-          // set new" pair, so there is no window where two rows (or zero
-          // rows) hold is_payer=TRUE even if this crashes mid-statement.
-          // transaction_customer_groups has no updated_at column (only
-          // created_at) — confirmed against migrations/20260527000000_create_transactions.ts.
+          // The partial unique index is not deferrable, so PostgreSQL can check
+          // the target row before the old payer row is cleared. Two updates
+          // inside this transaction avoid that statement-order race; rollback
+          // keeps a rejected reassignment invisible.
+          await dbClient.query(
+            `UPDATE accounts.transaction_customer_groups
+                SET is_payer = FALSE
+              WHERE transaction_id = $1 AND workspace_id = $2`,
+            [id, workspaceId],
+          );
           const flip = await dbClient.query<{ id: number }>(
             `UPDATE accounts.transaction_customer_groups
-                SET is_payer = (id = $1)
-              WHERE transaction_id = $2 AND workspace_id = $3
+                SET is_payer = TRUE
+              WHERE id = $1 AND transaction_id = $2 AND workspace_id = $3
               RETURNING id`,
             [payerTarget, id, workspaceId],
           );
-          if (!flip.rows.some((r) => r.id === payerTarget)) {
+          if (flip.rows.length === 0) {
             await dbClient.query("ROLLBACK");
             return c.json({ error: "reassign_payer_to must belong to this transaction" }, 404);
           }

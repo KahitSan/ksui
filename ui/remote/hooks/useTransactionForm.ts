@@ -266,6 +266,7 @@ export function useTransactionForm(deps: TransactionFormDeps) {
             transaction_date: formDate(),
             description: formDescription().trim(),
             notes: formNotes().trim() || null,
+            reference_number: formRefNumber().trim() || null,
             destination_account_id: formDestAccount()
               ? parseInt(formDestAccount())
               : null,

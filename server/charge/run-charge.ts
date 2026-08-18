@@ -51,6 +51,7 @@ import {
 } from "./insert-line-items.js";
 import { tryProbeVoucher } from "./probe-voucher.js";
 import { TRANSACTION_COLS } from "../routes/shared.js";
+import { allocateInvoiceNumber } from "../lib/invoice-number.js";
 
 export type ChargeConnectHandle = { connect(): Promise<PoolClient> };
 
@@ -238,6 +239,14 @@ export async function runCharge(opts: {
       );
     }
 
+    const invoiceDate = payload.transaction_date ?? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+    const invoiceReference = await allocateInvoiceNumber(
+      client,
+      workspaceId,
+      "sale",
+      invoiceDate,
+      payload.reference_number?.trim() || null,
+    );
     let txn: Record<string, unknown>;
     let lineItems: Array<Record<string, unknown>>;
 
@@ -283,6 +292,7 @@ export async function runCharge(opts: {
         `INSERT INTO accounts.transactions
            (workspace_id, category, subcategory, destination_account_id, amount, description,
             notes,
+            reference_number,
             transaction_date, status, created_by,
             tax_type, tax_rate, tax_amount, subtotal,
             client_id, discount_amount,
@@ -290,6 +300,7 @@ export async function runCharge(opts: {
             parent_transaction_id, batch_code)
          VALUES ($1, 'sale', 'Sales - services', $2, $3, $4,
                  $9,
+                 $14,
                  COALESCE($7::date, CURRENT_DATE), 'completed', $5,
                  'vat_inclusive', 0, 0, $12,
                  $6, $8,
@@ -311,6 +322,7 @@ export async function runCharge(opts: {
           payload.parent_transaction_id ?? null, // $11
           subtotal, // $12
           batchCode, // $13
+          invoiceReference, // $14
         ],
       );
       txn = txResult.rows[0];
@@ -390,6 +402,7 @@ export async function runCharge(opts: {
         `INSERT INTO accounts.transactions
            (workspace_id, category, subcategory, destination_account_id, amount, description,
             notes,
+            reference_number,
             transaction_date, status, created_by,
             tax_type, tax_rate, tax_amount, subtotal,
             client_id, discount_amount,
@@ -397,6 +410,7 @@ export async function runCharge(opts: {
             parent_transaction_id)
          VALUES ($1, 'sale', 'Sales - services', $2, $3, $4,
                  $9,
+                 $12,
                  COALESCE($7::date, CURRENT_DATE), 'completed', $5,
                  'vat_inclusive', 0, 0, $3,
                  $6, $8,
@@ -416,6 +430,7 @@ export async function runCharge(opts: {
           notes, // $9
           backdateReason, // $10
           payload.parent_transaction_id ?? null, // $11
+          invoiceReference, // $12
         ],
       );
       txn = txResult.rows[0];

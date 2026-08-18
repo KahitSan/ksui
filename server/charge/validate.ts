@@ -74,6 +74,7 @@ export interface ChargePayload {
   started_at?: string;
   backdate_reason?: string | null;
   notes?: string | null;
+  reference_number?: string | null;
   amount_collected?: number | null;
   parent_transaction_id?: number | null;
   // Multi-customer breakdown. When present, the parent transaction's
