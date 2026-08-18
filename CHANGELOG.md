@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.38.3
+
+### Patch Changes
+
+- d27a951: Label sales reference input as Invoice ID and explain automatic and backdated overrides.
+
 ## 0.38.2
 
 ### Patch Changes
