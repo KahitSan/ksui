@@ -75,10 +75,20 @@ function s3KeyForJob(workspaceId: number | string | undefined, jobId: string): s
   return `exports/transactions/${workspaceId}/${jobId}.csv`;
 }
 
+type ExportCategory = "all" | "sale" | "expense" | "other";
+
+function exportCategoryCondition(category: ExportCategory): string | null {
+  if (category === "sale") return "t.category = 'sale'";
+  if (category === "expense") return "t.category = 'expense'";
+  if (category === "other") return "t.category NOT IN ('sale', 'expense')";
+  return null;
+}
+
 type RowFilters = {
   workspaceId: number | string | undefined;
   dateFrom: string;
   dateTo: string;
+  category: ExportCategory;
   // The privacy fragment + its params, resolved once at request time from the
   // requester's identity (the worker runs after the response is sent, so it
   // can't re-read req — we snapshot what privacyClause needs here).
@@ -145,6 +155,7 @@ function whereForFilters(filters: RowFilters, extra: string): { sql: string; par
     "t.transaction_date >= $2",
     "t.transaction_date <= $3",
     "t.status <> 'voided'",
+    exportCategoryCondition(filters.category),
     extra,
   ].filter(Boolean);
   if (filters.privacy.frag) {
@@ -347,9 +358,15 @@ export function registerExportRoutes(router: Hono, ctx: ExportRouteCtx): void {
         dateFrom?: unknown;
         dateTo?: unknown;
         consolidate?: unknown;
+        category?: unknown;
       };
       const dateFrom = String(body.dateFrom ?? "");
       const dateTo = String(body.dateTo ?? "");
+      const category: ExportCategory = ["all", "sale", "expense", "other"].includes(
+        body.category as string,
+      )
+        ? (body.category as ExportCategory)
+        : "all";
       const consolidate = body.consolidate === true;
 
       if (!isValidIsoDate(dateFrom) || !isValidIsoDate(dateTo)) {
@@ -360,6 +377,9 @@ export function registerExportRoutes(router: Hono, ctx: ExportRouteCtx): void {
       }
       if (rangeSpanInDays(dateFrom, dateTo) > EXPORT_MAX_RANGE_DAYS) {
         return c.json({ error: `Range may not exceed ${EXPORT_MAX_RANGE_DAYS} days` }, 400);
+      }
+      if (consolidate && category !== "sale") {
+        return c.json({ error: "Daily consolidation is only available for sales exports" }, 400);
       }
       if (!s3Enabled()) {
         return c.json({ error: "Export storage is not configured" }, 503);
@@ -383,6 +403,7 @@ export function registerExportRoutes(router: Hono, ctx: ExportRouteCtx): void {
           workspaceId: ctxGet(c, "workspaceId"),
           dateFrom,
           dateTo,
+          category,
           privacy: { frag, params: privacyParams },
         };
         const identityHeader = identityHeaderOf(c);
