@@ -116,6 +116,7 @@ export default function ExportTransactionsModal(
   );
   const [dateTo, setDateTo] = createSignal<string | null>(todayStr());
   const [consolidate, setConsolidate] = createSignal(false);
+  const [category, setCategory] = createSignal<"all" | "sale" | "expense" | "other">("all");
 
   const [phase, setPhase] = createSignal<
     "form" | "preparing" | "done" | "error"
@@ -177,6 +178,7 @@ export default function ExportTransactionsModal(
           dateFrom: dateFrom(),
           dateTo: dateTo(),
           consolidate: consolidate(),
+          category: category(),
         }),
       });
       if (!res.ok) {
@@ -320,10 +322,33 @@ export default function ExportTransactionsModal(
             </section>
 
             <section class="rounded-lg border border-ks-border/60 bg-ks-surface/40 p-3">
+              <label class="block text-[10px] uppercase tracking-widest text-ks-fg-muted font-semibold mb-2" for="export-category">
+                Transaction type
+              </label>
+              <select
+                id="export-category"
+                value={category()}
+                onChange={(e) => {
+                  const next = e.currentTarget.value as "all" | "sale" | "expense" | "other";
+                  setCategory(next);
+                  if (next !== "sale") setConsolidate(false);
+                }}
+                class="w-full rounded border border-ks-border-strong bg-ks-surface px-3 py-2 text-sm text-ks-fg"
+                data-testid="export-category"
+              >
+                <option value="all">All transactions</option>
+                <option value="sale">Sales only</option>
+                <option value="expense">Expenses only</option>
+                <option value="other">Other transactions</option>
+              </select>
+            </section>
+
+            <section class="rounded-lg border border-ks-border/60 bg-ks-surface/40 p-3">
               <label class="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={consolidate()}
+                  disabled={category() !== "sale"}
                   onChange={(e) => setConsolidate(e.currentTarget.checked)}
                   class="mt-0.5 h-4 w-4 rounded border-ks-border-strong bg-ks-surface text-ks-accent focus:ring-ks-accent"
                   data-testid="export-consolidate"

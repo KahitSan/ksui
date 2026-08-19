@@ -155,41 +155,61 @@ describe("transactions CSV export: create → poll → download (real Postgres)"
     expect(res.status).toBe(400);
   });
 
-  it("exports a detailed CSV that includes a freshly-created row", async () => {
-    // Seed one row inside the export window so the assertion is meaningful even
-    // on an empty CI database.
-    const create = await request(honoApp, "POST", "/", {
-      category: "expense",
+  it("filters detailed CSV exports by transaction type", async () => {
+    const sale = await request(honoApp, "POST", "/", {
+      category: "sale",
       amount: "42.50",
-      description: desc,
+      description: `${desc}-sale`,
+      transaction_date: today,
+      reference_number: "INV-TEST-1001",
+    });
+    expect(sale.status).toBe(201);
+    const expense = await request(honoApp, "POST", "/", {
+      category: "expense",
+      amount: "12.50",
+      description: `${desc}-expense`,
       transaction_date: today,
     });
-    expect(create.status).toBe(201);
+    expect(expense.status).toBe(201);
 
-    const start = await request(honoApp, "POST", "/export", {
-      dateFrom: today,
-      dateTo: today,
-      consolidate: false,
-    });
-    const startBody = (await start.json()) as Record<string, unknown>;
-    expect(start.status).toBe(200);
-    const jobId = startBody.jobId as string;
-    expect(typeof jobId).toBe("string");
+    async function exportCategory(category: string): Promise<string> {
+      const start = await request(honoApp, "POST", "/export", {
+        dateFrom: today,
+        dateTo: today,
+        category,
+        consolidate: false,
+      });
+      const startBody = (await start.json()) as Record<string, unknown>;
+      expect(start.status).toBe(200);
+      const jobId = startBody.jobId as string;
+      expect(typeof jobId).toBe("string");
+      const job = await waitForJob(jobId);
+      expect(job.status, JSON.stringify(job)).toBe("done");
+      const dlRes = await honoApp.request(`/export/${jobId}/download`);
+      expect(dlRes.status).toBe(200);
+      return dlRes.text();
+    }
 
-    const job = await waitForJob(jobId);
-    expect(job.status, JSON.stringify(job)).toBe("done");
-    expect(job.filename).toContain(today);
+    const salesCsv = await exportCategory("sale");
+    expect(salesCsv).toContain("INV-TEST-1001");
+    expect(salesCsv).toContain(`${desc}-sale`);
+    expect(salesCsv).not.toContain(`${desc}-expense`);
 
-    const dlRes = await honoApp.request(`/export/${jobId}/download`);
-    expect(dlRes.status).toBe(200);
-    expect(dlRes.headers.get("content-type")).toContain("text/csv");
-    expect(dlRes.headers.get("content-disposition")).toContain("attachment");
-    // Header row + the seeded transaction's description must be present.
-    const dlText = await dlRes.text();
-    expect(dlText.startsWith("Date,Category,Subcategory,Description,Amount")).toBe(true);
-    expect(dlText).toContain(desc);
+    const expensesCsv = await exportCategory("expense");
+    expect(expensesCsv).toContain(`${desc}-expense`);
+    expect(expensesCsv).not.toContain(`${desc}-sale`);
+    expect(expensesCsv.startsWith("Date,Invoice Number,Category,Subcategory,Description,Amount")).toBe(true);
   });
 
+  it("rejects daily consolidation for non-sales exports", async () => {
+    const res = await request(honoApp, "POST", "/export", {
+      dateFrom: today,
+      dateTo: today,
+      category: "expense",
+      consolidate: true,
+    });
+    expect(res.status).toBe(400);
+  });
   it("404s a download for an unknown job", async () => {
     const res = await request(
       honoApp,

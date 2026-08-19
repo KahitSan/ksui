@@ -431,13 +431,6 @@ export default function TransactionsPage() {
         actions={
           <>
             <PageShareButton module="transactions" moduleLabel="Transactions" />
-            <a
-              href="/workspace-settings?tab=display"
-              class="inline-flex items-center justify-center px-3 py-2 text-xs font-medium text-ks-fg-muted border border-ks-border hover:text-ks-fg hover:border-ks-border-strong transition-colors"
-              data-testid="transactions-settings-link"
-            >
-              Settings
-            </a>
             <Button
               intent="secondary"
               variant="clip2"
