@@ -27,6 +27,7 @@ import type { PluginDb } from "@kahitsan/plugin-sdk";
 import { identityHeaderOf } from "@kahitsan/plugin-sdk";
 import { findAccountsByIds, findPackagesByIds, findPayeesByIds } from "../lib/peers.js";
 import { validateSubcategory } from "../lib/transaction-subcategories.js";
+import { allocateInvoiceNumber } from "../lib/invoice-number.js";
 import { isBackdated } from "../lib/backdate.js";
 import { ACTIVE_LINE_ROWS_SQL, summarizeActiveLines, type ActiveLineRow } from "../lib/active-line-summary.js";
 import { registerTransactionDetailRoute } from "./transactions-detail.js";
@@ -60,6 +61,79 @@ const TRANSFER_FEE_SUBCATEGORY = "Other expense";
 
 export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
   const { pool, requireAuth, requireWorkspace, requirePermission } = ctx;
+
+  router.get(
+    "/invoice-settings",
+    requireAuth,
+    requireWorkspace,
+    requirePermission("transactions.view"),
+    async (c) => {
+      const result = await pool.query(
+        `SELECT enabled, first_number, next_number, prefix FROM accounts.invoice_settings WHERE workspace_id = $1`,
+        [ctxGet(c, "workspaceId")],
+      );
+      return c.json(result.rows[0] ?? { enabled: false, first_number: 101, next_number: 101, prefix: "" });
+    },
+  );
+  router.put(
+    "/invoice-settings",
+    requireAuth,
+    requireWorkspace,
+    requirePermission("transactions.edit"),
+    async (c) => {
+      if (!isWorkspaceElevated(c)) return c.json({ error: "Workspace admin required" }, 403);
+      const body = await c.req.json().catch(() => ({}));
+      if (typeof body.enabled !== "boolean") return c.json({ error: "enabled must be boolean" }, 400);
+      const prefix = body.prefix === undefined ? "" : String(body.prefix);
+      if (prefix.length > 20) return c.json({ error: "prefix is too long" }, 400);
+      const nextNumber = body.next_number === undefined ? 100 : Number(body.next_number);
+      const firstNumber = body.first_number === undefined ? nextNumber : Number(body.first_number);
+      if (!Number.isInteger(firstNumber) || firstNumber < 1 || !Number.isInteger(nextNumber) || nextNumber < firstNumber) return c.json({ error: "next_number must be a positive integer" }, 400);
+      const result = await pool.query(
+        `INSERT INTO accounts.invoice_settings (workspace_id, enabled, first_number, next_number, prefix)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (workspace_id) DO UPDATE SET enabled = EXCLUDED.enabled, first_number = EXCLUDED.first_number, next_number = EXCLUDED.next_number, prefix = EXCLUDED.prefix, updated_at = NOW()
+         RETURNING enabled, first_number, next_number, prefix`,
+        [ctxGet(c, "workspaceId"), body.enabled, firstNumber, nextNumber, prefix],
+      );
+      return c.json(result.rows[0]);
+    },
+  );
+  router.get(
+    "/next-invoice-id",
+    requireAuth,
+    requireWorkspace,
+    requirePermission("transactions.view"),
+    async (c) => {
+      try {
+        const result = await ctx.pool.query<{ reference_number: string }>(
+          `SELECT reference_number
+             FROM accounts.transactions
+            WHERE workspace_id = $1
+              AND category = 'sale'
+              AND reference_number IS NOT NULL
+              AND btrim(reference_number) <> ''
+            ORDER BY id DESC
+            LIMIT 1`,
+          [ctxGet(c, "workspaceId")],
+        );
+        const last = result.rows[0]?.reference_number?.trim();
+        if (!last) return c.json({ invoiceId: "INV-0001" });
+        let digitStart = last.length;
+        while (digitStart > 0 && last.charCodeAt(digitStart - 1) >= 48 && last.charCodeAt(digitStart - 1) <= 57) {
+          digitStart--;
+        }
+        if (digitStart === last.length) return c.json({ invoiceId: `${last}-1` });
+        const digits = last.slice(digitStart);
+        const prefix = last.slice(0, digitStart);
+        const next = String(Number(digits) + 1).padStart(digits.length, "0");
+        return c.json({ invoiceId: `${prefix}${next}` });
+      } catch (err) {
+        console.error("[transactions] next invoice id error:", err);
+        return c.json({ error: "Internal server error" }, 500);
+      }
+    },
+  );
 
   // ── List ────────────────────────────────────────────────────────────────
   router.get(
@@ -419,6 +493,13 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           await assertOrgOwnsRow(dbClient, "accounts.financial_accounts", dstAccountId, ctxGet(c, "workspaceId"), "destination_account_id");
         }
 
+        const invoiceReference = await allocateInvoiceNumber(
+          dbClient,
+          ctxGet(c, "workspaceId"),
+          category,
+          String(transaction_date),
+          reference_number?.trim() || null,
+        );
         const txn = await insertTransactionRow(dbClient, {
           workspaceId: ctxGet(c, "workspaceId"),
           category,
@@ -433,7 +514,7 @@ export function registerCoreRoutes(router: Hono, ctx: CoreRouteCtx): void {
           isBackdated: backdated,
           backdateReason: backdated ? backdate_reason?.trim() : null,
           createdBy: ctxGet(c, "user").id,
-          referenceNumber: reference_number?.trim() || null,
+          referenceNumber: invoiceReference,
           taxType: txTaxType,
           taxRate,
           taxAmount,

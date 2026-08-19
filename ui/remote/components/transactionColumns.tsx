@@ -34,6 +34,7 @@ export interface TransactionColumnDeps {
   peersUnavailable: () => { accounts: boolean; payees: boolean };
   accountsIndex: () => Parameters<typeof resolveAccount>[0];
   creatorName: (userId: string | null | undefined) => string | null;
+  showInvoiceId: () => boolean;
 }
 
 export function makeTransactionColumns(
@@ -45,6 +46,7 @@ export function makeTransactionColumns(
     peersUnavailable,
     accountsIndex,
     creatorName,
+    showInvoiceId,
   } = deps;
   return [
     {
@@ -90,6 +92,19 @@ export function makeTransactionColumns(
           fallback={<span class="text-[11px] text-ks-fg-subtle">—</span>}
         >
           <span class="text-[11px] tabular-nums text-ks-fg-muted">#{row.id}</span>
+        </Show>
+      ),
+    },
+    {
+      data: "reference_number",
+      title: "Invoice ID",
+      className: "hidden lg:table-cell w-[130px]",
+      render: (_val, _type, row) => (
+        <Show
+          when={!row._grouped && row.category === "sale" && showInvoiceId() && row.reference_number}
+          fallback={<span class="text-[11px] text-ks-fg-subtle">—</span>}
+        >
+          <span class="text-xs text-ks-fg-muted truncate">{row.reference_number}</span>
         </Show>
       ),
     },
