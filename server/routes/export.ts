@@ -75,9 +75,9 @@ function s3KeyForJob(workspaceId: number | string | undefined, jobId: string): s
   return `exports/transactions/${workspaceId}/${jobId}.csv`;
 }
 
-type ExportCategory = "all" | "sale" | "expense" | "other";
+export type ExportCategory = "all" | "sale" | "expense" | "other";
 
-function exportCategoryCondition(category: ExportCategory): string | null {
+export function exportCategoryCondition(category: ExportCategory): string | null {
   if (category === "sale") return "t.category = 'sale'";
   if (category === "expense") return "t.category = 'expense'";
   if (category === "other") return "t.category NOT IN ('sale', 'expense')";
