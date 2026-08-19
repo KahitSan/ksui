@@ -1,5 +1,17 @@
 # @kahitsan/kplugin_transactions
 
+## 1.9.0
+
+### Minor Changes
+
+- c816a91: Add optional workspace-scoped automatic invoice numbering for sales transactions.
+
+### Patch Changes
+
+- 3d67dab: Bump @kahitsan/ksui to ^0.38.1 (voucher description in picker rows and staged summary)
+- 3d67dab: Bump @kahitsan/ksui to ^0.38.2 (voucher picker row layout + footer description with See more)
+- 31673ef: Bump @kahitsan/ksui to ^0.38.0 (VoucherPicker modal with search, paging, confirm)
+
 ## 1.8.3
 
 ### Patch Changes
