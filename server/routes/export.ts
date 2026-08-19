@@ -185,6 +185,7 @@ async function buildConsolidatedCsv(
 interface DetailRow {
   id: number;
   transaction_date: string;
+  reference_number: string | null;
   category: string;
   subcategory: string | null;
   description: string | null;
@@ -225,7 +226,7 @@ async function buildDetailedCsv(
     const li = params.length;
     const page = await pool.query(
       `SELECT t.id, to_char(t.transaction_date, 'YYYY-MM-DD') AS transaction_date,
-              t.category, t.subcategory, t.description, t.notes, t.amount, t.status,
+              t.reference_number, t.category, t.subcategory, t.description, t.notes, t.amount, t.status,
               t.source_account_id, t.destination_account_id, t.payee_id, t.created_by,
               to_char((t.created_at AT TIME ZONE 'Asia/Manila'), 'YYYY-MM-DD HH24:MI') AS created_at_local,
               paid.total_paid::numeric(12,2) AS amount_collected,
@@ -278,13 +279,14 @@ async function buildDetailedCsv(
   const payeeName = new Map((payees ?? []).map((p) => [p.id, p.name]));
 
   let text = csvRow([
-    "Date", "Category", "Subcategory", "Description", "Amount", "Status",
+    "Date", "Invoice Number", "Category", "Subcategory", "Description", "Amount", "Status",
     "Payment Status", "Amount Collected", "Balance", "Source Account",
     "Destination Account", "Payee", "Created By", "Created At", "Notes",
   ]);
   for (const r of rows) {
     text += csvRow([
       r.transaction_date,
+      r.reference_number,
       r.category,
       r.subcategory,
       r.description,

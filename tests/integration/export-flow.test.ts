@@ -159,10 +159,11 @@ describe("transactions CSV export: create → poll → download (real Postgres)"
     // Seed one row inside the export window so the assertion is meaningful even
     // on an empty CI database.
     const create = await request(honoApp, "POST", "/", {
-      category: "expense",
+      category: "sale",
       amount: "42.50",
       description: desc,
       transaction_date: today,
+      reference_number: "INV-TEST-1001",
     });
     expect(create.status).toBe(201);
 
@@ -186,7 +187,8 @@ describe("transactions CSV export: create → poll → download (real Postgres)"
     expect(dlRes.headers.get("content-disposition")).toContain("attachment");
     // Header row + the seeded transaction's description must be present.
     const dlText = await dlRes.text();
-    expect(dlText.startsWith("Date,Category,Subcategory,Description,Amount")).toBe(true);
+    expect(dlText.startsWith("Date,Invoice Number,Category,Subcategory,Description,Amount")).toBe(true);
+    expect(dlText).toContain("INV-TEST-1001");
     expect(dlText).toContain(desc);
   });
 
