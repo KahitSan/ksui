@@ -1,5 +1,12 @@
 # @kahitsan/kplugin_transactions
 
+## 1.9.1
+
+### Patch Changes
+
+- ba6e5a2: Add sales, expense, and other transaction filters to CSV exports.
+- e007818: Bump `@kahitsan/ksui` so transaction forms render sales invoice fields.
+
 ## 1.9.0
 
 ### Minor Changes
