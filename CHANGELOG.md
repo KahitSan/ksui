@@ -1,5 +1,12 @@
 # @kahitsan/ksui
 
+## 0.39.1
+
+### Patch Changes
+
+- be1d275: Fix compact transaction forms hiding secondary fields until expanded.
+- 7fe613d: Use approved font token fallback in compact transaction form styles.
+
 ## 0.39.0
 
 ### Minor Changes
