@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.39.0
+
+### Minor Changes
+
+- 60630ec: Add opt-in compact layout for transaction forms.
+
 ## 0.38.3
 
 ### Patch Changes
