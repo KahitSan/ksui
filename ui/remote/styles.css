@@ -185,7 +185,7 @@
 }
 .ks-finance-transaction-modal .ks-transaction-compact-fee-row {
   display: flex !important;
-  flex-direction: column;
+  flex-direction: column !important;
   align-items: center;
   justify-content: center;
   gap: .5rem;
@@ -220,9 +220,8 @@
   border-radius: .625rem;
 }
 .ks-finance-transaction-modal .ks-transaction-compact-date {
-  display: grid !important;
-  gap: .75rem;
-  padding: .875rem !important;
+  display: block !important;
+  padding: 0 !important;
   border: 1px solid color-mix(in srgb, var(--ks-border, #3f3f46) 70%, transparent) !important;
   border-radius: .75rem;
   background: color-mix(in srgb, var(--ks-overlay, #18181b) 78%, transparent) !important;
@@ -231,7 +230,11 @@
   display: flex;
   align-items: center;
   gap: .75rem;
+  padding: .875rem;
   color: var(--ks-fg-muted, #a1a1aa);
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-heading > svg {
+  flex: 0 0 auto;
 }
 .ks-finance-transaction-modal .ks-transaction-compact-date-copy {
   display: grid;
@@ -257,13 +260,99 @@
   width: max-content;
   max-width: 100%;
   min-width: 8rem;
+  height: 2.25rem;
   gap: .5rem;
-  border: 1px solid var(--ks-border, #3f3f46);
-  border-radius: .5625rem;
-  padding: .5rem .75rem;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
   color: var(--ks-fg-muted, #a1a1aa);
   background: var(--ks-overlay, #18181b);
   font-size: .75rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-trigger svg,
+.ks-finance-transaction-modal .ks-transaction-compact-date .ksui-datepicker-clear-btn {
+  display: none !important;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-nested {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem .875rem;
+  border-top: 1px solid color-mix(in srgb, var(--ks-border, #3f3f46) 55%, transparent);
+  color: var(--ks-fg-muted, #a1a1aa);
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-field {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: .375rem;
+  color: var(--ks-fg-muted, #a1a1aa);
+  font-size: .6875rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-field > span:first-child {
+  font-size: .625rem;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-inline-fields {
+  display: flex;
+  gap: .5rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-field select,
+.ks-finance-transaction-modal .ks-transaction-compact-date-field input {
+  min-width: 0;
+  height: 2.25rem;
+  border: 1px solid var(--ks-border, #3f3f46);
+  border-radius: .5rem;
+  padding: .375rem .5rem;
+  color: var(--ks-fg, #fff);
+  background: var(--ks-overlay, #18181b);
+  font-size: .75rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-inline-fields select {
+  flex: 1 1 auto;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-inline-fields input {
+  width: 5.5rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-remove {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: .5rem;
+  color: var(--ks-fg-subtle, #71717a);
+  background: transparent;
+  cursor: pointer;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-remove:hover {
+  color: var(--ks-danger-fg, #f87171);
+  background: color-mix(in srgb, var(--ks-danger, #ef4444) 10%, transparent);
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-actions {
+  display: flex;
+  gap: .5rem;
+  padding: .75rem .875rem;
+  border-top: 1px solid color-mix(in srgb, var(--ks-border, #3f3f46) 55%, transparent);
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-actions button {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 0;
+  border-radius: .5rem;
+  padding: .5rem .375rem;
+  color: var(--ks-fg-muted, #a1a1aa);
+  background: color-mix(in srgb, var(--ks-surface-raised, #202020) 75%, transparent);
+  font-size: .6875rem;
+  cursor: pointer;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-actions button:hover {
+  color: var(--ks-accent, #fbbf24);
+  background: color-mix(in srgb, var(--ks-accent, #fbbf24) 10%, transparent);
 }
 .ks-finance-transaction-modal .ks-transaction-compact-today {
   flex: none;
@@ -281,10 +370,6 @@
   display: grid;
   gap: 1rem;
   min-width: 0;
-}
-.ks-finance-transaction-modal .ks-transaction-compact-details-content,
-.ks-finance-transaction-modal .ks-transaction-compact-sales {
-  order: 9 !important;
 }
 .ks-finance-transaction-modal .ks-transaction-compact-details-content > * {
   min-width: 0;
@@ -316,6 +401,11 @@
   gap: .375rem;
   white-space: nowrap;
 }
+.ks-finance-transaction-modal .ks-transaction-details-copy svg,
+.ks-finance-transaction-modal .ks-transaction-advanced-toggle svg {
+  flex: 0 0 auto;
+  display: block;
+}
 .ks-finance-transaction-modal .ks-transaction-chevron-open {
   transform: rotate(180deg);
 }
@@ -329,6 +419,7 @@
   gap: .5rem !important;
   overflow-x: auto;
   padding: 0 0 .25rem;
+  white-space: nowrap;
 }
 .ks-finance-transaction-modal .ks-transaction-account-picker > [role="radio"] {
   flex: 0 0 auto;
@@ -339,12 +430,9 @@
   border-radius: 0 !important;
   text-align: center;
   font-size: .8125rem;
-}
-.ks-finance-transaction-modal .ks-transaction-compact-body > div.ks-transaction-compact-transfer-accounts {
-  order: 7 !important;
-}
-.ks-finance-transaction-modal .ks-transaction-details-toggle {
-  order: 8 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 @media (max-width: 639px) {
   .ks-finance-transaction-modal {
