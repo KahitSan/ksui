@@ -299,7 +299,10 @@ export interface TransactionFormProps {
 }
 
 export default function TransactionForm(props: TransactionFormProps) {
-  injectCSS("ksui-transaction-form-compact", `.ks-transaction-compact{min-height:0;font-family:var(--ks-font-body,ui-sans-serif,system-ui,sans-serif)}.ks-transaction-compact-body{display:flex;flex-direction:column;min-height:0;overflow:auto;padding:1rem 1.25rem 1.5rem;gap:1rem}.ks-transaction-compact-body>div{width:100%;flex:0 0 auto}.ks-transaction-compact-body input[data-testid="transactions-form-amount"]{min-height:3.5rem;text-align:center;font-size:2rem}.ks-transaction-compact-body input[data-testid="transactions-form-description"]{background:transparent;border-color:var(--ks-border)}.ks-transaction-compact-body>div:has(input[data-testid="transactions-form-amount"])>label,.ks-transaction-compact-body>div:has(input[data-testid="transactions-form-description"])>label{display:none}.ks-transaction-compact-body>div:has(button[aria-label="Today"])>label{font-size:0;text-transform:uppercase;letter-spacing:.12em}.ks-transaction-compact-body>div:has(button[aria-label="Today"])>label:after{content:"TRANSACTION DATE";font-size:10px}.ks-transaction-compact-body [role="radiogroup"]{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.ks-transaction-compact-body [role="radiogroup"]::-webkit-scrollbar{display:none}.ks-transaction-compact-body [role="radio"]{min-width:8rem}.ks-transaction-compact-footer{flex:0 0 auto}.ks-transaction-compact:not(.ks-transaction-compact-details) .ks-transaction-compact-body>div:has(button[data-testid="form-payee-picker"]),.ks-transaction-compact:not(.ks-transaction-compact-details) .ks-transaction-compact-body>div:has([data-testid="subcategory-select"]),.ks-transaction-compact:not(.ks-transaction-compact-details) .ks-transaction-compact-body>div:has(textarea),.ks-transaction-compact:not(.ks-transaction-compact-details) .ks-transaction-compact-body>div:has(button[aria-label="Add attachment"]){display:none}`);
+  injectCSS("ksui-transaction-form-compact", `.ks-transaction-compact{min-height:0;font-family:var(--ks-font-body,ui-sans-serif,system-ui,sans-serif)}.ks-transaction-compact-body{display:flex;flex-direction:column;min-height:0;overflow:auto;padding:1rem 1.25rem 1.5rem;gap:1rem}.ks-transaction-compact-body>div{width:100%;flex:0 0 auto}.ks-transaction-compact-body input[data-testid="transactions-form-amount"]{min-height:3.5rem;text-align:center;font-size:2rem}.ks-transaction-compact-body input[data-testid="transactions-form-description"]{background:transparent;border-color:var(--ks-border)}.ks-transaction-compact-body>div:has(input[data-testid="transactions-form-amount"])>label,.ks-transaction-compact-body>div:has(input[data-testid="transactions-form-description"])>label{display:none}.ks-transaction-compact-body>div:has(button[aria-label="Today"])>label{font-size:0;text-transform:uppercase;letter-spacing:.12em}.ks-transaction-compact-body>div:has(button[aria-label="Today"])>label:after{content:"TRANSACTION DATE";font-size:10px}.ks-transaction-compact-body [role="radiogroup"]{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.ks-transaction-compact-body [role="radiogroup"]::-webkit-scrollbar{display:none}.ks-transaction-compact-body [role="radio"]{min-width:8rem}.ks-transaction-compact-footer{flex:0 0 auto}.ks-transaction-compact:not(.ks-transaction-compact-details) .ks-transaction-compact-body>div:has(button[data-testid="form-payee-picker"]),.ks-transaction-compact:not(.ks-transaction-compact-details) .ks-transaction-compact-body>div:has([data-testid="subcategory-select"]),.ks-transaction-compact:not(.ks-transaction-compact-details) .ks-transaction-compact-body>div:has(textarea),.ks-transaction-compact:not(.ks-transaction-compact-details) .ks-transaction-compact-body>div:has(button[aria-label="Add attachment"]){display:none}
+.ks-transaction-compact:not(.ks-transaction-compact-details) .ks-transaction-compact-secondary{display:none;}
+.ks-transaction-compact .ks-transaction-compact-body{display:flex;flex-direction:column;min-height:0;overflow:auto;}
+`);
   const compact = () => props.layout === "compact";
   const catConfig = () =>
     CATEGORY_FORM[props.category] || CATEGORY_FORM.expense;
@@ -648,7 +651,7 @@ export default function TransactionForm(props: TransactionFormProps) {
           </FormField>
 
           <Show when={catConfig().showPayee}>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-4" classList={{ "ks-transaction-compact-secondary": compact() }}>
               <FormField label={catConfig().payeeLabel!}>
                 <ComboBox<PayeeOption>
                   testIdPrefix="form-payee-picker"
@@ -696,7 +699,8 @@ export default function TransactionForm(props: TransactionFormProps) {
             </div>
           </Show>
           <Show when={!catConfig().showPayee}>
-            <FormField label="Reference #">
+            <div classList={{ "ks-transaction-compact-secondary": compact() }}>
+              <FormField label="Reference #">
               <input
                 type="text"
                 value={props.refNumber}
@@ -704,11 +708,13 @@ export default function TransactionForm(props: TransactionFormProps) {
                 class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
                 placeholder="Reference number (optional)"
               />
-            </FormField>
+              </FormField>
+            </div>
           </Show>
 
           <Show when={subcategoryAppliesTo() !== null}>
-            <FormField label="Category">
+            <div classList={{ "ks-transaction-compact-secondary": compact() }}>
+              <FormField label="Category">
               <Show
                 when={subcategoryOptionsReady()}
                 fallback={
@@ -754,11 +760,13 @@ export default function TransactionForm(props: TransactionFormProps) {
               <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
                 Optional. Used for tax-prep classification.
               </p>
-            </FormField>
+              </FormField>
+            </div>
           </Show>
 
           <Show when={props.category === "payable"}>
-            <TransactionPayableFields
+            <div classList={{ "ks-transaction-compact-secondary": compact() }}>
+              <TransactionPayableFields
               payableKind={props.payableKind}
               setPayableKind={props.setPayableKind}
               dueDate={props.dueDate}
@@ -767,7 +775,8 @@ export default function TransactionForm(props: TransactionFormProps) {
               setChequeNumber={props.setChequeNumber}
               pdcStatus={props.pdcStatus}
               setPdcStatus={props.setPdcStatus}
-            />
+              />
+            </div>
           </Show>
 
           <TransactionAccountFields
@@ -787,6 +796,7 @@ export default function TransactionForm(props: TransactionFormProps) {
             allowTransferFee={props.allowTransferFee}
           />
 
+          <div classList={{ "ks-transaction-compact-secondary": compact() }}>
           <FormField label="Notes">
             <MentionTextarea
               value={props.notes}
@@ -797,6 +807,7 @@ export default function TransactionForm(props: TransactionFormProps) {
               ariaLabel="Notes"
             />
           </FormField>
+          </div>
 
           <div>
             <div class="flex items-center gap-1 mb-2 text-xs text-[var(--ks-fg-subtle,#71717a)]">
