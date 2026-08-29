@@ -43,6 +43,7 @@ import ExistingAttachmentTile, {
 import FormField from "../base/FormField";
 import DatePicker from "../base/DatePicker";
 import Button from "../base/Button";
+import { injectCSS } from "../../utils/inject-css";
 import {
   type PendingFile,
   createPendingFile,
@@ -294,9 +295,12 @@ export interface TransactionFormProps {
    *  For a caller that locks `category` to one value and never needs
    *  EWT/sharing (e.g. a "record my own expense" surface). */
   simpleMode?: boolean;
+  layout?: "default" | "compact";
 }
 
 export default function TransactionForm(props: TransactionFormProps) {
+  injectCSS("ksui-transaction-form-compact", `.ks-transaction-compact{min-height:0;font-family:var(--ks-font-body,ui-sans-serif,system-ui,sans-serif)}.ks-transaction-compact-body{display:flex;flex-direction:column;min-height:0;overflow:auto;padding:1rem 1.25rem 1.5rem;gap:1rem}.ks-transaction-compact-body>div{width:100%;flex:0 0 auto}.ks-transaction-compact-body input[data-testid="transactions-form-amount"]{min-height:3.5rem;text-align:center;font-size:2rem}.ks-transaction-compact-body input[data-testid="transactions-form-description"]{background:transparent;border-color:var(--ks-border)}.ks-transaction-compact-body>div:has(input[data-testid="transactions-form-amount"])>label,.ks-transaction-compact-body>div:has(input[data-testid="transactions-form-description"])>label{display:none}.ks-transaction-compact-body>div:has(button[aria-label="Today"])>label{font-size:0;text-transform:uppercase;letter-spacing:.12em}.ks-transaction-compact-body>div:has(button[aria-label="Today"])>label:after{content:"TRANSACTION DATE";font-size:10px}.ks-transaction-compact-body [role="radiogroup"]{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.ks-transaction-compact-body [role="radiogroup"]::-webkit-scrollbar{display:none}.ks-transaction-compact-body [role="radio"]{min-width:8rem}.ks-transaction-compact-footer{flex:0 0 auto}`);
+  const compact = () => props.layout === "compact";
   const catConfig = () =>
     CATEGORY_FORM[props.category] || CATEGORY_FORM.expense;
   const [dragging, setDragging] = createSignal(false);
@@ -422,6 +426,7 @@ export default function TransactionForm(props: TransactionFormProps) {
   return (
     <div
       class="relative flex flex-col flex-1 min-h-0"
+      classList={{ "ks-transaction-compact": compact() }}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -455,7 +460,8 @@ export default function TransactionForm(props: TransactionFormProps) {
         }}
         class="flex flex-col flex-1 min-h-0"
       >
-        <div class="flex-1 overflow-x-hidden overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
+        <div class="flex-1 overflow-x-hidden overflow-y-auto px-5 sm:px-6 py-5 space-y-4"
+          classList={{ "ks-transaction-compact-body": compact() }}>
           <Show when={props.error}>
             <div
               class="rounded-lg border border-[color-mix(in_srgb,var(--ks-danger,#ef4444)_30%,transparent)] bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_10%,transparent)] px-3 py-2 text-sm text-[var(--ks-danger-fg,#f87171)]"
@@ -531,7 +537,7 @@ export default function TransactionForm(props: TransactionFormProps) {
           <Show
             when={!(props.category === "sale" && props.saleItems.length > 0)}
           >
-            <FormField label="Amount *">
+            <FormField label={compact() ? "" : "Amount *"}>
               <div class="flex items-stretch gap-2 px-4 py-3 border bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] ks-hud-clip-button focus-within:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)] transition-colors">
                 <span class="self-center text-3xl font-bold text-[var(--ks-fg-subtle,#71717a)] tabular-nums">
                   ₱
@@ -598,7 +604,7 @@ export default function TransactionForm(props: TransactionFormProps) {
             </Show>
           </Show>
 
-          <FormField label="Date *">
+          <FormField label={compact() ? "TRANSACTION DATE" : "Date *"}>
             <DatePicker
               value={props.date}
               onChange={(d: string | null) => d && props.setDate(d)}
@@ -629,7 +635,7 @@ export default function TransactionForm(props: TransactionFormProps) {
             </div>
           </Show>
 
-          <FormField label="Description *">
+          <FormField label={compact() ? "" : "Description *"}>
             <input
               type="text"
               data-testid="transactions-form-description"
@@ -899,9 +905,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                 }
                 class="text-xs text-[var(--ks-fg-subtle,#71717a)] hover:text-[var(--ks-accent,#fbbf24)] px-3 py-1.5 transition-colors cursor-pointer"
               >
-                {viewMode() === "default"
-                  ? "Show advanced fields"
-                  : "Hide advanced fields"}
+                {compact() ? (viewMode() === "default" ? "More details" : "Less details") : (viewMode() === "default" ? "Show advanced fields" : "Hide advanced fields")}
               </button>
             </div>
 
@@ -929,7 +933,8 @@ export default function TransactionForm(props: TransactionFormProps) {
           </Show>
         </div>
 
-        <div class="px-5 sm:px-6 py-4 border-t border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] bg-[var(--ks-bg,#0a0a0a)] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
+        <div class="px-5 sm:px-6 py-4 border-t border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] bg-[var(--ks-bg,#0a0a0a)] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0"
+          classList={{ "ks-transaction-compact-footer": compact() }}>
           <div class="text-xs text-[var(--ks-fg-subtle,#71717a)]">
             <span class="text-[var(--ks-fg-subtle,#71717a)]">Will record as </span>
             <span
