@@ -767,6 +767,7 @@ export default function TransactionsPage() {
                 }
               >
                 <TransactionForm
+                  layout="compact"
                   error={formError()}
                   saving={formSaving()}
                   category={formCategory()}

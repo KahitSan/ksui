@@ -24,15 +24,15 @@ export default function TransactionCreateModal(
 ) {
   const f = () => props.form;
   return (
-    <Modal variant="sheet" onClose={props.onClose}>
+    <Modal variant="sheet" size="md" onClose={props.onClose}>
       <div
-        class="sm:w-[42rem] lg:w-[48rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh]"
+        class="sm:w-[42rem] lg:w-[48rem] sm:max-w-[calc(100vw-2rem)] flex flex-col max-h-[88vh] ks-finance-transaction-modal"
         data-testid="transactions-create-modal"
       >
         <div class="px-5 sm:px-6 py-3 border-b border-ks-border/60 flex items-center justify-between gap-3 shrink-0">
           <div class="flex items-center gap-2 min-w-0">
             <h2 class="text-base font-semibold text-ks-fg truncate">
-              Record transaction
+              New Transaction
             </h2>
             <Tooltip
               content="Log a sale, expense, transfer between your own accounts, or a payable. Transfers can carry a fee saved as a separate expense from the source account."
@@ -63,6 +63,7 @@ export default function TransactionCreateModal(
           </button>
         </div>
         <TransactionForm
+          layout="compact"
           error={f().formError()}
           saving={f().formSaving()}
           category={f().formCategory()}

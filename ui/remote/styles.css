@@ -74,3 +74,97 @@
   from { stroke-dashoffset: 16; }
   to   { stroke-dashoffset: 0; }
 }
+
+/* Compact transaction form: bounded sheet, native shared fields, no clipping. */
+.ks-finance-transaction-modal {
+  width: min(100%, 430px);
+  height: min(calc(100dvh - 2rem), 760px) !important;
+  max-height: calc(100dvh - 2rem) !important;
+  min-height: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  font-family: var(--ks-font-body, ui-sans-serif, system-ui, sans-serif);
+}
+.ks-finance-transaction-modal > div:first-child {
+  flex: 0 0 auto;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.ks-finance-transaction-modal form {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  gap: 1rem;
+  padding: 1rem 1.25rem 1.5rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body > div {
+  width: 100% !important;
+  flex: 0 0 auto !important;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-footer {
+  flex: 0 0 auto !important;
+  padding: 1rem 1.25rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body input,
+.ks-finance-transaction-modal .ks-transaction-compact-body select,
+.ks-finance-transaction-modal .ks-transaction-compact-body textarea {
+  border-radius: .625rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body input[data-testid="transactions-form-amount"] {
+  min-height: 3.5rem;
+  text-align: center;
+  font-size: 2rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body input[data-testid="transactions-form-description"] {
+  background: transparent;
+  border-color: var(--ks-border);
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:first-child > div:first-child,
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:first-child > p {
+  display: none;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has(input[data-testid="transactions-form-amount"]) > label,
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has(input[data-testid="transactions-form-description"]) > label {
+  display: none;
+}
+@media (max-width: 639px) {
+  .ks-finance-transaction-modal {
+    width: 100%;
+    height: min(calc(100dvh - 1rem), 760px) !important;
+    max-height: calc(100dvh - 1rem) !important;
+    border-radius: 1.125rem 1.125rem 0 0;
+  }
+}
+
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has(input[data-testid="transactions-form-amount"]) { order: 2 !important; }
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has(input[data-testid="transactions-form-description"]) { order: 3 !important; }
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has(button[aria-label="Today"]) { order: 4 !important; }
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has([role="radiogroup"]) { order: 5 !important; }
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has([data-testid="form-payee-picker-trigger"]),
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has([data-testid="subcategory-select"]),
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has([data-testid="mention-textarea"]),
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has(button[aria-label="Add attachment"]) { order: 6 !important; }
+@media (max-width: 639px) {
+  .ks-finance-transaction-modal::before {
+    content: "";
+    align-self: center;
+    width: 2.5rem;
+    height: .1875rem;
+    margin: .75rem 0 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ks-fg, #fff) 15%, transparent);
+    flex: 0 0 auto;
+  }
+}
