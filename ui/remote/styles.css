@@ -149,10 +149,35 @@
   order: 2 !important;
 }
 .ks-finance-transaction-modal .ks-transaction-compact-body > div:has(input[data-testid="transactions-form-description"]) {
-  order: 3 !important;
+  order: 5 !important;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body > div.ks-transaction-compact-fee-field {
+  order: 4 !important;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body > div.ks-transaction-compact-description {
+  order: 5 !important;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has(input[placeholder="Reference number (optional)"]) {
+  order: 6 !important;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has([data-testid="transactions-form-transfer-tile-from"]) {
+  order: 7 !important;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has([aria-label="Source account"]),
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has([aria-label="Destination account"]) {
+  min-width: 0;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has([aria-label="Source account"]) input,
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has([aria-label="Destination account"]) input {
+  min-height: 2.75rem;
+  border-radius: .5625rem;
+  padding: .6875rem .75rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact:not(.ks-transaction-compact-details) .ks-transaction-compact-body > div:has(input[placeholder="Reference number (optional)"]) {
+  display: none !important;
 }
 .ks-finance-transaction-modal .ks-transaction-compact-body > div:has(.ksui-datepicker-trigger) {
-  order: 4 !important;
+  order: 6 !important;
   padding: .75rem !important;
   border: 1px solid color-mix(in srgb, var(--ks-border, #3f3f46) 70%, transparent) !important;
   border-radius: .75rem;
@@ -172,13 +197,25 @@
 }
 .ks-finance-transaction-modal .ks-transaction-compact-body > div:has(input[aria-label="Paid from"]),
 .ks-finance-transaction-modal .ks-transaction-compact-body > div:has([data-testid="form-account-picker"]) {
-  order: 5 !important;
+  order: 7 !important;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body > div:has(input[aria-label="Source account"]) {
+  order: 7 !important;
+  padding-top: .25rem;
+}
+@media (max-width: 639px) {
+  .ks-finance-transaction-modal .ks-transaction-compact-body > div:has(input[aria-label="Source account"]) > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ks-finance-transaction-modal .ks-transaction-compact-body > div:has(input[aria-label="Source account"]) > div > div:nth-child(2) {
+    min-height: 1.25rem;
+  }
 }
 .ks-finance-transaction-modal .ks-transaction-compact-body > div:has([data-testid="form-payee-picker-trigger"]),
 .ks-finance-transaction-modal .ks-transaction-compact-body > div:has([data-testid="subcategory-select"]),
 .ks-finance-transaction-modal .ks-transaction-compact-body > div:has([data-testid="mention-textarea"]),
 .ks-finance-transaction-modal .ks-transaction-compact-body > div:has(button[aria-label="Add attachment"]) {
-  order: 6 !important;
+  order: 7 !important;
 }
 .ks-finance-transaction-modal .ks-transaction-compact-body > div.ks-transaction-details-toggle {
   order: 7 !important;
@@ -216,9 +253,64 @@
 .ks-finance-transaction-modal .ks-transaction-compact-tabs + p {
   display: none;
 }
+.ks-finance-transaction-modal .ks-transaction-compact-body [role="radiogroup"] {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: .5rem !important;
+  overflow-x: auto;
+  padding: 0 0 .25rem;
+  scrollbar-width: none;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body [role="radiogroup"]::-webkit-scrollbar {
+  display: none;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body [role="radio"] {
+  flex: 0 0 auto;
+  min-width: 8.75rem;
+  min-height: 2.625rem;
+  padding: .625rem .5rem !important;
+  border-radius: .5625rem !important;
+  justify-content: center;
+  text-align: center;
+  font-size: .8125rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-body [role="radio"] svg {
+  flex: 0 0 auto;
+}
 .ks-finance-transaction-modal .ks-transaction-compact-footer {
   flex: 0 0 auto !important;
   padding: 1rem 1.25rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-fee-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  order: 3 !important;
+  min-height: 2rem;
+  margin-top: -.5rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-fee-row button {
+  border-radius: 999px;
+  padding-inline: .875rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-fee-input {
+  display: inline-flex;
+  align-items: center;
+  gap: .375rem;
+  color: var(--ks-fg-muted, #a1a1aa);
+  font-size: .75rem;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-fee-input input {
+  width: 6rem;
+  min-height: 2rem;
+  border: 1px solid var(--ks-border, #3f3f46);
+  border-radius: .5rem;
+  padding: .375rem .5rem;
+  color: var(--ks-fg, #fff);
+  background: var(--ks-overlay, #18181b);
 }
 .ks-finance-transaction-modal .ks-transaction-compact-body input,
 .ks-finance-transaction-modal .ks-transaction-compact-body select,
@@ -269,4 +361,11 @@
     background: color-mix(in srgb, var(--ks-fg, #fff) 15%, transparent);
     flex: 0 0 auto;
   }
+}
+
+.ks-finance-transaction-modal .ks-transaction-compact-body > div.ks-transaction-compact-transfer-accounts {
+  order: 7 !important;
+}
+.ks-finance-transaction-modal .ks-transaction-details-toggle {
+  order: 8 !important;
 }
