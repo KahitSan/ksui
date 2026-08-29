@@ -453,3 +453,157 @@
     flex: 0 0 auto;
   }
 }
+
+/* Compact transaction form parity. The host sheet supplies generic modal
+ * chrome; this surface owns dimensions, spacing, and tokenized colors. */
+.ksui-modal-sheet-card:has(.ks-finance-transaction-modal) {
+  width: min(430px, 100%);
+  max-width: 430px !important;
+  background: var(--ks-overlay-surface, #161616) !important;
+  border: 1px solid color-mix(in srgb, var(--ks-fg, #fff) 10%, transparent) !important;
+  border-radius: .75rem;
+  overflow: hidden !important;
+}
+.ks-finance-transaction-modal {
+  width: 100%;
+  max-width: none;
+  background: var(--ks-overlay-surface, #161616) !important;
+  color: var(--ks-fg, #f5f5f5);
+}
+.ks-finance-transaction-modal > div:first-child {
+  height: 60px !important;
+  padding: 16px 20px !important;
+}
+.ks-finance-transaction-modal > div:first-child > button {
+  width: 28px !important;
+  min-width: 28px !important;
+  height: 28px !important;
+}
+.ks-finance-transaction-modal > .ks-transaction-compact > .ks-transaction-compact-type {
+  flex: 0 0 auto;
+  height: 47px;
+  margin: 0 18px 20px;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-tabs {
+  width: 100%;
+  height: 47px;
+  margin: 0;
+}
+.ks-finance-transaction-modal > .ks-transaction-compact > form > .ks-transaction-compact-body {
+  padding-top: 0;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-description-input {
+  height: 42px;
+  border-radius: 9px;
+  padding: 11px 12px;
+  background: var(--ks-overlay-surface, #1b1b1b);
+  border-color: color-mix(in srgb, var(--ks-fg, #fff) 10%, transparent);
+  font-size: 13px;
+  font-weight: 450;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date {
+  background: color-mix(in srgb, var(--ks-overlay-surface, #1b1b1b) 78%, transparent) !important;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-heading {
+  height: 69px;
+  min-height: 69px;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-input {
+  display: block;
+  width: 128px;
+  min-width: 0;
+  height: 20px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  color: var(--ks-fg, #fff);
+  background: transparent;
+  font-size: 13px;
+  line-height: 20px;
+  color-scheme: dark;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-input:disabled {
+  opacity: 1;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-today {
+  line-height: normal;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-actions {
+  height: 54px;
+  padding: 11px 14px;
+  line-height: normal;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-actions button {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--ks-border, #3f3f46) 100%, transparent);
+  border-radius: 7px;
+  background: transparent;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-actions button:first-child {
+  color: var(--ks-accent, #fbbf24);
+  border-color: color-mix(in srgb, var(--ks-accent, #fbbf24) 30%, transparent);
+}
+.ks-finance-transaction-modal .ks-transaction-compact-date-actions button:last-child {
+  color: var(--ks-info, #38bdf8);
+  border-color: color-mix(in srgb, var(--ks-info, #38bdf8) 30%, transparent);
+}
+.ks-finance-transaction-modal .ks-transaction-account-picker {
+  gap: 8px !important;
+}
+.ks-finance-transaction-modal .ks-transaction-account-picker > [role="radio"] {
+  min-width: max-content;
+  width: max-content;
+  justify-content: flex-start;
+  border-radius: 9px !important;
+  text-align: left;
+  white-space: nowrap;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-footer {
+  min-height: 71px;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px;
+  background: var(--ks-overlay-surface, #161616) !important;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-footer > div:last-child,
+.ks-finance-transaction-modal .ks-transaction-compact-footer > div:last-child button {
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.ks-finance-transaction-modal .ks-transaction-compact-footer > div:last-child button[type="submit"] {
+  width: 170px !important;
+  min-width: 170px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  padding: 11px 16px !important;
+  color: var(--ks-bg, #0a0a0a) !important;
+  background: var(--ks-accent, #fbbf24) !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+}
+@media (max-width: 639px) {
+  .ksui-modal-sheet-card:has(.ks-finance-transaction-modal) {
+    width: 100%;
+    max-width: 100% !important;
+    min-height: 708px !important;
+    max-height: 92dvh !important;
+    border-radius: 18px 18px 0 0 !important;
+  }
+  .ks-finance-transaction-modal {
+    height: auto !important;
+    min-height: 706px;
+    max-height: 92dvh !important;
+  }
+}
+@media (min-width: 640px) {
+  .ksui-modal-sheet-card:has(.ks-finance-transaction-modal) {
+    border-radius: 12px;
+  }
+}
