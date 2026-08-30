@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.39.2
+
+### Patch Changes
+
+- 86dce3a: Restore compact transaction form tabs, account picker styling, and mock-aligned field ordering.
+
 ## 0.39.1
 
 ### Patch Changes
