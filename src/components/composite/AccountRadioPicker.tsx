@@ -1,5 +1,6 @@
 import { createEffect, Show, For } from "solid-js";
 import AccountAvatar from "../base/AccountAvatar";
+import Button from "../base/Button";
 import type { PaymentAccountOption } from "./PaymentAccountPicker";
 
 export interface AccountRadioPickerProps {
@@ -9,6 +10,8 @@ export interface AccountRadioPickerProps {
   ariaLabel: string;
   excludeId?: string;
   autoDefault?: boolean;
+  compact?: boolean;
+  tone?: "income" | "expense" | "transfer";
 }
 
 export default function AccountRadioPicker(props: AccountRadioPickerProps) {
@@ -82,6 +85,7 @@ export default function AccountRadioPicker(props: AccountRadioPickerProps) {
         aria-label={props.ariaLabel}
         tabIndex={-1}
         class="grid max-sm:grid-cols-2 sm:grid-cols-3 gap-2"
+        classList={{ "ks-transaction-account-picker": props.compact }}
         onKeyDown={onKeyDown}
       >
         <For each={visible()}>
@@ -89,17 +93,29 @@ export default function AccountRadioPicker(props: AccountRadioPickerProps) {
             const selected = () => props.value === a.id.toString();
             const isTabStop = () => selected() || (!props.value && i() === 0);
             return (
-              <button
-                ref={(el) => (buttonRefs[i()] = el)}
+              <Button
+                ref={(el: HTMLButtonElement) => (buttonRefs[i()] = el)}
                 type="button"
                 role="radio"
                 aria-checked={selected()}
                 tabIndex={isTabStop() ? 0 : -1}
+                intent="secondary"
+                variant="clip1"
+                size="sm"
+                noGlow
+                noRipple
+                noScanline
                 onClick={() => props.onChange(a.id.toString())}
-                class="group flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm transition-colors cursor-pointer ks-hud-clip-top-left-bottom-right"
+                class="group flex items-center gap-2 px-3 py-3 text-left text-sm transition-colors cursor-pointer"
                 classList={{
                   "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_50%,transparent)] bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_10%,transparent)] text-[var(--ks-accent-hover,#fcd34d)]":
-                    selected(),
+                    selected() && (!props.compact || !props.tone),
+                  "border-[color-mix(in_srgb,var(--ks-success,#10b981)_50%,transparent)] bg-[color-mix(in_srgb,var(--ks-success,#10b981)_10%,transparent)] text-[var(--ks-success-fg,#34d399)]":
+                    selected() && props.compact && props.tone === "income",
+                  "border-[color-mix(in_srgb,var(--ks-danger,#ef4444)_50%,transparent)] bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_10%,transparent)] text-[var(--ks-danger-fg,#f87171)]":
+                    selected() && props.compact && props.tone === "expense",
+                  "border-[color-mix(in_srgb,var(--ks-info,#38bdf8)_50%,transparent)] bg-[color-mix(in_srgb,var(--ks-info,#38bdf8)_10%,transparent)] text-[var(--ks-info,#38bdf8)]":
+                    selected() && props.compact && props.tone === "transfer",
                   "border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] text-[var(--ks-fg-muted,#a1a1aa)] hover:border-[var(--ks-border-strong,#3f3f46)] hover:bg-[var(--ks-surface-raised,#1a1a1a)]":
                     !selected(),
                 }}
@@ -114,7 +130,7 @@ export default function AccountRadioPicker(props: AccountRadioPickerProps) {
                   }
                 />
                 <span class="truncate">{a.name}</span>
-              </button>
+              </Button>
             );
           }}
         </For>

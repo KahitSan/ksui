@@ -23,6 +23,7 @@ export interface TransactionAccountFieldsProps {
   transferFeeAmount: string;
   transferFeeEnabled: boolean;
   allowTransferFee: boolean;
+  compact?: boolean;
 }
 
 /**
@@ -43,6 +44,8 @@ export default function TransactionAccountFields(props: TransactionAccountFields
             value={
               props.category === "sale" ? props.destAccount : props.sourceAccount
             }
+            compact={props.compact}
+            tone={props.category === "sale" ? "income" : "expense"}
             onChange={(v) => {
               if (props.category === "sale") {
                 props.setDestAccount(v);
