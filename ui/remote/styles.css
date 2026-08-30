@@ -580,8 +580,6 @@
   min-width: 170px !important;
   height: 38px !important;
   min-height: 38px !important;
-  border: 0 !important;
-  border-radius: 9px !important;
   padding: 11px 16px !important;
   color: var(--ks-bg, #0a0a0a) !important;
   background: var(--ks-accent, #fbbf24) !important;

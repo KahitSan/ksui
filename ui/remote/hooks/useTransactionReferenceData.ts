@@ -178,14 +178,22 @@ export function useTransactionReferenceData(
     setOrgMembers([]);
     (async () => {
       try {
+        const wsId =
+          activeWorkspace()?.ws_id ??
+          (typeof window !== "undefined"
+            ? localStorage.getItem("ks_active_workspace_id") ?? ""
+            : "");
         const res = await fetch(
           "/api/financial-accounts?limit=200&status=active",
           {
             credentials: "include",
+            headers: wsId ? { "X-Workspace-Id": String(wsId) } : undefined,
           }
         );
         if (res.ok && activeWorkspace()?.ws_id === gen) {
-          const data = await res.json();
+          const data = (await res.json()) as {
+            data?: FinancialAccount[];
+          };
           setAccounts(data.data || []);
         }
       } catch {
