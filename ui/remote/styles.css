@@ -502,7 +502,7 @@
   font-weight: 450;
 }
 .ks-finance-transaction-modal .ks-transaction-compact-date {
-  background: color-mix(in srgb, var(--ks-overlay-surface, #1b1b1b) 78%, transparent) !important;
+  background: color-mix(in srgb, var(--ks-overlay, #1b1b1b) 78%, transparent) !important;
 }
 .ks-finance-transaction-modal .ks-transaction-compact-date-heading {
   height: 69px;
@@ -581,10 +581,6 @@
   height: 38px !important;
   min-height: 38px !important;
   padding: 11px 16px !important;
-  color: var(--ks-bg, #0a0a0a) !important;
-  background: var(--ks-accent, #fbbf24) !important;
-  font-size: 13px !important;
-  font-weight: 750 !important;
 }
 @media (max-width: 639px) {
   .ksui-modal-sheet-card:has(.ks-finance-transaction-modal) {
