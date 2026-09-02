@@ -37,6 +37,7 @@ function voucher(over: Partial<VoucherOption> & Pick<VoucherOption, "id" | "code
     value: 20,
     max_discount_amount: null,
     applicable_packages: null,
+    applicable_package_lineages: null,
     minimum_purchase: 0,
     valid_from: null,
     valid_until: null,
@@ -379,6 +380,52 @@ describe("VoucherPicker dialog", () => {
     );
   });
 
+  it("accepts a voucher when each package matches by aligned lineage", async () => {
+    mockPagedFetch([
+      voucher({
+        id: 35,
+        code: "LINEAGEOK",
+        applicable_packages: [99],
+        applicable_package_lineages: ["day-pass"],
+      }),
+    ]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={1000}
+        packageIds={[1]}
+        packageLineages={["day-pass"]}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-result-35")).toBeTruthy());
+  });
+  it("rejects a voucher when aligned package lineage does not match", async () => {
+    mockPagedFetch([
+      voucher({
+        id: 36,
+        code: "LINEAGEBAD",
+        applicable_packages: [99],
+        applicable_package_lineages: ["day-pass"],
+      }),
+    ]);
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={1000}
+        packageIds={[1]}
+        packageLineages={["single-use"]}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-36")).toBeTruthy());
+    expect(queryByTestId("voucher-picker-result-36")).toBeNull();
+    expect(getByTestId("voucher-picker-inapplicable-36").textContent).toContain(
+      "Doesn't cover every item",
+    );
+  });
   it("surfaces a load failure instead of rendering an empty list", async () => {
     vi.stubGlobal(
       "fetch",
