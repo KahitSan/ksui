@@ -1,6 +1,7 @@
 // The picker pages the list in from the server (page/limit) and delegates the
 // search to it, so these assert the request contract as well as the rendering.
 import { describe, expect, it, vi } from "vitest";
+import { createSignal } from "solid-js";
 import { fireEvent, render, waitFor } from "@solidjs/testing-library";
 import VoucherPicker, { type VoucherOption } from "./VoucherPicker";
 
@@ -401,6 +402,148 @@ describe("VoucherPicker dialog", () => {
     fireEvent.click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-35")).toBeTruthy());
   });
+
+  it("accepts mixed carts when every item matches one of several allowed pricing eras", async () => {
+    mockPagedFetch([
+      voucher({
+        id: 55,
+        code: "MULTI_ERA",
+        applicable_package_lineages: ["day-pass", "single-use"],
+      }),
+    ]);
+    const { getByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={1000}
+        packageIds={[1, 2, 3]}
+        packageLineages={["day-pass", "single-use", "day-pass"]}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-result-55")).toBeTruthy());
+  });
+
+  it("rejects a mixed ID and lineage cart when one item matches neither", async () => {
+    mockPagedFetch([
+      voucher({
+        id: 56,
+        code: "MIXED_NEITHER",
+        applicable_packages: [1],
+        applicable_package_lineages: ["day-pass"],
+      }),
+    ]);
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={1000}
+        packageIds={[1, 2, 3]}
+        packageLineages={[null, "day-pass", "single-use"]}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-56")).toBeTruthy());
+    expect(queryByTestId("voucher-picker-result-56")).toBeNull();
+    expect(getByTestId("voucher-picker-inapplicable-56").textContent).toContain(
+      "Doesn't cover every item",
+    );
+  });
+
+  it("does not keep a selected voucher selectable after reopening with a changed lineage", async () => {
+    const selected = voucher({
+      id: 57,
+      code: "CHANGED_ERA",
+      applicable_package_lineages: ["day-pass"],
+    });
+    mockPagedFetch([selected]);
+    const [packageLineage, setPackageLineage] = createSignal<string | null>("day-pass");
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker
+        selected={selected}
+        onChange={vi.fn()}
+        subtotal={1000}
+        packageIds={[1]}
+        packageLineages={[packageLineage()]}
+      />
+    ));
+
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-result-57")).toBeTruthy());
+    fireEvent.click(getByTestId("voucher-picker-cancel"));
+
+    setPackageLineage("single-use");
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-57")).toBeTruthy());
+    expect(queryByTestId("voucher-picker-result-57")).toBeNull();
+    expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(true);
+  });
+
+  it("keeps Confirm disabled when selected voucher is inactive", async () => {
+    const selected = voucher({ id: 59, code: "DISABLED_SELECTED", is_active: false });
+    mockPagedFetch([selected]);
+    const onChange = vi.fn();
+    const { getByTestId } = render(() => (
+      <VoucherPicker
+        selected={selected}
+        onChange={onChange}
+        subtotal={1000}
+        packageIds={[]}
+      />
+    ));
+
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-59")).toBeTruthy());
+    expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(true);
+
+    fireEvent.click(getByTestId("voucher-picker-confirm"));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("lists enabled and disabled vouchers in their correct modal sections", async () => {
+    mockPagedFetch([
+      voucher({ id: 37, code: "ENABLED_LINEAGE", applicable_packages: [99], applicable_package_lineages: ["day-pass"] }),
+      voucher({ id: 38, code: "DISABLED_LINEAGE", is_active: false, applicable_packages: [99], applicable_package_lineages: ["day-pass"] }),
+    ]);
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={1000}
+        packageIds={[1]}
+        packageLineages={["day-pass"]}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-result-37")).toBeTruthy());
+    expect(queryByTestId("voucher-picker-inapplicable-37")).toBeNull();
+    expect(getByTestId("voucher-picker-result-37").textContent).toContain("ENABLED_LINEAGE");
+    expect(queryByTestId("voucher-picker-result-38")).toBeNull();
+    expect(getByTestId("voucher-picker-inapplicable-38").textContent).toContain("DISABLED_LINEAGE");
+    expect(getByTestId("voucher-picker-inapplicable-38").textContent).toContain("Inactive");
+  });
+
+  it("lists lineage-disabled vouchers as visible but not selectable", async () => {
+    mockPagedFetch([
+      voucher({ id: 39, code: "DISABLED_LINEAGE", applicable_packages: [99], applicable_package_lineages: ["day-pass"] }),
+    ]);
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={1000}
+        packageIds={[1]}
+        packageLineages={["single-use"]}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-39")).toBeTruthy());
+    expect(queryByTestId("voucher-picker-result-39")).toBeNull();
+    expect(getByTestId("voucher-picker-inapplicable-39").getAttribute("aria-disabled")).toBe("true");
+    expect(getByTestId("voucher-picker-inapplicable-39").textContent).toContain("DISABLED_LINEAGE");
+    expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(true);
+  });
+
   it("rejects a voucher when aligned package lineage does not match", async () => {
     mockPagedFetch([
       voucher({
@@ -426,6 +569,78 @@ describe("VoucherPicker dialog", () => {
       "Doesn't cover every item",
     );
   });
+  it.each([
+    {
+      name: "legacy ID-only package matching",
+      packageIds: [1],
+      packageLineages: undefined,
+      voucher: voucher({ id: 60, code: "LEGACY_ID", applicable_packages: [1] }),
+      result: true,
+    },
+    {
+      name: "empty lineages with legacy ID-only matching",
+      packageIds: [1],
+      packageLineages: [],
+      voucher: voucher({ id: 61, code: "EMPTY_LINEAGES", applicable_packages: [1] }),
+      result: true,
+    },
+    {
+      name: "mixed IDs and lineages",
+      packageIds: [1, 2],
+      packageLineages: [null, "day-pass"],
+      voucher: voucher({
+        id: 62,
+        code: "MIXED_OK",
+        applicable_packages: [1],
+        applicable_package_lineages: ["day-pass"],
+      }),
+      result: true,
+    },
+    {
+      name: "mixed cart with an uncovered package",
+      packageIds: [1, 2],
+      packageLineages: [null, "single-use"],
+      voucher: voucher({
+        id: 63,
+        code: "MIXED_BAD",
+        applicable_packages: [1],
+        applicable_package_lineages: ["day-pass"],
+      }),
+      result: false,
+    },
+    {
+      name: "null lineage without an allowed package ID",
+      packageIds: [2],
+      packageLineages: [null],
+      voucher: voucher({
+        id: 64,
+        code: "NULL_LINEAGE",
+        applicable_packages: [1],
+        applicable_package_lineages: ["day-pass"],
+      }),
+      result: false,
+    },
+  ])("handles $name", async ({ packageIds, packageLineages, voucher: candidate, result }) => {
+    mockPagedFetch([candidate]);
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={1000}
+        packageIds={packageIds}
+        packageLineages={packageLineages}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() =>
+      expect(
+        result
+          ? getByTestId(`voucher-picker-result-${candidate.id}`)
+          : getByTestId(`voucher-picker-inapplicable-${candidate.id}`),
+      ).toBeTruthy(),
+    );
+    expect(queryByTestId(`voucher-picker-result-${candidate.id}`) !== null).toBe(result);
+  });
   it("surfaces a load failure instead of rendering an empty list", async () => {
     vi.stubGlobal(
       "fetch",
@@ -445,6 +660,31 @@ describe("VoucherPicker dialog", () => {
     );
   });
 
+  it("surfaces a rejected voucher request", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("network down"))));
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() =>
+      expect(getByTestId("voucher-picker-popup").textContent).toContain("network down"),
+    );
+  });
+  it("surfaces a missing vouchers endpoint", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 404, json: async () => ({}) })) as unknown as typeof fetch,
+    );
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() =>
+      expect(getByTestId("voucher-picker-popup").textContent).toContain(
+        "Vouchers module isn't available",
+      ),
+    );
+  });
   it("reopening discards a pick that was staged but never confirmed", async () => {
     mockPagedFetch([voucher({ id: 40, code: "STAGED" }), voucher({ id: 41, code: "OTHER" })]);
     const onChange = vi.fn();
