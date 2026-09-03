@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.39.3
+
+### Patch Changes
+
+- 8cbf471: Match vouchers against aligned package lineages.
+
 ## 0.39.2
 
 ### Patch Changes
