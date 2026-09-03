@@ -401,6 +401,50 @@ describe("VoucherPicker dialog", () => {
     fireEvent.click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-35")).toBeTruthy());
   });
+  it("lists enabled and disabled vouchers in their correct modal sections", async () => {
+    mockPagedFetch([
+      voucher({ id: 37, code: "ENABLED_LINEAGE", applicable_packages: [99], applicable_package_lineages: ["day-pass"] }),
+      voucher({ id: 38, code: "DISABLED_LINEAGE", is_active: false, applicable_packages: [99], applicable_package_lineages: ["day-pass"] }),
+    ]);
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={1000}
+        packageIds={[1]}
+        packageLineages={["day-pass"]}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-result-37")).toBeTruthy());
+    expect(queryByTestId("voucher-picker-inapplicable-37")).toBeNull();
+    expect(getByTestId("voucher-picker-result-37").textContent).toContain("ENABLED_LINEAGE");
+    expect(queryByTestId("voucher-picker-result-38")).toBeNull();
+    expect(getByTestId("voucher-picker-inapplicable-38").textContent).toContain("DISABLED_LINEAGE");
+    expect(getByTestId("voucher-picker-inapplicable-38").textContent).toContain("Inactive");
+  });
+
+  it("lists lineage-disabled vouchers as visible but not selectable", async () => {
+    mockPagedFetch([
+      voucher({ id: 39, code: "DISABLED_LINEAGE", applicable_packages: [99], applicable_package_lineages: ["day-pass"] }),
+    ]);
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={1000}
+        packageIds={[1]}
+        packageLineages={["single-use"]}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-39")).toBeTruthy());
+    expect(queryByTestId("voucher-picker-result-39")).toBeNull();
+    expect(getByTestId("voucher-picker-inapplicable-39").getAttribute("aria-disabled")).toBe("true");
+    expect(getByTestId("voucher-picker-inapplicable-39").textContent).toContain("DISABLED_LINEAGE");
+    expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(true);
+  });
+
   it("rejects a voucher when aligned package lineage does not match", async () => {
     mockPagedFetch([
       voucher({
