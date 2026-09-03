@@ -23,6 +23,7 @@ export interface VoucherOption {
   value: string | number | null;
   max_discount_amount: string | number | null;
   applicable_packages: number[] | null;
+  applicable_package_lineages?: string[] | null;
   minimum_purchase: string | number;
   valid_from: string | null;
   valid_until: string | null;
@@ -42,6 +43,7 @@ interface VoucherPickerProps {
   onChange: (next: VoucherOption | null) => void;
   subtotal: number;
   packageIds: number[];
+  packageLineages?: (string | null)[];
   disabled?: boolean;
   compact?: boolean;
   /** Same-shape endpoint override (defaults to the vouchers plugin's own API) —
@@ -104,6 +106,7 @@ function ineligibilityReason(
   voucher: VoucherOption,
   subtotal: number,
   packageIds: number[],
+  packageLineages: (string | null)[],
   todayIso: string,
 ): string | null {
   if (!voucher.is_active) return "Inactive";
@@ -116,10 +119,17 @@ function ineligibilityReason(
   if (usageExhausted(voucher)) return "Fully redeemed";
   if (asNumber(voucher.minimum_purchase) > subtotal)
     return `Needs ${formatCurrency(asNumber(voucher.minimum_purchase))} minimum`;
-  if (voucher.applicable_packages && voucher.applicable_packages.length > 0) {
+  const allowedIds = voucher.applicable_packages ?? [];
+  const allowedLineages = voucher.applicable_package_lineages ?? [];
+  if (allowedIds.length > 0 || allowedLineages.length > 0) {
     if (packageIds.length === 0) return "Only for specific items";
-    const allowed = new Set(voucher.applicable_packages);
-    if (!packageIds.every((id) => allowed.has(id))) return "Doesn't cover every item";
+    const allowed = new Set(allowedIds);
+    if (packageIds.some((id, index) =>
+      !allowed.has(id) &&
+      !(packageLineages[index] != null && allowedLineages.includes(packageLineages[index]!))
+    )) {
+      return "Doesn't cover every item";
+    }
   }
   return null;
 }
@@ -129,9 +139,10 @@ function isApplicable(
   voucher: VoucherOption,
   subtotal: number,
   packageIds: number[],
+  packageLineages: (string | null)[],
   todayIso: string,
 ): boolean {
-  return ineligibilityReason(voucher, subtotal, packageIds, todayIso) === null;
+  return ineligibilityReason(voucher, subtotal, packageIds, packageLineages, todayIso) === null;
 }
 
 function formatVoucherDescription(v: VoucherOption): string {
@@ -293,16 +304,16 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
 
   const applicable = createMemo(() => {
     const today_ = today();
-    return vouchers().filter((v) => isApplicable(v, props.subtotal, props.packageIds, today_));
+    return vouchers().filter((v) => isApplicable(v, props.subtotal, props.packageIds, props.packageLineages ?? [], today_));
   });
 
   const inapplicable = createMemo(() => {
     const today_ = today();
     return vouchers()
-      .filter((v) => !isApplicable(v, props.subtotal, props.packageIds, today_))
+      .filter((v) => !isApplicable(v, props.subtotal, props.packageIds, props.packageLineages ?? [], today_))
       .map((v) => ({
         voucher: v,
-        reason: ineligibilityReason(v, props.subtotal, props.packageIds, today_) ?? "",
+        reason: ineligibilityReason(v, props.subtotal, props.packageIds, props.packageLineages ?? [], today_) ?? "",
       }));
   });
 
