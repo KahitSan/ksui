@@ -478,6 +478,28 @@ describe("VoucherPicker dialog", () => {
     expect(queryByTestId("voucher-picker-result-57")).toBeNull();
     expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(true);
   });
+
+  it("keeps Confirm disabled when selected voucher is inactive", async () => {
+    const selected = voucher({ id: 59, code: "DISABLED_SELECTED", is_active: false });
+    mockPagedFetch([selected]);
+    const onChange = vi.fn();
+    const { getByTestId } = render(() => (
+      <VoucherPicker
+        selected={selected}
+        onChange={onChange}
+        subtotal={1000}
+        packageIds={[]}
+      />
+    ));
+
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-59")).toBeTruthy());
+    expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(true);
+
+    fireEvent.click(getByTestId("voucher-picker-confirm"));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("lists enabled and disabled vouchers in their correct modal sections", async () => {
     mockPagedFetch([
       voucher({ id: 37, code: "ENABLED_LINEAGE", applicable_packages: [99], applicable_package_lineages: ["day-pass"] }),
