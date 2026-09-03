@@ -426,6 +426,78 @@ describe("VoucherPicker dialog", () => {
       "Doesn't cover every item",
     );
   });
+  it.each([
+    {
+      name: "legacy ID-only package matching",
+      packageIds: [1],
+      packageLineages: undefined,
+      voucher: voucher({ id: 60, code: "LEGACY_ID", applicable_packages: [1] }),
+      result: true,
+    },
+    {
+      name: "empty lineages with legacy ID-only matching",
+      packageIds: [1],
+      packageLineages: [],
+      voucher: voucher({ id: 61, code: "EMPTY_LINEAGES", applicable_packages: [1] }),
+      result: true,
+    },
+    {
+      name: "mixed IDs and lineages",
+      packageIds: [1, 2],
+      packageLineages: [null, "day-pass"],
+      voucher: voucher({
+        id: 62,
+        code: "MIXED_OK",
+        applicable_packages: [1],
+        applicable_package_lineages: ["day-pass"],
+      }),
+      result: true,
+    },
+    {
+      name: "mixed cart with an uncovered package",
+      packageIds: [1, 2],
+      packageLineages: [null, "single-use"],
+      voucher: voucher({
+        id: 63,
+        code: "MIXED_BAD",
+        applicable_packages: [1],
+        applicable_package_lineages: ["day-pass"],
+      }),
+      result: false,
+    },
+    {
+      name: "null lineage without an allowed package ID",
+      packageIds: [2],
+      packageLineages: [null],
+      voucher: voucher({
+        id: 64,
+        code: "NULL_LINEAGE",
+        applicable_packages: [1],
+        applicable_package_lineages: ["day-pass"],
+      }),
+      result: false,
+    },
+  ])("handles $name", async ({ packageIds, packageLineages, voucher: candidate, result }) => {
+    mockPagedFetch([candidate]);
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker
+        selected={null}
+        onChange={vi.fn()}
+        subtotal={1000}
+        packageIds={packageIds}
+        packageLineages={packageLineages}
+      />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() =>
+      expect(
+        result
+          ? getByTestId(`voucher-picker-result-${candidate.id}`)
+          : getByTestId(`voucher-picker-inapplicable-${candidate.id}`),
+      ).toBeTruthy(),
+    );
+    expect(queryByTestId(`voucher-picker-result-${candidate.id}`) !== null).toBe(result);
+  });
   it("surfaces a load failure instead of rendering an empty list", async () => {
     vi.stubGlobal(
       "fetch",
@@ -445,6 +517,31 @@ describe("VoucherPicker dialog", () => {
     );
   });
 
+  it("surfaces a rejected voucher request", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("network down"))));
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() =>
+      expect(getByTestId("voucher-picker-popup").textContent).toContain("network down"),
+    );
+  });
+  it("surfaces a missing vouchers endpoint", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 404, json: async () => ({}) })) as unknown as typeof fetch,
+    );
+    const { getByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() =>
+      expect(getByTestId("voucher-picker-popup").textContent).toContain(
+        "Vouchers module isn't available",
+      ),
+    );
+  });
   it("reopening discards a pick that was staged but never confirmed", async () => {
     mockPagedFetch([voucher({ id: 40, code: "STAGED" }), voucher({ id: 41, code: "OTHER" })]);
     const onChange = vi.fn();
