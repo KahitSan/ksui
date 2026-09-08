@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.39.4
+
+### Patch Changes
+
+- 7b95066: Separate resource create and restore permissions, and surface archive and restore failures.
+
 ## 0.39.3
 
 ### Patch Changes
