@@ -48,8 +48,10 @@ export function routeToResourceSpec(route: RouteSpec): ResourceUiSpec {
     ...(route.subtitle !== undefined ? { subtitle: route.subtitle } : {}),
     permissions: {
       view: route.permissions.view,
+      ...(route.permissions.create ? { create: route.permissions.create } : {}),
       edit: route.permissions.edit,
       delete: route.permissions.delete,
+      ...(route.permissions.restore ? { restore: route.permissions.restore } : {}),
     },
     softDeleteField: route.softDeleteField,
     testIdPrefix: route.testIdPrefix,

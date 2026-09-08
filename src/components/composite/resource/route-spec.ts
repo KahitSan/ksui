@@ -91,8 +91,10 @@ export function action(
 
 export interface RoutePermissions {
   readonly view: string;
+  readonly create?: string;
   readonly edit: readonly string[];
   readonly delete: string;
+  readonly restore?: string;
 }
 
 /** Labels carried straight onto the lowered ResourceUiSpec.labels. */
