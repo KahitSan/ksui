@@ -100,8 +100,10 @@ export function ResourcePage<T extends ResourceRow>(
   } = props.host;
   const can = (key: string) => hostCan?.(key) ?? true;
   const canView = () => can(spec.permissions.view);
+  const canCreate = () => can(spec.permissions.create ?? spec.permissions.edit[0]);
   const canEdit = () => spec.permissions.edit.some(can);
   const canDelete = () => can(spec.permissions.delete);
+  const canRestore = () => can(spec.permissions.restore ?? spec.permissions.delete);
 
   /** Merge the host's per-request init (headers/credentials) with method + body. */
   function reqInit(extra?: RequestInit): RequestInit {
@@ -229,23 +231,31 @@ export function ResourcePage<T extends ResourceRow>(
     )
       return;
     try {
-      await doFetch(ep.one(id), reqInit({ method: "DELETE" }));
+      const res = await doFetch(ep.one(id), reqInit({ method: "DELETE" }));
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setError(err.error || "Failed to archive item");
+        return;
+      }
       setDetailRow(null);
       refetchFn?.refetch();
     } catch {
-      /* ignore */
+      setError(spec.labels.networkError);
     }
   }
 
   async function handleRestore(id: number) {
     try {
       const res = await doFetch(ep.restore(id), reqInit({ method: "PATCH" }));
-      if (res.ok) {
-        setDetailRow(await res.json());
-        refetchFn?.refetch();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setError(err.error || "Failed to restore item");
+        return;
       }
+      setDetailRow(await res.json());
+      refetchFn?.refetch();
     } catch {
-      /* ignore */
+      setError(spec.labels.networkError);
     }
   }
 
@@ -264,7 +274,7 @@ export function ResourcePage<T extends ResourceRow>(
         actions={
           <>
             {headerActions?.()}
-            <Show when={canEdit()}>
+            <Show when={canCreate()}>
               <Button
                 intent="primary"
                 variant="clip1"
@@ -403,7 +413,7 @@ export function ResourcePage<T extends ResourceRow>(
                       <Pencil size={16} />
                     </button>
                   </Show>
-                  <Show when={!editing() && canDelete()}>
+                  <Show when={!editing() && (row()[spec.softDeleteField] ? canDelete() : canRestore())}>
                     {row()[spec.softDeleteField] ? (
                       <button
                         onClick={() => handleArchive(row().id)}
@@ -436,7 +446,11 @@ export function ResourcePage<T extends ResourceRow>(
                   </button>
                 </div>
               </div>
-
+              <Show when={!editing() && error()}>
+                <div role="alert" class="mb-4 text-sm text-ks-danger-fg">
+                  {error()}
+                </div>
+              </Show>
               <Show
                 when={editing()}
                 fallback={<ResourceDetail rows={spec.detail} row={row()} />}

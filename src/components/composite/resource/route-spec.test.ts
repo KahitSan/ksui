@@ -65,6 +65,28 @@ function vendorRoute() {
 }
 
 describe("routeToResourceSpec lowering", () => {
+  it("preserves distinct create and restore permissions", () => {
+    const lowered = routeToResourceSpec(
+      defineRoute({
+        ...vendorRoute(),
+        permissions: {
+          view: "vendors.view",
+          create: "vendors.create",
+          edit: ["vendors.edit"],
+          delete: "vendors.delete",
+          restore: "vendors.restore",
+        },
+      }),
+    );
+    expect(lowered.permissions).toEqual({
+      view: "vendors.view",
+      create: "vendors.create",
+      edit: ["vendors.edit"],
+      delete: "vendors.delete",
+      restore: "vendors.restore",
+    });
+  });
+
   it("lowers a built route to the hand-authored ResourceUiSpec shape", () => {
     const lowered = routeToResourceSpec(vendorRoute());
     const hand: ResourceUiSpec = {

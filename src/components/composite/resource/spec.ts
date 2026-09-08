@@ -184,8 +184,10 @@ export interface ResourceUiSpec {
   /** Permission keys passed to `host.can`. `edit` passes if ANY of its keys do. */
   readonly permissions: {
     readonly view: string;
+    readonly create?: string;
     readonly edit: readonly string[];
     readonly delete: string;
+    readonly restore?: string;
   };
   /** Soft-delete boolean field; drives the archive/restore affordance + status. */
   readonly softDeleteField: string;
