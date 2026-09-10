@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.40.0
+
+### Minor Changes
+
+- c19d27c: Add public `MultiPeriodPicker` for selecting disjoint day, week, month, or year tokens with injected labels and token rendering.
+
 ## 0.39.5
 
 ### Patch Changes
