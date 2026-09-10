@@ -488,7 +488,7 @@ export default function TransactionForm(props: TransactionFormProps) {
         </div>
       </Show>
 
-      <Show when={compact() && !props.simpleMode}>
+      <Show when={!props.simpleMode}>
         <div class="ks-transaction-compact-type-switcher" role="tablist" aria-label="Transaction type">
           <For each={categoryOptions()}>
             {(cat) => (
