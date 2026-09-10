@@ -27,7 +27,7 @@ const STYLE_CSS = `
 .ksui-imgviewer[open]{display:flex;align-items:center;justify-content:center;}
 .ksui-imgviewer::backdrop{background:var(--ks-overlay, rgba(0,0,0,0.7));backdrop-filter:blur(2px);}
 .ksui-imgviewer-frame{display:grid;place-items:center;width:96vw;height:96vh;}
-.ksui-imgviewer-img{display:block;max-width:100%;max-height:100%;object-fit:contain;border-radius:0.25rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.8);}
+.ksui-imgviewer-img{display:block;max-width:100%;max-height:100%;object-fit:contain;border-radius:0.25rem;box-shadow:0 25px 50px -12px color-mix(in srgb,var(--ks-overlay,rgba(0,0,0,0.7)) 80%,transparent);}
 .ksui-imgviewer-close{position:absolute;top:1rem;right:1rem;display:flex;width:2.5rem;height:2.5rem;align-items:center;justify-content:center;border-radius:9999px;background:color-mix(in srgb,var(--ks-fg,#ffffff) 12%,transparent);color:var(--ks-fg,#ffffff);border:0;cursor:pointer;}
 .ksui-imgviewer-close:hover{background:color-mix(in srgb,var(--ks-fg,#ffffff) 22%,transparent);}
 `;
