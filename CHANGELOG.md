@@ -1,5 +1,13 @@
 # @kahitsan/ksui
 
+## 0.39.5
+
+### Patch Changes
+
+- 3e2f4f0: Keep attachment previews from suspending and remounting their parent modal while private image bytes load.
+- 4b1d303: Prevent image viewer modals from flashing by reserving the viewport frame until the image finishes loading.
+- cb16e71: Keep transaction form category changes mounted while subcategory options load.
+
 ## 0.39.4
 
 ### Patch Changes
