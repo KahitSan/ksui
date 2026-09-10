@@ -740,48 +740,36 @@ export default function TransactionForm(props: TransactionFormProps) {
 
           <Show when={subcategoryAppliesTo() !== null}>
             <FormField label="Category">
-              <Show
-                when={subcategoryOptionsReady()}
-                fallback={
-                  <select
-                    disabled
-                    data-testid="subcategory-select-loading"
-                    class="w-full bg-[color-mix(in_srgb,var(--ks-input-bg,#18181b)_60%,transparent)] border border-[var(--ks-border,rgba(39,39,42,0.5))] px-3 py-3 text-sm text-[var(--ks-fg-subtle,#71717a)] ks-hud-clip-button focus:outline-none"
-                  >
-                    <option>Loading…</option>
-                  </select>
-                }
-              >
-                <SearchableSelect
-                  triggerTestId="subcategory-select"
-                  wrapperClass="relative w-full"
-                  value={props.subcategory}
-                  options={(() => {
-                    const list = (subcategoryOptions() || []).map((opt) => ({
-                      value: opt.name,
-                      label: opt.name,
-                    }));
-                    list.unshift({ value: "", label: "— Uncategorised —" });
-                    if (
-                      props.subcategory &&
-                      !list.some((o) => o.value === props.subcategory)
-                    ) {
-                      list.push({
-                        value: props.subcategory,
-                        label: props.subcategory,
-                      });
-                    }
-                    return list;
-                  })()}
-                  onChange={(opt) =>
-                    props.setSubcategory(opt ? String(opt.value) : "")
+              <SearchableSelect
+                triggerTestId="subcategory-select"
+                wrapperClass="relative w-full"
+                value={props.subcategory}
+                loading={!subcategoryOptionsReady()}
+                options={(() => {
+                  const list = (subcategoryOptions() || []).map((opt) => ({
+                    value: opt.name,
+                    label: opt.name,
+                  }));
+                  list.unshift({ value: "", label: "— Uncategorised —" });
+                  if (
+                    props.subcategory &&
+                    !list.some((o) => o.value === props.subcategory)
+                  ) {
+                    list.push({
+                      value: props.subcategory,
+                      label: props.subcategory,
+                    });
                   }
-                  placeholder="— Uncategorised —"
-                  searchPlaceholder="Search categories…"
-                  triggerClass="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button cursor-pointer focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)] flex items-center justify-between gap-2"
-                  triggerLabelClass="truncate text-left flex-1 min-w-0"
-                />
-              </Show>
+                  return list;
+                })()}
+                onChange={(opt) =>
+                  props.setSubcategory(opt ? String(opt.value) : "")
+                }
+                placeholder="— Uncategorised —"
+                searchPlaceholder="Search categories…"
+                triggerClass="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button cursor-pointer focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)] flex items-center justify-between gap-2"
+                triggerLabelClass="truncate text-left flex-1 min-w-0"
+              />
               <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
                 Optional. Used for tax-prep classification.
               </p>
