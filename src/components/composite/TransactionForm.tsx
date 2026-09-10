@@ -7,13 +7,7 @@
 // advanced-fields toggle entirely, for a caller that locks `category` to one
 // value and never needs EWT/sharing (e.g. a "record my own expense" surface).
 
-import {
-  createEffect,
-  createResource,
-  createSignal,
-  Show,
-  For,
-} from "solid-js";
+import { createEffect, createSignal, Show, For } from "solid-js";
 import X from "lucide-solid/icons/x";
 import Upload from "lucide-solid/icons/upload";
 import FileIcon from "lucide-solid/icons/file";
@@ -306,6 +300,9 @@ export default function TransactionForm(props: TransactionFormProps) {
 .ks-transaction-compact-type-switcher{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.375rem;margin:0 1.25rem .25rem;padding:.375rem;border-radius:.75rem;background:color-mix(in srgb,var(--ks-fg,#ffffff) 5%,transparent)}
 .ks-transaction-compact-type-switcher>button{min-height:2.25rem;border:0;border-radius:.5rem;padding:.5rem .25rem}
 .ks-transaction-compact-type-switcher>button.ks-transaction-type-active{background:color-mix(in srgb,var(--ks-primary,#c9a961) 16%,transparent);color:var(--ks-primary,#c9a961)}
+.ks-transaction-compact-type-switcher>button.ks-transaction-type-sale.ks-transaction-type-active{background:color-mix(in srgb,var(--ks-success,#10b981) 16%,transparent);color:var(--ks-success-fg,#34d399)}
+.ks-transaction-compact-type-switcher>button.ks-transaction-type-expense.ks-transaction-type-active{background:color-mix(in srgb,var(--ks-danger,#ef4444) 16%,transparent);color:var(--ks-danger-fg,#f87171)}
+.ks-transaction-compact-type-switcher>button.ks-transaction-type-business.ks-transaction-type-active{background:color-mix(in srgb,var(--ks-info,#38bdf8) 16%,transparent);color:var(--ks-info,#38bdf8)}
 .ks-transaction-compact-body{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;width:100%!important;min-height:0!important;overflow-x:hidden!important;overflow-y:auto!important;padding:1rem 1.25rem 1.5rem!important;gap:1rem}
 .ks-transaction-compact-body>div{width:100%!important;flex:0 0 auto!important}
 .ks-transaction-compact-footer{flex:0 0 auto!important}
@@ -360,23 +357,43 @@ export default function TransactionForm(props: TransactionFormProps) {
       return "expense";
     return null;
   };
-  const [subcategoryOptions] = createResource(
-    subcategoryAppliesTo,
-    async (appliesTo) => {
-      if (!appliesTo) return [] as { id: number; name: string }[];
-      const res = await fetch(
-        `/api/transactions/subcategories?applies_to=${appliesTo}`,
-        {
-          credentials: "include",
-        }
-      );
-      if (!res.ok) return [] as { id: number; name: string }[];
-      const data = (await res.json()) as {
-        subcategories: { id: number; name: string }[];
-      };
-      return data.subcategories;
+  const [subcategoryOptions, setSubcategoryOptions] = createSignal<
+    { id: number; name: string }[] | undefined
+  >(undefined);
+  const subcategoryCache = new Map<
+    "income" | "expense",
+    { id: number; name: string }[]
+  >();
+  let subcategoryRequestId = 0;
+  createEffect(() => {
+    const appliesTo = subcategoryAppliesTo();
+    const requestId = ++subcategoryRequestId;
+    if (!appliesTo) {
+      setSubcategoryOptions(undefined);
+      return;
     }
-  );
+    const cached = subcategoryCache.get(appliesTo);
+    if (cached) {
+      setSubcategoryOptions(cached);
+      return;
+    }
+    setSubcategoryOptions(undefined);
+    void fetch(`/api/transactions/subcategories?applies_to=${appliesTo}`, {
+      credentials: "include",
+    })
+      .then(async (res) => {
+        if (!res.ok) return [] as { id: number; name: string }[];
+        const data = (await res.json()) as {
+          subcategories: { id: number; name: string }[];
+        };
+        return data.subcategories;
+      })
+      .catch(() => [] as { id: number; name: string }[])
+      .then((options) => {
+        subcategoryCache.set(appliesTo, options);
+        if (requestId === subcategoryRequestId) setSubcategoryOptions(options);
+      });
+  });
 
   // True once the async resource has resolved at least once. Gates the
   // SearchableSelect mount so the loading-state placeholder shows while the
@@ -471,7 +488,7 @@ export default function TransactionForm(props: TransactionFormProps) {
         </div>
       </Show>
 
-      <Show when={compact() && !props.simpleMode}>
+      <Show when={!props.simpleMode}>
         <div class="ks-transaction-compact-type-switcher" role="tablist" aria-label="Transaction type">
           <For each={categoryOptions()}>
             {(cat) => (
@@ -726,48 +743,36 @@ export default function TransactionForm(props: TransactionFormProps) {
 
           <Show when={subcategoryAppliesTo() !== null}>
             <FormField label="Category">
-              <Show
-                when={subcategoryOptionsReady()}
-                fallback={
-                  <select
-                    disabled
-                    data-testid="subcategory-select-loading"
-                    class="w-full bg-[color-mix(in_srgb,var(--ks-input-bg,#18181b)_60%,transparent)] border border-[var(--ks-border,rgba(39,39,42,0.5))] px-3 py-3 text-sm text-[var(--ks-fg-subtle,#71717a)] ks-hud-clip-button focus:outline-none"
-                  >
-                    <option>Loading…</option>
-                  </select>
-                }
-              >
-                <SearchableSelect
-                  triggerTestId="subcategory-select"
-                  wrapperClass="relative w-full"
-                  value={props.subcategory}
-                  options={(() => {
-                    const list = (subcategoryOptions() || []).map((opt) => ({
-                      value: opt.name,
-                      label: opt.name,
-                    }));
-                    list.unshift({ value: "", label: "— Uncategorised —" });
-                    if (
-                      props.subcategory &&
-                      !list.some((o) => o.value === props.subcategory)
-                    ) {
-                      list.push({
-                        value: props.subcategory,
-                        label: props.subcategory,
-                      });
-                    }
-                    return list;
-                  })()}
-                  onChange={(opt) =>
-                    props.setSubcategory(opt ? String(opt.value) : "")
+              <SearchableSelect
+                triggerTestId="subcategory-select"
+                wrapperClass="relative w-full"
+                value={props.subcategory}
+                loading={!subcategoryOptionsReady()}
+                options={(() => {
+                  const list = (subcategoryOptions() || []).map((opt) => ({
+                    value: opt.name,
+                    label: opt.name,
+                  }));
+                  list.unshift({ value: "", label: "— Uncategorised —" });
+                  if (
+                    props.subcategory &&
+                    !list.some((o) => o.value === props.subcategory)
+                  ) {
+                    list.push({
+                      value: props.subcategory,
+                      label: props.subcategory,
+                    });
                   }
-                  placeholder="— Uncategorised —"
-                  searchPlaceholder="Search categories…"
-                  triggerClass="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button cursor-pointer focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)] flex items-center justify-between gap-2"
-                  triggerLabelClass="truncate text-left flex-1 min-w-0"
-                />
-              </Show>
+                  return list;
+                })()}
+                onChange={(opt) =>
+                  props.setSubcategory(opt ? String(opt.value) : "")
+                }
+                placeholder="— Uncategorised —"
+                searchPlaceholder="Search categories…"
+                triggerClass="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button cursor-pointer focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)] flex items-center justify-between gap-2"
+                triggerLabelClass="truncate text-left flex-1 min-w-0"
+              />
               <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
                 Optional. Used for tax-prep classification.
               </p>
@@ -803,7 +808,6 @@ export default function TransactionForm(props: TransactionFormProps) {
             transferFeeAmount={props.transferFeeAmount}
             transferFeeEnabled={props.transferFeeEnabled}
             allowTransferFee={props.allowTransferFee}
-            compact={compact()}
           />
           </div>
 
