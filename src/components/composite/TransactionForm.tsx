@@ -300,6 +300,9 @@ export default function TransactionForm(props: TransactionFormProps) {
 .ks-transaction-compact-type-switcher{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.375rem;margin:0 1.25rem .25rem;padding:.375rem;border-radius:.75rem;background:color-mix(in srgb,var(--ks-fg,#ffffff) 5%,transparent)}
 .ks-transaction-compact-type-switcher>button{min-height:2.25rem;border:0;border-radius:.5rem;padding:.5rem .25rem}
 .ks-transaction-compact-type-switcher>button.ks-transaction-type-active{background:color-mix(in srgb,var(--ks-primary,#c9a961) 16%,transparent);color:var(--ks-primary,#c9a961)}
+.ks-transaction-compact-type-switcher>button.ks-transaction-type-sale.ks-transaction-type-active{background:color-mix(in srgb,var(--ks-success,#10b981) 16%,transparent);color:var(--ks-success-fg,#34d399)}
+.ks-transaction-compact-type-switcher>button.ks-transaction-type-expense.ks-transaction-type-active{background:color-mix(in srgb,var(--ks-danger,#ef4444) 16%,transparent);color:var(--ks-danger-fg,#f87171)}
+.ks-transaction-compact-type-switcher>button.ks-transaction-type-business.ks-transaction-type-active{background:color-mix(in srgb,var(--ks-info,#38bdf8) 16%,transparent);color:var(--ks-info,#38bdf8)}
 .ks-transaction-compact-body{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;width:100%!important;min-height:0!important;overflow-x:hidden!important;overflow-y:auto!important;padding:1rem 1.25rem 1.5rem!important;gap:1rem}
 .ks-transaction-compact-body>div{width:100%!important;flex:0 0 auto!important}
 .ks-transaction-compact-footer{flex:0 0 auto!important}
