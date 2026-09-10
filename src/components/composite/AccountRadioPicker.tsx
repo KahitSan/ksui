@@ -87,7 +87,7 @@ export default function AccountRadioPicker(props: AccountRadioPickerProps) {
         <For each={visible()}>
           {(a, i) => {
             const selected = () => props.value === a.id.toString();
-            const isTabStop = () => selected() || (!props.value && i() === 0);
+            const isTabStop = () => selected() || currentIndex() === i();
             return (
               <button
                 ref={(el) => (buttonRefs[i()] = el)}
