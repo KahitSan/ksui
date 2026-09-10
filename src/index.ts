@@ -87,6 +87,14 @@ export { default as Modal, type ModalProps, type ModalSize, type ModalTone } fro
 // DataTable's date filter renders this picker.
 export { default as DatePicker, type DatePickerProps, type DateRangeValue } from "./components/base/DatePicker";
 
+export {
+  default as MultiPeriodPicker,
+  type MultiPeriodPickerProps,
+  type MultiPeriodGranularity,
+  type MultiPeriodToken,
+  type MultiPeriodTokenRenderProps,
+} from "./components/composite/MultiPeriodPicker";
+
 // Server-side / client-side data table with debounced search, column sort,
 // pagination + "Show more" load mode, a filters slot, optional date filter, and
 // an onRefetch handle. Ported from the host kit; injects its own CSS, no Tailwind.
