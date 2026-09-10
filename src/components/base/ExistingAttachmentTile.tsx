@@ -10,14 +10,13 @@
 //    route and render the resulting blob: (the proxy/blob pattern). s3_link is then
 //    ignored for rendering; a spinner shows while the bytes stream.
 
-import { Show, createSignal, type Component } from "solid-js";
+import { Show, createEffect, createSignal, onCleanup, type Component } from "solid-js";
 import Paperclip from "lucide-solid/icons/paperclip";
 import X from "lucide-solid/icons/x";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import Loader2 from "lucide-solid/icons/loader-2";
 import { confirm } from "../../utils/confirm";
 import { attachmentUrl, isResolvableAttachment } from "../../utils/attachments";
-import { createObjectUrlResource } from "../../utils/object-url-resource";
 import ImageViewer from "./ImageViewer";
 
 export interface ExistingAttachment {
@@ -40,17 +39,53 @@ interface Props {
 }
 
 export default function ExistingAttachmentTile(props: Props) {
-  // Always call the hook (Solid rule); a null href no-ops when not in blob mode.
-  const blob = createObjectUrlResource(
-    () => props.rawHref ?? null,
-    { init: props.rawInit },
-  );
+  // Keep attachment loading local. A pending createResource promise can suspend
+  // the nearest boundary and briefly unmount the transaction modal.
+  const [blob, setBlob] = createSignal<string | null>(null);
+  const [blobLoading, setBlobLoading] = createSignal(false);
+  let requestId = 0;
+  let currentUrl: string | null = null;
+  const revokeUrl = () => {
+    if (currentUrl) URL.revokeObjectURL(currentUrl);
+    currentUrl = null;
+  };
+  createEffect(() => {
+    const href = props.rawHref ?? null;
+    const id = ++requestId;
+    revokeUrl();
+    setBlob(null);
+    if (!href) {
+      setBlobLoading(false);
+      return;
+    }
+    setBlobLoading(true);
+    void fetch(href, { credentials: "include", ...props.rawInit })
+      .then(async (res) => (res.ok ? URL.createObjectURL(await res.blob()) : null))
+      .then((url) => {
+        if (id !== requestId) {
+          if (url) URL.revokeObjectURL(url);
+          return;
+        }
+        currentUrl = url;
+        setBlob(url);
+      })
+      .catch(() => {
+        if (id === requestId) setBlob(null);
+      })
+      .finally(() => {
+        if (id === requestId) setBlobLoading(false);
+      });
+  });
+  onCleanup(() => {
+    requestId++;
+    revokeUrl();
+  });
   const isBlobMode = () => props.rawHref != null;
   const url = (): string | undefined =>
     isBlobMode() ? (blob() ?? undefined) : attachmentUrl(props.attachment.s3_link);
   const resolvable = () =>
     isBlobMode() ? blob() != null : isResolvableAttachment(props.attachment.s3_link);
-  const loading = () => (isBlobMode() ? blob.loading : false);
+  const loading = () => (isBlobMode() ? blobLoading() : false);
   const [viewerOpen, setViewerOpen] = createSignal(false);
 
   const FallbackIcon = () => {
