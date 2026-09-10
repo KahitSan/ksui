@@ -7,13 +7,7 @@
 // advanced-fields toggle entirely, for a caller that locks `category` to one
 // value and never needs EWT/sharing (e.g. a "record my own expense" surface).
 
-import {
-  createEffect,
-  createResource,
-  createSignal,
-  Show,
-  For,
-} from "solid-js";
+import { createEffect, createSignal, Show, For } from "solid-js";
 import X from "lucide-solid/icons/x";
 import Upload from "lucide-solid/icons/upload";
 import FileIcon from "lucide-solid/icons/file";
@@ -360,23 +354,30 @@ export default function TransactionForm(props: TransactionFormProps) {
       return "expense";
     return null;
   };
-  const [subcategoryOptions] = createResource(
-    subcategoryAppliesTo,
-    async (appliesTo) => {
-      if (!appliesTo) return [] as { id: number; name: string }[];
-      const res = await fetch(
-        `/api/transactions/subcategories?applies_to=${appliesTo}`,
-        {
-          credentials: "include",
-        }
-      );
-      if (!res.ok) return [] as { id: number; name: string }[];
-      const data = (await res.json()) as {
-        subcategories: { id: number; name: string }[];
-      };
-      return data.subcategories;
-    }
-  );
+  const [subcategoryOptions, setSubcategoryOptions] = createSignal<
+    { id: number; name: string }[] | undefined
+  >(undefined);
+  let subcategoryRequestId = 0;
+  createEffect(() => {
+    const appliesTo = subcategoryAppliesTo();
+    const requestId = ++subcategoryRequestId;
+    setSubcategoryOptions(undefined);
+    if (!appliesTo) return;
+    void fetch(`/api/transactions/subcategories?applies_to=${appliesTo}`, {
+      credentials: "include",
+    })
+      .then(async (res) => {
+        if (!res.ok) return [] as { id: number; name: string }[];
+        const data = (await res.json()) as {
+          subcategories: { id: number; name: string }[];
+        };
+        return data.subcategories;
+      })
+      .catch(() => [] as { id: number; name: string }[])
+      .then((options) => {
+        if (requestId === subcategoryRequestId) setSubcategoryOptions(options);
+      });
+  });
 
   // True once the async resource has resolved at least once. Gates the
   // SearchableSelect mount so the loading-state placeholder shows while the
