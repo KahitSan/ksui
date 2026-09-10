@@ -357,12 +357,24 @@ export default function TransactionForm(props: TransactionFormProps) {
   const [subcategoryOptions, setSubcategoryOptions] = createSignal<
     { id: number; name: string }[] | undefined
   >(undefined);
+  const subcategoryCache = new Map<
+    "income" | "expense",
+    { id: number; name: string }[]
+  >();
   let subcategoryRequestId = 0;
   createEffect(() => {
     const appliesTo = subcategoryAppliesTo();
     const requestId = ++subcategoryRequestId;
+    if (!appliesTo) {
+      setSubcategoryOptions(undefined);
+      return;
+    }
+    const cached = subcategoryCache.get(appliesTo);
+    if (cached) {
+      setSubcategoryOptions(cached);
+      return;
+    }
     setSubcategoryOptions(undefined);
-    if (!appliesTo) return;
     void fetch(`/api/transactions/subcategories?applies_to=${appliesTo}`, {
       credentials: "include",
     })
@@ -375,6 +387,7 @@ export default function TransactionForm(props: TransactionFormProps) {
       })
       .catch(() => [] as { id: number; name: string }[])
       .then((options) => {
+        subcategoryCache.set(appliesTo, options);
         if (requestId === subcategoryRequestId) setSubcategoryOptions(options);
       });
   });
