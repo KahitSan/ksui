@@ -808,7 +808,6 @@ export default function TransactionForm(props: TransactionFormProps) {
             transferFeeAmount={props.transferFeeAmount}
             transferFeeEnabled={props.transferFeeEnabled}
             allowTransferFee={props.allowTransferFee}
-            compact={compact()}
           />
           </div>
 
