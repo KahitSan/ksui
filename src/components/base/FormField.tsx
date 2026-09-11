@@ -6,10 +6,10 @@
 import { Show } from "solid-js";
 import type { JSX } from "solid-js";
 
-export default function FormField(props: { label: string; children: JSX.Element; hint?: string }) {
+export default function FormField(props: { label: string; id?: string; children: JSX.Element; hint?: string }) {
   return (
     <div>
-      <label class="block text-xs text-[var(--ks-fg-subtle,#71717a)] mb-1">{props.label}</label>
+      <label for={props.id} class="block text-xs text-[var(--ks-fg-subtle,#71717a)] mb-1">{props.label}</label>
       {props.children}
       <Show when={props.hint}>
         <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-1">{props.hint}</p>
