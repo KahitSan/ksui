@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.40.1
+
+### Patch Changes
+
+- 107ebc6: Add optional `id` support to `FormField` so labels associate with their controls.
+
 ## 0.40.0
 
 ### Minor Changes
