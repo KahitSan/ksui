@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.40.2
+
+### Patch Changes
+
+- 38894d5: Preserve date-only values when formatting short dates in Asia/Manila.
+
 ## 0.40.1
 
 ### Patch Changes
