@@ -88,6 +88,27 @@ export { default as Modal, type ModalProps, type ModalSize, type ModalTone } fro
 export { default as DatePicker, type DatePickerProps, type DateRangeValue } from "./components/base/DatePicker";
 
 export {
+  default as MonthCalendar,
+  type MonthCalendarProps,
+  type MonthCalendarDayRenderProps,
+  type MonthCalendarWeekRenderProps,
+  type MonthCalendarLabels,
+  type MonthCalendarClasses,
+} from "./components/base/MonthCalendar";
+export {
+  addCivilDays,
+  addCivilMonths,
+  buildMonthCalendarDays,
+  civilWeekday,
+  formatCivilDate,
+  parseCivilDate,
+  requireCivilDate,
+  todayInTimeZone,
+  type CivilDate,
+  type MonthCalendarDay,
+} from "./utils/month-calendar-date";
+
+export {
   default as MultiPeriodPicker,
   type MultiPeriodPickerProps,
   type MultiPeriodGranularity,
