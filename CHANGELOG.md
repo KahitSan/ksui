@@ -1,5 +1,15 @@
 # @kahitsan/ksui
 
+## 0.41.0
+
+### Minor Changes
+
+- 532c7e3: Add a controlled, accessible MonthCalendar base component with civil-date utilities and render slots.
+
+### Patch Changes
+
+- cc73a07: Preserve date-only short dates with explicit Asia/Manila formatting.
+
 ## 0.40.2
 
 ### Patch Changes
