@@ -48,7 +48,8 @@ export interface FormActionsProps {
 }
 
 export default function FormActions(props: FormActionsProps): JSX.Element {
-  const isSubmitType = () => props.submitType === "submit";
+  const submitType = props.submitType ?? "button";
+  const submitHandler = submitType === "submit" ? undefined : props.onSubmit;
   return (
     <div
       class={
@@ -65,8 +66,8 @@ export default function FormActions(props: FormActionsProps): JSX.Element {
         {props.cancelLabel ?? "Cancel"}
       </Button>
       <Button
-        type={isSubmitType() ? "submit" : "button"}
-        onClick={isSubmitType() ? undefined : props.onSubmit}
+        type={submitType}
+        onClick={submitHandler}
         disabled={(props.submitting ?? false) || (props.submitDisabled ?? false)}
         intent={props.danger ? "danger" : "primary"}
         class="gap-2 w-full sm:w-auto"
