@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.41.1
+
+### Patch Changes
+
+- c6a6bed: Prevent FormActions from creating reactive computations inside click handlers.
+
 ## 0.41.0
 
 ### Minor Changes
