@@ -264,6 +264,9 @@ export interface TransactionFormProps {
   transferFeeAmount: string;
   setTransferFeeAmount: (v: string) => void;
   allowTransferFee: boolean;
+  // Editing a legacy payable row keeps the payable pane; create flows opt out
+  // via allowPayable={false} now that payables live in the Payables module.
+  allowPayable?: boolean;
   pendingFiles: PendingFile[];
   setPendingFiles: (v: PendingFile[]) => void;
   existingAttachments?: TransactionAttachment[];
@@ -399,10 +402,11 @@ export default function TransactionForm(props: TransactionFormProps) {
   // SearchableSelect mount so the loading-state placeholder shows while the
   // per-tenant options are still in flight.
   const subcategoryOptionsReady = () => subcategoryOptions() !== undefined;
-  const categoryOptions = () =>
-    props.category === "payable"
-      ? ["sale", "expense", "business", "payable"]
-      : ["sale", "expense", "business"];
+  const categoryOptions = () => {
+    if (props.category === "payable") return ["sale", "expense", "business", "payable"];
+    const base = ["sale", "expense", "business"];
+    return props.allowPayable === false ? base : [...base, "payable"];
+  };
 
   createEffect(() => {
     if (props.category !== "business" && props.transferFeeEnabled) {
