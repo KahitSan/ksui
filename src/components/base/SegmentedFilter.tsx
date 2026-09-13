@@ -23,6 +23,8 @@ interface SegmentedFilterProps {
   class?: string;
   /** Accessible label for the radiogroup wrapper (WAI-ARIA radiogroup pattern). */
   ariaLabel?: string;
+  /** Keep long rows reachable on narrow screens with horizontal scrolling. */
+  scrollable?: boolean;
 }
 
 // A rounded bordered row of segment buttons with one active at a time.
@@ -85,7 +87,7 @@ export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Elemen
     <div
       role="radiogroup"
       aria-label={props.ariaLabel}
-      class={`flex rounded-lg border border-[var(--ks-border,rgba(39,39,42,0.5))] overflow-hidden ${props.class ?? ""}`}
+      class={`flex rounded-lg border border-[var(--ks-border,rgba(39,39,42,0.5))] ${props.scrollable ? "max-w-full overflow-x-auto" : "overflow-hidden"} ${props.class ?? ""}`}
       onKeyDown={onKeyDown}
     >
       <For each={props.options}>
@@ -115,7 +117,7 @@ export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Elemen
                 if (opt.disabled) return;
                 props.onChange(opt.value);
               }}
-              class="px-3 py-1.5 text-xs transition-colors"
+              class="shrink-0 px-3 py-1.5 text-xs transition-colors"
               classList={{
                 capitalize: opt.capitalize,
                 "cursor-not-allowed": opt.disabled,

@@ -43,6 +43,12 @@ describe("DatePicker", () => {
     expect(onChange).toHaveBeenCalledWith("2026-06-20");
   });
 
+  it("labels the trigger and calendar navigation", async () => {
+    render(() => <DatePicker ariaLabel="Paid date" value="2026-06-15" onChange={() => {}} />);
+    await fireEvent.click(screen.getByRole("button", { name: "Paid date" }));
+    expect(screen.getByRole("button", { name: /Previous month from/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Next month from/ })).toBeTruthy();
+  });
   it("keeps the trigger and clear action keyboard reachable", () => {
     render(() => <DatePicker value="2026-06-15" onChange={() => {}} />);
     const trigger = screen.getByText("Jun 15").closest("button")!;

@@ -27,6 +27,12 @@ describe("SegmentedFilter", () => {
     expect(radios[0].getAttribute("aria-checked")).toBe("true");
   });
 
+  it("supports a mobile-safe scrolling row", () => {
+    const { container } = render(() => (
+      <SegmentedFilter options={STRING_OPTIONS} value="today" onChange={() => {}} scrollable />
+    ));
+    expect(container.querySelector('[role="radiogroup"]')?.className).toContain("overflow-x-auto");
+  });
   it("renders object options with an explicit label", () => {
     const { getAllByRole } = render(() => (
       <SegmentedFilter options={OBJECT_OPTIONS} value="table" onChange={() => {}} />
