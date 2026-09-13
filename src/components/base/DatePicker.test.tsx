@@ -43,6 +43,22 @@ describe("DatePicker", () => {
     expect(onChange).toHaveBeenCalledWith("2026-06-20");
   });
 
+  it("keeps the trigger and clear action keyboard reachable", () => {
+    render(() => <DatePicker value="2026-06-15" onChange={() => {}} />);
+    const trigger = screen.getByText("Jun 15").closest("button")!;
+    expect(trigger.tabIndex).toBe(0);
+    expect(trigger.getAttribute("aria-haspopup")).toBe("dialog");
+    const clear = screen.getByRole("button", { name: "Clear date" });
+    expect(clear.tabIndex).toBe(0);
+  });
+  it("opens from native keyboard activation", async () => {
+    render(() => <DatePicker value={null} onChange={() => {}} />);
+    const trigger = screen.getByText("Pick date").closest("button")!;
+    trigger.focus();
+    await fireEvent.keyDown(trigger, { key: "Enter" });
+    await fireEvent.click(trigger);
+    expect(screen.getByTestId("datepicker-popover")).toBeTruthy();
+  });
   it("renders disabled trigger when disabled prop is true", () => {
     render(() => <DatePicker value={null} onChange={() => {}} disabled />);
     const trigger = screen.getByText("Pick date").closest("button")!;
