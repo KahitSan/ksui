@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.43.0
+
+### Minor Changes
+
+- 79c8ff1: Add purpose labels to DatePicker controls and a mobile-safe scrolling SegmentedFilter variant.
+
 ## 0.42.0
 
 ### Minor Changes
