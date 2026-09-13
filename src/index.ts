@@ -60,6 +60,7 @@ export { default as ChartLegend } from "./components/base/ChartLegend";
 // single canonical package.
 export { default as StatusPill, type StatusTone } from "./components/base/StatusPill";
 export { default as SegmentedFilter, type SegmentedFilterOption } from "./components/base/SegmentedFilter";
+export { default as MultiSelectGroup, type MultiSelectGroupProps, type MultiSelectOption } from "./components/base/MultiSelectGroup";
 export { default as CopyButton } from "./components/base/CopyButton";
 export { default as KpiCard, type KpiCardProps, type KpiTone } from "./components/base/KpiCard";
 export { default as RadioCardGroup } from "./components/base/RadioCardGroup";

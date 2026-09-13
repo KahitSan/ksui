@@ -724,7 +724,8 @@ export default function DatePicker(props: DatePickerProps) {
         ref={triggerRef}
         onClick={openPicker}
         type="button"
-        tabIndex={-1}
+        aria-haspopup="dialog"
+        aria-expanded={open()}
         disabled={props.disabled}
         class={
           props.triggerClass ??
@@ -736,7 +737,7 @@ export default function DatePicker(props: DatePickerProps) {
       </button>
       {/* Clear button */}
       <Show when={hasValue()}>
-        <button type="button" tabIndex={-1} class="ksui-datepicker-clear-btn" onClick={clear}>
+        <button type="button" aria-label="Clear date" class="ksui-datepicker-clear-btn" onClick={clear}>
           <X size={14} />
         </button>
       </Show>
