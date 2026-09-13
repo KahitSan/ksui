@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.44.0
+
+### Minor Changes
+
+- 686230e: TransactionForm: add optional `allowPayable` prop (default `true`). Consumers that no longer create payable-category transactions pass `allowPayable={false}` to hide the Payable category tab; editing an existing payable row still shows the payable pane.
+
 ## 0.43.0
 
 ### Minor Changes
