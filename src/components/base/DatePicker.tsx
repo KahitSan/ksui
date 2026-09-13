@@ -165,6 +165,8 @@ interface DatePickerSharedProps {
   placeholder?: string;
   withTime?: boolean;
   disabled?: boolean;
+  /** Accessible purpose label for the trigger, for example "Paid date". */
+  ariaLabel?: string;
   /** Override the trigger button class entirely (escape hatch for custom triggers). */
   triggerClass?: string;
 }
@@ -724,6 +726,7 @@ export default function DatePicker(props: DatePickerProps) {
         ref={triggerRef}
         onClick={openPicker}
         type="button"
+        aria-label={props.ariaLabel}
         aria-haspopup="dialog"
         aria-expanded={open()}
         disabled={props.disabled}
@@ -869,11 +872,11 @@ export default function DatePicker(props: DatePickerProps) {
             <div class="ksui-datepicker-section">
               {/* Month nav */}
               <div class="ksui-datepicker-nav">
-                <button type="button" onClick={prevMonth} class="ksui-datepicker-nav-btn">
+                <button type="button" aria-label={`Previous month from ${monthLabel()}`} onClick={prevMonth} class="ksui-datepicker-nav-btn">
                   <ChevronLeft size={16} />
                 </button>
                 <span class="ksui-datepicker-month-label">{monthLabel()}</span>
-                <button type="button" onClick={nextMonth} class="ksui-datepicker-nav-btn">
+                <button type="button" aria-label={`Next month from ${monthLabel()}`} onClick={nextMonth} class="ksui-datepicker-nav-btn">
                   <ChevronRight size={16} />
                 </button>
               </div>
