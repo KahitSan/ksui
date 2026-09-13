@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.42.0
+
+### Minor Changes
+
+- fb31d3f: Add an accessible multi-select button group and restore keyboard access to DatePicker controls.
+
 ## 0.41.1
 
 ### Patch Changes
