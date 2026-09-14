@@ -29,4 +29,24 @@ describe("ProgressBar", () => {
     expect(fill.style.width).toBe("100%");
     expect(fill.style.backgroundColor).toContain("--ks-success");
   });
+
+  it("honors compact visibility, direction, icon, and shimmer props", () => {
+    const Icon = () => <svg data-testid="compact-icon" />;
+    const { container } = render(() => (
+      <ProgressBar
+        variant="compact"
+        progress={25}
+        label="Quarter"
+        hidePercentage
+        position="right"
+        shimmer
+        icon={Icon}
+      />
+    ));
+    expect(screen.getByTestId("compact-icon")).toBeTruthy();
+    expect(screen.queryByText("25%")).toBeNull();
+    const fill = container.querySelector<HTMLElement>('[style*="width"]')!;
+    expect(fill.style.marginLeft).toBe("auto");
+    expect(fill.querySelector(".ks-progress-shimmer")).toBeTruthy();
+  });
 });

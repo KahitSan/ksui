@@ -43,7 +43,7 @@ export default function MultiSelectGroup(props: MultiSelectGroupProps): JSX.Elem
             class={`rounded-md border px-2.5 py-1.5 text-xs transition-colors ${props.itemClass ?? ""}`}
             classList={{
               "border-[var(--ks-info,#38bdf8)] bg-[var(--ks-info,#38bdf8)] text-[var(--ks-info-fg,#7dd3fc)]": selected(option.value) && (props.variant ?? "info") === "info",
-              "border-[var(--ks-accent,#fbbf24)] bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_20%,transparent)] font-semibold text-[var(--ks-accent,#fbbf24)]": selected(option.value) && props.variant === "accent",
+              "border-[var(--ks-accent,#fbbf24)] bg-[var(--ks-accent,#fbbf24)] font-semibold text-[var(--ks-fg-on-accent,#0a0a0a)]": selected(option.value) && props.variant === "accent",
               "border-[var(--ks-border,rgba(39,39,42,0.5))] bg-[var(--ks-surface,#0f0f0f)] text-[var(--ks-fg-muted,#a1a1aa)] hover:border-[var(--ks-border-strong,#3f3f46)] hover:text-[var(--ks-fg,#ffffff)]": !selected(option.value),
               "cursor-not-allowed opacity-50": !!props.disabled || !!option.disabled,
             }}

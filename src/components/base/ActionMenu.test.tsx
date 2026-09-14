@@ -29,6 +29,26 @@ describe("ActionMenu", () => {
     await fireEvent.click(screen.getByRole("menuitem", { name: "Open" }));
     expect(onSelect).toHaveBeenCalledWith("open");
     expect(screen.queryByRole("menu")).toBeNull();
+    await flushMenu();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("keeps focus moved by selection callback", async () => {
+    render(() => (
+      <div>
+        <ActionMenu
+          label="Actions"
+          items={items}
+          onSelect={() => screen.getByRole("button", { name: "Destination" }).focus()}
+        />
+        <button type="button">Destination</button>
+      </div>
+    ));
+    await fireEvent.click(screen.getByRole("button", { name: "Actions" }));
+    await flushMenu();
+    await fireEvent.click(screen.getByRole("menuitem", { name: "Open" }));
+    await flushMenu();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Destination" }));
   });
 
   it("skips disabled items during arrow navigation and restores trigger focus on Escape", async () => {

@@ -357,6 +357,7 @@ const CompactProgressBar: Component<CompactProgressBarProps> = (props) => {
   });
   const fillColor = createMemo(() => local.color ? COLOR_MAP[local.color].indicator : "var(--ks-primary, #c9a961)");
   const accessibleLabel = () => local.label ?? local.statusLabel ?? "Progress";
+  const Icon = () => local.icon;
   return (
     <div
       {...others}
@@ -367,19 +368,30 @@ const CompactProgressBar: Component<CompactProgressBarProps> = (props) => {
       aria-valuemin={0}
       aria-valuemax={100}
     >
-      <div class="mb-1 flex items-baseline justify-between gap-2 text-[10px] leading-none">
-        <span class="min-w-0 truncate font-semibold text-[var(--ks-fg,#ffffff)]">
-          {local.label ?? local.statusLabel}
+      <div class="mb-1 flex items-center justify-between gap-2 text-[10px] leading-none">
+        <span class="flex min-w-0 items-center gap-1 truncate font-semibold text-[var(--ks-fg,#ffffff)]">
+          <Show when={Icon()}>{(ResolvedIcon) => <Dynamic component={ResolvedIcon()} size={12} aria-hidden="true" />}</Show>
+          <span class="truncate">{local.label ?? local.statusLabel}</span>
         </span>
-        <span class="shrink-0 font-mono tabular-nums text-[var(--ks-fg-muted,#a1a1aa)]">
-          {local.rightLabel ?? `${value()}%`}
-        </span>
+        <Show when={local.rightLabel !== undefined || !local.hidePercentage}>
+          <span class="shrink-0 font-mono tabular-nums text-[var(--ks-fg-muted,#a1a1aa)]">
+            {local.rightLabel ?? `${value()}%`}
+          </span>
+        </Show>
       </div>
       <div class="h-[5px] overflow-hidden rounded-full bg-[var(--ks-surface-raised,#1a1a1a)]">
         <div
-          class="h-full rounded-full transition-[width] duration-200"
-          style={{ width: `${value()}%`, "background-color": fillColor() }}
-        />
+          class="relative h-full overflow-hidden rounded-full transition-[width] duration-200"
+          style={{
+            width: `${value()}%`,
+            "background-color": fillColor(),
+            "margin-left": local.position === "right" ? "auto" : undefined,
+          }}
+        >
+          <Show when={local.shimmer}>
+            <div class={styles["animate-shimmer"]} />
+          </Show>
+        </div>
       </div>
     </div>
   );

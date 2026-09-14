@@ -14,8 +14,8 @@ const STYLE_CSS = `
 .ksui-action-menu__panel{position:fixed;z-index:70;min-width:11rem;overflow:hidden;border:1px solid var(--ksui-action-menu-border,var(--ks-border,rgba(39,39,42,0.5)));border-radius:.5rem;background:var(--ksui-action-menu-bg,var(--ks-surface,#0f0f0f));padding:.25rem 0;box-shadow:var(--ksui-action-menu-shadow,var(--ks-shadow-lg,0 12px 32px rgba(0,0,0,0.6)));}
 .ksui-action-menu__item{display:flex;width:100%;align-items:center;gap:.5rem;border:0;background:transparent;padding:.375rem .75rem;color:var(--ksui-action-menu-fg,var(--ks-fg,#ffffff));font:inherit;font-size:.875rem;line-height:1.25rem;text-align:left;cursor:pointer;transition:background-color .15s ease,color .15s ease;}
 .ksui-action-menu__item:hover,.ksui-action-menu__item:focus{background:var(--ksui-action-menu-hover,var(--ks-surface-raised,#1a1a1a));outline:none;}
-.ksui-action-menu__item--danger{color:var(--ksui-action-menu-danger,var(--ks-danger,#ef4444));}
-.ksui-action-menu__item--danger:hover,.ksui-action-menu__item--danger:focus{background:var(--ksui-action-menu-danger-bg,color-mix(in srgb,var(--ks-danger,#ef4444) 10%,transparent));}
+.ksui-action-menu__item--danger{color:var(--ksui-action-menu-danger,var(--ks-danger-fg,#f87171));}
+.ksui-action-menu__item--danger:hover,.ksui-action-menu__item--danger:focus{background:var(--ksui-action-menu-danger-bg,var(--ks-danger-bg,rgba(239,68,68,0.12)));}
 .ksui-action-menu__item:disabled{cursor:not-allowed;opacity:.5;}
 .ksui-action-menu__item-icon{display:inline-flex;flex:none;}
 .ksui-action-menu__separator{margin:.25rem 0;border-top:1px solid var(--ksui-action-menu-border,var(--ks-border,rgba(39,39,42,0.5)));}
@@ -175,8 +175,13 @@ export default function ActionMenu(props: ActionMenuProps): JSX.Element {
                   class={`ksui-action-menu__item${item.danger ? " ksui-action-menu__item--danger" : ""}`}
                   onClick={() => {
                     if (item.disabled) return;
-                    close();
+                    const selectedElement = document.activeElement;
+                    setOpen(false);
                     props.onSelect(item.id);
+                    queueMicrotask(() => {
+                      const active = document.activeElement;
+                      if (active === document.body || active === selectedElement) trigger?.focus();
+                    });
                   }}
                 >
                   <Show when={item.icon}>{(Icon) => <span class="ksui-action-menu__item-icon"><Dynamic component={Icon()} size={14} aria-hidden="true" /></span>}</Show>
