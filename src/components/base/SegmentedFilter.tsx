@@ -1,4 +1,6 @@
-import { For, type JSX } from "solid-js";
+import { For, type Component, type JSX } from "solid-js";
+import { Dynamic } from "solid-js/web";
+export type SegmentedFilterIcon = Component<{ size?: number; class?: string }>;
 
 /** One choice in the segmented row. A bare string uses the value as the label
  *  and is rendered capitalized; an object lets the caller supply an explicit
@@ -8,9 +10,9 @@ import { For, type JSX } from "solid-js";
  *  text, since a muted, unclickable control is otherwise unexplained. */
 export type SegmentedFilterOption =
   | string
-  | { value: string; label: string; disabled?: boolean; disabledNote?: string };
+  | { value: string; label: string; icon?: SegmentedFilterIcon; disabled?: boolean; disabledNote?: string };
 
-interface SegmentedFilterProps {
+export interface SegmentedFilterProps {
   /** The available segments, left to right. */
   options: SegmentedFilterOption[];
   /** The currently active value. Matched against each option's value. */
@@ -37,8 +39,8 @@ export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Elemen
   const buttonRefs: (HTMLButtonElement | undefined)[] = [];
   const optionOf = (o: SegmentedFilterOption) =>
     typeof o === "string"
-      ? { value: o, label: o, capitalize: true, disabled: false, disabledNote: undefined as string | undefined }
-      : { disabled: false, disabledNote: undefined as string | undefined, ...o, capitalize: false };
+      ? { value: o, label: o, icon: undefined as SegmentedFilterIcon | undefined, capitalize: true, disabled: false, disabledNote: undefined as string | undefined }
+      : { icon: undefined as SegmentedFilterIcon | undefined, disabled: false, disabledNote: undefined as string | undefined, ...o, capitalize: false };
 
   const currentIndex = () => {
     const i = props.options.findIndex((o) => optionOf(o).value === props.value);
@@ -117,7 +119,7 @@ export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Elemen
                 if (opt.disabled) return;
                 props.onChange(opt.value);
               }}
-              class="shrink-0 px-3 py-1.5 text-xs transition-colors"
+              class="inline-flex shrink-0 items-center justify-center gap-1.5 px-3 py-1.5 text-xs transition-colors"
               classList={{
                 capitalize: opt.capitalize,
                 "cursor-not-allowed": opt.disabled,
@@ -128,6 +130,7 @@ export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Elemen
                   !selected() && !opt.disabled,
               }}
             >
+              {opt.icon ? <Dynamic component={opt.icon} size={14} aria-hidden="true" /> : null}
               {opt.label}
               {opt.disabled && opt.disabledNote ? (
                 <span id={noteId} class="sr-only">

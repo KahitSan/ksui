@@ -35,6 +35,7 @@ const styles: Record<string, string> = {
 // ProgressColor is derived from COLOR_MAP so adding a hue later flows here
 // without re-syncing a hardcoded list.
 export type ProgressColor = keyof typeof COLOR_MAP;
+export type ProgressBarVariant = "default" | "compact";
 
 export interface ProgressBarProps extends JSX.HTMLAttributes<HTMLDivElement> {
   progress: number;
@@ -52,6 +53,8 @@ export interface ProgressBarProps extends JSX.HTMLAttributes<HTMLDivElement> {
   // Explicit color signal — class-substring sniffing broke when COLOR_AMBER
   // was tokenized (4f6ed40 dropped the literal "amber" from the class).
   color?: ProgressColor;
+  /** Compact labeled readout with a thin track. Defaults to the existing bar. */
+  variant?: ProgressBarVariant;
   class?: string;
 }
 
@@ -159,7 +162,7 @@ function extractTextSize(className: string): number {
   return 14;
 }
 
-const ProgressBar: Component<ProgressBarProps> = (props) => {
+const DefaultProgressBar: Component<ProgressBarProps> = (props) => {
   injectCSS(PROGRESS_STYLE_ID, PROGRESS_CSS);
   const [local, others] = splitProps(props, [
     "progress",
@@ -171,6 +174,7 @@ const ProgressBar: Component<ProgressBarProps> = (props) => {
     "hidePercentage",
     "rightLabel",
     "color",
+    "variant",
     "class",
   ]);
 
@@ -341,5 +345,62 @@ const ProgressBar: Component<ProgressBarProps> = (props) => {
     </div>
   );
 };
+
+type CompactProgressBarProps = ProgressBarProps;
+
+const CompactProgressBar: Component<CompactProgressBarProps> = (props) => {
+  injectCSS(PROGRESS_STYLE_ID, PROGRESS_CSS);
+  const [local, others] = splitProps(props, ["progress", "icon", "label", "statusLabel", "shimmer", "position", "hidePercentage", "rightLabel", "color", "variant", "class"]);
+  const value = createMemo(() => {
+    if (typeof local.progress !== "number" || Number.isNaN(local.progress)) return 0;
+    return Math.min(100, Math.max(0, Math.round(local.progress)));
+  });
+  const fillColor = createMemo(() => local.color ? COLOR_MAP[local.color].indicator : "var(--ks-primary, #c9a961)");
+  const accessibleLabel = () => local.label ?? local.statusLabel ?? "Progress";
+  const Icon = () => local.icon;
+  return (
+    <div
+      {...others}
+      class={cn("min-w-28", local.class)}
+      role="progressbar"
+      aria-label={accessibleLabel()}
+      aria-valuenow={value()}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      <div class="mb-1 flex items-center justify-between gap-2 text-[10px] leading-none">
+        <span class="flex min-w-0 items-center gap-1 truncate font-semibold text-[var(--ks-fg,#ffffff)]">
+          <Show when={Icon()}>{(ResolvedIcon) => <Dynamic component={ResolvedIcon()} size={12} aria-hidden="true" />}</Show>
+          <span class="truncate">{local.label ?? local.statusLabel}</span>
+        </span>
+        <Show when={local.rightLabel !== undefined || !local.hidePercentage}>
+          <span class="shrink-0 font-mono tabular-nums text-[var(--ks-fg-muted,#a1a1aa)]">
+            {local.rightLabel ?? `${value()}%`}
+          </span>
+        </Show>
+      </div>
+      <div class="h-[5px] overflow-hidden rounded-full bg-[var(--ks-surface-raised,#1a1a1a)]">
+        <div
+          class="relative h-full overflow-hidden rounded-full transition-[width] duration-200"
+          style={{
+            width: `${value()}%`,
+            "background-color": fillColor(),
+            "margin-left": local.position === "right" ? "auto" : undefined,
+          }}
+        >
+          <Show when={local.shimmer}>
+            <div class={styles["animate-shimmer"]} />
+          </Show>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProgressBar: Component<ProgressBarProps> = (props) => (
+  <Show when={props.variant === "compact"} fallback={<DefaultProgressBar {...props} />}>
+    <CompactProgressBar {...props} />
+  </Show>
+);
 
 export default ProgressBar;

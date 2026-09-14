@@ -39,3 +39,17 @@ describe("MultiSelectGroup", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 });
+
+describe("MultiSelectGroup variants", () => {
+  it("keeps the existing info selected treatment by default", () => {
+    render(() => <MultiSelectGroup ariaLabel="Days" options={options} value={["mon"]} onChange={() => {}} />);
+    expect(screen.getByRole("button", { name: "Mon" }).className).toContain("--ks-info");
+  });
+
+  it("uses the accent selected-state treatment when requested", () => {
+    render(() => <MultiSelectGroup ariaLabel="Days" options={options} value={["mon"]} onChange={() => {}} variant="accent" />);
+    const selected = screen.getByRole("button", { name: "Mon" });
+    expect(selected.className).toContain("--ks-accent");
+    expect(selected.className).not.toContain("--ks-info");
+  });
+});

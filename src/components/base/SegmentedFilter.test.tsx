@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, fireEvent } from "@solidjs/testing-library";
+import List from "lucide-solid/icons/list";
 import SegmentedFilter, { type SegmentedFilterOption } from "./SegmentedFilter";
 
 // Back-compat: bare-string options are still accepted alongside the object
@@ -7,7 +8,7 @@ import SegmentedFilter, { type SegmentedFilterOption } from "./SegmentedFilter";
 const STRING_OPTIONS: SegmentedFilterOption[] = ["today", "week", "month"];
 
 const OBJECT_OPTIONS: SegmentedFilterOption[] = [
-  { value: "table", label: "Table" },
+  { value: "table", label: "Table", icon: List },
   { value: "calendar", label: "Calendar" },
 ];
 
@@ -39,6 +40,14 @@ describe("SegmentedFilter", () => {
     ));
     const radios = getAllByRole("radio");
     expect(radios.map((r) => r.textContent)).toEqual(["Table", "Calendar"]);
+  });
+  it("renders optional decorative icons without changing accessible names", () => {
+    const { getAllByRole } = render(() => (
+      <SegmentedFilter options={OBJECT_OPTIONS} value="table" onChange={() => {}} />
+    ));
+    const table = getAllByRole("radio")[0];
+    expect(table.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    expect(table.getAttribute("aria-checked")).toBe("true");
   });
 
   it("emits the clicked value on an enabled segment", () => {
