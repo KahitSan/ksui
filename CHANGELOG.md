@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.45.0
+
+### Minor Changes
+
+- 753b6ee: Add reusable modal headers and action menus, plus accent multi-select, compact progress, and icon-enabled segmented control variants.
+
 ## 0.44.0
 
 ### Minor Changes
