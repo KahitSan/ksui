@@ -53,14 +53,14 @@ export { default as DetailRow } from "./components/base/DetailRow";
 export { default as Tooltip } from "./components/base/Tooltip";
 export { default as ImageCropper } from "./components/base/ImageCropper";
 export { default as ImageViewer } from "./components/base/ImageViewer";
-export { default as ProgressBar, type ProgressBarProps } from "./components/base/ProgressBar";
+export { default as ProgressBar, type ProgressBarProps, type ProgressBarVariant, type ProgressColor } from "./components/base/ProgressBar";
 export { default as ChartLegend } from "./components/base/ChartLegend";
 
 // Plugin reusability backlog: atoms migrated from per-plugin copies into the
 // single canonical package.
 export { default as StatusPill, type StatusTone } from "./components/base/StatusPill";
-export { default as SegmentedFilter, type SegmentedFilterOption } from "./components/base/SegmentedFilter";
-export { default as MultiSelectGroup, type MultiSelectGroupProps, type MultiSelectOption } from "./components/base/MultiSelectGroup";
+export { default as SegmentedFilter, type SegmentedFilterProps, type SegmentedFilterOption, type SegmentedFilterIcon } from "./components/base/SegmentedFilter";
+export { default as MultiSelectGroup, type MultiSelectGroupProps, type MultiSelectGroupVariant, type MultiSelectOption } from "./components/base/MultiSelectGroup";
 export { default as CopyButton } from "./components/base/CopyButton";
 export { default as KpiCard, type KpiCardProps, type KpiTone } from "./components/base/KpiCard";
 export { default as RadioCardGroup } from "./components/base/RadioCardGroup";
@@ -79,6 +79,16 @@ export { default as EyebrowBadge, type EyebrowBadgeProps, type EyebrowTone, type
 // Self-contained modal dialog (promoted from the former host kit). Injects its
 // own CSS; no Tailwind / host-brand classes required.
 export { default as Modal, type ModalProps, type ModalSize, type ModalTone } from "./components/base/Modal";
+export { default as ModalHeader, type ModalHeaderProps } from "./components/base/ModalHeader";
+export {
+  default as ActionMenu,
+  RowMenu,
+  type ActionMenuProps,
+  type ActionMenuItem,
+  type ActionMenuIcon,
+  type RowMenuProps,
+  type RowMenuItem,
+} from "./components/base/ActionMenu";
 
 // Calendar date picker (ported from the host kit). Trigger button labeled with
 // the selected date or "Pick date", a portaled calendar popover with prev/next

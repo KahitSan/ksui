@@ -13,7 +13,14 @@ import PaymentAccountPicker from "../src/components/composite/PaymentAccountPick
 import VoucherPicker from "../src/components/composite/VoucherPicker";
 import MentionTextarea from "../src/components/composite/MentionTextarea";
 import AddAttachmentTile from "../src/components/base/AddAttachmentTile";
+import ActionMenu from "../src/components/base/ActionMenu";
+import ModalHeader from "../src/components/base/ModalHeader";
+import MultiSelectGroup from "../src/components/base/MultiSelectGroup";
+import ProgressBar from "../src/components/base/ProgressBar";
+import SegmentedFilter from "../src/components/base/SegmentedFilter";
 import Store from "lucide-solid/icons/store";
+import List from "lucide-solid/icons/list";
+import CalendarDays from "lucide-solid/icons/calendar-days";
 
 // Minimal test page that renders ksui components for Playwright e2e.
 // Each section is a self-contained component with data-testid markers
@@ -195,6 +202,57 @@ function AddAttachmentTileSection() {
   );
 }
 
+function SharedBlockersSection() {
+  const [days, setDays] = createSignal<string[]>(["mon"]);
+  const [view, setView] = createSignal("list");
+  const [selectedAction, setSelectedAction] = createSignal("none");
+  return (
+    <section data-testid="shared-blockers-section">
+      <h2>Shared blockers</h2>
+      <MultiSelectGroup
+        ariaLabel="Repeat days"
+        variant="accent"
+        options={[{ value: "mon", label: "Mon" }, { value: "tue", label: "Tue" }]}
+        value={days()}
+        onChange={setDays}
+      />
+      <ProgressBar variant="compact" progress={40} label="2 / 5 paid" />
+      <SegmentedFilter
+        ariaLabel="View"
+        value={view()}
+        onChange={setView}
+        options={[
+          { value: "list", label: "List", icon: List },
+          { value: "calendar", label: "Calendar", icon: CalendarDays },
+        ]}
+      />
+      <ActionMenu
+        label="Row actions"
+        items={[{ id: "open", label: "Open" }, { id: "remove", label: "Remove", danger: true }]}
+        onSelect={setSelectedAction}
+        testId="shared-action-menu"
+      />
+      <output data-testid="selected-action">{selectedAction()}</output>
+    </section>
+  );
+}
+
+function ModalHeaderSection() {
+  const [open, setOpen] = createSignal(false);
+  return (
+    <section data-testid="modal-header-section">
+      <h2>ModalHeader</h2>
+      <button data-testid="modal-header-open" onClick={() => setOpen(true)}>Open headed modal</button>
+      {open() && (
+        <Modal onClose={() => setOpen(false)} ariaLabel="Edit schedule">
+          <ModalHeader title="Edit schedule" subtitle="Future entries only" onClose={() => setOpen(false)} />
+          <p>Schedule body</p>
+        </Modal>
+      )}
+    </section>
+  );
+}
+
 // Reproduces the real bug scenario: a picker opened WHILE inside Modal's
 // default variant (a native <dialog>), which promotes its own content to the
 // top layer — an ordinary z-index popup can never out-paint that.
@@ -232,6 +290,8 @@ function App() {
       <VoucherPickerSection />
       <MentionTextareaSection />
       <AddAttachmentTileSection />
+      <SharedBlockersSection />
+      <ModalHeaderSection />
       <InModalDatePickerSection />
     </>
   );
