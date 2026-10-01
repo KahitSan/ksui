@@ -200,6 +200,19 @@ describe("VoucherPicker dialog", () => {
     );
   });
 
+  it("omits the footer description element when the voucher has no notes", async () => {
+    mockPagedFetch([voucher({ id: 51, code: "PLAIN" })]);
+    const { getByTestId, queryByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    await waitFor(() => expect(getByTestId("voucher-picker-result-51")).toBeTruthy());
+    fireEvent.click(getByTestId("voucher-picker-result-51"));
+    // The footer description row is gated on a trimmed notes value - a voucher
+    // without notes must not leave an empty line beside Cancel/Apply.
+    expect(queryByTestId("voucher-picker-draft-description")).toBeNull();
+  });
+
   it("finds a voucher by its description and highlights the match in it", async () => {
     const { calls } = mockPagedFetch([
       voucher({ id: 51, code: "PARTNER_UAPGA", notes: "UAPGA Camarines Chapter discount" }),
