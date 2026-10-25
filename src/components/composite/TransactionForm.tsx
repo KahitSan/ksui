@@ -231,6 +231,11 @@ export interface TransactionFormProps {
   setNotes: (v: string) => void;
   date: string;
   setDate: (v: string) => void;
+  /** Wall-clock time of day for the transaction, `HH:MM` or `HH:MM:SS`.
+   *  Supplying `setTime` switches the date field to a single native
+   *  date-and-time input; leave both out to keep the date-only picker. */
+  time?: string;
+  setTime?: (v: string) => void;
   isPrivate: boolean;
   setIsPrivate: (v: boolean) => void;
   sharedWith: string[];
@@ -329,6 +334,10 @@ export default function TransactionForm(props: TransactionFormProps) {
 `,
   );
   const compact = () => props.layout === "compact";
+  const withTime = () => typeof props.setTime === "function";
+  // datetime-local wants exactly YYYY-MM-DDTHH:MM; a missing date reads as empty.
+  const dateTimeValue = () =>
+    props.date ? `${props.date}T${(props.time || "00:00").slice(0, 5)}` : "";
   const catConfig = () =>
     CATEGORY_FORM[props.category] || CATEGORY_FORM.expense;
   const [dragging, setDragging] = createSignal(false);
@@ -639,15 +648,48 @@ export default function TransactionForm(props: TransactionFormProps) {
           </Show>
 
           <div class={compact() ? "ks-transaction-compact-date" : undefined}>
-          <FormField label={compact() ? "TRANSACTION DATE" : "Date *"}>
-            <DatePicker
-              value={props.date}
-              onChange={(d: string | null) => d && props.setDate(d)}
-              disabled={!props.isAdmin}
-            />
+          <FormField
+            label={
+              withTime()
+                ? compact()
+                  ? "TRANSACTION DATE & TIME"
+                  : "Date & time *"
+                : compact()
+                ? "TRANSACTION DATE"
+                : "Date *"
+            }
+          >
+            <Show
+              when={withTime()}
+              fallback={
+                <DatePicker
+                  value={props.date}
+                  onChange={(d: string | null) => d && props.setDate(d)}
+                  disabled={!props.isAdmin}
+                />
+              }
+            >
+              <input
+                type="datetime-local"
+                data-testid="transactions-form-datetime"
+                aria-label="Transaction date and time"
+                value={dateTimeValue()}
+                disabled={!props.isAdmin}
+                required
+                onInput={(e) => {
+                  const v = e.currentTarget.value;
+                  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)) return;
+                  props.setDate(v.slice(0, 10));
+                  props.setTime?.(v.slice(11, 16));
+                }}
+                class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)] disabled:opacity-60"
+              />
+            </Show>
             <Show when={!props.isAdmin}>
               <p class="text-[10px] text-[var(--ks-fg-subtle,#71717a)] mt-0.5">
-                Only admins can change the date
+                {withTime()
+                  ? "Only admins can change the date and time"
+                  : "Only admins can change the date"}
               </p>
             </Show>
           </FormField>
