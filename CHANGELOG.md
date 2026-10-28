@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.46.1
+
+### Patch Changes
+
+- 2345245: Modal: a `variant="sheet"` Modal no longer closes on Escape while a dialog Modal or `confirm()` is open on top of it. Only the topmost layer reacts, so the sheet and its form survive.
+
 ## 0.46.0
 
 ### Minor Changes
