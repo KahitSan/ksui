@@ -18,6 +18,7 @@ import ModalHeader from "../src/components/base/ModalHeader";
 import MultiSelectGroup from "../src/components/base/MultiSelectGroup";
 import ProgressBar from "../src/components/base/ProgressBar";
 import SegmentedFilter from "../src/components/base/SegmentedFilter";
+import { confirm } from "../src/utils/confirm";
 import Store from "lucide-solid/icons/store";
 import List from "lucide-solid/icons/list";
 import CalendarDays from "lucide-solid/icons/calendar-days";
@@ -276,6 +277,41 @@ function InModalDatePickerSection() {
   );
 }
 
+// A dialog stacked on a sheet must take Escape alone; the sheet stays open.
+function SheetStackSection() {
+  const [sheet, setSheet] = createSignal(false);
+  const [inner, setInner] = createSignal(false);
+  const [answer, setAnswer] = createSignal("none");
+  return (
+    <section data-testid="sheet-stack-section">
+      <h2>Dialog over sheet</h2>
+      <button data-testid="sheet-open" onClick={() => setSheet(true)}>Open sheet</button>
+      <output data-testid="sheet-confirm-answer">{answer()}</output>
+      {sheet() && (
+        <Modal variant="sheet" onClose={() => setSheet(false)} ariaLabel="Sheet">
+          <div data-testid="sheet-content">
+            <input data-testid="sheet-input" />
+            <button data-testid="sheet-inner-open" onClick={() => setInner(true)}>Open dialog</button>
+            <button
+              data-testid="sheet-confirm-open"
+              onClick={async () => setAnswer(String(await confirm({ title: "Sure?" })))}
+            >
+              Ask
+            </button>
+            {inner() && (
+              <Modal onClose={() => setInner(false)} ariaLabel="Inner">
+                <div data-testid="sheet-inner-content">
+                  <button>Inner action</button>
+                </div>
+              </Modal>
+            )}
+          </div>
+        </Modal>
+      )}
+    </section>
+  );
+}
+
 function App() {
   return (
     <>
@@ -293,6 +329,7 @@ function App() {
       <SharedBlockersSection />
       <ModalHeaderSection />
       <InModalDatePickerSection />
+      <SheetStackSection />
     </>
   );
 }

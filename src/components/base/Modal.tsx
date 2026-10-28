@@ -155,13 +155,28 @@ function DialogModal(local: LocalProps): JSX.Element {
   );
 }
 
+function openModalDialogs(): HTMLDialogElement[] {
+  const open = [...document.querySelectorAll<HTMLDialogElement>("dialog[open]")];
+  try {
+    return open.filter((d) => d.matches(":modal"));
+  } catch {
+    // Engines without :modal support; treat every open dialog as modal.
+    return open;
+  }
+}
+
 function SheetModal(local: LocalProps, size?: ModalSize): JSX.Element {
+  let overlayEl: HTMLDivElement | undefined;
+
   lockPullToRefresh();
   onCleanup(unlockPullToRefresh);
 
   const handleKey = (e: KeyboardEvent) => {
-    if (e.key !== "Escape") return;
+    if (e.key !== "Escape" || e.defaultPrevented) return;
     if (local.dismissable === false) return;
+    // A modal <dialog> stacked above this sheet owns Escape (it gets `cancel`);
+    // closing here too would discard the sheet underneath.
+    if (openModalDialogs().some((d) => !d.contains(overlayEl ?? null))) return;
     local.onClose();
   };
   if (typeof window !== "undefined") {
@@ -179,7 +194,7 @@ function SheetModal(local: LocalProps, size?: ModalSize): JSX.Element {
   // ModalLayerContext value is already ambient (an outer DialogModal's
   // dialogEl if nested inside one, otherwise the default null/document.body).
   return (
-    <div class="ksui-modal-sheet-overlay">
+    <div ref={overlayEl} class="ksui-modal-sheet-overlay">
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div class="ksui-modal-sheet-backdrop" onClick={handleBackdropClick} />
       <div
