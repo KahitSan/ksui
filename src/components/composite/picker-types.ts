@@ -14,6 +14,9 @@ export interface PayeeOption {
   kind: PayeeKind;
   default_subcategory?: string | null;
   notes?: string | null;
+  /** Tax ID on record. `undefined` means not loaded yet; `null`/"" means none. */
+  tin?: string | null;
+  address?: string | null;
   is_active?: boolean;
 }
 

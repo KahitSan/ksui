@@ -212,6 +212,7 @@ export {
 // Shared domain option shapes for the common pickers, decoupled from any
 // component (still imported across transactions / counter / payees).
 export type { ClientOption, PayeeOption, PayeeKind } from "./components/composite/picker-types";
+export { isValidTin, normalizeTin } from "./components/composite/payee-tin";
 
 export { default as VoucherPicker, calculateDiscount } from "./components/composite/VoucherPicker";
 export type { VoucherOption } from "./components/composite/VoucherPicker";
