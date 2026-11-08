@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.47.1
+
+### Patch Changes
+
+- a2bb8f8: TIN validation now accepts a 5 digit branch code (14 digits in total) as printed on current invoices, as well as 9 and 12 digits.
+
 ## 0.47.0
 
 ### Minor Changes
