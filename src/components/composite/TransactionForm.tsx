@@ -833,14 +833,14 @@ export default function TransactionForm(props: TransactionFormProps) {
                         value={props.payeeTin ?? ""}
                         onInput={(e) => props.setPayeeTin!(e.currentTarget.value)}
                         class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
-                        placeholder="000-000-000-000"
+                        placeholder="000-000-000-00000"
                       />
                       <Show when={!isValidTin(props.payeeTin ?? "")}>
                         <p
                           data-testid="form-payee-tin-error"
                           class="mt-1 text-[10px] text-[var(--ks-danger,#ef4444)]"
                         >
-                          A TIN has 9 digits, or 12 with the branch code.
+                          A TIN has 9 digits, plus a 3 or 5 digit branch code.
                         </p>
                       </Show>
                     </FormField>
