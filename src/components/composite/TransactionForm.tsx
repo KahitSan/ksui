@@ -25,6 +25,7 @@ import TransactionAccountFields from "./TransactionAccountFields";
 import TransactionPayableFields from "./TransactionPayableFields";
 import ComboBox from "./ComboBox";
 import type { ClientOption, PayeeOption, PayeeKind } from "./picker-types";
+import { isValidTin } from "./payee-tin";
 import VoucherPicker, { type VoucherOption } from "./VoucherPicker";
 import MentionTextarea from "./MentionTextarea";
 import SearchableSelect from "./SearchableSelect";
@@ -103,6 +104,13 @@ async function createPayee(
     throw new Error(body.error || "Failed to create payee");
   }
   return (await res.json()) as PayeeOption;
+}
+
+async function loadPayee(id: number): Promise<PayeeOption | null> {
+  const r = await fetch(`/api/payees/${id}`, { credentials: "include" });
+  if (!r.ok) return null;
+  const json = (await r.json()) as PayeeOption & { data?: PayeeOption };
+  return json.data ?? json;
 }
 
 function payeeSecondary(p: PayeeOption): string | null {
@@ -248,6 +256,13 @@ export interface TransactionFormProps {
   setPayee: (v: string) => void;
   payeeId: number | null;
   setPayeeId: (v: number | null) => void;
+  /** Opt in to tax-ID capture for the picked payee by supplying `setPayeeTin`.
+   *  The form shows the saved TIN/address, or inputs when they are missing, and
+   *  reports typed values here; the host decides when and how to save them. */
+  payeeTin?: string;
+  setPayeeTin?: (v: string) => void;
+  payeeAddress?: string;
+  setPayeeAddress?: (v: string) => void;
   refNumber: string;
   setRefNumber: (v: string) => void;
   taxType: string;
@@ -360,6 +375,27 @@ export default function TransactionForm(props: TransactionFormProps) {
       setSelectedPayee(null);
     }
   });
+  // A payee picked from search already carries its tax ID; one restored from a
+  // saved row does not, so load it before deciding what to show.
+  createEffect(() => {
+    const sel = selectedPayee();
+    if (!props.setPayeeTin || !sel || sel.tin !== undefined) return;
+    const id = sel.id;
+    loadPayee(id)
+      .then((rec) => {
+        const cur = selectedPayee();
+        if (!rec || !cur || cur.id !== id) return;
+        setSelectedPayee({ ...cur, tin: rec.tin ?? null, address: rec.address ?? null });
+      })
+      .catch(() => {});
+  });
+  const taxPayee = () =>
+    props.setPayeeTin && props.category !== "sale" && catConfig().showPayee
+      ? selectedPayee()
+      : null;
+  const savedTin = () => !!taxPayee()?.tin?.trim();
+  const savedAddress = () => !!taxPayee()?.address?.trim();
+  const tinKnown = () => taxPayee()?.tin !== undefined;
   let dragCounter = 0;
   let formFileInput: HTMLInputElement | undefined;
 
@@ -756,6 +792,8 @@ export default function TransactionForm(props: TransactionFormProps) {
                     setSelectedPayee(p);
                     props.setPayee(p ? p.name : "");
                     props.setPayeeId(p ? p.id : null);
+                    props.setPayeeTin?.("");
+                    props.setPayeeAddress?.("");
                   }}
                 />
               </FormField>
@@ -774,6 +812,62 @@ export default function TransactionForm(props: TransactionFormProps) {
                 </Show>
               </FormField>
             </div>
+            <Show when={taxPayee() && tinKnown()}>
+              <div class="space-y-2" data-testid="form-payee-tax-id">
+                <Show when={savedTin()}>
+                  <p
+                    data-testid="form-payee-tin-readonly"
+                    class="text-xs text-[var(--ks-fg-subtle,#71717a)]"
+                  >
+                    TIN {taxPayee()!.tin}
+                    {savedAddress() ? ` · ${taxPayee()!.address}` : ""}
+                  </p>
+                </Show>
+                <div class="grid grid-cols-2 gap-4">
+                  <Show when={!savedTin()}>
+                    <FormField label="TIN (optional)">
+                      <input
+                        type="text"
+                        inputmode="numeric"
+                        data-testid="form-payee-tin-input"
+                        value={props.payeeTin ?? ""}
+                        onInput={(e) => props.setPayeeTin!(e.currentTarget.value)}
+                        class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
+                        placeholder="000-000-000-000"
+                      />
+                      <Show when={!isValidTin(props.payeeTin ?? "")}>
+                        <p
+                          data-testid="form-payee-tin-error"
+                          class="mt-1 text-[10px] text-[var(--ks-danger,#ef4444)]"
+                        >
+                          A TIN has 9 digits, or 12 with the branch code.
+                        </p>
+                      </Show>
+                    </FormField>
+                  </Show>
+                  <Show when={!savedAddress() && props.setPayeeAddress}>
+                    <FormField label="Address (optional)">
+                      <input
+                        type="text"
+                        data-testid="form-payee-address-input"
+                        value={props.payeeAddress ?? ""}
+                        onInput={(e) => props.setPayeeAddress!(e.currentTarget.value)}
+                        class="w-full bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)] border border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] px-3 py-3 text-sm text-[var(--ks-fg,#ffffff)] ks-hud-clip-button focus:outline-none focus:border-[color-mix(in_srgb,var(--ks-focus-ring,#c9a961)_50%,transparent)]"
+                        placeholder="Printed on the invoice"
+                      />
+                    </FormField>
+                  </Show>
+                </div>
+                <Show when={props.hasEwt && !savedTin() && !(props.payeeTin ?? "").trim()}>
+                  <p
+                    data-testid="form-payee-tin-ewt-warning"
+                    class="text-[11px] text-[var(--ks-warning,#f59e0b)]"
+                  >
+                    Withholding needs the payee's TIN for the 2307 certificate. You can save without it.
+                  </p>
+                </Show>
+              </div>
+            </Show>
           </Show>
           <Show when={!catConfig().showPayee}>
             <FormField label="Reference #">
