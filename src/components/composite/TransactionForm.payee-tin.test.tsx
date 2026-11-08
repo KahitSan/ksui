@@ -102,15 +102,19 @@ beforeEach(() => vi.unstubAllGlobals());
 afterEach(() => vi.unstubAllGlobals());
 
 describe("isValidTin", () => {
-  it("accepts 9 or 12 digits with or without dashes", () => {
+  it("accepts 9 digits with a 3 or 5 digit branch code, dashes optional", () => {
     expect(isValidTin("123456789")).toBe(true);
     expect(isValidTin("123-456-789")).toBe(true);
     expect(isValidTin("123-456-789-000")).toBe(true);
     expect(isValidTin("123456789000")).toBe(true);
+    expect(isValidTin("123-456-789-00043")).toBe(true);
+    expect(isValidTin("12345678900043")).toBe(true);
   });
   it("rejects other lengths and non-digits", () => {
     expect(isValidTin("12345678")).toBe(false);
     expect(isValidTin("1234567890")).toBe(false);
+    expect(isValidTin("1234567890001")).toBe(false);
+    expect(isValidTin("123456789000430")).toBe(false);
     expect(isValidTin("12a-456-789")).toBe(false);
   });
   it("treats blank as valid because the field is optional", () => {
