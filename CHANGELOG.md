@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.47.0
+
+### Minor Changes
+
+- 84779c8: TransactionForm can show the picked payee's TIN and address, ask for them when missing, and warn when withholding is on without a TIN. Opt in by passing `setPayeeTin` (and optionally `payeeTin`, `payeeAddress`, `setPayeeAddress`). Adds `isValidTin` and `normalizeTin`, and `tin` and `address` on `PayeeOption`.
+
 ## 0.46.1
 
 ### Patch Changes
