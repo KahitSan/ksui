@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.47.2
+
+### Patch Changes
+
+- 43ba13d: TransactionForm shows the newly picked payee's TIN and address after switching payees, instead of the previous payee's.
+
 ## 0.47.1
 
 ### Patch Changes
