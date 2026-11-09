@@ -7,7 +7,7 @@
 // advanced-fields toggle entirely, for a caller that locks `category` to one
 // value and never needs EWT/sharing (e.g. a "record my own expense" surface).
 
-import { createEffect, createSignal, Show, For } from "solid-js";
+import { batch, createEffect, createSignal, Show, For } from "solid-js";
 import X from "lucide-solid/icons/x";
 import Upload from "lucide-solid/icons/upload";
 import FileIcon from "lucide-solid/icons/file";
@@ -788,13 +788,16 @@ export default function TransactionForm(props: TransactionFormProps) {
                   icon={Store}
                   noun="payee"
                   placeholder={catConfig().payeePlaceholder!}
-                  onChange={(p) => {
-                    setSelectedPayee(p);
-                    props.setPayee(p ? p.name : "");
-                    props.setPayeeId(p ? p.id : null);
-                    props.setPayeeTin?.("");
-                    props.setPayeeAddress?.("");
-                  }}
+                  onChange={(p) =>
+                    // One batch so the sync effect never sees the new name with the old id.
+                    batch(() => {
+                      setSelectedPayee(p);
+                      props.setPayee(p ? p.name : "");
+                      props.setPayeeId(p ? p.id : null);
+                      props.setPayeeTin?.("");
+                      props.setPayeeAddress?.("");
+                    })
+                  }
                 />
               </FormField>
               <FormField label={props.category === "sale" ? "Invoice ID" : "Receipt / Ref #"}>
