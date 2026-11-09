@@ -2,7 +2,8 @@
 // and address, offers inputs when they are missing, and warns when withholding
 // is on but no TIN is known.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, fireEvent, waitFor } from "@solidjs/testing-library";
+import { render, fireEvent, waitFor, screen } from "@solidjs/testing-library";
+import { createSignal } from "solid-js";
 import TransactionForm, { type TransactionFormProps } from "./TransactionForm";
 import { isValidTin } from "./payee-tin";
 
@@ -223,6 +224,53 @@ describe("TransactionForm payee tax ID", () => {
     mockPayee({ id: 7, name: "Acme Hardware", kind: "customer", tin: null, address: null });
     const { queryByTestId } = render(() => <TransactionForm {...tinProps({ category: "sale" })} />);
     await Promise.resolve();
+    expect(queryByTestId("form-payee-tin-input")).toBeNull();
+  });
+
+  it("shows the newly picked payee's tax ID when switching payees", async () => {
+    const payees = [
+      { id: 1, name: "Alpha Mart", kind: "vendor", tin: "123-456-789-00043", address: "1 Main St" },
+      { id: 2, name: "Beta Shop", kind: "vendor", tin: null, address: null },
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const one = /\/api\/payees\/(\d+)/.exec(String(url));
+        const body = one ? payees.find((p) => p.id === Number(one[1])) : { data: payees };
+        return new Response(JSON.stringify(body), { status: 200 });
+      }),
+    );
+    const [payee, setPayee] = createSignal("");
+    const [payeeId, setPayeeId] = createSignal<number | null>(null);
+    const { findByTestId, queryByTestId } = render(() => (
+      <TransactionForm
+        {...tinProps({
+          get payee() {
+            return payee();
+          },
+          setPayee,
+          get payeeId() {
+            return payeeId();
+          },
+          setPayeeId,
+        })}
+      />
+    ));
+    const pick = async (id: number) => {
+      fireEvent.click(await screen.findByTestId("form-payee-picker-trigger"));
+      fireEvent.input(await screen.findByTestId("form-payee-picker-input"), { target: { value: "a" } });
+      fireEvent.click(await screen.findByTestId(`form-payee-picker-result-${id}`));
+    };
+
+    await pick(1);
+    expect((await findByTestId("form-payee-tin-readonly")).textContent).toContain("123-456-789-00043");
+
+    await pick(2);
+    await findByTestId("form-payee-tin-input");
+    expect(queryByTestId("form-payee-tin-readonly")).toBeNull();
+
+    await pick(1);
+    expect((await findByTestId("form-payee-tin-readonly")).textContent).toContain("123-456-789-00043");
     expect(queryByTestId("form-payee-tin-input")).toBeNull();
   });
 });
