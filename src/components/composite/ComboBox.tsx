@@ -52,6 +52,9 @@ interface ComboBoxCommonProps<T> {
   icon: (p: { size?: number; class?: string }) => JSX.Element;
   /** Singular noun for UI copy: "payee", "client". */
   noun: string;
+  /** Custom text for the create row, given the typed name. Defaults to
+   *  `New <noun> "<name>"`. */
+  createLabel?: (name: string) => string;
 
   placeholder?: string;
   disabled?: boolean;
@@ -303,7 +306,12 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
                       <UserPlus size={14} class="text-[var(--ks-success-fg,#34d399)] shrink-0" />
                     </Show>
                     <span class="text-sm text-[var(--ks-success-fg,#34d399)]">
-                      New {props.noun} "<span class="font-medium">{eng.trimmedQuery()}</span>"
+                      <Show
+                        when={props.createLabel}
+                        fallback={<>New {props.noun} "<span class="font-medium">{eng.trimmedQuery()}</span>"</>}
+                      >
+                        {(label) => label()(eng.trimmedQuery())}
+                      </Show>
                     </span>
                   </button>
                 </div>
@@ -606,7 +614,12 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
                     <UserPlus size={14} class="text-[var(--ks-success-fg,#34d399)] shrink-0 mt-0.5" />
                   </Show>
                   <span class="flex-1 text-[var(--ks-success-fg,#34d399)]">
-                    New {props.noun} "<span class="font-medium">{eng.trimmedQuery()}</span>"
+                    <Show
+                        when={props.createLabel}
+                        fallback={<>New {props.noun} "<span class="font-medium">{eng.trimmedQuery()}</span>"</>}
+                      >
+                        {(label) => label()(eng.trimmedQuery())}
+                      </Show>
                   </span>
                 </button>
               </Show>
