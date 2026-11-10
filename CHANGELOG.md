@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.47.3
+
+### Patch Changes
+
+- f33ac90: ComboBox: optional `createLabel` prop to customise the create-row text.
+
 ## 0.47.2
 
 ### Patch Changes
