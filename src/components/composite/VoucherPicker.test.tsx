@@ -720,3 +720,18 @@ describe("VoucherPicker dialog", () => {
     document.removeEventListener("keydown", ancestorEsc);
   });
 });
+
+describe("VoucherPicker applyOnSelect", () => {
+  it("applies on tap, closes, and shows no Apply footer", async () => {
+    mockPagedFetch([voucher({ id: 1, code: "TAP_ME" })]);
+    const onChange = vi.fn();
+    const { getByTestId, queryByTestId, findByTestId } = render(() => (
+      <VoucherPicker selected={null} onChange={onChange} subtotal={100} packageIds={[]} applyOnSelect />
+    ));
+    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    expect(queryByTestId("voucher-picker-confirm")).toBeNull();
+    fireEvent.click(await findByTestId("voucher-picker-result-1"));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    await waitFor(() => expect(queryByTestId("voucher-picker-popup")).toBeNull());
+  });
+});
