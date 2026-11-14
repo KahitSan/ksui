@@ -54,6 +54,9 @@ interface VoucherPickerProps {
    *  preview a discount RANGE while `subtotal` is still 0, instead of a
    *  meaningless zero. */
   subtotalRange?: { min: number; max: number };
+  /** Apply a voucher the moment its row is tapped and drop the staged
+   *  Apply/Cancel footer. Off by default (select, then confirm). */
+  applyOnSelect?: boolean;
 }
 
 function asNumber(v: string | number | null | undefined): number {
@@ -333,6 +336,11 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
   // Picking a row only stages it; nothing reaches the cart until Confirm, so a
   // mis-tap on a touch screen can be corrected without re-opening the dialog.
   const stage = (v: VoucherOption) => {
+    if (props.applyOnSelect) {
+      props.onChange(props.selected?.id === v.id ? null : v);
+      close();
+      return;
+    }
     setDraft((current) => (current?.id === v.id ? null : v));
   };
 
@@ -455,7 +463,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
       </button>
 
       <Show when={open()}>
-        <Modal onClose={close} size="xl" ariaLabel="Select a voucher">
+        <Modal onClose={close} size="xl" ariaLabel={props.applyOnSelect ? "Choose a voucher" : "Select a voucher"}>
           <div data-testid="voucher-picker-popup" class="flex flex-col max-h-[70vh]">
             {/* Bled to the card edges (the card owns the padding) so the rule
                 under the title spans the full width. */}
@@ -463,7 +471,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
               <div class="flex items-center gap-2 min-w-0">
                 <Ticket size={16} class="text-[var(--ks-fg-muted,#a1a1aa)] shrink-0" aria-hidden="true" />
                 <h2 class="m-0 text-base font-semibold text-[var(--ks-fg,#ffffff)] truncate">
-                  Select a voucher
+                  {props.applyOnSelect ? "Choose a voucher" : "Select a voucher"}
                 </h2>
                 <Show when={loading()}>
                   <Loader2 size={14} class="animate-spin text-[var(--ks-fg-subtle,#71717a)] shrink-0" />
@@ -487,7 +495,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                 data-testid="voucher-picker-search"
                 value={query()}
                 onInput={(e) => setQuery(e.currentTarget.value)}
-                placeholder="Search voucher code…"
+                placeholder={props.applyOnSelect ? "Search code or name" : "Search voucher code…"}
                 aria-label="Search voucher code"
                 class="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm text-[var(--ks-fg,#ffffff)] placeholder:text-[var(--ks-fg-subtle,#71717a)]"
               />
@@ -641,6 +649,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
 
             {/* Bled to the card edges so the rule spans the full width, matching
                 the header. */}
+            <Show when={!props.applyOnSelect}>
             <div class="-mx-6 -mb-6 mt-4 px-5 sm:px-6 py-3 border-t border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] flex items-center justify-between gap-3 shrink-0">
               <div class="min-w-0 flex flex-col gap-1">
                 <Show
@@ -712,6 +721,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                 </button>
               </div>
             </div>
+            </Show>
           </div>
         </Modal>
       </Show>
