@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.48.0
+
+### Minor Changes
+
+- 8814562: VoucherPicker: opt-in `applyOnSelect` applies a voucher on tap and drops the Apply/Cancel footer.
+
 ## 0.47.3
 
 ### Patch Changes
