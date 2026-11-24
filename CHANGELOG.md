@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.49.0
+
+### Minor Changes
+
+- fc923e6: Add selectively imported original artwork icons with SVG accessibility and theme-color support. Replace internal Lucide usage while preserving account icon slugs and existing component slots.
+
 ## 0.48.0
 
 ### Minor Changes
