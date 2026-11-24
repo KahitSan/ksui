@@ -14,7 +14,7 @@
 // (wrap in `<Show when={…}>`).
 
 import { createSignal, onCleanup, onMount } from "solid-js";
-import X from "lucide-solid/icons/x";
+import X from "../../icons/x";
 import { lockPullToRefresh, unlockPullToRefresh } from "../../utils/dom";
 import { injectCSS } from "../../utils/inject-css";
 

@@ -10,11 +10,20 @@ export default defineConfig({
   base,
   plugins: [solid()],
   resolve: {
-    alias: {
-      // Import the real components from source (not dist) so vite-plugin-solid
-      // compiles their JSX with the rest of the app.
-      "@kahitsan/ksui": resolve(__dirname, "../src/index.ts"),
-    },
+    alias: [
+      {
+        find: /^@kahitsan\/ksui\/icons\/(.+)$/,
+        replacement: resolve(__dirname, "../src/icons/$1"),
+      },
+      {
+        find: "@kahitsan/ksui/icons",
+        replacement: resolve(__dirname, "../src/icons/index.ts"),
+      },
+      {
+        find: "@kahitsan/ksui",
+        replacement: resolve(__dirname, "../src/index.ts"),
+      },
+    ],
     // One reactive runtime shared by the components. A duplicate
     // solid-js is the classic cause of dead reactivity.
     dedupe: ["solid-js", "solid-js/web", "solid-js/store"],

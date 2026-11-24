@@ -1,7 +1,7 @@
 import { createSignal, For, onCleanup, onMount, type JSX } from "solid-js";
-import ChevronDown from "lucide-solid/icons/chevron-down";
-import Check from "lucide-solid/icons/check";
-import ExternalLink from "lucide-solid/icons/external-link";
+import ChevronDown from "@kahitsan/ksui/icons/chevron-down";
+import Check from "@kahitsan/ksui/icons/check";
+import ExternalLink from "@kahitsan/ksui/icons/external-link";
 import { VERSIONS } from "../versions";
 import { selectedVersion, setSelectedVersion } from "../versions";
 

@@ -6,7 +6,7 @@
 // are a verbatim subset of TransactionFormProps.
 
 import { For, Show } from "solid-js";
-import Lock from "lucide-solid/icons/lock";
+import Lock from "../../icons/lock";
 import FormField from "../base/FormField";
 import SegmentedFilter from "../base/SegmentedFilter";
 import { formatPHP } from "../../utils/formatPHP";

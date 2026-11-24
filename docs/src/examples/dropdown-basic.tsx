@@ -1,7 +1,7 @@
 // example-start
 import { createSignal } from "solid-js";
-import Building from "lucide-solid/icons/building";
-import Store from "lucide-solid/icons/store";
+import Building from "@kahitsan/ksui/icons/building";
+import Store from "@kahitsan/ksui/icons/store";
 import { Dropdown, type DropdownItem } from "@kahitsan/ksui";
 
 export default function DropdownBasic() {

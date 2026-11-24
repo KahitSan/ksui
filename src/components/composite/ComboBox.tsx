@@ -24,11 +24,11 @@ import { createEffect, createSignal, For, onCleanup, onMount, Show, type JSX } f
 import { useTopLayer } from "../../utils/top-layer";
 import { usePopoverMount } from "../../utils/modal-layer";
 import { highlightMatch } from "../../utils/highlight";
-import UserPlus from "lucide-solid/icons/user-plus";
-import Search from "lucide-solid/icons/search";
-import Star from "lucide-solid/icons/star";
-import X from "lucide-solid/icons/x";
-import Loader2 from "lucide-solid/icons/loader-2";
+import UserPlus from "../../icons/user-plus";
+import Search from "../../icons/search";
+import Star from "../../icons/star";
+import X from "../../icons/x";
+import Loader2 from "../../icons/loader-2";
 import { createPickerPopup } from "./picker-engine";
 
 interface ComboBoxCommonProps<T> {
@@ -48,7 +48,7 @@ interface ComboBoxCommonProps<T> {
   /** Optional muted secondary line under the label in results. */
   secondaryOf?: (item: T) => string | null;
 
-  /** Leading icon component (lucide-solid), e.g. Store / UserRound. */
+  /** Leading icon component, e.g. Store / UserRound. */
   icon: (p: { size?: number; class?: string }) => JSX.Element;
   /** Singular noun for UI copy: "payee", "client". */
   noun: string;

@@ -1,5 +1,5 @@
 import { Show, createUniqueId, type JSX } from "solid-js";
-import X from "lucide-solid/icons/x";
+import X from "../../icons/x";
 import { injectCSS } from "../../utils/inject-css";
 
 const STYLE_ID = "ksui-modal-header-style";

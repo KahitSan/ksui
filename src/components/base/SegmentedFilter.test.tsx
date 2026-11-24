@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, fireEvent } from "@solidjs/testing-library";
-import List from "lucide-solid/icons/list";
+import List from "../../icons/list";
 import SegmentedFilter, { type SegmentedFilterOption } from "./SegmentedFilter";
 
 // Back-compat: bare-string options are still accepted alongside the object

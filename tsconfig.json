@@ -11,8 +11,8 @@
     "jsxImportSource": "solid-js",
     "types": []
   },
-  // The library is standalone — it imports only solid-js + lucide-solid, so it
+  // The library is standalone and imports its original icon artwork locally. It
   // type-checks on its own. The authoritative gate is still each consuming
-  // plugin's tsc (where lucide-solid + the consumer's solid are present).
+  // plugin's tsc with the consumer's Solid runtime.
   "include": ["src"]
 }

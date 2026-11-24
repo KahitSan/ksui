@@ -5,7 +5,7 @@ import { getAccountIcon, getAccountTone, ACCOUNT_ICON_SLUGS, ACCOUNT_ICON_LABELS
 
 export default function AccountIconsBasic() {
   // These are pure helpers: no trigger to press. We show each icon slug the
-  // way it appears in the app so the lucide glyphs and the per-type tone
+  // way it appears in the app so the owned glyphs and the per-type tone
   // chips read true.
   const tone = getAccountTone({ type: "bank", color: "#0ea5e9" });
   return (

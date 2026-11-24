@@ -1,6 +1,6 @@
 import { createSignal, Show, onMount, type JSX } from "solid-js";
-import Sun from "lucide-solid/icons/sun";
-import Moon from "lucide-solid/icons/moon";
+import Sun from "@kahitsan/ksui/icons/sun";
+import Moon from "@kahitsan/ksui/icons/moon";
 
 // The docs mirror the real app's theme switch exactly. The app holds a single
 // theme in localStorage under "ks-erp-theme" and toggles a class on the <html>

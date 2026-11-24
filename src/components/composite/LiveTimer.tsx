@@ -6,11 +6,11 @@
 
 import type { Component, JSX } from "solid-js";
 import { Show, createMemo, createSignal, onCleanup, splitProps } from "solid-js";
-import Clock from "lucide-solid/icons/clock";
-import Play from "lucide-solid/icons/play";
-import AlertTriangle from "lucide-solid/icons/triangle-alert";
-import Check from "lucide-solid/icons/check";
-import Calendar from "lucide-solid/icons/calendar";
+import Clock from "../../icons/clock";
+import Play from "../../icons/play";
+import AlertTriangle from "../../icons/triangle-alert";
+import Check from "../../icons/check";
+import Calendar from "../../icons/calendar";
 import ProgressBar, { type ProgressColor } from "../base/ProgressBar";
 
 export interface LiveTimerProps extends Omit<JSX.HTMLAttributes<HTMLDivElement>, "class"> {

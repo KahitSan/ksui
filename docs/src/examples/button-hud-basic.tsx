@@ -1,6 +1,6 @@
 // example-start
 import { Button } from "@kahitsan/ksui";
-import { Save, Trash2, Settings } from "lucide-solid";
+import { Save, Trash2, Settings } from "@kahitsan/ksui/icons";
 
 export default function ButtonHudBasic() {
   // Button is a domain-free HUD primitive: pick an intent (color tone) and a

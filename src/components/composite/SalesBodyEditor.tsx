@@ -18,8 +18,8 @@ import ComboBox from "./ComboBox";
 import type { ClientOption } from "./picker-types";
 import VoucherPicker, { calculateDiscount } from "./VoucherPicker";
 import type { VoucherOption } from "./VoucherPicker";
-import UserRound from "lucide-solid/icons/user-round";
-import Plus from "lucide-solid/icons/plus";
+import UserRound from "../../icons/user-round";
+import Plus from "../../icons/plus";
 
 // Client data-wiring for the generic ComboBox engine. Search/create hit the
 // host app's /api/clients endpoint directly. Degrades gracefully when that
@@ -61,9 +61,9 @@ async function createClient(name: string): Promise<ClientOption> {
 function clientSecondary(c: ClientOption): string | null {
   return [c.email, c.phone].filter(Boolean).join(" · ") || null;
 }
-import Minus from "lucide-solid/icons/minus";
-import Trash2 from "lucide-solid/icons/trash-2";
-import PackageIcon from "lucide-solid/icons/package";
+import Minus from "../../icons/minus";
+import Trash2 from "../../icons/trash-2";
+import PackageIcon from "../../icons/package";
 
 interface Variant {
   id: number;

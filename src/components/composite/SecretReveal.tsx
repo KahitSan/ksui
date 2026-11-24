@@ -7,7 +7,7 @@
 
 import type { Component } from "solid-js";
 import { Show, createSignal, splitProps } from "solid-js";
-import Copy from "lucide-solid/icons/copy";
+import Copy from "../../icons/copy";
 
 export interface SecretRevealProps {
   /** The secret string to display and copy. */

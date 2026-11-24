@@ -2,8 +2,8 @@ import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX 
 import { Portal } from "solid-js/web";
 import { useTopLayer } from "../../utils/top-layer";
 import { usePopoverMount } from "../../utils/modal-layer";
-import ChevronsUpDown from "lucide-solid/icons/chevrons-up-down";
-import X from "lucide-solid/icons/x";
+import ChevronsUpDown from "../../icons/chevrons-up-down";
+import X from "../../icons/x";
 
 export interface SearchableOption {
   value: string | number;

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
-import Pencil from "lucide-solid/icons/pencil";
+import Pencil from "../../icons/pencil";
 import ActionMenu, { RowMenu } from "./ActionMenu";
 
 const items = [

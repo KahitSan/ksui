@@ -1,17 +1,17 @@
 // Vendored into plugin remotes.
-// Maps an account-icon slug → lucide glyph, with a type-based fallback for
+// Maps an account-icon slug to owned artwork, with a type-based fallback for
 // accounts that have no custom icon yet. Used by AccountAvatar.
 
-import Banknote from "lucide-solid/icons/banknote";
-import Landmark from "lucide-solid/icons/landmark";
-import Building from "lucide-solid/icons/building";
-import CreditCard from "lucide-solid/icons/credit-card";
-import Smartphone from "lucide-solid/icons/smartphone";
-import Wallet from "lucide-solid/icons/wallet";
-import Coins from "lucide-solid/icons/coins";
-import PiggyBank from "lucide-solid/icons/piggy-bank";
-import DollarSign from "lucide-solid/icons/dollar-sign";
-import Receipt from "lucide-solid/icons/receipt";
+import Banknote from "../icons/banknote";
+import Landmark from "../icons/landmark";
+import Building from "../icons/building";
+import CreditCard from "../icons/credit-card";
+import Smartphone from "../icons/smartphone";
+import Wallet from "../icons/wallet";
+import Coins from "../icons/coins";
+import PiggyBank from "../icons/piggy-bank";
+import DollarSign from "../icons/dollar-sign";
+import Receipt from "../icons/receipt";
 import type { Component, JSX } from "solid-js";
 
 export type IconComponent = Component<JSX.SvgSVGAttributes<SVGSVGElement> & { size?: number }>;
@@ -65,7 +65,7 @@ export const ACCOUNT_ICON_LABELS: Record<AccountIconSlug, string> = {
   receipt: "Receipt",
 };
 
-// Returns the lucide icon to render for an account, preferring the account's
+// Returns the owned icon to render for an account, preferring the account's
 // own icon slug and falling back to the type-based default.
 export function getAccountIcon(account: { icon?: string | null; type: string }): IconComponent {
   if (account.icon && (ACCOUNT_ICON_SLUGS as readonly string[]).includes(account.icon)) {

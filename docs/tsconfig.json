@@ -12,7 +12,9 @@
     "jsxImportSource": "solid-js",
     "types": ["vite/client", "node"],
     "paths": {
-      "@kahitsan/ksui": ["../src/index.ts"]
+      "@kahitsan/ksui": ["../src/index.ts"],
+      "@kahitsan/ksui/icons": ["../src/icons/index.ts"],
+      "@kahitsan/ksui/icons/*": ["../src/icons/*"]
     }
   },
   "include": ["src", "vite.config.ts", "scripts"]

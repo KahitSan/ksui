@@ -11,8 +11,8 @@ import {
   Show,
   type JSX,
 } from "solid-js";
-import Banknote from "lucide-solid/icons/banknote";
-import Loader2 from "lucide-solid/icons/loader-2";
+import Banknote from "../../icons/banknote";
+import Loader2 from "../../icons/loader-2";
 import AccountAvatar from "../base/AccountAvatar";
 
 export interface PaymentAccountOption {

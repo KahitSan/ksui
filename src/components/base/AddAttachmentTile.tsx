@@ -5,9 +5,9 @@ import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { useTopLayer } from "../../utils/top-layer";
 import { usePopoverMount } from "../../utils/modal-layer";
-import Plus from "lucide-solid/icons/plus";
-import Camera from "lucide-solid/icons/camera";
-import FileIcon from "lucide-solid/icons/file";
+import Plus from "../../icons/plus";
+import Camera from "../../icons/camera";
+import FileIcon from "../../icons/file";
 
 interface Props {
   uploading: boolean;

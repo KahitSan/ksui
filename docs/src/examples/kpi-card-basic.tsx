@@ -1,6 +1,6 @@
 // example-start
 import { KpiCard } from "@kahitsan/ksui";
-import { TrendingUp, Wallet, Users, AlertTriangle } from "lucide-solid";
+import { TrendingUp, Wallet, Users, AlertTriangle } from "@kahitsan/ksui/icons";
 
 export default function KpiCardBasic() {
   // KpiCard is presentational only. The caller pre-formats every value string

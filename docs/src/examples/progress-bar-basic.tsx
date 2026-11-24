@@ -1,6 +1,6 @@
 // example-start
 import { ProgressBar } from "@kahitsan/ksui";
-import { Timer } from "lucide-solid";
+import { Timer } from "@kahitsan/ksui/icons";
 
 export default function ProgressBarBasic() {
   // The color is picked up from a color name inside the `class` prop

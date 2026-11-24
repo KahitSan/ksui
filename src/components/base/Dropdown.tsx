@@ -1,8 +1,8 @@
 import { createSignal, For, onCleanup, onMount, Show, type Component, type JSX } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import ChevronDown from "lucide-solid/icons/chevron-down";
+import ChevronDown from "../../icons/chevron-down";
 
-/** A lucide-solid icon component (or any component taking size/class). */
+/** A owned icons icon component (or any component taking size/class). */
 type IconComponent = Component<{ size?: number; class?: string }>;
 
 /** The status of a dropdown item, used to render a small leading colored dot

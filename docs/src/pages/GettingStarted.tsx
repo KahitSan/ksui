@@ -36,7 +36,7 @@ export default function GettingStarted(): JSX.Element {
       <p>Import a component by its bare specifier and drop it in.</p>
       <CodeBlock
         code={`import { createSignal } from "solid-js";
-import UserRound from "lucide-solid/icons/user-round";
+import UserRound from "@kahitsan/ksui/icons/user-round";
 import { ComboBox, type ClientOption } from "@kahitsan/ksui";
 
 export default function BilledTo() {

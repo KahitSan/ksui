@@ -10,7 +10,7 @@
 import type { Component } from "solid-js";
 import { Show, createMemo } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import AlertTriangle from "lucide-solid/icons/triangle-alert";
+import AlertTriangle from "../../icons/triangle-alert";
 import {
   getRenderer,
   validateConsumes,

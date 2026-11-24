@@ -14,18 +14,18 @@
 import type { Component, JSX } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
-import Database from "lucide-solid/icons/database";
-import MousePointerClick from "lucide-solid/icons/mouse-pointer-click";
-import AppWindow from "lucide-solid/icons/app-window";
-import DownloadCloud from "lucide-solid/icons/download-cloud";
-import ArrowLeftRight from "lucide-solid/icons/arrow-left-right";
-import Calculator from "lucide-solid/icons/calculator";
-import GitBranch from "lucide-solid/icons/git-branch";
-import Save from "lucide-solid/icons/save";
-import Radio from "lucide-solid/icons/radio";
-import Sparkles from "lucide-solid/icons/sparkles";
-import CircleCheck from "lucide-solid/icons/circle-check-big";
-import Circle from "lucide-solid/icons/circle";
+import Database from "../../icons/database";
+import MousePointerClick from "../../icons/mouse-pointer-click";
+import AppWindow from "../../icons/app-window";
+import DownloadCloud from "../../icons/download-cloud";
+import ArrowLeftRight from "../../icons/arrow-left-right";
+import Calculator from "../../icons/calculator";
+import GitBranch from "../../icons/git-branch";
+import Save from "../../icons/save";
+import Radio from "../../icons/radio";
+import Sparkles from "../../icons/sparkles";
+import CircleCheck from "../../icons/circle-check-big";
+import Circle from "../../icons/circle";
 import {
   layoutGraph,
   type GraphDirection,

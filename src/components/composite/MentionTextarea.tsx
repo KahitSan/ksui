@@ -10,8 +10,8 @@ import { Portal } from "solid-js/web";
 import { useTopLayer } from "../../utils/top-layer";
 import { usePopoverMount } from "../../utils/modal-layer";
 import { createEffect, createSignal, createUniqueId, For, onCleanup, onMount, Show, type JSX } from "solid-js";
-import UserRound from "lucide-solid/icons/user-round";
-import Loader2 from "lucide-solid/icons/loader-2";
+import UserRound from "../../icons/user-round";
+import Loader2 from "../../icons/loader-2";
 
 const POPUP_MAX_HEIGHT = 240;
 const POPUP_MIN_WIDTH = 280;

@@ -10,7 +10,7 @@ export default function AccountIconsPage(): JSX.Element {
     <article>
       <h1>Account Icon Helpers</h1>
       <p class="lead">
-        A set of helpers for financial account icons. <code>getAccountIcon</code> picks the right lucide icon for an
+        A set of helpers for financial account icons. <code>getAccountIcon</code> picks the right owned icon for an
         account (its chosen icon slug, or a type based default). <code>getAccountTone</code> gives the accent
         text/background/border colors for an account chip. <code>ACCOUNT_ICON_SLUGS</code> and{" "}
         <code>ACCOUNT_ICON_LABELS</code> are the icon choices and their friendly names for building a picker.
@@ -26,7 +26,7 @@ export default function AccountIconsPage(): JSX.Element {
       <h2>Basic</h2>
       <Example
         title="Every icon slug, rendered and labelled"
-        description="getAccountIcon returns a lucide-solid component you render via <Dynamic>. ACCOUNT_ICON_SLUGS lists every slug and ACCOUNT_ICON_LABELS supplies each friendly caption. getAccountTone returns the accent styling for a chip."
+        description="getAccountIcon returns a owned icon component you render via <Dynamic>. ACCOUNT_ICON_SLUGS lists every slug and ACCOUNT_ICON_LABELS supplies each friendly caption. getAccountTone returns the accent styling for a chip."
         render={() => <AccountIconsBasic />}
         code={src}
       />
