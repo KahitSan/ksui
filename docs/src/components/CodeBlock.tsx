@@ -1,6 +1,6 @@
 import { createSignal, createResource, Show, type JSX } from "solid-js";
-import Copy from "lucide-solid/icons/copy";
-import Check from "lucide-solid/icons/check";
+import Copy from "@kahitsan/ksui/icons/copy";
+import Check from "@kahitsan/ksui/icons/check";
 import { highlight, stripExampleBoilerplate } from "../lib/highlight";
 
 interface CodeBlockProps {

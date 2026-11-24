@@ -1,4 +1,4 @@
-import X from "lucide-solid/icons/x";
+import X from "../../icons/x";
 
 export interface TransferFeeChipProps {
   enabled: boolean;

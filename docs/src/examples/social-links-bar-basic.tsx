@@ -1,8 +1,8 @@
 // example-start
 import { SocialLinksBar } from "@kahitsan/ksui";
-import Globe from "lucide-solid/icons/globe";
-import AtSign from "lucide-solid/icons/at-sign";
-import Rss from "lucide-solid/icons/rss";
+import Globe from "@kahitsan/ksui/icons/globe";
+import AtSign from "@kahitsan/ksui/icons/at-sign";
+import Rss from "@kahitsan/ksui/icons/rss";
 
 export default function SocialLinksBarBasic() {
   // SocialLinksBar renders a row of accessible icon buttons that link out to

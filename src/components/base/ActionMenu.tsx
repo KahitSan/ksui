@@ -1,6 +1,6 @@
 import { For, Show, createSignal, createUniqueId, onCleanup, onMount, type Component, type JSX } from "solid-js";
 import { Dynamic, Portal } from "solid-js/web";
-import MoreHorizontal from "lucide-solid/icons/more-horizontal";
+import MoreHorizontal from "../../icons/more-horizontal";
 import { injectCSS } from "../../utils/inject-css";
 import { usePopoverMount } from "../../utils/modal-layer";
 import { useTopLayer } from "../../utils/top-layer";

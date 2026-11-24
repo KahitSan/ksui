@@ -11,10 +11,10 @@
 //    ignored for rendering; a spinner shows while the bytes stream.
 
 import { Show, createEffect, createSignal, onCleanup, type Component } from "solid-js";
-import Paperclip from "lucide-solid/icons/paperclip";
-import X from "lucide-solid/icons/x";
-import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import Loader2 from "lucide-solid/icons/loader-2";
+import Paperclip from "../../icons/paperclip";
+import X from "../../icons/x";
+import TriangleAlert from "../../icons/triangle-alert";
+import Loader2 from "../../icons/loader-2";
 import { confirm } from "../../utils/confirm";
 import { attachmentUrl, isResolvableAttachment } from "../../utils/attachments";
 import ImageViewer from "./ImageViewer";

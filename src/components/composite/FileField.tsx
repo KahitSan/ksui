@@ -15,10 +15,10 @@
 
 import type { Component, JSX } from "solid-js";
 import { Match, Show, Switch, createSignal } from "solid-js";
-import UploadCloud from "lucide-solid/icons/cloud-upload";
-import FileIcon from "lucide-solid/icons/file";
-import ImageOff from "lucide-solid/icons/image-off";
-import X from "lucide-solid/icons/x";
+import UploadCloud from "../../icons/cloud-upload";
+import FileIcon from "../../icons/file";
+import ImageOff from "../../icons/image-off";
+import X from "../../icons/x";
 import { injectCSS } from "../../utils/inject-css";
 
 /** The opaque asset handle the field stores as its value (§11). */

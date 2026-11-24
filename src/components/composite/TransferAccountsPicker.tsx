@@ -1,6 +1,6 @@
 import { Show, type JSX } from "solid-js";
-import ArrowRightLeft from "lucide-solid/icons/arrow-right-left";
-import Plus from "lucide-solid/icons/plus";
+import ArrowRightLeft from "../../icons/arrow-right-left";
+import Plus from "../../icons/plus";
 import AccountAvatar from "../base/AccountAvatar";
 import FormField from "../base/FormField";
 import AccountRadioPicker from "./AccountRadioPicker";

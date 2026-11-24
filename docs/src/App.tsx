@@ -1,7 +1,7 @@
 import { createSignal, Show, type JSX } from "solid-js";
 import { A, useLocation } from "@solidjs/router";
-import Menu from "lucide-solid/icons/menu";
-import TriangleAlert from "lucide-solid/icons/triangle-alert";
+import Menu from "@kahitsan/ksui/icons/menu";
+import TriangleAlert from "@kahitsan/ksui/icons/triangle-alert";
 import { Sidebar } from "./components/Sidebar";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { VersionDropdown } from "./components/VersionDropdown";

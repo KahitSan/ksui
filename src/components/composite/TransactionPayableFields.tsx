@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import CalendarDays from "lucide-solid/icons/calendar-days";
+import CalendarDays from "../../icons/calendar-days";
 import FormField from "../base/FormField";
 import DatePicker from "../base/DatePicker";
 import SegmentedFilter from "../base/SegmentedFilter";

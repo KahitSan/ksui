@@ -1,10 +1,10 @@
 import { createMemo, createSignal, For, Show, type JSX } from "solid-js";
 import { Portal } from "solid-js/web";
-import CalendarDays from "lucide-solid/icons/calendar-days";
-import ChevronDown from "lucide-solid/icons/chevron-down";
-import ChevronLeft from "lucide-solid/icons/chevron-left";
-import ChevronRight from "lucide-solid/icons/chevron-right";
-import X from "lucide-solid/icons/x";
+import CalendarDays from "../../icons/calendar-days";
+import ChevronDown from "../../icons/chevron-down";
+import ChevronLeft from "../../icons/chevron-left";
+import ChevronRight from "../../icons/chevron-right";
+import X from "../../icons/x";
 import { injectCSS } from "../../utils/inject-css";
 
 export type MultiPeriodGranularity = "day" | "week" | "month" | "year";

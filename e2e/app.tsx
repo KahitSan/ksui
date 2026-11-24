@@ -3,7 +3,10 @@ import { render } from "solid-js/web";
 import { createSignal } from "solid-js";
 import Modal from "../src/components/base/Modal";
 import DatePicker from "../src/components/base/DatePicker";
-import { DataTable, type DataTableColumn } from "../src/components/base/DataTable";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "../src/components/base/DataTable";
 import ComboBox from "../src/components/composite/ComboBox";
 import SearchableSelect, {
   type SearchableOption,
@@ -19,9 +22,9 @@ import MultiSelectGroup from "../src/components/base/MultiSelectGroup";
 import ProgressBar from "../src/components/base/ProgressBar";
 import SegmentedFilter from "../src/components/base/SegmentedFilter";
 import { confirm } from "../src/utils/confirm";
-import Store from "lucide-solid/icons/store";
-import List from "lucide-solid/icons/list";
-import CalendarDays from "lucide-solid/icons/calendar-days";
+import Store from "../src/icons/store";
+import List from "../src/icons/list";
+import CalendarDays from "../src/icons/calendar-days";
 
 // Minimal test page that renders ksui components for Playwright e2e.
 // Each section is a self-contained component with data-testid markers
@@ -32,7 +35,12 @@ import CalendarDays from "lucide-solid/icons/calendar-days";
 // real empty-state trigger stays disabled and never opens).
 const realFetch = window.fetch.bind(window);
 window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  const url =
+    typeof input === "string"
+      ? input
+      : input instanceof URL
+      ? input.href
+      : input.url;
   if (url.includes("/api/financial-accounts")) {
     return Promise.resolve(
       new Response(
@@ -42,8 +50,8 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
             { id: 2, name: "BPI Checking", type: "bank" },
           ],
         }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
     );
   }
   return realFetch(input, init);
@@ -67,12 +75,16 @@ function ModalSection() {
   return (
     <section data-testid="modal-section">
       <h2>Modal</h2>
-      <button data-testid="modal-open" onClick={() => setOpen(true)}>Open Modal</button>
+      <button data-testid="modal-open" onClick={() => setOpen(true)}>
+        Open Modal
+      </button>
       {open() && (
         <Modal onClose={() => setOpen(false)}>
           <div data-testid="modal-content">
             <p>Modal body</p>
-            <button data-testid="modal-close" onClick={() => setOpen(false)}>Close</button>
+            <button data-testid="modal-close" onClick={() => setOpen(false)}>
+              Close
+            </button>
           </div>
         </Modal>
       )}
@@ -101,7 +113,10 @@ function DataTableSection() {
 }
 
 function ComboBoxSection() {
-  const [selected, setSelected] = createSignal<{ id: number; name: string } | null>(null);
+  const [selected, setSelected] = createSignal<{
+    id: number;
+    name: string;
+  } | null>(null);
   return (
     <section data-testid="combobox-section">
       <h2>ComboBox</h2>
@@ -161,9 +176,8 @@ function BadgeSelectSection() {
 }
 
 function PaymentAccountPickerSection() {
-  const [selected, setSelected] = createSignal<Parameters<
-    typeof PaymentAccountPicker
-  >[0]["selected"]>(null);
+  const [selected, setSelected] =
+    createSignal<Parameters<typeof PaymentAccountPicker>[0]["selected"]>(null);
   return (
     <section data-testid="paymentaccountpicker-section">
       <h2>PaymentAccountPicker</h2>
@@ -173,13 +187,17 @@ function PaymentAccountPickerSection() {
 }
 
 function VoucherPickerSection() {
-  const [selected, setSelected] = createSignal<Parameters<typeof VoucherPicker>[0]["selected"]>(
-    null,
-  );
+  const [selected, setSelected] =
+    createSignal<Parameters<typeof VoucherPicker>[0]["selected"]>(null);
   return (
     <section data-testid="voucherpicker-section">
       <h2>VoucherPicker</h2>
-      <VoucherPicker selected={selected()} onChange={setSelected} subtotal={100} packageIds={[]} />
+      <VoucherPicker
+        selected={selected()}
+        onChange={setSelected}
+        subtotal={100}
+        packageIds={[]}
+      />
     </section>
   );
 }
@@ -189,7 +207,11 @@ function MentionTextareaSection() {
   return (
     <section data-testid="mentiontextarea-section">
       <h2>MentionTextarea</h2>
-      <MentionTextarea value={value()} setValue={setValue} placeholder="Type @ to mention" />
+      <MentionTextarea
+        value={value()}
+        setValue={setValue}
+        placeholder="Type @ to mention"
+      />
     </section>
   );
 }
@@ -198,7 +220,11 @@ function AddAttachmentTileSection() {
   return (
     <section data-testid="addattachmenttile-section">
       <h2>AddAttachmentTile</h2>
-      <AddAttachmentTile uploading={false} onPickFile={() => {}} onPickCamera={() => {}} />
+      <AddAttachmentTile
+        uploading={false}
+        onPickFile={() => {}}
+        onPickCamera={() => {}}
+      />
     </section>
   );
 }
@@ -213,7 +239,10 @@ function SharedBlockersSection() {
       <MultiSelectGroup
         ariaLabel="Repeat days"
         variant="accent"
-        options={[{ value: "mon", label: "Mon" }, { value: "tue", label: "Tue" }]}
+        options={[
+          { value: "mon", label: "Mon" },
+          { value: "tue", label: "Tue" },
+        ]}
         value={days()}
         onChange={setDays}
       />
@@ -229,7 +258,10 @@ function SharedBlockersSection() {
       />
       <ActionMenu
         label="Row actions"
-        items={[{ id: "open", label: "Open" }, { id: "remove", label: "Remove", danger: true }]}
+        items={[
+          { id: "open", label: "Open" },
+          { id: "remove", label: "Remove", danger: true },
+        ]}
         onSelect={setSelectedAction}
         testId="shared-action-menu"
       />
@@ -243,10 +275,16 @@ function ModalHeaderSection() {
   return (
     <section data-testid="modal-header-section">
       <h2>ModalHeader</h2>
-      <button data-testid="modal-header-open" onClick={() => setOpen(true)}>Open headed modal</button>
+      <button data-testid="modal-header-open" onClick={() => setOpen(true)}>
+        Open headed modal
+      </button>
       {open() && (
         <Modal onClose={() => setOpen(false)} ariaLabel="Edit schedule">
-          <ModalHeader title="Edit schedule" subtitle="Future entries only" onClose={() => setOpen(false)} />
+          <ModalHeader
+            title="Edit schedule"
+            subtitle="Future entries only"
+            onClose={() => setOpen(false)}
+          />
           <p>Schedule body</p>
         </Modal>
       )}
@@ -285,16 +323,29 @@ function SheetStackSection() {
   return (
     <section data-testid="sheet-stack-section">
       <h2>Dialog over sheet</h2>
-      <button data-testid="sheet-open" onClick={() => setSheet(true)}>Open sheet</button>
+      <button data-testid="sheet-open" onClick={() => setSheet(true)}>
+        Open sheet
+      </button>
       <output data-testid="sheet-confirm-answer">{answer()}</output>
       {sheet() && (
-        <Modal variant="sheet" onClose={() => setSheet(false)} ariaLabel="Sheet">
+        <Modal
+          variant="sheet"
+          onClose={() => setSheet(false)}
+          ariaLabel="Sheet"
+        >
           <div data-testid="sheet-content">
             <input data-testid="sheet-input" />
-            <button data-testid="sheet-inner-open" onClick={() => setInner(true)}>Open dialog</button>
+            <button
+              data-testid="sheet-inner-open"
+              onClick={() => setInner(true)}
+            >
+              Open dialog
+            </button>
             <button
               data-testid="sheet-confirm-open"
-              onClick={async () => setAnswer(String(await confirm({ title: "Sure?" })))}
+              onClick={async () =>
+                setAnswer(String(await confirm({ title: "Sure?" })))
+              }
             >
               Ask
             </button>
@@ -334,4 +385,8 @@ function App() {
   );
 }
 
-render(() => <App />, document.getElementById("app")!);
+if (new URLSearchParams(location.search).has("icons")) {
+  void import("./icons").then(({ mountIconLab }) => mountIconLab());
+} else {
+  render(() => <App />, document.getElementById("app")!);
+}

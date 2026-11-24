@@ -1,6 +1,6 @@
 // example-start
 import { createSignal } from "solid-js";
-import UserRound from "lucide-solid/icons/user-round";
+import UserRound from "@kahitsan/ksui/icons/user-round";
 import { ComboBox } from "@kahitsan/ksui";
 
 interface Person {

@@ -8,15 +8,15 @@
 // value and never needs EWT/sharing (e.g. a "record my own expense" surface).
 
 import { batch, createEffect, createSignal, Show, For } from "solid-js";
-import X from "lucide-solid/icons/x";
-import Upload from "lucide-solid/icons/upload";
-import FileIcon from "lucide-solid/icons/file";
-import CalendarDays from "lucide-solid/icons/calendar-days";
-import Paperclip from "lucide-solid/icons/paperclip";
-import Store from "lucide-solid/icons/store";
-import ArrowDownLeft from "lucide-solid/icons/arrow-down-left";
-import ArrowUpRight from "lucide-solid/icons/arrow-up-right";
-import ArrowRightLeft from "lucide-solid/icons/arrow-right-left";
+import X from "../../icons/x";
+import Upload from "../../icons/upload";
+import FileIcon from "../../icons/file";
+import CalendarDays from "../../icons/calendar-days";
+import Paperclip from "../../icons/paperclip";
+import Store from "../../icons/store";
+import ArrowDownLeft from "../../icons/arrow-down-left";
+import ArrowUpRight from "../../icons/arrow-up-right";
+import ArrowRightLeft from "../../icons/arrow-right-left";
 
 import FormAdvancedSection from "./FormAdvancedSection";
 import SalesBodyEditor, { type SalesLine } from "./SalesBodyEditor";

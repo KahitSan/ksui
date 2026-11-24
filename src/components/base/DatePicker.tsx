@@ -15,7 +15,7 @@
 // fallback after each `var(...)` is the host's exact zinc + amber value.
 //
 // The host's `DatePickerURLSync` child (which read `?date=` via @solidjs/router)
-// is intentionally dropped: ksui depends only on solid-js + lucide-solid, never
+// is intentionally dropped: ksui depends only on solid-js and owned icon artwork, never
 // the router. Callers that want URL persistence wire it from the outside.
 
 import {
@@ -29,11 +29,11 @@ import {
   onCleanup,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import Calendar from "lucide-solid/icons/calendar";
-import ChevronLeft from "lucide-solid/icons/chevron-left";
-import ChevronRight from "lucide-solid/icons/chevron-right";
-import Clock from "lucide-solid/icons/clock";
-import X from "lucide-solid/icons/x";
+import Calendar from "../../icons/calendar";
+import ChevronLeft from "../../icons/chevron-left";
+import ChevronRight from "../../icons/chevron-right";
+import Clock from "../../icons/clock";
+import X from "../../icons/x";
 import {
   parseDateInput,
   formatDateDisplay,

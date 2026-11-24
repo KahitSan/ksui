@@ -1,6 +1,6 @@
 import { createSignal, onCleanup, type JSX } from "solid-js";
-import Copy from "lucide-solid/icons/copy";
-import Check from "lucide-solid/icons/check";
+import Copy from "../../icons/copy";
+import Check from "../../icons/check";
 
 interface CopyButtonProps {
   /** The text written to the clipboard on click. Caller owns the value. */

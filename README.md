@@ -32,7 +32,7 @@ There are two ways to use KSUI.
    own copy.
 
 One honest note so nothing surprises you. Every component is self-contained: the
-library depends only on `solid-js` and `lucide-solid` and injects its own CSS, so
+library depends only on `solid-js` and includes original icon artwork and injects its own CSS, so
 there is no host UI kit and no Tailwind to wire up. A handful of components (the
 voucher and payment account pickers, the attachment tiles) call a backend that
 answers certain requests, so they shine inside an app built the KahitSan way, but
@@ -124,7 +124,7 @@ One thing this library expects from the app around it:
 
 That is the whole setup. There is no host UI kit, no Tailwind, and no app-provided
 primitives to wire up — every component injects its own CSS and depends only on
-`solid-js` + `lucide-solid`. A few components can do *more* when the surrounding
+`solid-js` and the included original icons. A few components can do *more* when the surrounding
 app feeds them context (a permission check, the active workspace id) through the
 optional `configurePermissions` / `configureActiveWorkspace` helpers, but they
 degrade gracefully when those are not configured.

@@ -2,7 +2,7 @@
 // + its CSS in src/assets/css/button.css (.ks-theme-toggle*).
 // Extracted as a domain-free, controlled primitive: the theme state is lifted
 // to props (`value` + `onToggle`) so it carries no dependency on kahitsan's
-// ~/lib/theme. Only solid-js + lucide-solid.
+// ~/lib/theme. Only solid-js and owned icon artwork.
 //
 // ksui ships no sibling .css and no sidecar CSS in the published package, so
 // the custom track/thumb/icon styles (transitions, the sliding ::after thumb)
@@ -11,8 +11,8 @@
 
 import type { JSX } from "solid-js";
 import { splitProps } from "solid-js";
-import Sun from "lucide-solid/icons/sun";
-import Moon from "lucide-solid/icons/moon";
+import Sun from "../../icons/sun";
+import Moon from "../../icons/moon";
 import { injectCSS } from "../../utils/inject-css";
 
 const THEME_TOGGLE_STYLE_ID = "ks-theme-toggle-inline-style";

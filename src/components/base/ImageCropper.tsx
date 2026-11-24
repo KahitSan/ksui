@@ -10,7 +10,7 @@
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import Modal from "./Modal";
 import Button from "./Button";
-import X from "lucide-solid/icons/x";
+import X from "../../icons/x";
 
 interface ImageCropperProps {
   file: File;

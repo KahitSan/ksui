@@ -10,11 +10,11 @@
 // app, transport, or auth assumptions of its own.
 import { createSignal, For, Show, type Component, type JSX } from "solid-js";
 import { createStore } from "solid-js/store";
-import Plus from "lucide-solid/icons/plus";
-import X from "lucide-solid/icons/x";
-import Archive from "lucide-solid/icons/archive";
-import ArchiveRestore from "lucide-solid/icons/archive-restore";
-import Pencil from "lucide-solid/icons/pencil";
+import Plus from "../../../icons/plus";
+import X from "../../../icons/x";
+import Archive from "../../../icons/archive";
+import ArchiveRestore from "../../../icons/archive-restore";
+import Pencil from "../../../icons/pencil";
 import SegmentedFilter from "../../base/SegmentedFilter";
 import Button from "../../base/Button";
 import Modal from "../../base/Modal";

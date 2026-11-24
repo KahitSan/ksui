@@ -11,7 +11,7 @@
 // names. Surface / border / accent colors read from CSS custom properties
 // (`--ksui-dt-*`) with the host's dark zinc + amber values as fallbacks, so a
 // consumer can retint without forking. The component depends only on solid-js +
-// lucide-solid plus ksui's own DatePicker — the same self-contained calendar
+// owned icons plus ksui's own DatePicker — the same self-contained calendar
 // popover the host DataTable used for its date filter (single + range), so the
 // library carries no host primitive and no native `<input type="date">`.
 //
@@ -38,13 +38,13 @@ import {
   type JSX,
   type ParentComponent,
 } from "solid-js";
-import Search from "lucide-solid/icons/search";
-import Filter from "lucide-solid/icons/filter";
-import ChevronLeft from "lucide-solid/icons/chevron-left";
-import ChevronRight from "lucide-solid/icons/chevron-right";
-import ChevronDown from "lucide-solid/icons/chevron-down";
-import ChevronUp from "lucide-solid/icons/chevron-up";
-import ChevronsUpDown from "lucide-solid/icons/chevrons-up-down";
+import Search from "../../icons/search";
+import Filter from "../../icons/filter";
+import ChevronLeft from "../../icons/chevron-left";
+import ChevronRight from "../../icons/chevron-right";
+import ChevronDown from "../../icons/chevron-down";
+import ChevronUp from "../../icons/chevron-up";
+import ChevronsUpDown from "../../icons/chevrons-up-down";
 import DatePicker from "./DatePicker";
 import { injectCSS } from "../../utils/inject-css";
 

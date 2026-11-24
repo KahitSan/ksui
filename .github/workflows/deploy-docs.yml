@@ -25,7 +25,7 @@ jobs:
           node-version: 22
       - name: Install deps
         run: |
-          # Root deps (lucide-solid, solid-js) are needed because the docs build
+          # Root dependencies are needed because the docs build
           # compiles the ksui source under ../src, whose imports resolve from the
           # root node_modules.
           npm install

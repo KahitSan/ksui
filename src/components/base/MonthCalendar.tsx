@@ -1,6 +1,6 @@
 import { For, createMemo, createUniqueId, type JSX } from "solid-js";
-import ChevronLeft from "lucide-solid/icons/chevron-left";
-import ChevronRight from "lucide-solid/icons/chevron-right";
+import ChevronLeft from "../../icons/chevron-left";
+import ChevronRight from "../../icons/chevron-right";
 import { injectCSS } from "../../utils/inject-css";
 import {
   addCivilMonths,

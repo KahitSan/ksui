@@ -10,11 +10,11 @@
 import { Modal } from "../base/Modal";
 import { highlightMatch } from "../../utils/highlight";
 import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX } from "solid-js";
-import Ticket from "lucide-solid/icons/ticket";
-import X from "lucide-solid/icons/x";
-import Search from "lucide-solid/icons/search";
-import Loader2 from "lucide-solid/icons/loader-2";
-import CalendarClock from "lucide-solid/icons/calendar-clock";
+import Ticket from "../../icons/ticket";
+import X from "../../icons/x";
+import Search from "../../icons/search";
+import Loader2 from "../../icons/loader-2";
+import CalendarClock from "../../icons/calendar-clock";
 
 export interface VoucherOption {
   id: number;

@@ -2,13 +2,13 @@ import { For, type Component, type JSX } from "solid-js";
 import { injectCSS } from "../../utils/inject-css";
 
 /** Icon component shape: any component that accepts a numeric `size`
- *  (lucide-solid icons satisfy this, as does any custom SVG component). */
+ *  (owned icons satisfy this, as does any custom SVG component). */
 export type SocialIcon = Component<{ size?: number }>;
 
 export interface SocialLink {
   /** Destination URL. Opened in a new tab with rel="noopener noreferrer". */
   href: string;
-  /** Icon component rendered inside the button (e.g. a lucide-solid icon). */
+  /** Icon component rendered inside the button (e.g. an owned icon). */
   icon: SocialIcon;
   /** Accessible label, used for `aria-label` and `title`. */
   label: string;

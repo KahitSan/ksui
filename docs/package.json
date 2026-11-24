@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@solidjs/router": "^0.15.0",
-    "lucide-solid": "^1.7.0",
     "solid-js": "^1.9.0"
   },
   "devDependencies": {

@@ -7,7 +7,7 @@ import { PageFooter } from "../components/PageFooter";
 // keep the example. The "Obsolete since" banner is rendered by App's
 // VersionNotice from the registry entry.
 const usageSrc = `import { createSignal } from "solid-js";
-import UserRound from "lucide-solid/icons/user-round";
+import UserRound from "@kahitsan/ksui/icons/user-round";
 import { EntityPicker } from "@kahitsan/ksui";
 
 function AssigneeField() {

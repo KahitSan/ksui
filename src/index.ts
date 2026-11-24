@@ -4,8 +4,8 @@
 // package ships its source under a `solid` export condition (see package.json),
 // so the consumer's vite-plugin-solid compiles these components while solid-js
 // stays EXTERNALIZED to the app's runtime so there is a single Solid instance.
-// The library is self-contained: it depends only on solid-js + lucide-solid and
-// injects its own CSS at runtime — no host UI kit, no Tailwind, no app-provided
+// The library is self-contained: its only runtime dependency is solid-js. It
+// includes original icon artwork and injects its own CSS at runtime — no host UI kit, no Tailwind, no app-provided
 // primitives are required. Components that can integrate with a surrounding app
 // (a permission check, the active workspace) do so through an OPTIONAL opt-in
 // registry (configurePermissions / configureActiveWorkspace) and degrade
@@ -13,7 +13,7 @@
 //
 // Components live under two folders by category:
 //   base/      a primitive that stands on its own. It uses only solid-js and
-//              lucide-solid (plus ksui's own utils). It does not import another
+//              owned icons (plus ksui's own utils). It does not import another
 //              ksui component.
 //   composite/ a component that wraps a base or composes two or more components
 //              into a higher-level widget.

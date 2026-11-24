@@ -1,10 +1,10 @@
 import { type JSX } from "solid-js";
-import Star from "lucide-solid/icons/star";
+import Star from "@kahitsan/ksui/icons/star";
 
 const REPO_URL = "https://github.com/KahitSan/ksui";
 
 // The official GitHub octocat mark as an inline SVG. We inline it because the
-// GitHub brand icon was removed from lucide, so we cannot rely on lucide for it.
+// The GitHub brand mark stays separate from generic interface artwork.
 function GitHubMark(props: { size?: number }): JSX.Element {
   const s = props.size ?? 20;
   return (

@@ -25,7 +25,7 @@ export default function SocialLinksBarPage(): JSX.Element {
       <h2>Round and clip shapes</h2>
       <Example
         title="Round and clip shapes"
-        description="The default round shape is a full circle; the clip shape cuts the top-right corner with a clip-path for the angular brand variant. Icons come from any component that accepts a numeric size (lucide-solid icons satisfy this)."
+        description="The default round shape is a full circle; the clip shape cuts the top-right corner with a clip-path for the angular brand variant. Icons come from any component that accepts a numeric size (owned icons satisfy this)."
         render={() => <SocialLinksBarBasic />}
         code={socialLinksBarBasicSrc}
       />
