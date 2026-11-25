@@ -1,0 +1,89 @@
+{
+  "sha256": "20721acec38e17d49cf759d6cb75ee6b1477c74b93fe6b4fe253593925e33de3",
+  "width": 1254,
+  "height": 1254,
+  "cells": [
+    {
+      "name": "circle",
+      "pixels": 30197,
+      "margin": 17
+    },
+    {
+      "name": "circle-alert",
+      "pixels": 29672,
+      "margin": 11
+    },
+    {
+      "name": "circle-dot",
+      "pixels": 22331,
+      "margin": 10
+    },
+    {
+      "name": "circle-x",
+      "pixels": 27341,
+      "margin": 10
+    },
+    {
+      "name": "clipboard-list",
+      "pixels": 28830,
+      "margin": 20
+    },
+    {
+      "name": "clock",
+      "pixels": 19819,
+      "margin": 13
+    },
+    {
+      "name": "compass",
+      "pixels": 19867,
+      "margin": 13
+    },
+    {
+      "name": "corner-down-right",
+      "pixels": 15384,
+      "margin": 33
+    },
+    {
+      "name": "credit-card",
+      "pixels": 28000,
+      "margin": 18
+    },
+    {
+      "name": "crown",
+      "pixels": 20444,
+      "margin": 43
+    },
+    {
+      "name": "database",
+      "pixels": 24951,
+      "margin": 56
+    },
+    {
+      "name": "dollar-sign",
+      "pixels": 18604,
+      "margin": 43
+    },
+    {
+      "name": "ellipsis",
+      "pixels": 6021,
+      "margin": 41
+    },
+    {
+      "name": "equal",
+      "pixels": 13646,
+      "margin": 66
+    },
+    {
+      "name": "external-link",
+      "pixels": 16656,
+      "margin": 46
+    },
+    {
+      "name": "eye",
+      "pixels": 17459,
+      "margin": 22
+    }
+  ],
+  "technicalGate": "all named cells occupied; clear2px+ boundaries; master unchanged",
+  "visualGate": "white QA reviewed: intended subjects readable; no clipping/overlap"
+}

@@ -1,0 +1,89 @@
+{
+  "sha256": "eee57a10104dd869451a3ede6b7715c0f9a996422a9d460a842dc36fc1a48167",
+  "width": 1254,
+  "height": 1254,
+  "cells": [
+    {
+      "name": "file",
+      "pixels": 38678,
+      "margin": 35
+    },
+    {
+      "name": "file-spreadsheet",
+      "pixels": 31620,
+      "margin": 35
+    },
+    {
+      "name": "file-text",
+      "pixels": 32822,
+      "margin": 35
+    },
+    {
+      "name": "funnel",
+      "pixels": 25072,
+      "margin": 23
+    },
+    {
+      "name": "globe",
+      "pixels": 28575,
+      "margin": 22
+    },
+    {
+      "name": "grip-vertical",
+      "pixels": 13027,
+      "margin": 56
+    },
+    {
+      "name": "history",
+      "pixels": 20025,
+      "margin": 37
+    },
+    {
+      "name": "house",
+      "pixels": 28623,
+      "margin": 22
+    },
+    {
+      "name": "image-off",
+      "pixels": 31320,
+      "margin": 22
+    },
+    {
+      "name": "inbox",
+      "pixels": 23824,
+      "margin": 34
+    },
+    {
+      "name": "key",
+      "pixels": 15464,
+      "margin": 43
+    },
+    {
+      "name": "landmark",
+      "pixels": 30911,
+      "margin": 21
+    },
+    {
+      "name": "layers",
+      "pixels": 29831,
+      "margin": 26
+    },
+    {
+      "name": "layout-dashboard",
+      "pixels": 24814,
+      "margin": 33
+    },
+    {
+      "name": "layout-grid",
+      "pixels": 34102,
+      "margin": 36
+    },
+    {
+      "name": "layout-list",
+      "pixels": 31513,
+      "margin": 21
+    }
+  ],
+  "technicalGate": "all named cells occupied; clear2px+ boundaries; master unchanged",
+  "visualGate": "white QA reviewed: intended subjects readable; no clipping/overlap"
+}

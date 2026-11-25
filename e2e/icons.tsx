@@ -2,9 +2,9 @@ import { createSignal, For } from "solid-js";
 import { render } from "solid-js/web";
 import { isIconName, loadIcon } from "../src/icons/registry";
 import * as icons from "../src/icons";
-import manifest from "../assets/icon-sources/manifest.json";
+import contract from "../scripts/icon-artwork-contract.json";
 
-const names = manifest.groups.flatMap((group) => group.names);
+const names = [...new Set([...contract.runtime.map((item) => item.name), ...contract.requiredSourceNames])];
 const symbol = (name: string) =>
   name
     .split("-")

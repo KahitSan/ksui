@@ -1,0 +1,1 @@
+Approved V4 source master supplied by Luis. Copied unchanged from the approved local preview source-sheet-v4.png. Exact seed slot names are retained in manifest.json; two alternative BIR office cells are intentionally unshipped. No new generation or image editing was performed for this source copy.

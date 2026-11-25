@@ -1,0 +1,89 @@
+{
+  "sha256": "a81dc4e6ab8b9bceb6efd22331797843c989b91a48225169509ce9f7dbe64d54",
+  "width": 1254,
+  "height": 1254,
+  "cells": [
+    {
+      "name": "sliders-horizontal",
+      "pixels": 21592,
+      "margin": 33
+    },
+    {
+      "name": "smartphone",
+      "pixels": 23133,
+      "margin": 34
+    },
+    {
+      "name": "sparkles",
+      "pixels": 13578,
+      "margin": 48
+    },
+    {
+      "name": "square",
+      "pixels": 29788,
+      "margin": 55
+    },
+    {
+      "name": "sticky-note",
+      "pixels": 29737,
+      "margin": 39
+    },
+    {
+      "name": "store",
+      "pixels": 29297,
+      "margin": 39
+    },
+    {
+      "name": "sun",
+      "pixels": 18504,
+      "margin": 35
+    },
+    {
+      "name": "tag",
+      "pixels": 23967,
+      "margin": 38
+    },
+    {
+      "name": "target",
+      "pixels": 23797,
+      "margin": 32
+    },
+    {
+      "name": "trending-up",
+      "pixels": 17022,
+      "margin": 40
+    },
+    {
+      "name": "trophy",
+      "pixels": 26463,
+      "margin": 42
+    },
+    {
+      "name": "undo-2",
+      "pixels": 18275,
+      "margin": 39
+    },
+    {
+      "name": "user",
+      "pixels": 19559,
+      "margin": 46
+    },
+    {
+      "name": "user-plus",
+      "pixels": 20049,
+      "margin": 44
+    },
+    {
+      "name": "volume-2",
+      "pixels": 20073,
+      "margin": 47
+    },
+    {
+      "name": "volume-x",
+      "pixels": 18632,
+      "margin": 33
+    }
+  ],
+  "technicalGate": "all named cells occupied; clear2px+ boundaries; master unchanged",
+  "visualGate": "white QA reviewed: intended subjects readable; no clipping/overlap"
+}

@@ -58,7 +58,8 @@
     "changeset": "changeset",
     "version": "changeset version",
     "release": "changeset publish",
-    "build:icons": "node scripts/build-icon-assets.mjs"
+    "build:icons": "node scripts/build-icon-assets.mjs",
+    "test:icon-sources": "node --test scripts/icon-source-manifest.test.mjs scripts/write-icon-modules.test.mjs scripts/trace-icon-artwork.test.mjs"
   },
   "peerDependencies": {
     "solid-js": "^1.9.0",

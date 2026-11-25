@@ -10,6 +10,35 @@ const Glyph = createArtworkIcon("sample", regular, { bold, filled });
 afterEach(cleanup);
 
 describe("original artwork icon contract", () => {
+  it("rotates shared source geometry without changing caller SVG transforms or children", () => {
+    const Oriented = createArtworkIcon("left", "M72 12v120", { rotation: 90 });
+    const view = render(() => <Oriented transform="translate(2 3)"><desc>Previous page</desc></Oriented>);
+    expect(view.container.querySelector("svg")?.getAttribute("transform")).toBe("translate(2 3)");
+    expect(view.container.querySelector("path")?.parentElement?.getAttribute("transform")).toBe("rotate(90 72 72)");
+    expect(view.container.querySelector("desc")?.parentElement?.tagName.toLowerCase()).toBe("svg");
+  });
+  it("keeps accessible titles in the SVG namespace without changing the document title", () => {
+    const previousTitle = document.title;
+    document.title = "Application";
+    try {
+      const view = render(() => <Glyph title="Search" />);
+      const title = view.container.querySelector("title");
+      expect(title?.namespaceURI).toBe("http://www.w3.org/2000/svg");
+      expect(view.getByRole("img", { name: "Search" })).toBeTruthy();
+      expect(document.title).toBe("Application");
+    } finally {
+      document.title = previousTitle;
+    }
+  });
+
+  it("uses an emitted image URL without mistaking it for vector geometry", () => {
+    const External = createArtworkIcon("external", { image: "/assets/original.png" });
+    const view = render(() => <External title="Original image" />);
+    expect(view.container.querySelector("path")).toBeNull();
+    expect(view.container.querySelector("image")?.getAttribute("href")).toBe("/assets/original.png");
+    expect(view.getByRole("img", { name: "Original image" })).toBeTruthy();
+  });
+
   it("changes delivery format when a reactive weight selects different artwork", () => {
     const Mixed = createArtworkIcon("mixed", regular, {
       bold: "M12 12h120v120H12z",

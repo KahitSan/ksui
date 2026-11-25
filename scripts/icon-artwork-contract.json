@@ -1,0 +1,865 @@
+{
+  "requiredSourceNames": [
+    "activity",
+    "app-window",
+    "archive",
+    "archive-restore",
+    "arrow-down",
+    "arrow-left-right",
+    "at-sign",
+    "ban",
+    "banknote",
+    "bell",
+    "bir-office",
+    "book-open",
+    "boxes",
+    "building",
+    "building-2",
+    "calendar",
+    "calendar-clock",
+    "camera",
+    "chart-bar",
+    "check",
+    "check-check",
+    "chevron-right",
+    "chevrons-up-down",
+    "circle",
+    "circle-alert",
+    "circle-check",
+    "circle-dot",
+    "circle-x",
+    "clipboard-list",
+    "clock",
+    "coins",
+    "compass",
+    "copy",
+    "corner-down-right",
+    "credit-card",
+    "crown",
+    "database",
+    "dollar-sign",
+    "download",
+    "ellipsis",
+    "equal",
+    "external-link",
+    "eye",
+    "file",
+    "file-spreadsheet",
+    "file-text",
+    "funnel",
+    "globe",
+    "grip-vertical",
+    "history",
+    "house",
+    "image-off",
+    "inbox",
+    "info",
+    "key",
+    "landmark",
+    "layers",
+    "layout-dashboard",
+    "layout-grid",
+    "layout-list",
+    "link-2",
+    "list",
+    "loader-circle",
+    "lock",
+    "log-in",
+    "log-out",
+    "mail",
+    "mail-open",
+    "megaphone",
+    "message-square",
+    "minus",
+    "moon",
+    "mouse-pointer-click",
+    "move",
+    "package",
+    "palette",
+    "panel-left",
+    "panel-left-close",
+    "paperclip",
+    "pencil",
+    "phone",
+    "piggy-bank",
+    "play",
+    "plus",
+    "power",
+    "radio",
+    "receipt",
+    "refresh-cw",
+    "rotate-ccw",
+    "sales",
+    "save",
+    "search",
+    "settings",
+    "shield",
+    "shield-alert",
+    "shield-check",
+    "shield-off",
+    "shopping-cart",
+    "shuffle",
+    "sliders-horizontal",
+    "smartphone",
+    "sparkles",
+    "square",
+    "star",
+    "sticky-note",
+    "store",
+    "sun",
+    "tag",
+    "target",
+    "ticket",
+    "trash-2",
+    "trending-up",
+    "triangle-alert",
+    "trophy",
+    "undo-2",
+    "upload",
+    "user",
+    "user-plus",
+    "users",
+    "volume-2",
+    "volume-x",
+    "wallet",
+    "x",
+    "zap",
+    "zoom-in",
+    "star-filled",
+    "check-bold",
+    "circle-check-bold"
+  ],
+  "runtime": [
+    {
+      "name": "activity",
+      "source": "activity",
+      "rotation": 0
+    },
+    {
+      "name": "app-window",
+      "source": "app-window",
+      "rotation": 0
+    },
+    {
+      "name": "archive",
+      "source": "archive",
+      "rotation": 0
+    },
+    {
+      "name": "archive-restore",
+      "source": "archive-restore",
+      "rotation": 0
+    },
+    {
+      "name": "arrow-down",
+      "source": "arrow-down",
+      "rotation": 0
+    },
+    {
+      "name": "arrow-down-left",
+      "source": "arrow-down",
+      "rotation": 45
+    },
+    {
+      "name": "arrow-left",
+      "source": "arrow-down",
+      "rotation": 90
+    },
+    {
+      "name": "arrow-left-right",
+      "source": "arrow-left-right",
+      "rotation": 0
+    },
+    {
+      "name": "arrow-right",
+      "source": "arrow-down",
+      "rotation": 270
+    },
+    {
+      "name": "arrow-right-left",
+      "source": "arrow-left-right",
+      "rotation": 0
+    },
+    {
+      "name": "arrow-up",
+      "source": "arrow-down",
+      "rotation": 180
+    },
+    {
+      "name": "arrow-up-down",
+      "source": "arrow-left-right",
+      "rotation": 90
+    },
+    {
+      "name": "arrow-up-right",
+      "source": "arrow-down",
+      "rotation": 225
+    },
+    {
+      "name": "at-sign",
+      "source": "at-sign",
+      "rotation": 0
+    },
+    {
+      "name": "ban",
+      "source": "ban",
+      "rotation": 0
+    },
+    {
+      "name": "banknote",
+      "source": "banknote",
+      "rotation": 0
+    },
+    {
+      "name": "bell",
+      "source": "bell",
+      "rotation": 0
+    },
+    {
+      "name": "bir-office",
+      "source": "bir-office",
+      "rotation": 0
+    },
+    {
+      "name": "book-open",
+      "source": "book-open",
+      "rotation": 0
+    },
+    {
+      "name": "boxes",
+      "source": "boxes",
+      "rotation": 0
+    },
+    {
+      "name": "building",
+      "source": "building",
+      "rotation": 0
+    },
+    {
+      "name": "building-2",
+      "source": "building-2",
+      "rotation": 0
+    },
+    {
+      "name": "calendar",
+      "source": "calendar",
+      "rotation": 0
+    },
+    {
+      "name": "calendar-clock",
+      "source": "calendar-clock",
+      "rotation": 0
+    },
+    {
+      "name": "calendar-days",
+      "source": "calendar",
+      "rotation": 0
+    },
+    {
+      "name": "camera",
+      "source": "camera",
+      "rotation": 0
+    },
+    {
+      "name": "chart-bar",
+      "source": "chart-bar",
+      "rotation": 0
+    },
+    {
+      "name": "check",
+      "source": "check",
+      "rotation": 0
+    },
+    {
+      "name": "check-check",
+      "source": "check-check",
+      "rotation": 0
+    },
+    {
+      "name": "chevron-down",
+      "source": "chevron-right",
+      "rotation": 90
+    },
+    {
+      "name": "chevron-left",
+      "source": "chevron-right",
+      "rotation": 180
+    },
+    {
+      "name": "chevron-right",
+      "source": "chevron-right",
+      "rotation": 0
+    },
+    {
+      "name": "chevron-up",
+      "source": "chevron-right",
+      "rotation": 270
+    },
+    {
+      "name": "chevrons-up-down",
+      "source": "chevrons-up-down",
+      "rotation": 0
+    },
+    {
+      "name": "circle",
+      "source": "circle",
+      "rotation": 0
+    },
+    {
+      "name": "circle-alert",
+      "source": "circle-alert",
+      "rotation": 0
+    },
+    {
+      "name": "circle-check",
+      "source": "circle-check",
+      "rotation": 0
+    },
+    {
+      "name": "circle-check-big",
+      "source": "circle-check",
+      "rotation": 0
+    },
+    {
+      "name": "circle-dot",
+      "source": "circle-dot",
+      "rotation": 0
+    },
+    {
+      "name": "circle-slash",
+      "source": "ban",
+      "rotation": 0
+    },
+    {
+      "name": "circle-x",
+      "source": "circle-x",
+      "rotation": 0
+    },
+    {
+      "name": "clipboard-list",
+      "source": "clipboard-list",
+      "rotation": 0
+    },
+    {
+      "name": "clock",
+      "source": "clock",
+      "rotation": 0
+    },
+    {
+      "name": "cloud-upload",
+      "source": "upload",
+      "rotation": 0
+    },
+    {
+      "name": "coins",
+      "source": "coins",
+      "rotation": 0
+    },
+    {
+      "name": "compass",
+      "source": "compass",
+      "rotation": 0
+    },
+    {
+      "name": "copy",
+      "source": "copy",
+      "rotation": 0
+    },
+    {
+      "name": "corner-down-right",
+      "source": "corner-down-right",
+      "rotation": 0
+    },
+    {
+      "name": "credit-card",
+      "source": "credit-card",
+      "rotation": 0
+    },
+    {
+      "name": "crown",
+      "source": "crown",
+      "rotation": 0
+    },
+    {
+      "name": "database",
+      "source": "database",
+      "rotation": 0
+    },
+    {
+      "name": "dollar-sign",
+      "source": "dollar-sign",
+      "rotation": 0
+    },
+    {
+      "name": "download",
+      "source": "download",
+      "rotation": 0
+    },
+    {
+      "name": "ellipsis",
+      "source": "ellipsis",
+      "rotation": 0
+    },
+    {
+      "name": "ellipsis-vertical",
+      "source": "ellipsis",
+      "rotation": 90
+    },
+    {
+      "name": "equal",
+      "source": "equal",
+      "rotation": 0
+    },
+    {
+      "name": "external-link",
+      "source": "external-link",
+      "rotation": 0
+    },
+    {
+      "name": "eye",
+      "source": "eye",
+      "rotation": 0
+    },
+    {
+      "name": "file",
+      "source": "file",
+      "rotation": 0
+    },
+    {
+      "name": "file-spreadsheet",
+      "source": "file-spreadsheet",
+      "rotation": 0
+    },
+    {
+      "name": "file-text",
+      "source": "file-text",
+      "rotation": 0
+    },
+    {
+      "name": "funnel",
+      "source": "funnel",
+      "rotation": 0
+    },
+    {
+      "name": "globe",
+      "source": "globe",
+      "rotation": 0
+    },
+    {
+      "name": "grip-vertical",
+      "source": "grip-vertical",
+      "rotation": 0
+    },
+    {
+      "name": "history",
+      "source": "history",
+      "rotation": 0
+    },
+    {
+      "name": "house",
+      "source": "house",
+      "rotation": 0
+    },
+    {
+      "name": "image-off",
+      "source": "image-off",
+      "rotation": 0
+    },
+    {
+      "name": "inbox",
+      "source": "inbox",
+      "rotation": 0
+    },
+    {
+      "name": "info",
+      "source": "info",
+      "rotation": 0
+    },
+    {
+      "name": "key",
+      "source": "key",
+      "rotation": 0
+    },
+    {
+      "name": "key-round",
+      "source": "key",
+      "rotation": 0
+    },
+    {
+      "name": "landmark",
+      "source": "landmark",
+      "rotation": 0
+    },
+    {
+      "name": "layers",
+      "source": "layers",
+      "rotation": 0
+    },
+    {
+      "name": "layout-dashboard",
+      "source": "layout-dashboard",
+      "rotation": 0
+    },
+    {
+      "name": "layout-grid",
+      "source": "layout-grid",
+      "rotation": 0
+    },
+    {
+      "name": "layout-list",
+      "source": "layout-list",
+      "rotation": 0
+    },
+    {
+      "name": "link-2",
+      "source": "link-2",
+      "rotation": 0
+    },
+    {
+      "name": "list",
+      "source": "list",
+      "rotation": 0
+    },
+    {
+      "name": "loader-circle",
+      "source": "loader-circle",
+      "rotation": 0
+    },
+    {
+      "name": "lock",
+      "source": "lock",
+      "rotation": 0
+    },
+    {
+      "name": "log-in",
+      "source": "log-in",
+      "rotation": 0
+    },
+    {
+      "name": "log-out",
+      "source": "log-out",
+      "rotation": 0
+    },
+    {
+      "name": "mail",
+      "source": "mail",
+      "rotation": 0
+    },
+    {
+      "name": "mail-open",
+      "source": "mail-open",
+      "rotation": 0
+    },
+    {
+      "name": "megaphone",
+      "source": "megaphone",
+      "rotation": 0
+    },
+    {
+      "name": "message-square",
+      "source": "message-square",
+      "rotation": 0
+    },
+    {
+      "name": "minus",
+      "source": "minus",
+      "rotation": 0
+    },
+    {
+      "name": "moon",
+      "source": "moon",
+      "rotation": 0
+    },
+    {
+      "name": "mouse-pointer-click",
+      "source": "mouse-pointer-click",
+      "rotation": 0
+    },
+    {
+      "name": "move",
+      "source": "move",
+      "rotation": 0
+    },
+    {
+      "name": "package",
+      "source": "package",
+      "rotation": 0
+    },
+    {
+      "name": "palette",
+      "source": "palette",
+      "rotation": 0
+    },
+    {
+      "name": "panel-left",
+      "source": "panel-left",
+      "rotation": 0
+    },
+    {
+      "name": "panel-left-close",
+      "source": "panel-left-close",
+      "rotation": 0
+    },
+    {
+      "name": "paperclip",
+      "source": "paperclip",
+      "rotation": 0
+    },
+    {
+      "name": "pencil",
+      "source": "pencil",
+      "rotation": 0
+    },
+    {
+      "name": "phone",
+      "source": "phone",
+      "rotation": 0
+    },
+    {
+      "name": "piggy-bank",
+      "source": "piggy-bank",
+      "rotation": 0
+    },
+    {
+      "name": "play",
+      "source": "play",
+      "rotation": 0
+    },
+    {
+      "name": "plus",
+      "source": "plus",
+      "rotation": 0
+    },
+    {
+      "name": "power",
+      "source": "power",
+      "rotation": 0
+    },
+    {
+      "name": "radio",
+      "source": "radio",
+      "rotation": 0
+    },
+    {
+      "name": "receipt",
+      "source": "receipt",
+      "rotation": 0
+    },
+    {
+      "name": "refresh-cw",
+      "source": "refresh-cw",
+      "rotation": 0
+    },
+    {
+      "name": "rotate-ccw",
+      "source": "rotate-ccw",
+      "rotation": 0
+    },
+    {
+      "name": "save",
+      "source": "save",
+      "rotation": 0
+    },
+    {
+      "name": "search",
+      "source": "search",
+      "rotation": 0
+    },
+    {
+      "name": "settings",
+      "source": "settings",
+      "rotation": 0
+    },
+    {
+      "name": "settings-2",
+      "source": "settings",
+      "rotation": 0
+    },
+    {
+      "name": "shield",
+      "source": "shield",
+      "rotation": 0
+    },
+    {
+      "name": "shield-alert",
+      "source": "shield-alert",
+      "rotation": 0
+    },
+    {
+      "name": "shield-check",
+      "source": "shield-check",
+      "rotation": 0
+    },
+    {
+      "name": "shield-off",
+      "source": "shield-off",
+      "rotation": 0
+    },
+    {
+      "name": "shopping-cart",
+      "source": "shopping-cart",
+      "rotation": 0
+    },
+    {
+      "name": "shuffle",
+      "source": "shuffle",
+      "rotation": 0
+    },
+    {
+      "name": "sliders-horizontal",
+      "source": "sliders-horizontal",
+      "rotation": 0
+    },
+    {
+      "name": "smartphone",
+      "source": "smartphone",
+      "rotation": 0
+    },
+    {
+      "name": "sparkles",
+      "source": "sparkles",
+      "rotation": 0
+    },
+    {
+      "name": "square",
+      "source": "square",
+      "rotation": 0
+    },
+    {
+      "name": "star",
+      "source": "star",
+      "rotation": 0
+    },
+    {
+      "name": "sticky-note",
+      "source": "sticky-note",
+      "rotation": 0
+    },
+    {
+      "name": "store",
+      "source": "store",
+      "rotation": 0
+    },
+    {
+      "name": "sun",
+      "source": "sun",
+      "rotation": 0
+    },
+    {
+      "name": "tag",
+      "source": "tag",
+      "rotation": 0
+    },
+    {
+      "name": "target",
+      "source": "target",
+      "rotation": 0
+    },
+    {
+      "name": "ticket",
+      "source": "ticket",
+      "rotation": 0
+    },
+    {
+      "name": "trash-2",
+      "source": "trash-2",
+      "rotation": 0
+    },
+    {
+      "name": "trending-up",
+      "source": "trending-up",
+      "rotation": 0
+    },
+    {
+      "name": "triangle-alert",
+      "source": "triangle-alert",
+      "rotation": 0
+    },
+    {
+      "name": "trophy",
+      "source": "trophy",
+      "rotation": 0
+    },
+    {
+      "name": "undo-2",
+      "source": "undo-2",
+      "rotation": 0
+    },
+    {
+      "name": "upload",
+      "source": "upload",
+      "rotation": 0
+    },
+    {
+      "name": "user",
+      "source": "user",
+      "rotation": 0
+    },
+    {
+      "name": "user-plus",
+      "source": "user-plus",
+      "rotation": 0
+    },
+    {
+      "name": "user-round",
+      "source": "user",
+      "rotation": 0
+    },
+    {
+      "name": "users",
+      "source": "users",
+      "rotation": 0
+    },
+    {
+      "name": "users-round",
+      "source": "users",
+      "rotation": 0
+    },
+    {
+      "name": "volume-2",
+      "source": "volume-2",
+      "rotation": 0
+    },
+    {
+      "name": "volume-x",
+      "source": "volume-x",
+      "rotation": 0
+    },
+    {
+      "name": "wallet",
+      "source": "wallet",
+      "rotation": 0
+    },
+    {
+      "name": "x",
+      "source": "x",
+      "rotation": 0
+    },
+    {
+      "name": "zap",
+      "source": "zap",
+      "rotation": 0
+    },
+    {
+      "name": "zoom-in",
+      "source": "zoom-in",
+      "rotation": 0
+    },
+    {
+      "name": "sales",
+      "source": "sales",
+      "rotation": 0
+    }
+  ],
+  "variants": {
+    "check": {
+      "bold": "check-bold"
+    },
+    "circle-check": {
+      "bold": "circle-check-bold"
+    },
+    "star": {
+      "filled": "star-filled"
+    }
+  }
+}

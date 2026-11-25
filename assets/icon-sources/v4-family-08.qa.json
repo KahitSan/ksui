@@ -1,0 +1,24 @@
+{
+  "sha256": "1c1d4f33f9f6bfed1d5ca815ae773b9f5eebdf97e7932ffee80248f69f781577",
+  "width": 2172,
+  "height": 724,
+  "cells": [
+    {
+      "name": "wallet",
+      "pixels": 129505,
+      "margin": 130
+    },
+    {
+      "name": "zap",
+      "pixels": 76275,
+      "margin": 122
+    },
+    {
+      "name": "zoom-in",
+      "pixels": 92258,
+      "margin": 123
+    }
+  ],
+  "technicalGate": "all named cells occupied; clear2px+ boundaries; master unchanged",
+  "visualGate": "white QA reviewed: intended subjects readable; no clipping/overlap"
+}

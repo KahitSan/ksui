@@ -1,0 +1,6 @@
+Use case: stylized-concept. Production UI atlas using image1 ONLY as approved V4 Refined Solid style reference. Original filled/carved black forms with transparent negative cuts, varied balanced optical weight, crisp contours. Never generic thin outlines or uniformly massive emblems; no forced slash decorations. True alpha, no labels/numbers/seals/shadows/gradients. Exactly4x4 equal cells, isolated glyphs centered within middle50% each cell. Clear at20px. Real product purposes in reading order:
+row1: simple circular node (permission graph fallback role/action); circular exclamation (payment/export warning); circle with center dot (settled transaction status); circle with X (rejected workspace membership/error).
+row2: clipboard list (payables navigation); clock (rental duration/timesheets); compass (choose homepage route); down-then-right bent arrow (nested navigation result).
+row3: payment card (voucher and payment choice); crown (privileged workspace role); database cylinder (plugin data in connection graph); dollar sign (financial account identity choice).
+row4: three horizontal dots (row actions); equals sign (computed payroll/cash result); square-corner outward arrow (open linked record); eye (view details or reveal value).
+No BIR artwork, no repeated reference subjects. Keep semantic shapes distinct.

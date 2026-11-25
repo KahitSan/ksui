@@ -1,0 +1,89 @@
+{
+  "sha256": "59faf24760aeec014cf154b6b19adafad873c237fe73b47c95155912b918c70d",
+  "width": 1254,
+  "height": 1254,
+  "cells": [
+    {
+      "name": "paperclip",
+      "pixels": 18055,
+      "margin": 7
+    },
+    {
+      "name": "phone",
+      "pixels": 15862,
+      "margin": 10
+    },
+    {
+      "name": "piggy-bank",
+      "pixels": 26665,
+      "margin": 9
+    },
+    {
+      "name": "play",
+      "pixels": 17043,
+      "margin": 28
+    },
+    {
+      "name": "power",
+      "pixels": 17914,
+      "margin": 32
+    },
+    {
+      "name": "radio",
+      "pixels": 18399,
+      "margin": 34
+    },
+    {
+      "name": "receipt",
+      "pixels": 24941,
+      "margin": 43
+    },
+    {
+      "name": "rotate-ccw",
+      "pixels": 18264,
+      "margin": 36
+    },
+    {
+      "name": "sales",
+      "pixels": 19344,
+      "margin": 35
+    },
+    {
+      "name": "settings",
+      "pixels": 24227,
+      "margin": 42
+    },
+    {
+      "name": "shield",
+      "pixels": 28133,
+      "margin": 47
+    },
+    {
+      "name": "shield-alert",
+      "pixels": 26871,
+      "margin": 39
+    },
+    {
+      "name": "shield-check",
+      "pixels": 25626,
+      "margin": 26
+    },
+    {
+      "name": "shield-off",
+      "pixels": 25631,
+      "margin": 24
+    },
+    {
+      "name": "shopping-cart",
+      "pixels": 18683,
+      "margin": 34
+    },
+    {
+      "name": "shuffle",
+      "pixels": 16979,
+      "margin": 27
+    }
+  ],
+  "technicalGate": "all named cells occupied; clear2px+ boundaries; master unchanged",
+  "visualGate": "white QA reviewed: intended subjects readable; no clipping/overlap"
+}

@@ -164,6 +164,8 @@ export { default as CheckBold } from "./check-bold";
 export { default as CircleCheckBold } from "./circle-check-bold";
 export { default as TaxDocument } from "./tax-document";
 export { default as Github } from "./github";
+export { default as BirOffice } from "./bir-office";
+export { default as Sales } from "./sales";
 export { default as AlertCircle } from "./circle-alert";
 export { default as AlertTriangle } from "./triangle-alert";
 export { default as BarChart3 } from "./chart-column";

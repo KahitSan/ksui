@@ -1,3 +1,4 @@
+/// <reference path="./asset-modules.d.ts" />
 import {
   Show,
   createUniqueId,
@@ -8,6 +9,7 @@ import {
 
 export type IconProps = JSX.SvgSVGAttributes<SVGSVGElement> & {
   size?: number | string;
+  transform?: string;
   title?: string;
   strokeWidth?: number | string;
   absoluteStrokeWidth?: boolean;
@@ -16,18 +18,23 @@ export type IconProps = JSX.SvgSVGAttributes<SVGSVGElement> & {
 
 export type ArtworkIconComponent = Component<IconProps>;
 
+export type ArtworkSource = string | { readonly image: string };
+
 export interface ArtworkVariants {
-  bold?: string;
-  filled?: string;
+  bold?: ArtworkSource;
+  filled?: ArtworkSource;
+  /** Intrinsic source orientation; native SVG transforms remain caller-controlled. */
+  rotation?: number;
 }
 
-function ArtworkLayer(props: { source: string; id: string; fill: string }) {
+function ArtworkLayer(props: { source: ArtworkSource; id: string; fill: string }) {
+  const imageSource = () => typeof props.source === "string" ? props.source : props.source.image;
   return (
     <Show
-      when={props.source.startsWith("data:")}
+      when={typeof props.source !== "string" || props.source.startsWith("data:")}
       fallback={
         <path
-          d={props.source}
+          d={typeof props.source === "string" ? props.source : ""}
           fill={props.fill}
           fill-rule="evenodd"
           stroke="none"
@@ -44,7 +51,7 @@ function ArtworkLayer(props: { source: string; id: string; fill: string }) {
           maskUnits="userSpaceOnUse"
           style={{ "mask-type": "alpha" }}
         >
-          <image href={props.source} x="0" y="0" width="144" height="144" />
+          <image href={imageSource()} x="0" y="0" width="144" height="144" />
         </mask>
       </defs>
       <rect
@@ -74,7 +81,7 @@ function accessibility(props: IconProps, titleId: string) {
 /** Render original generated artwork while retaining native SVG component props. */
 export function createArtworkIcon(
   name: string,
-  source: string,
+  source: ArtworkSource,
   variants: ArtworkVariants = {}
 ): ArtworkIconComponent {
   return function ArtworkIcon(props) {
@@ -114,16 +121,18 @@ export function createArtworkIcon(
         stroke="none"
         data-icon={name}
       >
-        {local.title && <title id={titleId}>{local.title}</title>}
+        <title id={titleId}>{local.title}</title>
         {local.children}
-        <ArtworkLayer source={artwork()} id={id} fill="currentColor" />
-        {variants.filled && (
-          <ArtworkLayer
-            source={variants.filled}
-            id={`${id}-filled`}
-            fill="inherit"
-          />
-        )}
+        <g transform={variants.rotation ? `rotate(${variants.rotation} 72 72)` : undefined}>
+          <ArtworkLayer source={artwork()} id={id} fill="currentColor" />
+          {variants.filled && (
+            <ArtworkLayer
+              source={variants.filled}
+              id={`${id}-filled`}
+              fill="inherit"
+            />
+          )}
+        </g>
       </svg>
     );
   };
