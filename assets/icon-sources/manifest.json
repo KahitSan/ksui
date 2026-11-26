@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "expectedCount": 128,
+  "expectedCount": 131,
   "approvedContract": "scripts/icon-artwork-contract.json",
   "approvedStyle": "V4 Refined Solid",
   "groups": [
@@ -238,6 +238,19 @@
       "sha256": "1c1d4f33f9f6bfed1d5ca815ae773b9f5eebdf97e7932ffee80248f69f781577",
       "status": "ready",
       "provenance": "Built-in GPT Image; exact prompt and original master retained; purpose-derived contract"
+    },
+    {
+      "id": "bir-documents-v1",
+      "columns": 3,
+      "rows": 1,
+      "names": [
+        "bir-form-2307",
+        "bir-form-0619-e",
+        "bir-form-1601-eq"
+      ],
+      "sha256": "f54063b903946be407ccdb598fd6b185eef00716d030bdbb5a7d87e31bd5d4b8",
+      "provenance": "Original GPT Image document glyphs, retained unchanged",
+      "status": "ready"
     }
   ],
   "expectedNames": [
@@ -368,6 +381,9 @@
     "zoom-in",
     "star-filled",
     "check-bold",
-    "circle-check-bold"
+    "circle-check-bold",
+    "bir-form-2307",
+    "bir-form-0619-e",
+    "bir-form-1601-eq"
   ]
 }

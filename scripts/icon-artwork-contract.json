@@ -127,7 +127,10 @@
     "zoom-in",
     "star-filled",
     "check-bold",
-    "circle-check-bold"
+    "circle-check-bold",
+    "bir-form-2307",
+    "bir-form-0619-e",
+    "bir-form-1601-eq"
   ],
   "runtime": [
     {
@@ -848,6 +851,21 @@
     {
       "name": "sales",
       "source": "sales",
+      "rotation": 0
+    },
+    {
+      "name": "bir-form-2307",
+      "source": "bir-form-2307",
+      "rotation": 0
+    },
+    {
+      "name": "bir-form-0619-e",
+      "source": "bir-form-0619-e",
+      "rotation": 0
+    },
+    {
+      "name": "bir-form-1601-eq",
+      "source": "bir-form-1601-eq",
       "rotation": 0
     }
   ],

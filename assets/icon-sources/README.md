@@ -15,3 +15,7 @@ Resizing is a deliberate export step, not a lossless operation. The encoder comp
 The exporter also compares vector traces at 8–54 pixels and device-pixel ratios of one through three. It retains raster delivery when mean alpha error exceeds the configured bound in any case, or when tracing does not reduce size. Metrics retain every comparison; they do not establish perceptual equivalence by themselves.
 
 The runtime imports individual glyph modules and does not load complete atlases. It can deliver selected PNG masks as asset URLs; common initial-navigation masks can remain inline. Native SVG paths and alpha masks apply the caller's current color, accessible name, dimensions, and interaction attributes. Bundler and remote-asset requirements are documented with the renderer.
+
+## BIR document forms
+
+`bir-documents-v1-original.png` is the untouched 2172×724 GPT Image master. Its three equal cells map left to right to Form 2307, Form 0619-E, and Form 1601-EQ. The adjacent prompt and generation record preserve source identity. These add three document meanings to the existing 128-source set.

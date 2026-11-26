@@ -5,6 +5,7 @@ import * as icons from "../src/icons";
 import contract from "../scripts/icon-artwork-contract.json";
 
 const names = [...new Set([...contract.runtime.map((item) => item.name), ...contract.requiredSourceNames])];
+const visibleNames = location.search.includes("bir-documents") ? names.filter((name) => name.startsWith("bir-form-")) : names;
 const symbol = (name: string) =>
   name
     .split("-")
@@ -70,7 +71,7 @@ function App() {
         <output aria-live="polite">{selected()}</output>
       </header>
       <div class="grid">
-        <For each={names}>
+        <For each={visibleNames}>
           {(name) => {
             const Icon = all[symbol(name)];
             return (
@@ -81,9 +82,9 @@ function App() {
                 onClick={() => setSelected(name)}
               >
                 <span class="samples">
-                  <Icon size={12} />
-                  <Icon size={24} />
-                  <Icon size={48} />
+                  <Icon size={name.startsWith("bir-form-") ? 16 : 12} />
+                  <Icon size={name.startsWith("bir-form-") ? 20 : 24} />
+                  <Icon size={name.startsWith("bir-form-") ? 24 : 48} />
                 </span>
                 <span class="name">{name}</span>
               </button>

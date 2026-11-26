@@ -1,7 +1,7 @@
 {
   "edge": 144,
-  "pipelineHash": "47a1a361a88ccc7c732cb89bc892300c4036767d5f2326790e1983c6c3c161dd",
-  "expectedCount": 128,
+  "pipelineHash": "2b3e6a39d1d744eeffdf244395e4a0ccf01fd54c4f639f071f5e7adc79cd4d37",
+  "expectedCount": 131,
   "complete": true,
   "icons": [
     {
@@ -21776,6 +21776,504 @@
             "threshold": 160,
             "pathBytes": 1090,
             "worstMeanAlphaError": 0.041237745098039215
+          }
+        ]
+      }
+    },
+    {
+      "name": "bir-form-2307",
+      "group": "bir-documents-v1",
+      "sourceSha256": "f54063b903946be407ccdb598fd6b185eef00716d030bdbb5a7d87e31bd5d4b8",
+      "assignmentHash": "1345b4bd207cbbc30c55b5dd8920774bb1552d8206797734cdbe58df688c3580",
+      "originalCell": {
+        "left": 0,
+        "top": 0,
+        "right": 724,
+        "bottom": 724
+      },
+      "crop": {
+        "x0": 171,
+        "y0": 112,
+        "x1": 593,
+        "y1": 615
+      },
+      "width": 144,
+      "height": 144,
+      "bytes": 5984,
+      "paletteExact": true,
+      "decodedBytes": 82944,
+      "delivery": {
+        "format": "png",
+        "threshold": 96,
+        "pathBytes": 2946,
+        "worstMeanAlphaError": 0.0440359477124183,
+        "comparison": [
+          {
+            "size": 8,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.04332107843137255
+          },
+          {
+            "size": 8,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.03475796568627451
+          },
+          {
+            "size": 8,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.030201525054466234
+          },
+          {
+            "size": 12,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.0440359477124183
+          },
+          {
+            "size": 12,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.030201525054466234
+          },
+          {
+            "size": 12,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.02295449043815057
+          },
+          {
+            "size": 16,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.03475796568627451
+          },
+          {
+            "size": 16,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.0248812806372549
+          },
+          {
+            "size": 16,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.021893722766884532
+          },
+          {
+            "size": 24,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.030201525054466234
+          },
+          {
+            "size": 24,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.021893722766884532
+          },
+          {
+            "size": 24,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.022453703703703705
+          },
+          {
+            "size": 48,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.021893722766884532
+          },
+          {
+            "size": 48,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.022194989106753812
+          },
+          {
+            "size": 48,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.02139539457758412
+          },
+          {
+            "size": 54,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.021457005298690122
+          },
+          {
+            "size": 54,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.021683275504989375
+          },
+          {
+            "size": 54,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.03330001105761616
+          }
+        ],
+        "candidates": [
+          {
+            "threshold": 128,
+            "pathBytes": 2838,
+            "worstMeanAlphaError": 0.04419934640522876
+          },
+          {
+            "threshold": 96,
+            "pathBytes": 2946,
+            "worstMeanAlphaError": 0.0440359477124183
+          },
+          {
+            "threshold": 112,
+            "pathBytes": 2969,
+            "worstMeanAlphaError": 0.045649509803921566
+          },
+          {
+            "threshold": 144,
+            "pathBytes": 2992,
+            "worstMeanAlphaError": 0.04479847494553377
+          },
+          {
+            "threshold": 160,
+            "pathBytes": 2939,
+            "worstMeanAlphaError": 0.046296296296296294
+          }
+        ]
+      }
+    },
+    {
+      "name": "bir-form-0619-e",
+      "group": "bir-documents-v1",
+      "sourceSha256": "f54063b903946be407ccdb598fd6b185eef00716d030bdbb5a7d87e31bd5d4b8",
+      "assignmentHash": "1345b4bd207cbbc30c55b5dd8920774bb1552d8206797734cdbe58df688c3580",
+      "originalCell": {
+        "left": 724,
+        "top": 0,
+        "right": 1448,
+        "bottom": 724
+      },
+      "crop": {
+        "x0": 840,
+        "y0": 112,
+        "x1": 1267,
+        "y1": 620
+      },
+      "width": 144,
+      "height": 144,
+      "bytes": 6809,
+      "paletteExact": true,
+      "decodedBytes": 82944,
+      "delivery": {
+        "format": "png",
+        "threshold": 128,
+        "pathBytes": 3419,
+        "worstMeanAlphaError": 0.04785539215686275,
+        "comparison": [
+          {
+            "size": 8,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.04785539215686275
+          },
+          {
+            "size": 8,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.03762254901960784
+          },
+          {
+            "size": 8,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.03708469498910675
+          },
+          {
+            "size": 12,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.04692265795206972
+          },
+          {
+            "size": 12,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.03708469498910675
+          },
+          {
+            "size": 12,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.027587145969498912
+          },
+          {
+            "size": 16,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.03762254901960784
+          },
+          {
+            "size": 16,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.032965686274509805
+          },
+          {
+            "size": 16,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.02703056917211329
+          },
+          {
+            "size": 24,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.03708469498910675
+          },
+          {
+            "size": 24,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.02703056917211329
+          },
+          {
+            "size": 24,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.02732691842168966
+          },
+          {
+            "size": 48,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.02703056917211329
+          },
+          {
+            "size": 48,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.02579103690087146
+          },
+          {
+            "size": 48,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.026476072682159284
+          },
+          {
+            "size": 54,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.026336103714462464
+          },
+          {
+            "size": 54,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.025550714112805614
+          },
+          {
+            "size": 54,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.04177462785144541
+          }
+        ],
+        "candidates": [
+          {
+            "threshold": 128,
+            "pathBytes": 3419,
+            "worstMeanAlphaError": 0.04785539215686275
+          },
+          {
+            "threshold": 96,
+            "pathBytes": 3576,
+            "worstMeanAlphaError": 0.04861111111111111
+          },
+          {
+            "threshold": 112,
+            "pathBytes": 3595,
+            "worstMeanAlphaError": 0.0491421568627451
+          },
+          {
+            "threshold": 144,
+            "pathBytes": 3587,
+            "worstMeanAlphaError": 0.04850217864923747
+          },
+          {
+            "threshold": 160,
+            "pathBytes": 3703,
+            "worstMeanAlphaError": 0.05008169934640523
+          }
+        ]
+      }
+    },
+    {
+      "name": "bir-form-1601-eq",
+      "group": "bir-documents-v1",
+      "sourceSha256": "f54063b903946be407ccdb598fd6b185eef00716d030bdbb5a7d87e31bd5d4b8",
+      "assignmentHash": "1345b4bd207cbbc30c55b5dd8920774bb1552d8206797734cdbe58df688c3580",
+      "originalCell": {
+        "left": 1448,
+        "top": 0,
+        "right": 2172,
+        "bottom": 724
+      },
+      "crop": {
+        "x0": 1502,
+        "y0": 162,
+        "x1": 2049,
+        "y1": 607
+      },
+      "width": 144,
+      "height": 144,
+      "bytes": 6583,
+      "paletteExact": true,
+      "decodedBytes": 82944,
+      "delivery": {
+        "format": "png",
+        "threshold": 96,
+        "pathBytes": 3936,
+        "worstMeanAlphaError": 0.046840958605664486,
+        "comparison": [
+          {
+            "size": 8,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.04485294117647059
+          },
+          {
+            "size": 8,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.03794424019607843
+          },
+          {
+            "size": 8,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.0374863834422658
+          },
+          {
+            "size": 12,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.046840958605664486
+          },
+          {
+            "size": 12,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.0374863834422658
+          },
+          {
+            "size": 12,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.028376906318082786
+          },
+          {
+            "size": 16,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.03794424019607843
+          },
+          {
+            "size": 16,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.029752604166666665
+          },
+          {
+            "size": 16,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.026492715141612198
+          },
+          {
+            "size": 24,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.0374863834422658
+          },
+          {
+            "size": 24,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.026492715141612198
+          },
+          {
+            "size": 24,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.027352638586298716
+          },
+          {
+            "size": 48,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.026492715141612198
+          },
+          {
+            "size": 48,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.02629229643246187
+          },
+          {
+            "size": 48,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.026452054587267005
+          },
+          {
+            "size": 54,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.027668845315904137
+          },
+          {
+            "size": 54,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.026846472471018585
+          },
+          {
+            "size": 54,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.0420450911655624
+          }
+        ],
+        "candidates": [
+          {
+            "threshold": 128,
+            "pathBytes": 3686,
+            "worstMeanAlphaError": 0.050136165577342046
+          },
+          {
+            "threshold": 96,
+            "pathBytes": 3936,
+            "worstMeanAlphaError": 0.046840958605664486
+          },
+          {
+            "threshold": 112,
+            "pathBytes": 3660,
+            "worstMeanAlphaError": 0.048366013071895426
+          },
+          {
+            "threshold": 144,
+            "pathBytes": 3686,
+            "worstMeanAlphaError": 0.050217864923747274
+          },
+          {
+            "threshold": 160,
+            "pathBytes": 3834,
+            "worstMeanAlphaError": 0.051606753812636165
           }
         ]
       }

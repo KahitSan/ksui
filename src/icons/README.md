@@ -25,3 +25,5 @@ Selected artwork is delivered as a native vector path when its size comparisons 
 Raster imports use Vite's `?url&no-inline` asset support. Vite 6 builds are verified. Consumers must serve the emitted image files alongside their JavaScript. For an IIFE remote served from a nested path, set `base: "./"` so image URLs resolve relative to its script, rather than the host's root. Server-rendered builds must also pass these source imports through the bundler; importing raw PNG modules directly in Node is unsupported. A restrictive content security policy must permit same-origin images and `data:` images for embedded fallbacks.
 
 Directional components share an original source design with an intrinsic rotation. The public component name keeps its direction, and caller SVG transforms still apply. Existing public exports outside the refreshed set remain available. `Sales` provides a revenue meaning; `ShoppingBag` retains its existing public artwork.
+
+BIR document identities are available as `BirForm2307`, `BirForm0619E`, and `BirForm1601Eq`, or their `bir-form-*` deep imports. Use a visible form label or accessible name with each document identity.
