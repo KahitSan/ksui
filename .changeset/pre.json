@@ -4,5 +4,8 @@
   "initialVersions": {
     "@kahitsan/ksui": "0.50.0"
   },
-  "changesets": []
+  "changesets": [
+    "solid2-channel",
+    "solid2-port"
+  ]
 }
