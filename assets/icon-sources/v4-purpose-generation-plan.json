@@ -1,0 +1,164 @@
+[
+  {
+    "id": "v4-family-02",
+    "names": [
+      "arrow-left-right",
+      "at-sign",
+      "ban",
+      "banknote",
+      "bell",
+      "book-open",
+      "boxes",
+      "building",
+      "building-2",
+      "calendar",
+      "calendar-clock",
+      "camera",
+      "chart-bar",
+      "check-check",
+      "chevron-right",
+      "chevrons-up-down"
+    ],
+    "columns": 4,
+    "rows": 4
+  },
+  {
+    "id": "v4-family-03",
+    "names": [
+      "circle",
+      "circle-alert",
+      "circle-dot",
+      "circle-x",
+      "clipboard-list",
+      "clock",
+      "compass",
+      "corner-down-right",
+      "credit-card",
+      "crown",
+      "database",
+      "dollar-sign",
+      "ellipsis",
+      "equal",
+      "external-link",
+      "eye"
+    ],
+    "columns": 4,
+    "rows": 4
+  },
+  {
+    "id": "v4-family-04",
+    "names": [
+      "file",
+      "file-spreadsheet",
+      "file-text",
+      "funnel",
+      "globe",
+      "grip-vertical",
+      "history",
+      "house",
+      "image-off",
+      "inbox",
+      "key",
+      "landmark",
+      "layers",
+      "layout-dashboard",
+      "layout-grid",
+      "layout-list"
+    ],
+    "columns": 4,
+    "rows": 4,
+    "rowBoundaries": [
+      0,
+      350,
+      650,
+      950,
+      1254
+    ]
+  },
+  {
+    "id": "v4-family-05",
+    "names": [
+      "link-2",
+      "list",
+      "lock",
+      "log-in",
+      "log-out",
+      "mail",
+      "mail-open",
+      "megaphone",
+      "message-square",
+      "moon",
+      "mouse-pointer-click",
+      "move",
+      "package",
+      "palette",
+      "panel-left",
+      "panel-left-close"
+    ],
+    "columns": 4,
+    "rows": 4
+  },
+  {
+    "id": "v4-family-06",
+    "names": [
+      "paperclip",
+      "phone",
+      "piggy-bank",
+      "play",
+      "power",
+      "radio",
+      "receipt",
+      "rotate-ccw",
+      "sales",
+      "settings",
+      "shield",
+      "shield-alert",
+      "shield-check",
+      "shield-off",
+      "shopping-cart",
+      "shuffle"
+    ],
+    "columns": 4,
+    "rows": 4
+  },
+  {
+    "id": "v4-family-07",
+    "names": [
+      "sliders-horizontal",
+      "smartphone",
+      "sparkles",
+      "square",
+      "sticky-note",
+      "store",
+      "sun",
+      "tag",
+      "target",
+      "trending-up",
+      "trophy",
+      "undo-2",
+      "user",
+      "user-plus",
+      "volume-2",
+      "volume-x"
+    ],
+    "columns": 4,
+    "rows": 4,
+    "rowBoundaries": [
+      0,
+      350,
+      650,
+      950,
+      1254
+    ]
+  },
+  {
+    "id": "v4-family-08",
+    "names": [
+      "wallet",
+      "zap",
+      "zoom-in"
+    ],
+    "columns": 3,
+    "rows": 1
+  }
+]

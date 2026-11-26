@@ -1,0 +1,6 @@
+Use case: stylized-concept. Original production UI atlas; image1 approved V4 Refined Solid STYLE reference only. Filled/carved black forms, transparent negative cuts, varied balanced optical weight, crisp contours. No thin generic outlines, forced sweeps, uniform massive emblems, labels, shadows or gradients. True alpha.4x4 equal cells. IMPORTANT glyph centers exactly at12.5%,37.5%,62.5%,87.5% canvas coordinates; fit central50% of EACH cell, wide empty gutters. Real product purposes reading order:
+row1: connected chain links (link payroll to existing transaction); three simple list lines (payables list view); padlock (password/restricted access); arrow entering doorway (sign in/authorized impersonation).
+row2: arrow leaving doorway (sign out); closed envelope (email/invitation); open envelope (empty notifications); megaphone (engagement navigation).
+row3: speech bubble (feedback/messages); crescent moon (dark theme); pointer with restrained click rays (action trigger in connections graph); four-direction move arrows (drag image crop).
+row4: ONE neutral package/service box (package catalog fallback, never infer package names or add logos); artist palette (theme preferences); sidebar layout panel (navigation settings); sidebar panel with leftward collapse chevron (collapse sidebar).
+Exactly16 standalone glyphs. Clear at20px. No reference BIR subjects.

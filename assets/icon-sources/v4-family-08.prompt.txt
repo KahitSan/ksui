@@ -1,0 +1,5 @@
+Use case: stylized-concept. Generate the last THREE standalone original production UI glyphs using image1 ONLY as approved V4 Refined Solid style reference. Filled/carved black forms with transparent negative cuts, optically balanced per glyph, crisp clipped/rounded contours. Do not use generic thin outline library style, heavy badges, decorative forced sweeps, labels, shadows or gradients. True transparent alpha. A wide single-row atlas with EXACTLY3equal cells, no extra rows or symbols. Each glyph sits at center of its cell with generous25%empty margin each side. Reading left-right:
+1. wallet with small card edge and clasp: financial accounts, payroll and payment account identity.
+2. lightning bolt: apply voucher discount/action.
+3. magnifying glass with carved plus: zoom image crop.
+Readable16–24px. Original designs only. No BIR subjects or text. Exactlythree.

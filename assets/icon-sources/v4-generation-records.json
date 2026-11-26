@@ -1,0 +1,58 @@
+[
+  {
+    "id": "v4-family-02",
+    "generationOutput": "exec-45fdf47e-49dc-483e-a986-167d011b98d7.png",
+    "generationSession": "01a209c4-b8fc-7a23-b554-6b406efeb3d2",
+    "tool": "built-in GPT Image",
+    "master": "v4-family-02-original.png",
+    "prompt": "v4-family-02.prompt.txt"
+  },
+  {
+    "id": "v4-family-03",
+    "generationOutput": "exec-cc8d97f0-a656-4971-a4ec-6fe9cef8241c.png",
+    "generationSession": "01a209c4-b8fc-7a23-b554-6b406efeb3d2",
+    "tool": "built-in GPT Image",
+    "master": "v4-family-03-original.png",
+    "prompt": "v4-family-03.prompt.txt"
+  },
+  {
+    "id": "v4-family-04",
+    "generationOutput": "exec-eba70efc-ea16-4ef6-9fbe-3ca399c3019b.png",
+    "generationSession": "01a209c4-b8fc-7a23-b554-6b406efeb3d2",
+    "tool": "built-in GPT Image",
+    "master": "v4-family-04-original.png",
+    "prompt": "v4-family-04.prompt.txt"
+  },
+  {
+    "id": "v4-family-05",
+    "generationOutput": "exec-d481b664-b1d3-46fd-b3fe-fe01a31cf8e0.png",
+    "generationSession": "01a209c4-b8fc-7a23-b554-6b406efeb3d2",
+    "tool": "built-in GPT Image",
+    "master": "v4-family-05-original.png",
+    "prompt": "v4-family-05.prompt.txt"
+  },
+  {
+    "id": "v4-family-06",
+    "generationOutput": "exec-ed44897e-ab6b-4017-bc49-0b985b3ec471.png",
+    "generationSession": "01a209c4-b8fc-7a23-b554-6b406efeb3d2",
+    "tool": "built-in GPT Image",
+    "master": "v4-family-06-original.png",
+    "prompt": "v4-family-06.prompt.txt"
+  },
+  {
+    "id": "v4-family-07",
+    "generationOutput": "exec-5342e337-e1b4-46b7-995e-95aca9432d2f.png",
+    "generationSession": "01a209c4-b8fc-7a23-b554-6b406efeb3d2",
+    "tool": "built-in GPT Image",
+    "master": "v4-family-07-original.png",
+    "prompt": "v4-family-07.prompt.txt"
+  },
+  {
+    "id": "v4-family-08",
+    "generationOutput": "exec-455b61c2-3ca2-4f57-ad51-df900e8d1166.png",
+    "generationSession": "01a209c4-b8fc-7a23-b554-6b406efeb3d2",
+    "tool": "built-in GPT Image",
+    "master": "v4-family-08-original.png",
+    "prompt": "v4-family-08.prompt.txt"
+  }
+]

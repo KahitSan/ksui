@@ -29,6 +29,8 @@ jobs:
       - run: npm install
       - name: Unit tests (vitest)
         run: npm test
+      - name: Icon source manifest contracts
+        run: npm run test:icon-sources
       - name: Token fallback gate
         run: npm run check:tokens
       - name: Token coverage gate

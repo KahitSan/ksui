@@ -167,6 +167,11 @@ const loaders = {
   "circle-check-bold": () => import("./circle-check-bold"),
   "tax-document": () => import("./tax-document"),
   "github": () => import("./github"),
+  "bir-office": () => import("./bir-office"),
+  "sales": () => import("./sales"),
+  "bir-form-2307": () => import("./bir-form-2307"),
+  "bir-form-0619-e": () => import("./bir-form-0619-e"),
+  "bir-form-1601-eq": () => import("./bir-form-1601-eq"),
   "bar-chart-3": () => import("./chart-column"),
   "loader-2": () => import("./loader-circle"),
   "alert-triangle": () => import("./triangle-alert"),
@@ -187,11 +192,11 @@ const loaders = {
 
 export type IconName = keyof typeof loaders;
 
-export function isIconName(name: string): name is IconName {
-  return Object.hasOwn(loaders, name);
+export function isIconName(name: unknown): name is IconName {
+  return typeof name === "string" && Object.hasOwn(loaders, name);
 }
 
-export async function loadIcon(name: string): Promise<ArtworkIconComponent | null> {
+export async function loadIcon(name: unknown): Promise<ArtworkIconComponent | null> {
   if (!isIconName(name)) return null;
   return (await loaders[name]()).default;
 }

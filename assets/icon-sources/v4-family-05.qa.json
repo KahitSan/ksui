@@ -1,0 +1,89 @@
+{
+  "sha256": "27e50b68b813545c54fc55e6d121339321bb0063b8cfb1c409625744781e8a3b",
+  "width": 1254,
+  "height": 1254,
+  "cells": [
+    {
+      "name": "link-2",
+      "pixels": 13483,
+      "margin": 22
+    },
+    {
+      "name": "list",
+      "pixels": 17770,
+      "margin": 43
+    },
+    {
+      "name": "lock",
+      "pixels": 21303,
+      "margin": 21
+    },
+    {
+      "name": "log-in",
+      "pixels": 19801,
+      "margin": 22
+    },
+    {
+      "name": "log-out",
+      "pixels": 20198,
+      "margin": 41
+    },
+    {
+      "name": "mail",
+      "pixels": 22351,
+      "margin": 49
+    },
+    {
+      "name": "mail-open",
+      "pixels": 20580,
+      "margin": 44
+    },
+    {
+      "name": "megaphone",
+      "pixels": 17729,
+      "margin": 37
+    },
+    {
+      "name": "message-square",
+      "pixels": 23308,
+      "margin": 37
+    },
+    {
+      "name": "moon",
+      "pixels": 13636,
+      "margin": 62
+    },
+    {
+      "name": "mouse-pointer-click",
+      "pixels": 11786,
+      "margin": 49
+    },
+    {
+      "name": "move",
+      "pixels": 13469,
+      "margin": 33
+    },
+    {
+      "name": "package",
+      "pixels": 25936,
+      "margin": 38
+    },
+    {
+      "name": "palette",
+      "pixels": 20387,
+      "margin": 51
+    },
+    {
+      "name": "panel-left",
+      "pixels": 23278,
+      "margin": 51
+    },
+    {
+      "name": "panel-left-close",
+      "pixels": 24380,
+      "margin": 35
+    }
+  ],
+  "technicalGate": "all named cells occupied; clear2px+ boundaries; master unchanged",
+  "visualGate": "white QA reviewed: intended subjects readable; no clipping/overlap"
+}

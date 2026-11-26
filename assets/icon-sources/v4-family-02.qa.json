@@ -1,0 +1,89 @@
+{
+  "sha256": "d8d68aa905550e1db5dbed91b0666527e08b20b9bb2bc799159b0a37dfddf6ba",
+  "width": 1254,
+  "height": 1254,
+  "cells": [
+    {
+      "name": "arrow-left-right",
+      "pixels": 16849,
+      "margin": 28
+    },
+    {
+      "name": "at-sign",
+      "pixels": 21241,
+      "margin": 17
+    },
+    {
+      "name": "ban",
+      "pixels": 19520,
+      "margin": 17
+    },
+    {
+      "name": "banknote",
+      "pixels": 20898,
+      "margin": 33
+    },
+    {
+      "name": "bell",
+      "pixels": 22568,
+      "margin": 25
+    },
+    {
+      "name": "book-open",
+      "pixels": 30854,
+      "margin": 32
+    },
+    {
+      "name": "boxes",
+      "pixels": 24215,
+      "margin": 38
+    },
+    {
+      "name": "building",
+      "pixels": 26606,
+      "margin": 30
+    },
+    {
+      "name": "building-2",
+      "pixels": 28742,
+      "margin": 13
+    },
+    {
+      "name": "calendar",
+      "pixels": 26479,
+      "margin": 45
+    },
+    {
+      "name": "calendar-clock",
+      "pixels": 24869,
+      "margin": 34
+    },
+    {
+      "name": "camera",
+      "pixels": 31298,
+      "margin": 19
+    },
+    {
+      "name": "chart-bar",
+      "pixels": 21692,
+      "margin": 30
+    },
+    {
+      "name": "check-check",
+      "pixels": 12750,
+      "margin": 59
+    },
+    {
+      "name": "chevron-right",
+      "pixels": 9167,
+      "margin": 60
+    },
+    {
+      "name": "chevrons-up-down",
+      "pixels": 12702,
+      "margin": 53
+    }
+  ],
+  "technicalGate": "all named cells occupied; clear2px+ boundaries; master unchanged",
+  "visualGate": "white QA reviewed: intended subjects readable; no clipping/overlap"
+}

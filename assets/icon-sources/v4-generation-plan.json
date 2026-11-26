@@ -1,0 +1,229 @@
+{
+  "expectedCount": 167,
+  "seedNamedCount": 14,
+  "groups": [
+    {
+      "id": "v4-family-01",
+      "names": [
+        "minus",
+        "x",
+        "check",
+        "circle-check",
+        "check-bold",
+        "circle-check-bold",
+        "star",
+        "star-filled",
+        "triangle-alert",
+        "info",
+        "copy",
+        "save",
+        "activity",
+        "archive",
+        "archive-restore",
+        "arrow-down"
+      ],
+      "columns": 4,
+      "rows": 4
+    },
+    {
+      "id": "v4-family-02",
+      "names": [
+        "arrow-down-left",
+        "arrow-left",
+        "arrow-left-right",
+        "arrow-right",
+        "arrow-right-left",
+        "arrow-up",
+        "arrow-up-down",
+        "arrow-up-right",
+        "at-sign",
+        "ban",
+        "banknote",
+        "bell",
+        "blocks",
+        "book-open",
+        "boxes",
+        "briefcase"
+      ],
+      "columns": 4,
+      "rows": 4
+    },
+    {
+      "id": "v4-family-03",
+      "names": [
+        "building",
+        "building-2",
+        "calculator",
+        "calendar",
+        "calendar-clock",
+        "calendar-days",
+        "camera",
+        "chart-bar",
+        "chart-column",
+        "check-check",
+        "chevron-down",
+        "chevron-left",
+        "chevron-right",
+        "chevron-up",
+        "chevrons-up-down",
+        "circle"
+      ],
+      "columns": 4,
+      "rows": 4
+    },
+    {
+      "id": "v4-family-04",
+      "names": [
+        "circle-alert",
+        "circle-check-big",
+        "circle-dot",
+        "circle-question-mark",
+        "circle-slash",
+        "circle-x",
+        "clipboard-list",
+        "clock",
+        "cloud-download",
+        "cloud-upload",
+        "compass",
+        "corner-down-right",
+        "credit-card",
+        "crown",
+        "database",
+        "dollar-sign"
+      ],
+      "columns": 4,
+      "rows": 4
+    },
+    {
+      "id": "v4-family-05",
+      "names": [
+        "door-open",
+        "ellipsis",
+        "ellipsis-vertical",
+        "equal",
+        "external-link",
+        "eye",
+        "eye-off",
+        "file",
+        "file-spreadsheet",
+        "file-text",
+        "funnel",
+        "git-branch",
+        "globe",
+        "grip-vertical",
+        "history",
+        "house"
+      ],
+      "columns": 4,
+      "rows": 4
+    },
+    {
+      "id": "v4-family-06",
+      "names": [
+        "image-off",
+        "inbox",
+        "key",
+        "key-round",
+        "landmark",
+        "layers",
+        "layout-dashboard",
+        "layout-grid",
+        "layout-list",
+        "link-2",
+        "list",
+        "lock",
+        "lock-keyhole",
+        "log-in",
+        "log-out",
+        "mail"
+      ],
+      "columns": 4,
+      "rows": 4
+    },
+    {
+      "id": "v4-family-07",
+      "names": [
+        "mail-open",
+        "map-pin",
+        "megaphone",
+        "menu",
+        "message-square",
+        "moon",
+        "mouse-pointer-click",
+        "move",
+        "package",
+        "palette",
+        "panel-left",
+        "panel-left-close",
+        "paperclip",
+        "pause",
+        "phone",
+        "phone-call"
+      ],
+      "columns": 4,
+      "rows": 4
+    },
+    {
+      "id": "v4-family-08",
+      "names": [
+        "piggy-bank",
+        "play",
+        "power",
+        "radio",
+        "receipt",
+        "rotate-ccw",
+        "rss",
+        "settings",
+        "settings-2",
+        "shield",
+        "shield-alert",
+        "shield-check",
+        "shield-off",
+        "shopping-bag",
+        "shopping-cart",
+        "shuffle"
+      ],
+      "columns": 4,
+      "rows": 4
+    },
+    {
+      "id": "v4-family-09",
+      "names": [
+        "sliders-horizontal",
+        "smartphone",
+        "sparkles",
+        "square",
+        "sticky-note",
+        "store",
+        "sun",
+        "tag",
+        "target",
+        "timer",
+        "trending-up",
+        "trophy",
+        "undo-2",
+        "user",
+        "user-check",
+        "user-plus"
+      ],
+      "columns": 4,
+      "rows": 4
+    },
+    {
+      "id": "v4-family-10",
+      "names": [
+        "user-round",
+        "users-round",
+        "volume-2",
+        "volume-x",
+        "wallet",
+        "workflow",
+        "zap",
+        "zoom-in",
+        "github"
+      ],
+      "columns": 3,
+      "rows": 3
+    }
+  ]
+}

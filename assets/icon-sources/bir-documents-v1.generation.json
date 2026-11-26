@@ -1,0 +1,66 @@
+{
+  "tool": "built-in GPT Image",
+  "size": [
+    2172,
+    724
+  ],
+  "hasAlpha": true,
+  "channels": 4,
+  "channelsStats": [
+    {
+      "min": 0,
+      "max": 255,
+      "sum": 3706811,
+      "squaresSum": 31004487,
+      "mean": 2.357230523081306,
+      "stdev": 3.7629519120427997,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 1073,
+      "maxY": 299
+    },
+    {
+      "min": 0,
+      "max": 255,
+      "sum": 3603583,
+      "squaresSum": 29349243,
+      "mean": 2.291585904988655,
+      "stdev": 3.6622910510811058,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 1073,
+      "maxY": 299
+    },
+    {
+      "min": 0,
+      "max": 255,
+      "sum": 3029945,
+      "squaresSum": 20924039,
+      "mean": 1.9267987597041198,
+      "stdev": 3.0973280150013895,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 1830,
+      "maxY": 339
+    },
+    {
+      "min": 0,
+      "max": 255,
+      "sum": 110832642,
+      "squaresSum": 27607260988,
+      "mean": 70.48055233356735,
+      "stdev": 112.19836871550196,
+      "minX": 0,
+      "minY": 0,
+      "maxX": 204,
+      "maxY": 116
+    }
+  ],
+  "sha256": "f54063b903946be407ccdb598fd6b185eef00716d030bdbb5a7d87e31bd5d4b8",
+  "subjects": [
+    "bir-form-2307",
+    "bir-form-0619-e",
+    "bir-form-1601-eq"
+  ],
+  "status": "generated draft, not adopted into library or staging"
+}
