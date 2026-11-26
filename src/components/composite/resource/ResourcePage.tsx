@@ -300,7 +300,8 @@ export function ResourcePage<T extends ResourceRow>(
         }
       >
         <DataTable<ResourceRow>
-          refetchKey={refetchKey}
+          // The table runs fetchFn untracked, so filter changes must be part of the key.
+          refetchKey={() => `${String(refetchKey?.())}|${JSON.stringify(filterState)}`}
           fetchFn={async (
             params: FetchParams
           ): Promise<FetchResult<ResourceRow>> => {

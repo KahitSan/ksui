@@ -213,6 +213,8 @@ export interface DataTableProps<T extends DataTableRow> {
   /**
    * Reactive key that triggers a refetch + page-1 reset when it changes.
    * Typical usage: `refetchKey={() => activeWorkspace()?.ws_id}`.
+   * `fetchFn` runs untracked, so any signal it reads (an external filter, say)
+   * must also be read in this key, or changing it will not refetch.
    */
   refetchKey?: () => unknown;
 
