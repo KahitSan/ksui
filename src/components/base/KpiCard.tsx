@@ -1,5 +1,6 @@
-import { createMemo, Show, type JSX } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { createMemo, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
 
 type IconComponent = (props: { size?: number; class?: string }) => JSX.Element;
 

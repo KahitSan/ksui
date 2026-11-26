@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render } from "@solidjs/testing-library";
+import { flush } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ImageViewer from "./ImageViewer";
 
@@ -19,6 +20,7 @@ describe("ImageViewer", () => {
     expect(showModal).toHaveBeenCalledTimes(1);
 
     fireEvent.load(image!);
+    flush();
     expect(image?.style.opacity).toBe("1");
 
   });

@@ -9,7 +9,7 @@
 
 import type { Component } from "solid-js";
 import { Show, createMemo } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Dynamic } from "@solidjs/web";
 import AlertTriangle from "../../icons/triangle-alert";
 import {
   getRenderer,

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@solidjs/testing-library";
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { ResourcePage } from "./ResourcePage";
 import type { ResourceRow, ResourceUiSpec } from "./spec";
 

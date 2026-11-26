@@ -8,7 +8,7 @@
 // /helper class is added once per page via a runtime <style> tag. Callers can
 // still pass their own `markClass` to override.
 
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { injectCSS } from "./inject-css";
 
 const MARK_STYLE_ID = "ksui-mark-style";

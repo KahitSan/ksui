@@ -149,8 +149,8 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
       </div>
 
       <div
-        class="rounded-lg border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)] bg-[color-mix(in_srgb,var(--ks-bg,#0a0a0a)_40%,transparent)] p-4 relative"
-        classList={{ "opacity-60": !props.canShare }}
+        class={["rounded-lg border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)] bg-[color-mix(in_srgb,var(--ks-bg,#0a0a0a)_40%,transparent)] p-4 relative", { "opacity-60": !props.canShare }]}
+
         title={
           props.canShare
             ? undefined
@@ -177,8 +177,8 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
               if (!props.canShare) return;
               props.setIsPrivate(!props.isPrivate);
             }}
-            class="ks-theme-toggle shrink-0"
-            classList={{ "cursor-not-allowed": !props.canShare }}
+            class={["ks-theme-toggle shrink-0", { "cursor-not-allowed": !props.canShare }]}
+
           >
             <span
               class="ks-theme-toggle-track"
@@ -238,13 +238,13 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                           ]);
                         }
                       }}
-                      class="px-3 py-2 text-xs rounded-lg border cursor-pointer min-h-[36px] capitalize transition-colors active:opacity-80"
-                      classList={{
+                      class={["px-3 py-2 text-xs rounded-lg border cursor-pointer min-h-[36px] capitalize transition-colors active:opacity-80", {
                         "border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_40%,transparent)] bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_10%,transparent)] text-[var(--ks-accent,#fbbf24)]":
                           selected(),
                         "border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] text-[var(--ks-fg-muted,#a1a1aa)] hover:border-[var(--ks-border-strong,#3f3f46)]":
                           !selected(),
-                      }}
+                      }]}
+
                     >
                       All {role.label}s
                       <Show when={membersInRole().length > 0}>
@@ -279,23 +279,23 @@ export default function FormAdvancedSection(props: FormAdvancedSectionProps) {
                     props.sharedWith.includes(m.user_id) || !!coveringRole();
                   return (
                     <label
-                      class="flex items-center gap-3 text-sm py-2 px-2 rounded-lg min-h-[40px] transition-colors"
-                      classList={{
+                      class={["flex items-center gap-3 text-sm py-2 px-2 rounded-lg min-h-[40px] transition-colors", {
                         "text-[var(--ks-fg-muted,#a1a1aa)] cursor-pointer hover:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_30%,transparent)] active:bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)]":
                           !coveringRole(),
                         "text-[var(--ks-fg-subtle,#71717a)] cursor-not-allowed bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_40%,transparent)]":
                           !!coveringRole(),
-                      }}
+                      }]}
+
                     >
                       <div
-                        class="w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors"
-                        classList={{
+                        class={["w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors", {
                           "border-[var(--ks-primary,#c9a961)] bg-[var(--ks-primary,#c9a961)]":
                             checked() && !coveringRole(),
                           "border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_40%,transparent)] bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_40%,transparent)]":
                             checked() && !!coveringRole(),
                           "border-[var(--ks-border-strong,#3f3f46)] bg-transparent": !checked(),
-                        }}
+                        }]}
+
                       >
                         <Show when={checked()}>
                           <svg

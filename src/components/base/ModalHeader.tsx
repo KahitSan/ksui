@@ -1,4 +1,5 @@
-import { Show, createUniqueId, type JSX } from "solid-js";
+import { Show, createUniqueId } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import X from "../../icons/x";
 import { injectCSS } from "../../utils/inject-css";
 

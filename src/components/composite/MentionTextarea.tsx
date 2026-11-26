@@ -6,12 +6,14 @@
 // /api/clients; when it 404s the popup just shows no results and the field
 // still works as a plain notes editor.
 
-import { Portal } from "solid-js/web";
+import { Portal } from "@solidjs/web";
 import { useTopLayer } from "../../utils/top-layer";
 import { usePopoverMount } from "../../utils/modal-layer";
-import { createEffect, createSignal, createUniqueId, For, onCleanup, onMount, Show, type JSX } from "solid-js";
+import { createEffect, createSignal, createUniqueId, For, onCleanup, onSettled, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import UserRound from "../../icons/user-round";
 import Loader2 from "../../icons/loader-2";
+import { ariaBool } from "../../utils/aria";
 
 const POPUP_MAX_HEIGHT = 240;
 const POPUP_MIN_WIDTH = 280;
@@ -181,18 +183,22 @@ export default function MentionTextarea(props: MentionTextareaProps): JSX.Elemen
     });
   };
 
-  createEffect(() => {
-    const q = query();
+  createEffect(
+    query,
+    (q) => {
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => setDebouncedQuery(q), SEARCH_DEBOUNCE_MS);
-    onCleanup(() => {
+    return () => {
       if (debounceTimer) clearTimeout(debounceTimer);
-    });
-  });
+    };
+  },
+  );
 
-  createEffect(() => {
-    if (!open()) return;
-    const q = debouncedQuery().trim();
+  createEffect(
+    () => ({ isOpen: open(), debounced: debouncedQuery() }),
+    ({ isOpen, debounced }) => {
+    if (!isOpen) return;
+    const q = debounced.trim();
     const token = ++activeFetchToken;
     setLoading(true);
     const params = new URLSearchParams({ status: "active", limit: String(FETCH_LIMIT) });
@@ -213,10 +219,11 @@ export default function MentionTextarea(props: MentionTextareaProps): JSX.Elemen
         if (token !== activeFetchToken) return;
         setLoading(false);
       });
-  });
+  },
+  );
 
-  createEffect(() => {
-    if (!open()) return;
+  createEffect(open, (isOpen) => {
+    if (!isOpen) return;
     updatePosition();
     const onDocClick = (e: MouseEvent) => {
       const t = e.target as Node;
@@ -228,15 +235,16 @@ export default function MentionTextarea(props: MentionTextareaProps): JSX.Elemen
     document.addEventListener("mousedown", onDocClick);
     window.addEventListener("resize", onReflow);
     window.addEventListener("scroll", onReflow, true);
-    onCleanup(() => {
+    return () => {
       document.removeEventListener("mousedown", onDocClick);
       window.removeEventListener("resize", onReflow);
       window.removeEventListener("scroll", onReflow, true);
-    });
+    };
   });
 
-  createEffect(() => {
-    const v = props.value;
+  createEffect(
+    () => props.value,
+    (v) => {
     if (!editorRef) return;
     if (isHydrating) return;
     if (serialize(editorRef) === v) {
@@ -247,9 +255,10 @@ export default function MentionTextarea(props: MentionTextareaProps): JSX.Elemen
     hydrateInto(editorRef, v);
     isHydrating = false;
     setIsEmpty(v.length === 0);
-  });
+  },
+  );
 
-  onMount(() => {
+  onSettled(() => {
     if (!editorRef) return;
     hydrateInto(editorRef, props.value);
     setIsEmpty(props.value.length === 0);
@@ -393,7 +402,7 @@ export default function MentionTextarea(props: MentionTextareaProps): JSX.Elemen
           tabindex={props.disabled ? -1 : 0}
           role="combobox"
           aria-haspopup="listbox"
-          aria-expanded={open()}
+          aria-expanded={ariaBool(open())}
           aria-controls={open() ? listboxId : undefined}
           aria-autocomplete="list"
           aria-label={props.ariaLabel}
@@ -433,7 +442,7 @@ export default function MentionTextarea(props: MentionTextareaProps): JSX.Elemen
           <div
             ref={(el) => {
               popupRef = el;
-              onCleanup(useTopLayer(el));
+              useTopLayer(el);
             }}
             data-testid="mention-popup"
             class="z-[120] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
@@ -460,7 +469,7 @@ export default function MentionTextarea(props: MentionTextareaProps): JSX.Elemen
               >
                 <For each={results()}>
                   {(c, idx) => (
-                    <li id={optionId(c.id)} role="option" aria-selected={idx() === activeIdx()}>
+                    <li id={optionId(c.id)} role="option" aria-selected={ariaBool(idx() === activeIdx())}>
                       <button
                         type="button"
                         data-testid={`mention-result-${c.id}`}

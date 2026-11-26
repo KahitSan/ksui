@@ -1,5 +1,7 @@
-import { For, type Component, type JSX } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { For, type Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
+import { ariaBool, ariaTri } from "../../utils/aria";
 export type SegmentedFilterIcon = Component<{ size?: number; class?: string }>;
 
 /** One choice in the segmented row. A bare string uses the value as the label
@@ -109,18 +111,17 @@ export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Elemen
               ref={(el) => (buttonRefs[i()] = el)}
               type="button"
               role="radio"
-              aria-checked={selected()}
-              aria-disabled={opt.disabled}
+              aria-checked={ariaTri(selected())}
+              aria-disabled={ariaBool(opt.disabled)}
               aria-describedby={opt.disabled && opt.disabledNote ? noteId : undefined}
               title={opt.disabled ? opt.disabledNote : undefined}
-              tabIndex={opt.disabled ? -1 : isTabStop() ? 0 : -1}
+              tabindex={opt.disabled ? -1 : isTabStop() ? 0 : -1}
               data-testid={props.testIdPrefix ? `${props.testIdPrefix}-${opt.value}` : undefined}
               onClick={() => {
                 if (opt.disabled) return;
                 props.onChange(opt.value);
               }}
-              class="inline-flex shrink-0 items-center justify-center gap-1.5 px-3 py-1.5 text-xs transition-colors"
-              classList={{
+              class={["inline-flex shrink-0 items-center justify-center gap-1.5 px-3 py-1.5 text-xs transition-colors", {
                 capitalize: opt.capitalize,
                 "cursor-not-allowed": opt.disabled,
                 "cursor-pointer": !opt.disabled,
@@ -128,7 +129,8 @@ export default function SegmentedFilter(props: SegmentedFilterProps): JSX.Elemen
                 "text-[var(--ks-fg-subtle,#71717a)]": opt.disabled,
                 "text-[var(--ks-fg-muted,#a1a1aa)] hover:text-[var(--ks-fg,#ffffff)] hover:bg-[var(--ks-surface-raised,#1a1a1a)]":
                   !selected() && !opt.disabled,
-              }}
+              }]}
+
             >
               {opt.icon ? <Dynamic component={opt.icon} size={14} aria-hidden="true" /> : null}
               {opt.label}

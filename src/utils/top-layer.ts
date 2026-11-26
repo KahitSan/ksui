@@ -1,4 +1,3 @@
-import { onMount } from "solid-js";
 import { injectCSS } from "./inject-css";
 
 const STYLE_ID = "ksui-toplayer-style";
@@ -23,17 +22,16 @@ const STYLE_CSS = `
  * ksui popup keeps its own mousedown/Escape listeners unchanged.
  *
  * Call from the portaled panel's ref, mirroring useFocusTrap's shape:
- *   ref={(el) => { popupRef = el; onCleanup(useTopLayer(el)); }}
+ *   ref={(el) => { popupRef = el; useTopLayer(el); }}
  *
- * showPopover() is deferred to onMount, not called inline here: this
+ * showPopover() is deferred to a microtask, not called inline here: this
  * function runs synchronously inside <Portal>'s ref callback, which fires
  * while the node is still detached (Portal appends its container to
  * document.body *after* building the subtree) — el.isConnected is false
  * and el.ownerDocument !== document at that point, so an inline call
- * always throws InvalidStateError. onMount queues onto Solid's render-effect
- * list, which only flushes once the whole synchronous render pass —
- * including Portal's appendChild — has finished, so by the time it runs
- * the node is guaranteed connected. (Same fix shape as Modal's DialogModal,
+ * always throws InvalidStateError. A microtask runs only after the whole synchronous
+ * render pass — including Portal's appendChild — has finished, so by the
+ * time it runs the node is connected. (Same fix shape as Modal's DialogModal,
  * which calls showModal() in onMount rather than in dialogEl's ref.)
  */
 export function useTopLayer(el: HTMLElement | undefined): () => void {
@@ -41,7 +39,10 @@ export function useTopLayer(el: HTMLElement | undefined): () => void {
   injectCSS(STYLE_ID, STYLE_CSS);
   el.setAttribute("popover", "manual");
   el.setAttribute("data-ksui-toplayer", "");
-  onMount(() => {
+  // Primitives are forbidden in a ref callback, so a microtask stands in for
+  // onSettled. The element leaves the top layer by itself when its portal is removed.
+  queueMicrotask(() => {
+    if (!el.isConnected) return;
     // No Popover API (e.g. jsdom in unit tests) — nothing to promote, not an error.
     if (typeof el.showPopover !== "function") return;
     try {

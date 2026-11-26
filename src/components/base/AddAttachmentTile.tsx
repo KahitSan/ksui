@@ -1,8 +1,8 @@
 // Vendored into plugin remotes.
 // Dashed "Add" tile with a small Camera / Image-or-file popover menu.
 
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { Portal } from "solid-js/web";
+import { createSignal, onCleanup, onSettled, Show } from "solid-js";
+import { Portal } from "@solidjs/web";
 import { useTopLayer } from "../../utils/top-layer";
 import { usePopoverMount } from "../../utils/modal-layer";
 import Plus from "../../icons/plus";
@@ -28,7 +28,7 @@ export default function AddAttachmentTile(props: Props) {
     setPos({ top: r.bottom + 8, left: r.left });
   };
 
-  onMount(() => {
+  onSettled(() => {
     const handler = (e: MouseEvent) => {
       if (btn && !btn.contains(e.target as Node) && menu && !menu.contains(e.target as Node)) {
         setOpen(false);
@@ -37,11 +37,11 @@ export default function AddAttachmentTile(props: Props) {
     document.addEventListener("click", handler);
     window.addEventListener("scroll", place, true);
     window.addEventListener("resize", place);
-    onCleanup(() => {
+    return () => {
       document.removeEventListener("click", handler);
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("resize", place);
-    });
+    };
   });
 
   return (
@@ -67,7 +67,7 @@ export default function AddAttachmentTile(props: Props) {
           <div
             ref={(el) => {
               menu = el;
-              onCleanup(useTopLayer(el));
+              useTopLayer(el);
             }}
             style={{ top: `${pos().top}px`, left: `${pos().left}px` }}
             class="fixed z-[60] min-w-[160px] rounded-lg border border-[var(--ks-border-strong,#3f3f46)] bg-[var(--ks-surface-raised,#1a1a1a)] shadow-2xl p-1 ks-hud-clip-top-left-bottom-right"

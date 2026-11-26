@@ -19,8 +19,9 @@
 //     (star) with click-to-promote, `invalid` paints the required/empty tone,
 //     and `lockedIds` anchors specific chips.
 
-import { Portal } from "solid-js/web";
-import { createEffect, createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js";
+import { Portal } from "@solidjs/web";
+import { createEffect, createSignal, For, onCleanup, onSettled, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { useTopLayer } from "../../utils/top-layer";
 import { usePopoverMount } from "../../utils/modal-layer";
 import { highlightMatch } from "../../utils/highlight";
@@ -30,6 +31,7 @@ import Star from "../../icons/star";
 import X from "../../icons/x";
 import Loader2 from "../../icons/loader-2";
 import { createPickerPopup } from "./picker-engine";
+import { ariaBool } from "../../utils/aria";
 
 interface ComboBoxCommonProps<T> {
   /** Search the backing list. Receives the trimmed query (may be empty for the
@@ -129,9 +131,12 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
   if (props.defaultOpen) queueMicrotask(() => eng.setOpen(true));
 
   // Focus the popup's search input whenever it opens.
-  createEffect(() => {
-    if (eng.open()) queueMicrotask(() => inputRef?.focus());
-  });
+  createEffect(
+    eng.open,
+    (isOpen) => {
+    if (isOpen) queueMicrotask(() => inputRef?.focus());
+  },
+  );
 
   const hasExactMatch = () => {
     const q = eng.trimmedQuery().toLowerCase();
@@ -186,7 +191,7 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
         onClick={() => !props.disabled && eng.setOpen((o) => !o)}
         class="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_30%,transparent)] border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)] hover:border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_5%,transparent)] transition-colors text-sm text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
         aria-haspopup="listbox"
-        aria-expanded={eng.open()}
+        aria-expanded={ariaBool(eng.open())}
       >
         <Icon size={16} class="shrink-0 text-[var(--ks-fg-muted,#a1a1aa)]" />
         <Show when={triggerLabel()} fallback={<span class="text-[var(--ks-fg-subtle,#71717a)] italic">{placeholder()}</span>}>
@@ -211,7 +216,7 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
           <div
             ref={(el) => {
               popupRef = el;
-              onCleanup(useTopLayer(el));
+              useTopLayer(el);
             }}
             data-testid={tid("popup")}
             class="z-[10000] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
@@ -224,7 +229,7 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
                 type="text"
                 data-testid={tid("input")}
                 role="combobox"
-                aria-expanded={eng.open()}
+                aria-expanded={ariaBool(eng.open())}
                 aria-controls={`${tid("listbox")}`}
                 aria-autocomplete="list"
                 aria-label={`Search ${props.noun}s`}
@@ -262,7 +267,7 @@ function SingleComboBox<T>(props: ComboBoxSingleProps<T>): JSX.Element {
                       const isSel = () =>
                         props.selected != null && props.idOf(props.selected) === props.idOf(item);
                       return (
-                        <li role="option" aria-selected={isSel()}>
+                        <li role="option" aria-selected={ariaBool(isSel())}>
                           <button
                             type="button"
                             data-testid={`${tid("result")}-${props.idOf(item)}`}
@@ -442,7 +447,7 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
     }
   };
 
-  onMount(() => {
+  onSettled(() => {
     if (props.autoFocusOnMount) queueMicrotask(() => inputRef?.focus());
   });
 
@@ -564,7 +569,7 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
           <div
             ref={(el) => {
               popupRef = el;
-              onCleanup(useTopLayer(el));
+              useTopLayer(el);
             }}
             data-testid={tid("popup")}
             role="listbox"
@@ -596,7 +601,7 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
                 <button
                   type="button"
                   role="option"
-                  aria-selected={focusedIdx() === 0}
+                  aria-selected={ariaBool(focusedIdx() === 0)}
                   data-testid={tid("create")}
                   onMouseEnter={() => setFocusedIdx(0)}
                   onClick={() => void createAndAdd()}
@@ -632,7 +637,7 @@ function MultiComboBox<T>(props: ComboBoxMultiProps<T>): JSX.Element {
                     <button
                       type="button"
                       role="option"
-                      aria-selected={isFocused()}
+                      aria-selected={ariaBool(isFocused())}
                       data-testid={`${tid("result")}-${idOf(item)}`}
                       onMouseEnter={() => setFocusedIdx(displayIdx())}
                       onClick={() => addToPool(item)}

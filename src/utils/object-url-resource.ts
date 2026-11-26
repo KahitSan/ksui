@@ -1,4 +1,5 @@
-import { createResource, createEffect, onCleanup, type Resource } from "solid-js";
+import { createEffect, onCleanup } from "solid-js";
+import { createFetchResource, type FetchResource } from "./fetch-resource";
 
 export interface ObjectUrlOptions {
   /** Extra fetch init, merged after `credentials: "include"` (e.g. tenant headers). */
@@ -25,8 +26,8 @@ export interface ObjectUrlOptions {
 export function createObjectUrlResource(
   href: () => string | null | undefined,
   options: ObjectUrlOptions = {},
-): Resource<string | null> {
-  const [url] = createResource(
+): FetchResource<string | null> {
+  const url = createFetchResource(
     () => href() || null,
     async (src) => {
       const res = await fetch(src, { credentials: "include", ...options.init });
@@ -40,11 +41,13 @@ export function createObjectUrlResource(
   // final one on unmount. During a refetch the resource holds its prior value
   // (cur === prev), so an in-flight reload doesn't revoke a URL still on screen.
   let prev: string | null = null;
-  createEffect(() => {
-    const cur = url() ?? null;
-    if (prev && prev !== cur) URL.revokeObjectURL(prev);
-    prev = cur;
-  });
+  createEffect(
+    () => url() ?? null,
+    (cur) => {
+      if (prev && prev !== cur) URL.revokeObjectURL(prev);
+      prev = cur;
+    },
+  );
   onCleanup(() => {
     if (prev) URL.revokeObjectURL(prev);
   });

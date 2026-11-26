@@ -1,5 +1,5 @@
 import { cleanup, render } from "@solidjs/testing-library";
-import { createSignal } from "solid-js";
+import { createSignal, flush } from "solid-js";
 import { afterEach, describe, expect, it } from "vitest";
 import { createArtworkIcon } from "./create-artwork-icon";
 
@@ -47,6 +47,7 @@ describe("original artwork icon contract", () => {
     const view = render(() => <Mixed strokeWidth={weight()} />);
     expect(view.container.querySelector("image")).not.toBeNull();
     setWeight(3);
+    flush();
     expect(view.container.querySelector("image")).toBeNull();
     expect(view.container.querySelector("path")).not.toBeNull();
   });
@@ -80,6 +81,7 @@ describe("original artwork icon contract", () => {
     expect(svg.getAttribute("role")).toBe("img");
     expect(svg.hasAttribute("aria-hidden")).toBe(false);
     setSize(24);
+    flush();
     expect(svg.getAttribute("width")).toBe("24");
     expect(svg.getAttribute("class")).toContain("indicator");
   });
@@ -109,6 +111,7 @@ describe("original artwork icon contract", () => {
     const images = view.container.querySelectorAll("image");
     expect(images[0].getAttribute("href")).toBe(regular);
     setWeight(3);
+    flush();
     expect(images[0].getAttribute("href")).toBe(bold);
     expect(images[1].getAttribute("href")).toBe(filled);
     expect(view.container.querySelector("svg")?.getAttribute("fill")).toBe(

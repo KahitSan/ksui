@@ -4,8 +4,9 @@
 // N intervals when N cards are on screen — the home page session
 // manager already proved this pattern at scale, so we lift it as-is.
 
-import type { Component, JSX } from "solid-js";
-import { Show, createMemo, createSignal, onCleanup, splitProps } from "solid-js";
+import type { Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Show, createMemo, createSignal, onCleanup, omit } from "solid-js";
 import Clock from "../../icons/clock";
 import Play from "../../icons/play";
 import AlertTriangle from "../../icons/triangle-alert";
@@ -242,16 +243,8 @@ const COLOR_AMBER = "border border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_6
 const COLOR_RED = "border border-red-600/60 text-[var(--ks-danger-fg,#f87171)] hover:border-[var(--ks-danger,#ef4444)]";
 
 const LiveTimer: Component<LiveTimerProps> = (props) => {
-  const [local, others] = splitProps(props, [
-    "startAt",
-    "endAt",
-    "overdue",
-    "icon",
-    "class",
-    "label",
-    "hidePercentage",
-    "totalLabel",
-  ]);
+  const local = props;
+  const others = omit(props, "startAt", "endAt", "overdue", "icon", "class", "label", "hidePercentage", "totalLabel");
 
   const timestamps = createMemo(() => {
     const start = ensureDate(local.startAt);

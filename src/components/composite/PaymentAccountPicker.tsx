@@ -1,19 +1,12 @@
-import { Portal } from "solid-js/web";
+import { Portal } from "@solidjs/web";
 import { useTopLayer } from "../../utils/top-layer";
 import { usePopoverMount } from "../../utils/modal-layer";
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  For,
-  onCleanup,
-  onMount,
-  Show,
-  type JSX,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, onSettled, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import Banknote from "../../icons/banknote";
 import Loader2 from "../../icons/loader-2";
 import AccountAvatar from "../base/AccountAvatar";
+import { ariaBool } from "../../utils/aria";
 
 export interface PaymentAccountOption {
   id: number;
@@ -109,19 +102,21 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
   // and Charge gating already depends on the count it reports up via
   // onCountChange. If the picker ever needs to refetch on org switch,
   // swap this for a createEffect tracking the active-org signal.
-  onMount(() => {
+  onSettled(() => {
     void fetchAccounts();
   });
 
   // Auto-select the first account once the list loads, so a single-account
   // org doesn't have to tap to charge. Skips when something is already
   // selected (preserves an explicit reset to null).
-  createEffect(() => {
-    if (props.selected) return;
-    if (loading()) return;
-    const first = accounts()[0];
+  createEffect(
+    () => ({ selected: props.selected, isLoading: loading(), first: accounts()[0] }),
+    ({ selected, isLoading, first }) => {
+    if (selected) return;
+    if (isLoading) return;
     if (first) props.onChange(first);
-  });
+  },
+  );
 
   const sections = createMemo(() => groupAndSort(accounts()));
   const noAccounts = () => !loading() && accounts().length === 0;
@@ -150,8 +145,8 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
     });
   };
 
-  createEffect(() => {
-    if (!open()) return;
+  createEffect(open, (isOpen) => {
+    if (!isOpen) return;
     updatePosition();
 
     const onDocClick = (e: MouseEvent) => {
@@ -172,12 +167,12 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
     document.addEventListener("keydown", onEsc, true);
     window.addEventListener("resize", onReflow);
     window.addEventListener("scroll", onReflow, true);
-    onCleanup(() => {
+    return () => {
       document.removeEventListener("mousedown", onDocClick);
       document.removeEventListener("keydown", onEsc, true);
       window.removeEventListener("resize", onReflow);
       window.removeEventListener("scroll", onReflow, true);
-    });
+    };
   });
 
   const select = (a: PaymentAccountOption) => {
@@ -202,7 +197,7 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
         }
         class="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_30%,transparent)] border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)] hover:border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_5%,transparent)] transition-colors text-sm text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
         aria-haspopup="listbox"
-        aria-expanded={open()}
+        aria-expanded={ariaBool(open())}
       >
         <Show when={loading()} fallback={null}>
           <Loader2 size={14} class="animate-spin text-[var(--ks-fg-subtle,#71717a)] shrink-0" aria-hidden="true" />
@@ -245,7 +240,7 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
           <div
             ref={(el) => {
               popupRef = el;
-              onCleanup(useTopLayer(el));
+              useTopLayer(el);
             }}
             data-testid="payment-account-picker-popup"
             class="z-[100] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
@@ -286,7 +281,7 @@ export default function PaymentAccountPicker(props: PaymentAccountPickerProps): 
                         {(a) => {
                           const selected = () => props.selected?.id === a.id;
                           return (
-                            <li role="option" aria-selected={selected()}>
+                            <li role="option" aria-selected={ariaBool(selected())}>
                               <button
                                 type="button"
                                 data-testid={`payment-account-picker-result-${a.id}`}

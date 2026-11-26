@@ -3,9 +3,10 @@
 // progress visualization the session manager uses on the home page.
 // Adapted to the library's TS + shared icon conventions.
 
-import type { Component, JSX } from "solid-js";
-import { createMemo, splitProps, Show } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import type { Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { createMemo, omit, Show } from "solid-js";
+import { Dynamic } from "@solidjs/web";
 import { injectCSS } from "../../utils/inject-css";
 
 // The monolith ships these as a CSS module (ProgressBar.module.css). The
@@ -164,19 +165,8 @@ function extractTextSize(className: string): number {
 
 const DefaultProgressBar: Component<ProgressBarProps> = (props) => {
   injectCSS(PROGRESS_STYLE_ID, PROGRESS_CSS);
-  const [local, others] = splitProps(props, [
-    "progress",
-    "icon",
-    "label",
-    "statusLabel",
-    "shimmer",
-    "position",
-    "hidePercentage",
-    "rightLabel",
-    "color",
-    "variant",
-    "class",
-  ]);
+  const local = props;
+  const others = omit(props, "progress", "icon", "label", "statusLabel", "shimmer", "position", "hidePercentage", "rightLabel", "color", "variant", "class");
 
   const progressVal = createMemo(() => {
     const value = local.progress;
@@ -350,7 +340,8 @@ type CompactProgressBarProps = ProgressBarProps;
 
 const CompactProgressBar: Component<CompactProgressBarProps> = (props) => {
   injectCSS(PROGRESS_STYLE_ID, PROGRESS_CSS);
-  const [local, others] = splitProps(props, ["progress", "icon", "label", "statusLabel", "shimmer", "position", "hidePercentage", "rightLabel", "color", "variant", "class"]);
+  const local = props;
+  const others = omit(props, "progress", "icon", "label", "statusLabel", "shimmer", "position", "hidePercentage", "rightLabel", "color", "variant", "class");
   const value = createMemo(() => {
     if (typeof local.progress !== "number" || Number.isNaN(local.progress)) return 0;
     return Math.min(100, Math.max(0, Math.round(local.progress)));

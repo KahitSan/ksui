@@ -9,7 +9,8 @@
 // error UI. Self-contained CSS (ksui-fr-* unscoped classes + CSS custom props);
 // no Tailwind, no host-brand classes (standalone-library rule).
 
-import type { Component, JSX } from "solid-js";
+import type { Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { For, Match, Show, Switch, createSignal } from "solid-js";
 import {
   collectsInput,

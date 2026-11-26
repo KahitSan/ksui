@@ -1,6 +1,6 @@
 // Column-cell rendering for the datatable. One pure function maps a column's
 // declared render hint (title / enum / status / text) to its cell markup.
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import StatusPill from "../../base/StatusPill";
 import type { ResourceRow, ResourceUiSpec, UiColumn } from "./spec";
 

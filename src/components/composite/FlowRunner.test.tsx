@@ -1,5 +1,6 @@
 // U7 — FlowRunner component tests: renders each node kind, calls advance with the
 // node's input, handles a terminal node + an error.
+import { flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 import { render, fireEvent, waitFor } from "@solidjs/testing-library";
 import FlowRunner from "./FlowRunner";
@@ -26,6 +27,7 @@ describe("FlowRunner", () => {
       />
     ));
     fireEvent.input(getByTestId("fr-field-amount"), { target: { value: "50" } });
+    flush(); // the input handler's write must commit before the click reads it
     fireEvent.click(getByTestId("fr-submit"));
     await waitFor(() => expect(advance).toHaveBeenCalledWith({ token: "abc" }, { amount: "50" }));
     await waitFor(() => expect(getByTestId("fr-terminal")).toBeTruthy());

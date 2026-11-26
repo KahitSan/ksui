@@ -1,6 +1,7 @@
 import { createEffect, Show, For } from "solid-js";
 import AccountAvatar from "../base/AccountAvatar";
 import type { PaymentAccountOption } from "./PaymentAccountPicker";
+import { ariaTri } from "../../utils/aria";
 
 export interface AccountRadioPickerProps {
   accounts: PaymentAccountOption[];
@@ -17,12 +18,14 @@ export default function AccountRadioPicker(props: AccountRadioPickerProps) {
       (a) => !props.excludeId || a.id.toString() !== props.excludeId
     );
 
-  createEffect(() => {
-    if (props.autoDefault === false) return;
-    if (props.value) return;
-    const first = visible()[0];
+  createEffect(
+    () => ({ auto: props.autoDefault, value: props.value, first: visible()[0] }),
+    ({ auto, value, first }) => {
+    if (auto === false) return;
+    if (value) return;
     if (first) props.onChange(first.id.toString());
-  });
+  },
+  );
 
   const buttonRefs: (HTMLButtonElement | undefined)[] = [];
 
@@ -80,7 +83,7 @@ export default function AccountRadioPicker(props: AccountRadioPickerProps) {
       <div
         role="radiogroup"
         aria-label={props.ariaLabel}
-        tabIndex={-1}
+        tabindex={-1}
         class="grid max-sm:grid-cols-2 sm:grid-cols-3 gap-2"
         onKeyDown={onKeyDown}
       >
@@ -93,16 +96,16 @@ export default function AccountRadioPicker(props: AccountRadioPickerProps) {
                 ref={(el) => (buttonRefs[i()] = el)}
                 type="button"
                 role="radio"
-                aria-checked={selected()}
-                tabIndex={isTabStop() ? 0 : -1}
+                aria-checked={ariaTri(selected())}
+                tabindex={isTabStop() ? 0 : -1}
                 onClick={() => props.onChange(a.id.toString())}
-                class="group flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm transition-colors cursor-pointer ks-hud-clip-top-left-bottom-right"
-                classList={{
+                class={["group flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm transition-colors cursor-pointer ks-hud-clip-top-left-bottom-right", {
                   "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_50%,transparent)] bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_10%,transparent)] text-[var(--ks-accent-hover,#fcd34d)]":
                     selected(),
                   "border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_50%,transparent)] text-[var(--ks-fg-muted,#a1a1aa)] hover:border-[var(--ks-border-strong,#3f3f46)] hover:bg-[var(--ks-surface-raised,#1a1a1a)]":
                     !selected(),
-                }}
+                }]}
+
               >
                 <AccountAvatar
                   account={a}

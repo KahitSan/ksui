@@ -69,15 +69,16 @@ export function unlockPullToRefresh() {
  * a teardown function the caller can use to deactivate the trap explicitly
  * (also runs automatically when called inside a Solid `onCleanup`).
  *
- * Use this from a ref callback or Solid effect:
+ * Use this from a ref callback, keeping the teardown for an owner-level
+ * onCleanup (Solid 2 forbids onCleanup inside a ref callback):
  *
- *   <div ref={(el) => { onCleanup(useFocusTrap(el)); }}>
+ *   let release: (() => void) | undefined;
+ *   onCleanup(() => release?.());
+ *   <div ref={(el) => { release = useFocusTrap(el); }}>
  *
- * Or from an effect:
+ * Or from an effect, returning the teardown:
  *
- *   createEffect(() => {
- *     if (containerRef) onCleanup(useFocusTrap(containerRef));
- *   });
+ *   createEffect(() => containerRef, (el) => (el ? useFocusTrap(el) : undefined));
  *
  * The trap only intercepts Tab. Escape, click-outside, and submit handling
  * remain the modal's responsibility, the trap is purely a focus-keeper.

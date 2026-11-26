@@ -1,4 +1,5 @@
-import { createSignal, onCleanup, type JSX } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import Copy from "../../icons/copy";
 import Check from "../../icons/check";
 

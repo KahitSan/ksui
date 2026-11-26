@@ -97,7 +97,7 @@ describe("Modal", () => {
       expect(onClose).toHaveBeenCalledOnce();
     });
 
-    it("leaves Escape to a dialog opened on top of it", () => {
+    it("leaves Escape to a dialog opened on top of it", async () => {
       const onSheetClose = vi.fn();
       const onDialogClose = vi.fn();
       const { container } = render(() => (
@@ -108,7 +108,8 @@ describe("Modal", () => {
         </Modal>
       ));
       const dialog = container.querySelector("dialog")!;
-      expect(dialog.open).toBe(true);
+      // The dialog opens once the render settles, not during it.
+      await vi.waitFor(() => expect(dialog.open).toBe(true));
 
       // A browser delivers Escape as keydown (bubbling to window) and then
       // fires cancel on the topmost modal dialog.

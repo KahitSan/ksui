@@ -7,7 +7,7 @@
 // The widget is self-contained: it uses ksui's own Modal + Button, solid-js,
 // and a single lucide icon.
 
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, onCleanup, onSettled, Show } from "solid-js";
 import Modal from "./Modal";
 import Button from "./Button";
 import X from "../../icons/x";
@@ -48,7 +48,7 @@ export default function ImageCropper(props: ImageCropperProps) {
   let pointerStartY = 0;
   let selStart = { x: 0, y: 0, size: 0 };
 
-  onMount(() => {
+  onSettled(() => {
     const url = URL.createObjectURL(props.file);
     setImageUrl(url);
 
@@ -68,7 +68,7 @@ export default function ImageCropper(props: ImageCropperProps) {
     };
     el.onerror = () => setLoadError("Could not load this image. Try a different file.");
     el.src = url;
-    onCleanup(() => URL.revokeObjectURL(url));
+    return () => URL.revokeObjectURL(url);
   });
 
   function clampMove(nextX: number, nextY: number) {

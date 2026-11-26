@@ -13,7 +13,7 @@
 // tokens. Only the body chrome the Modal does not cover (FormErrorBanner +
 // FormActions) is promoted.
 
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { Show } from "solid-js";
 import Button from "../base/Button";
 

@@ -11,8 +11,8 @@
 // want the host Button can pass it through the `action` slot, which fully
 // replaces the built-in button.
 
-import type { JSX } from "solid-js";
-import { Show, splitProps } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Show, omit } from "solid-js";
 import { ArrowLeft } from "../../icons/index";
 
 export interface NotFoundProps
@@ -46,19 +46,8 @@ export interface NotFoundProps
 }
 
 export default function NotFound(props: NotFoundProps): JSX.Element {
-  const [local, others] = splitProps(props, [
-    "title",
-    "heading",
-    "message",
-    "buttonText",
-    "href",
-    "onButtonClick",
-    "logo",
-    "hideButton",
-    "action",
-    "testId",
-    "class",
-  ]);
+  const local = props;
+  const others = omit(props, "title", "heading", "message", "buttonText", "href", "onButtonClick", "logo", "hideButton", "action", "testId", "class");
 
   const showTitle = () => local.title !== "";
   const buttonClass =

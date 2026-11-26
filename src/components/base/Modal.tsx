@@ -15,7 +15,8 @@
 // sheet variant uses a <div> overlay so child popovers Portaled into
 // document.body still compose above the backdrop via z-index.
 
-import { JSX, onCleanup, onMount, splitProps } from "solid-js";
+import { onCleanup, onSettled, omit } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { autoFocusOnMount, lockPullToRefresh, unlockPullToRefresh, useFocusTrap } from "../../utils/dom";
 import { injectCSS } from "../../utils/inject-css";
 import { ModalLayerProvider } from "../../utils/modal-layer";
@@ -72,14 +73,7 @@ type LocalProps = Omit<ModalProps, "variant">;
 
 export function Modal(props: ModalProps): JSX.Element {
   injectCSS(STYLE_ID, STYLE_CSS);
-  const [local] = splitProps(props, [
-    "onClose",
-    "dismissable",
-    "size",
-    "tone",
-    "ariaLabel",
-    "children",
-  ]);
+  const local = props;
   // Variant is read once at mount; call sites pick it statically.
   if (props.variant === "sheet") return SheetModal(local, props.size);
   return DialogModal(local);
@@ -87,11 +81,14 @@ export function Modal(props: ModalProps): JSX.Element {
 
 function DialogModal(local: LocalProps): JSX.Element {
   let dialogEl: HTMLDialogElement | undefined;
+  // onCleanup is not allowed in the ref callback that creates the trap.
+  let releaseTrap: (() => void) | undefined;
+  onCleanup(() => releaseTrap?.());
 
   lockPullToRefresh();
   onCleanup(unlockPullToRefresh);
 
-  onMount(() => {
+  onSettled(() => {
     if (!dialogEl) return;
     if (!dialogEl.open) {
       try {
@@ -141,7 +138,7 @@ function DialogModal(local: LocalProps): JSX.Element {
       <div
         ref={(el) => {
           autoFocusOnMount(el);
-          onCleanup(useFocusTrap(el));
+          releaseTrap = useFocusTrap(el);
         }}
         class={`ksui-modal-card${local.tone === "danger" ? " danger" : ""}`}
         style={{ "max-width": SIZE_MAX_WIDTH[local.size ?? "lg"] }}
@@ -167,6 +164,8 @@ function openModalDialogs(): HTMLDialogElement[] {
 
 function SheetModal(local: LocalProps, size?: ModalSize): JSX.Element {
   let overlayEl: HTMLDivElement | undefined;
+  let releaseTrap: (() => void) | undefined;
+  onCleanup(() => releaseTrap?.());
 
   lockPullToRefresh();
   onCleanup(unlockPullToRefresh);
@@ -200,7 +199,7 @@ function SheetModal(local: LocalProps, size?: ModalSize): JSX.Element {
       <div
         ref={(el) => {
           autoFocusOnMount(el);
-          onCleanup(useFocusTrap(el));
+          releaseTrap = useFocusTrap(el);
         }}
         role="dialog"
         aria-modal="true"

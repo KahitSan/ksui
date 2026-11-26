@@ -1,4 +1,5 @@
-import { For, createMemo, createUniqueId, type JSX } from "solid-js";
+import { For, createMemo, createUniqueId } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import ChevronLeft from "../../icons/chevron-left";
 import ChevronRight from "../../icons/chevron-right";
 import { injectCSS } from "../../utils/inject-css";

@@ -26,18 +26,8 @@
 // `base/` (and is re-exported as base) to preserve its existing import path —
 // the only ksui dependency is DatePicker, itself a self-contained primitive.
 
-import {
-  batch,
-  createSignal,
-  createMemo,
-  createEffect,
-  on,
-  untrack,
-  For,
-  Show,
-  type JSX,
-  type ParentComponent,
-} from "solid-js";
+import { createSignal, createMemo, createEffect, untrack, For, Show, type ParentComponent } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import Search from "../../icons/search";
 import Filter from "../../icons/filter";
 import ChevronLeft from "../../icons/chevron-left";
@@ -401,48 +391,45 @@ export function DataTable<T extends DataTableRow>(props: DataTableProps<T>): JSX
   props.onRefetch?.({
     refetch: () => triggerFetch(),
     resetAndRefetch: () => {
-      batch(() => {
-        setCurrentPage(1);
-        resetLoadMore();
-        triggerFetch();
-      });
+      setCurrentPage(1);
+      resetLoadMore();
+      triggerFetch();
     },
   });
 
   // Watch refetchKey — when it changes, reset to page 1 and refetch.
   createEffect(
-    on(
-      () => props.refetchKey?.(),
-      () => {
-        batch(() => {
-          setCurrentPage(1);
-          resetLoadMore();
-          triggerFetch();
-        });
-      },
-      { defer: true },
-    ),
+    () => props.refetchKey?.(),
+    () => {
+      setCurrentPage(1);
+      resetLoadMore();
+      triggerFetch();
+    },
+    { defer: true },
   );
 
-  createEffect(() => {
-    void fetchTrigger(); // track
-    if (!props.fetchFn) return;
-
-    const fn = props.fetchFn;
-    const limit = itemsPerPage();
-    const lm = loadMoreMode();
-    const page = currentPage();
-    const epoch = loadEpoch();
-    const params: FetchParams = {
-      page,
-      limit,
-      search: searchTerm(),
-      sortBy: sortBy(),
-      sortDir: sortDir(),
-      dateFilter: props.dateRangeMode ? null : dateFilter(),
-      dateFrom: props.dateRangeMode ? dateFrom() : null,
-      dateTo: props.dateRangeMode ? dateTo() : null,
-    };
+  createEffect(
+    () => {
+      void fetchTrigger(); // track
+      const fn = props.fetchFn;
+      if (!fn) return undefined;
+      const page = currentPage();
+      const limit = itemsPerPage();
+      const params: FetchParams = {
+        page,
+        limit,
+        search: searchTerm(),
+        sortBy: sortBy(),
+        sortDir: sortDir(),
+        dateFilter: props.dateRangeMode ? null : dateFilter(),
+        dateFrom: props.dateRangeMode ? dateFrom() : null,
+        dateTo: props.dateRangeMode ? dateTo() : null,
+      };
+      return { fn, params, page, limit, lm: loadMoreMode(), epoch: loadEpoch() };
+    },
+    (request) => {
+    if (!request) return;
+    const { fn, params, page, limit, lm, epoch } = request;
 
     if (lm) {
       const key = `${page}:${epoch}`;
@@ -491,7 +478,8 @@ export function DataTable<T extends DataTableRow>(props: DataTableProps<T>): JSX
         }
       })
       .finally(() => setLoading(false));
-  });
+    },
+  );
 
   // ---- Auto-load (loadMore mode) ----
   //
@@ -502,31 +490,32 @@ export function DataTable<T extends DataTableRow>(props: DataTableProps<T>): JSX
   // network fetch. The autoLoadCount cap protects a degenerate grouping from
   // chaining to the end of the dataset.
   createEffect(
-    on([apiConsumed, loading], ([, isLoading]) => {
+    () => ({ consumed: apiConsumed(), isLoading: loading() }),
+    ({ isLoading }) => {
       if (!loadMoreMode()) return;
-      if (untrack(initialized) === false) return;
+      if (initialized() === false) return;
       if (isLoading) return;
-      const visible = untrack(() => paginatedData().length);
-      if (visible >= untrack(loadTarget)) return;
-      if (untrack(apiConsumed) >= untrack(totalRecords)) return;
-      if (untrack(autoLoadCount) >= AUTO_LOAD_CAP) return;
-      batch(() => {
-        setAutoLoadCount((c) => c + 1);
-        setCurrentPage((p) => p + 1);
-        triggerFetch();
-      });
-    }),
+      const visible = paginatedData().length;
+      if (visible >= loadTarget()) return;
+      if (apiConsumed() >= totalRecords()) return;
+      if (autoLoadCount() >= AUTO_LOAD_CAP) return;
+      setAutoLoadCount((c) => c + 1);
+      setCurrentPage((p) => p + 1);
+      triggerFetch();
+    },
   );
 
   // ---- Client-side data ----
 
-  createEffect(() => {
-    if (isServerSide()) return;
-    const d = props.data || [];
-    setTableData(d as T[]);
-    setTotalRecords(d.length);
-    setInitialized(true);
-  });
+  createEffect(
+    () => (isServerSide() ? undefined : props.data || []),
+    (d) => {
+      if (!d) return;
+      setTableData(d as T[]);
+      setTotalRecords(d.length);
+      setInitialized(true);
+    },
+  );
 
   // Post-fetch row transform. No-op passthrough when no transform is supplied.
   const transformedData = createMemo(() => {
@@ -605,30 +594,24 @@ export function DataTable<T extends DataTableRow>(props: DataTableProps<T>): JSX
   // ---- Handlers ----
 
   function handleDateFilter(date: string | null) {
-    batch(() => {
-      setDateFilter(date);
-      setCurrentPage(1);
-      resetLoadMore();
-      if (isServerSide()) triggerFetch();
-    });
+    setDateFilter(date);
+    setCurrentPage(1);
+    resetLoadMore();
+    if (isServerSide()) triggerFetch();
   }
 
   function handleDateRangeFilter(range: { start: string | null; end: string | null }) {
-    batch(() => {
-      setDateFrom(range.start);
-      setDateTo(range.end);
-      setCurrentPage(1);
-      resetLoadMore();
-      if (isServerSide()) triggerFetch();
-    });
+    setDateFrom(range.start);
+    setDateTo(range.end);
+    setCurrentPage(1);
+    resetLoadMore();
+    if (isServerSide()) triggerFetch();
   }
 
   function handleSearch(value: string) {
-    batch(() => {
-      setSearchTerm(value);
-      setCurrentPage(1);
-      resetLoadMore();
-    });
+    setSearchTerm(value);
+    setCurrentPage(1);
+    resetLoadMore();
     if (isServerSide()) {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(triggerFetch, debounceDelay());
@@ -637,17 +620,15 @@ export function DataTable<T extends DataTableRow>(props: DataTableProps<T>): JSX
 
   function handleSort(key: string) {
     if (!ordering()) return;
-    batch(() => {
-      if (sortBy() === key) {
-        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-      } else {
-        setSortBy(key);
-        setSortDir("desc");
-      }
-      setCurrentPage(1);
-      resetLoadMore();
-      if (isServerSide()) triggerFetch();
-    });
+    if (sortBy() === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir("desc");
+    }
+    setCurrentPage(1);
+    resetLoadMore();
+    if (isServerSide()) triggerFetch();
   }
 
   function handlePageChange(page: number) {
@@ -656,23 +637,19 @@ export function DataTable<T extends DataTableRow>(props: DataTableProps<T>): JSX
   }
 
   function handlePageSize(size: number) {
-    batch(() => {
-      setItemsPerPage(size);
-      setCurrentPage(1);
-      resetLoadMore();
-      if (isServerSide()) triggerFetch();
-    });
+    setItemsPerPage(size);
+    setCurrentPage(1);
+    resetLoadMore();
+    if (isServerSide()) triggerFetch();
   }
 
   function handleShowMore() {
     if (!loadMoreMode() || loading()) return;
     if (apiConsumed() >= totalRecords()) return;
-    batch(() => {
-      setCurrentPage((p) => p + 1);
-      setAutoLoadCount(0);
-      setPendingLoadTargetBump(true);
-      triggerFetch();
-    });
+    setCurrentPage((p) => p + 1);
+    setAutoLoadCount(0);
+    setPendingLoadTargetBump(true);
+    triggerFetch();
   }
 
   // ---- Render helpers ----
@@ -823,7 +800,7 @@ export function DataTable<T extends DataTableRow>(props: DataTableProps<T>): JSX
             {/* Empty state */}
             <Show when={initialized() && !loading() && paginatedData().length === 0}>
               <tr>
-                <td colSpan={columns().length} class="ksui-datatable-empty">
+                <td colspan={columns().length} class="ksui-datatable-empty">
                   {searchTerm()
                     ? props.noResultsMessage || "No results found."
                     : props.emptyMessage || "No data available."}
@@ -839,8 +816,8 @@ export function DataTable<T extends DataTableRow>(props: DataTableProps<T>): JSX
                   return (
                     <>
                       <tr
-                        class="ksui-datatable-row"
-                        classList={{ "ksui-datatable-row-clickable": !!props.onRowClick }}
+                        class={["ksui-datatable-row", { "ksui-datatable-row-clickable": !!props.onRowClick }]}
+
                         onClick={() => props.onRowClick?.(row)}
                       >
                         <For each={columns()}>
@@ -860,7 +837,7 @@ export function DataTable<T extends DataTableRow>(props: DataTableProps<T>): JSX
                           class="ksui-datatable-expansion-row"
                           data-testid="datatable-expansion-row"
                         >
-                          <td class="ksui-datatable-expansion-td" colSpan={columns().length}>
+                          <td class="ksui-datatable-expansion-td" colspan={columns().length}>
                             {expansion()}
                           </td>
                         </tr>

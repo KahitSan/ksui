@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@solidjs/testing-library";
-import { Suspense } from "solid-js";
+import { Loading } from "solid-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import ExistingAttachmentTile from "./ExistingAttachmentTile";
 
@@ -28,7 +28,7 @@ describe("ExistingAttachmentTile", () => {
     });
 
     render(() => (
-      <Suspense fallback={<p>Modal fallback</p>}>
+      <Loading fallback={<p>Modal fallback</p>}>
         <div data-testid="modal-shell">
           <ExistingAttachmentTile
             attachment={{
@@ -41,7 +41,7 @@ describe("ExistingAttachmentTile", () => {
             testId="attachment"
           />
         </div>
-      </Suspense>
+      </Loading>
     ));
 
     expect(screen.getByTestId("modal-shell")).toBeTruthy();

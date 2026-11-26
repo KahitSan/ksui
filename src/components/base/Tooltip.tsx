@@ -1,4 +1,5 @@
-import { createUniqueId, type JSX } from "solid-js";
+import { createUniqueId } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 interface TooltipProps {
   /** Text or JSX to show inside the tooltip bubble. */

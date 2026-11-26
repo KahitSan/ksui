@@ -3,7 +3,8 @@
 // single- and multi-select renders drive this one engine so there is exactly
 // one copy of the mechanics.
 
-import { createEffect, createSignal, onCleanup, type JSX } from "solid-js";
+import { createEffect, createSignal, onCleanup } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 const POPUP_MAX_HEIGHT = 360;
 const POPUP_MIN_WIDTH = 320;
@@ -35,18 +36,22 @@ export function createPickerPopup<T>(cfg: {
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
   let activeFetchToken = 0;
 
-  createEffect(() => {
-    const q = query();
+  createEffect(
+    query,
+    (q) => {
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => setDebouncedQuery(q), SEARCH_DEBOUNCE_MS);
-    onCleanup(() => {
+    return () => {
       if (debounceTimer) clearTimeout(debounceTimer);
-    });
-  });
+    };
+  },
+  );
 
-  createEffect(() => {
-    if (!open()) return;
-    const q = debouncedQuery().trim();
+  createEffect(
+    () => ({ isOpen: open(), debounced: debouncedQuery() }),
+    ({ isOpen, debounced }) => {
+    if (!isOpen) return;
+    const q = debounced.trim();
     const token = ++activeFetchToken;
     setLoading(true);
     setError(null);
@@ -66,7 +71,8 @@ export function createPickerPopup<T>(cfg: {
         if (token !== activeFetchToken) return;
         setLoading(false);
       });
-  });
+  },
+  );
 
   const close = () => {
     setOpen(false);
@@ -106,8 +112,8 @@ export function createPickerPopup<T>(cfg: {
     });
   };
 
-  createEffect(() => {
-    if (!open()) return;
+  createEffect(open, (isOpen) => {
+    if (!isOpen) return;
     updatePosition();
 
     const onDocClick = (e: MouseEvent) => {
@@ -128,12 +134,12 @@ export function createPickerPopup<T>(cfg: {
     document.addEventListener("keydown", onEsc, true);
     window.addEventListener("resize", onReflow);
     window.addEventListener("scroll", onReflow, true);
-    onCleanup(() => {
+    return () => {
       document.removeEventListener("mousedown", onDocClick);
       document.removeEventListener("keydown", onEsc, true);
       window.removeEventListener("resize", onReflow);
       window.removeEventListener("scroll", onReflow, true);
-    });
+    };
   });
 
   const trimmedQuery = () => query().trim();

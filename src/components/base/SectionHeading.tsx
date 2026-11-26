@@ -1,4 +1,5 @@
-import { Show, type JSX } from "solid-js";
+import { Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 /** Horizontal alignment for the whole heading block. */
 export type SectionHeadingAlign = "left" | "center" | "right";

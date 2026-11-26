@@ -1,4 +1,6 @@
-import { For, type JSX } from "solid-js";
+import { For } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { ariaBool, ariaTri } from "../../utils/aria";
 
 interface RadioCardGroupProps<T> {
   /** The selectable options. */
@@ -101,11 +103,11 @@ export default function RadioCardGroup<T>(props: RadioCardGroupProps<T>): JSX.El
   const defaultRender = (option: T, selected: boolean) => (
     <>
       <span
-        class="h-2 w-2 rounded-full shrink-0"
-        classList={{
+        class={["h-2 w-2 rounded-full shrink-0", {
           "bg-[var(--ks-accent,#fbbf24)]": selected,
           "bg-[var(--ks-fg-subtle,#71717a)] group-hover:bg-[var(--ks-fg-muted,#a1a1aa)]": !selected,
-        }}
+        }]}
+
       />
       <span class="truncate">{label(option)}</span>
     </>
@@ -115,8 +117,8 @@ export default function RadioCardGroup<T>(props: RadioCardGroupProps<T>): JSX.El
     <div
       role="radiogroup"
       aria-label={props.ariaLabel}
-      aria-disabled={props.disabled}
-      tabIndex={-1}
+      aria-disabled={ariaBool(props.disabled)}
+      tabindex={-1}
       class={`${gridClass()} ${props.class ?? ""}`}
       onKeyDown={onKeyDown}
     >
@@ -130,18 +132,18 @@ export default function RadioCardGroup<T>(props: RadioCardGroupProps<T>): JSX.El
               ref={(el) => (buttonRefs[i()] = el)}
               type="button"
               role="radio"
-              aria-checked={selected()}
-              aria-disabled={props.disabled}
-              tabIndex={isTabStop() ? 0 : -1}
+              aria-checked={ariaTri(selected())}
+              aria-disabled={ariaBool(props.disabled)}
+              tabindex={isTabStop() ? 0 : -1}
               onClick={() => !props.disabled && props.onChange(k)}
-              class={`group flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm transition-colors cursor-pointer ${props.itemClass ?? ""}`}
-              classList={{
+              class={[`group flex items-center gap-2 rounded-lg border px-3 py-3 text-left text-sm transition-colors cursor-pointer ${props.itemClass ?? ""}`, {
                 "opacity-50 pointer-events-none cursor-not-allowed": !!props.disabled,
                 "border-[var(--ks-accent,#fbbf24)]/50 bg-[var(--ks-accent,#fbbf24)]/10 text-[var(--ks-accent,#fbbf24)]":
                   selected(),
                 "border-[var(--ks-border-strong,#3f3f46)] bg-[var(--ks-surface-raised,#1a1a1a)] text-[var(--ks-fg-muted,#a1a1aa)] hover:border-[var(--ks-fg-subtle,#71717a)] hover:bg-[var(--ks-surface-sunken,#141414)]":
                   !selected(),
-              }}
+              }]}
+
             >
               {(props.renderOption ?? defaultRender)(option, selected())}
             </button>

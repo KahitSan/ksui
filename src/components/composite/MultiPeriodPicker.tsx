@@ -1,11 +1,13 @@
-import { createMemo, createSignal, For, Show, type JSX } from "solid-js";
-import { Portal } from "solid-js/web";
+import { createMemo, createSignal, For, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
 import CalendarDays from "../../icons/calendar-days";
 import ChevronDown from "../../icons/chevron-down";
 import ChevronLeft from "../../icons/chevron-left";
 import ChevronRight from "../../icons/chevron-right";
 import X from "../../icons/x";
 import { injectCSS } from "../../utils/inject-css";
+import { ariaBool, ariaTri } from "../../utils/aria";
 
 export type MultiPeriodGranularity = "day" | "week" | "month" | "year";
 
@@ -218,11 +220,11 @@ export default function MultiPeriodPicker(props: MultiPeriodPickerProps): JSX.El
     <div class={`ksui-mpp ${props.class ?? ""}`} data-testid="multi-period-picker">
       <div class="ksui-mpp-tabs" role="tablist" aria-label={labels().period ?? "Period"}>
         <For each={tabOptions}>{(granularity) => (
-          <button type="button" role="tab" aria-selected={props.granularity === granularity} classList={{ "ksui-mpp-selected": props.granularity === granularity }} class="ksui-mpp-tab" onClick={() => { props.onGranularityChange(granularity); setViewYear(current.year); setViewMonth(current.month); }}>
+          <button type="button" role="tab" aria-selected={ariaBool(props.granularity === granularity)}  class={["ksui-mpp-tab", { "ksui-mpp-selected": props.granularity === granularity }]} onClick={() => { props.onGranularityChange(granularity); setViewYear(current.year); setViewMonth(current.month); }}>
             {defaultLabel(granularity, labels())}
           </button>
         )}</For>
-        <button ref={triggerRef} type="button" class="ksui-mpp-trigger" disabled={props.disabled} aria-haspopup="dialog" aria-expanded={open()} onClick={openPicker}>
+        <button ref={triggerRef} type="button" class="ksui-mpp-trigger" disabled={props.disabled} aria-haspopup="dialog" aria-expanded={ariaBool(open())} onClick={openPicker}>
           <CalendarDays size={14} aria-hidden="true" /> <span>{summary()}</span><ChevronDown size={14} aria-hidden="true" />
         </button>
       </div>
@@ -231,18 +233,18 @@ export default function MultiPeriodPicker(props: MultiPeriodPickerProps): JSX.El
           <div ref={popupRef} class="ksui-mpp-popover" style={popupStyle()} role="dialog" aria-label={labels().period ?? "Pick periods"} tabindex={-1}>
             <Show when={props.granularity === "day"}>
               <div class="ksui-mpp-heading"><button class="ksui-mpp-nav" type="button" aria-label="Previous month" onClick={() => shiftMonth(-1)}><ChevronLeft size={14} /></button><span>{new Date(Date.UTC(viewYear(), viewMonth() - 1, 1)).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}</span><button class="ksui-mpp-nav" type="button" aria-label="Next month" onClick={() => shiftMonth(1)}><ChevronRight size={14} /></button></div>
-              <div class="ksui-mpp-grid ksui-mpp-grid-days"><For each={["S", "M", "T", "W", "T", "F", "S"]}>{(label) => <span class="ksui-mpp-token">{label}</span>}</For><For each={days()}>{(item) => <button type="button" classList={{ "ksui-mpp-selected": props.selected.includes(item.token) }} class="ksui-mpp-token" aria-pressed={props.selected.includes(item.token)} onClick={() => toggle(item.token)}>{tokenContent(item)}</button>}</For></div>
+              <div class="ksui-mpp-grid ksui-mpp-grid-days"><For each={["S", "M", "T", "W", "T", "F", "S"]}>{(label) => <span class="ksui-mpp-token">{label}</span>}</For><For each={days()}>{(item) => <button type="button"  class={["ksui-mpp-token", { "ksui-mpp-selected": props.selected.includes(item.token) }]} aria-pressed={ariaTri(props.selected.includes(item.token))} onClick={() => toggle(item.token)}>{tokenContent(item)}</button>}</For></div>
             </Show>
             <Show when={props.granularity === "week"}>
               <div class="ksui-mpp-heading"><button class="ksui-mpp-nav" type="button" aria-label="Previous year" onClick={() => setViewYear((year) => year - 1)}><ChevronLeft size={14} /></button><span>{viewYear()}</span><button class="ksui-mpp-nav" type="button" aria-label="Next year" onClick={() => setViewYear((year) => year + 1)}><ChevronRight size={14} /></button></div>
-              <div class="ksui-mpp-months"><For each={Array.from({ length: 12 }, (_, index) => index + 1)}>{(month) => <button type="button" class="ksui-mpp-month" classList={{ "ksui-mpp-selected": month === viewMonth() }} onClick={() => setViewMonth(month)}>{new Date(Date.UTC(2000, month - 1, 1)).toLocaleDateString("en-US", { month: "short", timeZone: "UTC" })}</button>}</For></div>
-              <div class="ksui-mpp-week-label">Weeks</div><div class="ksui-mpp-grid"><For each={weekOptions()}>{(item) => <button type="button" classList={{ "ksui-mpp-selected": props.selected.includes(item.token) }} class="ksui-mpp-token" aria-pressed={props.selected.includes(item.token)} onClick={() => toggle(item.token)}>{tokenContent(item)}</button>}</For></div>
+              <div class="ksui-mpp-months"><For each={Array.from({ length: 12 }, (_, index) => index + 1)}>{(month) => <button type="button" class={["ksui-mpp-month", { "ksui-mpp-selected": month === viewMonth() }]}  onClick={() => setViewMonth(month)}>{new Date(Date.UTC(2000, month - 1, 1)).toLocaleDateString("en-US", { month: "short", timeZone: "UTC" })}</button>}</For></div>
+              <div class="ksui-mpp-week-label">Weeks</div><div class="ksui-mpp-grid"><For each={weekOptions()}>{(item) => <button type="button"  class={["ksui-mpp-token", { "ksui-mpp-selected": props.selected.includes(item.token) }]} aria-pressed={ariaTri(props.selected.includes(item.token))} onClick={() => toggle(item.token)}>{tokenContent(item)}</button>}</For></div>
             </Show>
             <Show when={props.granularity === "month"}>
               <div class="ksui-mpp-heading"><button class="ksui-mpp-nav" type="button" aria-label="Previous year" onClick={() => setViewYear((year) => year - 1)}><ChevronLeft size={14} /></button><span>{viewYear()}</span><button class="ksui-mpp-nav" type="button" aria-label="Next year" onClick={() => setViewYear((year) => year + 1)}><ChevronRight size={14} /></button></div>
-              <div class="ksui-mpp-grid ksui-mpp-grid-months"><For each={monthOptions()}>{(item) => <button type="button" classList={{ "ksui-mpp-selected": props.selected.includes(item.token) }} class="ksui-mpp-token" aria-pressed={props.selected.includes(item.token)} onClick={() => toggle(item.token)}>{tokenContent(item)}</button>}</For></div>
+              <div class="ksui-mpp-grid ksui-mpp-grid-months"><For each={monthOptions()}>{(item) => <button type="button"  class={["ksui-mpp-token", { "ksui-mpp-selected": props.selected.includes(item.token) }]} aria-pressed={ariaTri(props.selected.includes(item.token))} onClick={() => toggle(item.token)}>{tokenContent(item)}</button>}</For></div>
             </Show>
-            <Show when={props.granularity === "year"}><div class="ksui-mpp-grid ksui-mpp-grid-years"><For each={yearOptions()}>{(item) => <button type="button" classList={{ "ksui-mpp-selected": props.selected.includes(item.token) }} class="ksui-mpp-token" aria-pressed={props.selected.includes(item.token)} onClick={() => toggle(item.token)}>{tokenContent(item)}</button>}</For></div></Show>
+            <Show when={props.granularity === "year"}><div class="ksui-mpp-grid ksui-mpp-grid-years"><For each={yearOptions()}>{(item) => <button type="button"  class={["ksui-mpp-token", { "ksui-mpp-selected": props.selected.includes(item.token) }]} aria-pressed={ariaTri(props.selected.includes(item.token))} onClick={() => toggle(item.token)}>{tokenContent(item)}</button>}</For></div></Show>
             <Show when={props.selected.length > 0}><div class="ksui-mpp-chips"><For each={props.selected}>{(token) => <button type="button" class="ksui-mpp-chip ksui-mpp-selected" aria-label={`Remove ${selectedLabel(token)}`} onClick={() => toggle(token)}><span>{selectedLabel(token)}</span><X size={11} aria-hidden="true" /></button>}</For></div></Show>
           </div>
         </Portal>

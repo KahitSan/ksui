@@ -1,11 +1,7 @@
 /// <reference path="./asset-modules.d.ts" />
-import {
-  Show,
-  createUniqueId,
-  splitProps,
-  type Component,
-  type JSX,
-} from "solid-js";
+import { ariaBool } from "../utils/aria";
+import { Show, createUniqueId, omit, type Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 export type IconProps = JSX.SvgSVGAttributes<SVGSVGElement> & {
   size?: number | string;
@@ -74,7 +70,11 @@ function accessibility(props: IconProps, titleId: string) {
     "aria-label": props["aria-label"],
     "aria-labelledby":
       props["aria-labelledby"] ?? (props.title ? titleId : undefined),
-    "aria-hidden": props["aria-hidden"] ?? (labelled ? undefined : true),
+    "aria-hidden": ariaBool(
+      typeof props["aria-hidden"] === "string"
+        ? props["aria-hidden"] === "true"
+        : (props["aria-hidden"] ?? (labelled ? undefined : true)),
+    ),
   } as const;
 }
 
@@ -85,22 +85,8 @@ export function createArtworkIcon(
   variants: ArtworkVariants = {}
 ): ArtworkIconComponent {
   return function ArtworkIcon(props) {
-    const [local, rest] = splitProps(props, [
-      "size",
-      "width",
-      "height",
-      "title",
-      "children",
-      "fill",
-      "role",
-      "aria-hidden",
-      "aria-label",
-      "aria-labelledby",
-      "strokeWidth",
-      "stroke-width",
-      "absoluteStrokeWidth",
-      "weight",
-    ]);
+    const local = props;
+    const rest = omit(props, "size", "width", "height", "title", "children", "fill", "role", "aria-hidden", "aria-label", "aria-labelledby", "strokeWidth", "stroke-width", "absoluteStrokeWidth", "weight");
     const id = `artwork-${createUniqueId()}`;
     const titleId = `${id}-title`;
     const artwork = () => {

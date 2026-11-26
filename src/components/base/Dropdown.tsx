@@ -1,5 +1,6 @@
-import { createSignal, For, onCleanup, onMount, Show, type Component, type JSX } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { createSignal, For, onCleanup, onSettled, Show, type Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
 import ChevronDown from "../../icons/chevron-down";
 
 /** A owned icons icon component (or any component taking size/class). */
@@ -73,7 +74,7 @@ export default function Dropdown(props: DropdownProps): JSX.Element {
 
   const currentSelection = () => selectedItem() ?? props.items.find((i) => i.id === props.value) ?? props.items[0];
 
-  onMount(() => {
+  onSettled(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Element | null;
       if (!target?.closest("[data-dropdown-container]")) {
@@ -81,7 +82,7 @@ export default function Dropdown(props: DropdownProps): JSX.Element {
       }
     };
     document.addEventListener("click", handleClickOutside);
-    onCleanup(() => document.removeEventListener("click", handleClickOutside));
+    return () => document.removeEventListener("click", handleClickOutside);
   });
 
   const handleSelect = (item: DropdownItem) => {

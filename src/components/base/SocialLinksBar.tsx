@@ -1,4 +1,5 @@
-import { For, type Component, type JSX } from "solid-js";
+import { For, type Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { injectCSS } from "../../utils/inject-css";
 
 /** Icon component shape: any component that accepts a numeric `size`
