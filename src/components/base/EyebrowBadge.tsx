@@ -1,4 +1,5 @@
-import { Show, type JSX } from "solid-js";
+import { Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 export type EyebrowTone = "amber" | "blue" | "emerald" | "red" | "zinc";
 

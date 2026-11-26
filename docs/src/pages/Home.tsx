@@ -1,5 +1,4 @@
-import { type JSX } from "solid-js";
-import { A } from "@solidjs/router";
+import type { JSX } from "@solidjs/web";
 
 export default function Home(): JSX.Element {
   return (
@@ -28,10 +27,10 @@ export default function Home(): JSX.Element {
         rendered result on top and its exact source directly below.
       </p>
       <p>
-        Start with <A href="/getting-started">Getting Started</A>, or jump to a component:{" "}
-        <A href="/components/button">Button</A>, <A href="/components/modal">Modal</A>,{" "}
-        <A href="/components/combo-box">Combo Box</A>,{" "}
-        <A href="/components/markdown-notes">Markdown Notes</A>.
+        Start with <a href="/getting-started">Getting Started</a>, or jump to a component:{" "}
+        <a href="/components/button">Button</a>, <a href="/components/modal">Modal</a>,{" "}
+        <a href="/components/combo-box">Combo Box</a>,{" "}
+        <a href="/components/markdown-notes">Markdown Notes</a>.
       </p>
     </article>
   );

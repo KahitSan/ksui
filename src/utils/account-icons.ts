@@ -12,7 +12,8 @@ import Coins from "../icons/coins";
 import PiggyBank from "../icons/piggy-bank";
 import DollarSign from "../icons/dollar-sign";
 import Receipt from "../icons/receipt";
-import type { Component, JSX } from "solid-js";
+import type { Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 export type IconComponent = Component<JSX.SvgSVGAttributes<SVGSVGElement> & { size?: number }>;
 

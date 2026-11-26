@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import SecretRevealBasic from "../examples/secret-reveal-basic";
 import secretRevealBasicSrc from "../examples/secret-reveal-basic.tsx?raw";
 import { Example } from "../components/Example";

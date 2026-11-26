@@ -26,15 +26,15 @@ export default function FormFieldBasic() {
       }}
     >
       <FormField label="Full name">
-        <input style={inputStyle} type="text" value="Maria Santos" readOnly />
+        <input style={inputStyle} type="text" value="Maria Santos" readonly />
       </FormField>
 
       <FormField label="Email" hint="We only use this for receipts.">
-        <input style={inputStyle} type="email" value="maria@example.com" readOnly />
+        <input style={inputStyle} type="email" value="maria@example.com" readonly />
       </FormField>
 
       <FormField label="Monthly budget" hint="Amounts are in pesos.">
-        <input style={inputStyle} type="text" value="15,000" readOnly />
+        <input style={inputStyle} type="text" value="15,000" readonly />
       </FormField>
     </div>
   );

@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import FormatFullDateBasic from "../examples/format-full-date-basic";
 import src from "../examples/format-full-date-basic.tsx?raw";
 import { Example } from "../components/Example";

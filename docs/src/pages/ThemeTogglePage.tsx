@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import ThemeToggleBasic from "../examples/theme-toggle-basic";
 import themeToggleBasicSrc from "../examples/theme-toggle-basic.tsx?raw";
 import { Example } from "../components/Example";

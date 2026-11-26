@@ -13,8 +13,10 @@
 // static, read-only cell that renders dimmed so a row can show which tiles are
 // "in" vs "out" of a selection at a glance.
 
-import { Show, type JSX } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
+import { ariaTri } from "../../utils/aria";
 
 export interface DateTileProps {
   /** The big primary value — typically a day-of-month number, but any short
@@ -42,14 +44,14 @@ export default function DateTile(props: DateTileProps): JSX.Element {
       component={interactive() ? "button" : "div"}
       type={interactive() ? "button" : undefined}
       onClick={props.onToggle}
-      aria-pressed={interactive() ? on() : undefined}
+      aria-pressed={ariaTri(interactive() ? on() : undefined)}
       data-testid={interactive() ? props.testId : undefined}
       style={{ width: "60px", height: "68px", flex: "0 0 auto" }}
-      class={`${interactive() ? "cursor-pointer" : ""} flex flex-col rounded-md overflow-hidden border transition-colors`}
-      classList={{
+      class={[`${interactive() ? "cursor-pointer" : ""} flex flex-col rounded-md overflow-hidden border transition-colors`, {
         "border-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_25%,transparent)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_40%,transparent)]": on(),
         "border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] bg-[color-mix(in_srgb,var(--ks-surface,#0f0f0f)_40%,transparent)] opacity-50 hover:opacity-80": !on(),
-      }}
+      }]}
+
     >
       <div
         style={{ height: "18px" }}
@@ -59,21 +61,21 @@ export default function DateTile(props: DateTileProps): JSX.Element {
       </div>
       <div class="flex-1 flex flex-col items-center justify-center">
         <div
-          class="text-xl font-semibold leading-none tabular-nums"
-          classList={{
+          class={["text-xl font-semibold leading-none tabular-nums", {
             "text-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_90%,transparent)]": on(),
             "text-[var(--ks-fg-subtle,#71717a)]": !on(),
-          }}
+          }]}
+
         >
           {props.value}
         </div>
         <Show when={props.subLabel != null && props.subLabel !== ""}>
           <div
-            class="text-[9px] mt-0.5 tabular-nums"
-            classList={{
+            class={["text-[9px] mt-0.5 tabular-nums", {
               "text-[var(--ks-fg-subtle,#71717a)]": on(),
               "text-[var(--ks-border-strong,#3f3f46)]": !on(),
-            }}
+            }]}
+
           >
             {props.subLabel}
           </div>

@@ -8,8 +8,9 @@
 // layout, a permission check, per-request init (auth headers / credentials), a
 // refetch trigger, and any extra header actions — so the component carries no
 // app, transport, or auth assumptions of its own.
-import { createSignal, For, Show, type Component, type JSX } from "solid-js";
-import { createStore } from "solid-js/store";
+import { createSignal, For, Show, type Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { createStore } from "solid-js";
 import Plus from "../../../icons/plus";
 import X from "../../../icons/x";
 import Archive from "../../../icons/archive";
@@ -132,14 +133,21 @@ export function ResourcePage<T extends ResourceRow>(
   );
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal("");
-  const setValue = (key: string, value: string) => setForm(key, value);
+  const setValue = (key: string, value: string) =>
+    setForm((draft) => {
+      draft[key] = value;
+    });
 
   function resetForm() {
-    setForm(emptyFormValues(spec));
+    setForm((draft) => {
+      Object.assign(draft, emptyFormValues(spec));
+    });
     setError("");
   }
   function populateForm(row: ResourceRow) {
-    setForm(rowToFormValues(spec, row));
+    setForm((draft) => {
+      Object.assign(draft, rowToFormValues(spec, row));
+    });
     setError("");
   }
 
@@ -317,14 +325,20 @@ export function ResourcePage<T extends ResourceRow>(
                     <SegmentedFilter
                       options={[...f.options]}
                       value={filterState[f.param]}
-                      onChange={(v: string) => setFilterState(f.param, v)}
+                      onChange={(v: string) =>
+                        setFilterState((draft) => {
+                          draft[f.param] = v;
+                        })
+                      }
                       testIdPrefix={f.testIdPrefix}
                     />
                   ) : (
                     <select
                       value={filterState[f.param]}
                       onChange={(e) =>
-                        setFilterState(f.param, e.currentTarget.value)
+                        setFilterState((draft) => {
+                          draft[f.param] = e.currentTarget.value;
+                        })
                       }
                       class="rounded-lg border border-[var(--ks-border,rgba(39,39,42,0.5))] bg-[var(--ks-input-bg,#18181b)] px-3 py-1.5 text-xs text-[var(--ks-fg-muted,#a1a1aa)] cursor-pointer"
                     >

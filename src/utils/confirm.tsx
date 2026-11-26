@@ -8,7 +8,7 @@
 // kit, no Tailwind — Modal and Button inject their own styles.
 
 import { createSignal, Show } from "solid-js";
-import { render } from "solid-js/web";
+import { render } from "@solidjs/web";
 import Modal from "../components/base/Modal";
 import Button from "../components/base/Button";
 

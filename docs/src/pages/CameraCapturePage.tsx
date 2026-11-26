@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import CameraCaptureBasic from "../examples/camera-capture-basic";
 import src from "../examples/camera-capture-basic.tsx?raw";
 import { Example } from "../components/Example";

@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import TooltipBasic from "../examples/tooltip-basic";
 import tooltipBasicSrc from "../examples/tooltip-basic.tsx?raw";
 import { Example } from "../components/Example";

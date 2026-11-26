@@ -13,8 +13,9 @@
 // its CSS (ksui-ff-* unscoped classes + CSS custom props); no Tailwind, no
 // host-brand classes (standalone-library rule).
 
-import type { Component, JSX } from "solid-js";
-import { Match, Show, Switch, createSignal } from "solid-js";
+import type { Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Match, Show, Switch, createSignal, onSettled } from "solid-js";
 import UploadCloud from "../../icons/cloud-upload";
 import FileIcon from "../../icons/file";
 import ImageOff from "../../icons/image-off";
@@ -136,7 +137,9 @@ export const FileField: Component<FileFieldProps> = (props) => {
   };
 
   // If a value handle is supplied at mount, load its preview eagerly.
-  if (props.value) loadPreview(props.value);
+  onSettled(() => {
+    if (props.value) loadPreview(props.value);
+  });
 
   const pick = () => {
     if (props.disabled) return;

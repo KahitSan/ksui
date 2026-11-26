@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import DateTileBasic from "../examples/date-tile-basic";
 import dateTileBasicSrc from "../examples/date-tile-basic.tsx?raw";
 import { Example } from "../components/Example";

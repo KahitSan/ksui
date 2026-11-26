@@ -11,18 +11,9 @@
 // injected once per page via a runtime <style> tag and referenced with plain,
 // unscoped class names so the bundle stays self-contained.
 
-import {
-  splitProps,
-  createSignal,
-  onCleanup,
-  createMemo,
-  mergeProps,
-  Show,
-  For,
-  type JSX,
-  type Component,
-} from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { omit, createSignal, onCleanup, createMemo, merge, Show, For, type Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
 import { injectCSS } from "../../utils/inject-css";
 
 const BUTTON_STYLE_ID = "ks-button-inline-style";
@@ -242,37 +233,40 @@ interface Ripple {
 const Button = (props: ButtonProps): JSX.Element => {
   ensureButtonStyle();
 
-  const merged = mergeProps(
-    {
-      as: "button" as ButtonProps["as"],
-      intent: "primary" as ButtonIntent,
-      variant: "clip1" as ButtonVariant,
-      size: "md" as ButtonSize,
-      noRipple: false,
-      noScanline: false,
-      noGlow: false,
-      noPulse: false,
-      iconPosition: "left" as const,
+  // Getters, not merge defaults: Solid 2 merge lets an explicit `undefined`
+  // (a wrapper forwarding an optional prop) override the default.
+  const merged = merge(props, {
+    get as() {
+      return props.as ?? ("button" as ButtonProps["as"]);
     },
-    props,
-  );
+    get intent() {
+      return props.intent ?? ("primary" as ButtonIntent);
+    },
+    get variant() {
+      return props.variant ?? ("clip1" as ButtonVariant);
+    },
+    get size() {
+      return props.size ?? ("md" as ButtonSize);
+    },
+    get noRipple() {
+      return props.noRipple ?? false;
+    },
+    get noScanline() {
+      return props.noScanline ?? false;
+    },
+    get noGlow() {
+      return props.noGlow ?? false;
+    },
+    get noPulse() {
+      return props.noPulse ?? false;
+    },
+    get iconPosition() {
+      return props.iconPosition ?? ("left" as const);
+    },
+  });
 
-  const [local, others] = splitProps(merged, [
-    "as",
-    "intent",
-    "variant",
-    "size",
-    "noRipple",
-    "noScanline",
-    "noGlow",
-    "noPulse",
-    "icon",
-    "iconPosition",
-    "class",
-    "children",
-    "onClick",
-    "disabled",
-  ]);
+  const local = merged;
+  const others = omit(merged, "as", "intent", "variant", "size", "noRipple", "noScanline", "noGlow", "noPulse", "icon", "iconPosition", "class", "children", "onClick", "disabled");
 
   const [ripples, setRipples] = createSignal<Ripple[]>([]);
 

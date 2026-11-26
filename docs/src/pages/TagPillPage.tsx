@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import TagPillBasic from "../examples/tag-pill-basic";
 import tagPillBasicSrc from "../examples/tag-pill-basic.tsx?raw";
 import { Example } from "../components/Example";

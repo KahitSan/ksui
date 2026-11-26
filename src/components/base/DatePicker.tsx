@@ -22,13 +22,12 @@ import {
   createSignal,
   createMemo,
   createEffect,
-  on,
   For,
   Show,
-  onMount,
+  onSettled,
   onCleanup,
 } from "solid-js";
-import { Portal } from "solid-js/web";
+import { Portal } from "@solidjs/web";
 import Calendar from "../../icons/calendar";
 import ChevronLeft from "../../icons/chevron-left";
 import ChevronRight from "../../icons/chevron-right";
@@ -45,6 +44,7 @@ import {
 import { injectCSS } from "../../utils/inject-css";
 import { useTopLayer } from "../../utils/top-layer";
 import { usePopoverMount } from "../../utils/modal-layer";
+import { ariaBool, ariaTri } from "../../utils/aria";
 
 // ---------------------------------------------------------------------------
 // Injected CSS
@@ -611,11 +611,9 @@ export default function DatePicker(props: DatePickerProps) {
     }
   }
 
-  createEffect(
-    on(time, (t) => {
-      if (t) setTimeInput(formatTimeDisplay(t));
-    }),
-  );
+  createEffect(time, (t) => {
+    if (t) setTimeInput(formatTimeDisplay(t));
+  });
 
   // ── Click outside ──────────────────────────────────────────────────────────
 
@@ -631,9 +629,9 @@ export default function DatePicker(props: DatePickerProps) {
     }
   }
 
-  onMount(() => {
+  onSettled(() => {
     document.addEventListener("mousedown", handleClickOutside);
-    onCleanup(() => document.removeEventListener("mousedown", handleClickOutside));
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   });
 
   // ── Reposition on scroll / resize ──────────────────────────────────────────
@@ -648,14 +646,14 @@ export default function DatePicker(props: DatePickerProps) {
     });
   }
 
-  createEffect(() => {
-    if (!open()) return;
+  createEffect(open, (isOpen) => {
+    if (!isOpen) return;
     window.addEventListener("scroll", reposition, { passive: true, capture: true });
     window.addEventListener("resize", reposition);
-    onCleanup(() => {
+    return () => {
       window.removeEventListener("scroll", reposition, { capture: true } as EventListenerOptions);
       window.removeEventListener("resize", reposition);
-    });
+    };
   });
 
   // ── Display value ──────────────────────────────────────────────────────────
@@ -728,7 +726,7 @@ export default function DatePicker(props: DatePickerProps) {
         type="button"
         aria-label={props.ariaLabel}
         aria-haspopup="dialog"
-        aria-expanded={open()}
+        aria-expanded={ariaBool(open())}
         disabled={props.disabled}
         class={
           props.triggerClass ??
@@ -753,7 +751,7 @@ export default function DatePicker(props: DatePickerProps) {
           <div
             ref={(el) => {
               popoverPanelRef = el;
-              onCleanup(useTopLayer(el));
+              useTopLayer(el);
             }}
             data-testid="datepicker-popover"
             class="ksui-datepicker-popover"
@@ -942,7 +940,7 @@ export default function DatePicker(props: DatePickerProps) {
                   type="button"
                   role="switch"
                   aria-label="End date"
-                  aria-checked={endActive()}
+                  aria-checked={ariaTri(endActive())}
                   data-testid="datepicker-end-date-toggle"
                   onClick={() => {
                     const next = !endActive();

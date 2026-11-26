@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import ChartLegendBasic from "../examples/chart-legend-basic";
 import chartLegendBasicSrc from "../examples/chart-legend-basic.tsx?raw";
 import { Example } from "../components/Example";

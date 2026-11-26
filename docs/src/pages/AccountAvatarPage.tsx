@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import AccountAvatarBasic from "../examples/account-avatar-basic";
 import src from "../examples/account-avatar-basic.tsx?raw";
 import { Example } from "../components/Example";

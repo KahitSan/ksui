@@ -1,5 +1,6 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX } from "solid-js";
-import { Portal } from "solid-js/web";
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
 import { useTopLayer } from "../../utils/top-layer";
 import { usePopoverMount } from "../../utils/modal-layer";
 import ChevronsUpDown from "../../icons/chevrons-up-down";
@@ -93,8 +94,8 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
     });
   };
 
-  createEffect(() => {
-    if (!open()) return;
+  createEffect(open, (isOpen) => {
+    if (!isOpen) return;
     // Initial measurement + focus + listeners.
     updatePosition();
     queueMicrotask(() => inputRef?.focus());
@@ -119,12 +120,12 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
     window.addEventListener("resize", onReflow);
     // Capture phase so we catch scrolls in every ancestor.
     window.addEventListener("scroll", onReflow, true);
-    onCleanup(() => {
+    return () => {
       document.removeEventListener("mousedown", onDocClick);
       document.removeEventListener("keydown", onEsc);
       window.removeEventListener("resize", onReflow);
       window.removeEventListener("scroll", onReflow, true);
-    });
+    };
   });
 
   const emptyStateLabel = () => {
@@ -152,11 +153,11 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
         data-testid={props.triggerTestId}
         disabled={props.disabled || busy()}
         onClick={() => !props.disabled && setOpen((o) => !o)}
-        class={
+        class={[
           props.triggerClass ??
           "inline-flex items-center gap-1.5 text-xs text-[var(--ks-fg,#ffffff)] bg-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] hover:bg-[var(--ks-surface-raised,#1a1a1a)] border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_60%,transparent)] rounded px-2 py-1 cursor-pointer transition-colors"
-        }
-        classList={{ "cursor-not-allowed opacity-60": props.disabled }}
+        , { "cursor-not-allowed opacity-60": props.disabled }]}
+
         title={props.disabled ? undefined : "Click to select"}
       >
         <span class={props.triggerLabelClass ?? "truncate max-w-[180px]"}>
@@ -173,7 +174,7 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
           <div
             ref={(el) => {
               popupRef = el;
-              onCleanup(useTopLayer(el));
+              useTopLayer(el);
             }}
             class="z-[10000] rounded-md border border-[var(--ks-input-border,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
             style={popupStyle()}
@@ -202,11 +203,11 @@ export default function SearchableSelect(props: SearchableSelectProps): JSX.Elem
                       <button
                         type="button"
                         onClick={() => select(opt)}
-                        class="w-full text-left px-3 py-2 text-xs hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_10%,transparent)] transition-colors flex items-center justify-between gap-2"
-                        classList={{
+                        class={["w-full text-left px-3 py-2 text-xs hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_10%,transparent)] transition-colors flex items-center justify-between gap-2", {
                           "text-[var(--ks-accent,#fbbf24)]": selected(),
                           "text-[var(--ks-fg,#ffffff)]": !selected(),
-                        }}
+                        }]}
+
                       >
                         <span class="flex flex-col min-w-0">
                           <span class="font-medium truncate">{opt.label}</span>

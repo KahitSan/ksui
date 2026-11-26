@@ -1,5 +1,6 @@
-import { createSignal, Show, type JSX } from "solid-js";
-import { A, useLocation } from "@solidjs/router";
+import { createSignal, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { useLocation } from "@solidjs/router";
 import Menu from "@kahitsan/ksui/icons/menu";
 import TriangleAlert from "@kahitsan/ksui/icons/triangle-alert";
 import { Sidebar } from "./components/Sidebar";
@@ -61,9 +62,9 @@ export function App(props: { children?: JSX.Element }): JSX.Element {
         >
           <Menu size={20} />
         </button>
-        <A href="/" class="brand">
+        <a href="/" class="brand">
           KS<span class="brand-accent">UI</span>
-        </A>
+        </a>
         <span class="brand-sub">Docs</span>
         <VersionDropdown />
         <div class="topbar-spacer" />
@@ -71,7 +72,7 @@ export function App(props: { children?: JSX.Element }): JSX.Element {
         <GitHubLinks />
       </header>
       <div class="body">
-        <aside class="sidebar-wrap" classList={{ open: navOpen() }} onClick={() => setNavOpen(false)}>
+        <aside class={["sidebar-wrap", { open: navOpen() }]}  onClick={() => setNavOpen(false)}>
           <Sidebar />
         </aside>
         <Show when={navOpen()}>

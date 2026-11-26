@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import ButtonHudBasic from "../examples/button-hud-basic";
 import buttonHudBasicSrc from "../examples/button-hud-basic.tsx?raw";
 import { Example } from "../components/Example";

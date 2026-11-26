@@ -49,8 +49,9 @@ export default function ExistingAttachmentTile(props: Props) {
     if (currentUrl) URL.revokeObjectURL(currentUrl);
     currentUrl = null;
   };
-  createEffect(() => {
-    const href = props.rawHref ?? null;
+  createEffect(
+    () => ({ href: props.rawHref ?? null, init: props.rawInit }),
+    ({ href, init }) => {
     const id = ++requestId;
     revokeUrl();
     setBlob(null);
@@ -59,7 +60,7 @@ export default function ExistingAttachmentTile(props: Props) {
       return;
     }
     setBlobLoading(true);
-    void fetch(href, { credentials: "include", ...props.rawInit })
+    void fetch(href, { credentials: "include", ...init })
       .then(async (res) => (res.ok ? URL.createObjectURL(await res.blob()) : null))
       .then((url) => {
         if (id !== requestId) {
@@ -75,7 +76,8 @@ export default function ExistingAttachmentTile(props: Props) {
       .finally(() => {
         if (id === requestId) setBlobLoading(false);
       });
-  });
+  },
+  );
   onCleanup(() => {
     requestId++;
     revokeUrl();

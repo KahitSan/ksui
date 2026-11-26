@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import BuildLogoSrcBasic from "../examples/build-logo-src-basic";
 import src from "../examples/build-logo-src-basic.tsx?raw";
 import { Example } from "../components/Example";

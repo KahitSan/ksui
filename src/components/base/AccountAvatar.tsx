@@ -20,7 +20,7 @@
 // <img> so chip sizing is identical regardless of source.
 
 import { Show } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Dynamic } from "@solidjs/web";
 import { getAccountIcon } from "../../utils/account-icons";
 import { buildLogoSrc } from "../../utils/account-logo-url";
 

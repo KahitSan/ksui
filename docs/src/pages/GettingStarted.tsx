@@ -1,5 +1,4 @@
-import { type JSX } from "solid-js";
-import { A } from "@solidjs/router";
+import type { JSX } from "@solidjs/web";
 import { CodeBlock } from "../components/CodeBlock";
 import { PackageManagerTabs } from "../components/PackageManagerTabs";
 import { PageFooter } from "../components/PageFooter";
@@ -92,9 +91,9 @@ export default function BilledTo() {
 
       <h2>Components</h2>
       <p>
-        Browse the kit: <A href="/components/button">Button</A>, <A href="/components/modal">Modal</A>,{" "}
-        <A href="/components/combo-box">Combo Box</A>,{" "}
-        <A href="/components/markdown-notes">Markdown Notes</A>.
+        Browse the kit: <a href="/components/button">Button</a>, <a href="/components/modal">Modal</a>,{" "}
+        <a href="/components/combo-box">Combo Box</a>,{" "}
+        <a href="/components/markdown-notes">Markdown Notes</a>.
       </p>
 
       <PageFooter path="/getting-started" />

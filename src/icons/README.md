@@ -12,7 +12,7 @@ import Search from "@kahitsan/ksui/icons/search";
 
 Named imports are also available from `@kahitsan/ksui/icons`. A tree-shaking bundler can discard unused icon modules.
 
-The components retain an SVG root. `size`, `width`, `height`, `class`, `classList`, SVG refs, style, events, and accessible attributes remain available. Artwork uses `currentColor`, so normal text and theme colors apply. Icons are decorative by default. Supply `title` or an accessible label when the image itself conveys information.
+The components retain an SVG root. `size`, `width`, `height`, `class` (string, array, or object form), SVG refs, style, events, and accessible attributes remain available. Artwork uses `currentColor`, so normal text and theme colors apply. Icons are decorative by default. Supply `title` or an accessible label when the image itself conveys information.
 
 The Star includes a distinct filled rendition. Its fill inherits the SVG fill value, including CSS classes. Use `fill="currentColor"` to show the filled rendition.
 

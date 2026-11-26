@@ -1,5 +1,5 @@
 /* @refresh reload */
-import { render } from "solid-js/web";
+import { render } from "@solidjs/web";
 import { createSignal } from "solid-js";
 import Modal from "../src/components/base/Modal";
 import DatePicker from "../src/components/base/DatePicker";

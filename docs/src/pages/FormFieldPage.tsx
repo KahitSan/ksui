@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import FormFieldBasic from "../examples/form-field-basic";
 import formFieldBasicSrc from "../examples/form-field-basic.tsx?raw";
 import { Example } from "../components/Example";

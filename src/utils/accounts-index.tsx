@@ -17,7 +17,8 @@
 // fetch 404s/fails and the index stays empty, so resolveAccount() then falls back
 // to the type-default glyph.
 
-import { createResource, type Resource } from "solid-js";
+import { createRoot, runWithOwner } from "solid-js";
+import { createFetchResource, type FetchResource } from "./fetch-resource";
 import { getActiveWorkspaceId } from "./integration";
 import type { AvatarAccount } from "../components/base/AccountAvatar";
 
@@ -71,12 +72,14 @@ async function fetchAccountsIndex(wsId: number | string | null): Promise<IndexSh
 
 // Module-level singletons so a page with N rows fires one fetch per org, not
 // 2*N. Created on first useAccountsIndex() call.
-let sharedResource: Resource<IndexShape> | undefined;
+let sharedResource: FetchResource<IndexShape> | undefined;
 
-export function useAccountsIndex(): Resource<IndexShape> {
+export function useAccountsIndex(): FetchResource<IndexShape> {
   if (!sharedResource) {
-    const [data] = createResource(() => getActiveWorkspaceId(), fetchAccountsIndex);
-    sharedResource = data;
+    // Detached: the shared index must outlive whichever component asked first.
+    sharedResource = runWithOwner(null, () =>
+      createRoot(() => createFetchResource(() => getActiveWorkspaceId(), fetchAccountsIndex)),
+    )!;
   }
   return sharedResource;
 }

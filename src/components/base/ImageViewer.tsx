@@ -13,10 +13,11 @@
 // with unscoped `ksui-imgviewer-*` class names. Mount === open, unmount === closed
 // (wrap in `<Show when={…}>`).
 
-import { createSignal, onCleanup, onMount } from "solid-js";
+import { createSignal, onCleanup, onSettled } from "solid-js";
 import X from "../../icons/x";
 import { lockPullToRefresh, unlockPullToRefresh } from "../../utils/dom";
 import { injectCSS } from "../../utils/inject-css";
+import { ariaBool } from "../../utils/aria";
 
 const STYLE_ID = "ksui-image-viewer-style";
 // The backdrop scrim maps to --ks-overlay (§6a); the img/close-button chrome
@@ -49,7 +50,7 @@ export default function ImageViewer(props: Props) {
   lockPullToRefresh();
   onCleanup(unlockPullToRefresh);
 
-  onMount(() => {
+  onSettled(() => {
     if (dialogEl && !dialogEl.open) {
       try {
         dialogEl.showModal();
@@ -91,7 +92,7 @@ export default function ImageViewer(props: Props) {
       >
         <X size={22} />
       </button>
-      <div class="ksui-imgviewer-frame" aria-busy={!loaded()}>
+      <div class="ksui-imgviewer-frame" aria-busy={ariaBool(!loaded())}>
         <img
           src={props.src}
           alt={props.alt || ""}

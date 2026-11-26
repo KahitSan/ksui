@@ -7,7 +7,7 @@
 // advanced-fields toggle entirely, for a caller that locks `category` to one
 // value and never needs EWT/sharing (e.g. a "record my own expense" surface).
 
-import { batch, createEffect, createSignal, Show, For } from "solid-js";
+import { createEffect, createSignal, Show, For } from "solid-js";
 import X from "../../icons/x";
 import Upload from "../../icons/upload";
 import FileIcon from "../../icons/file";
@@ -44,6 +44,7 @@ import {
   createPendingFile,
   revokePendingFile,
 } from "../../utils/pending-file";
+import { ariaBool } from "../../utils/aria";
 
 export type TransactionAccount = PaymentAccountOption & {
   balance?: number | string | null;
@@ -122,7 +123,7 @@ function payeeSecondary(p: PayeeOption): string | null {
   );
 }
 
-type IconComponent = (props: { size?: number; class?: string }) => import("solid-js").JSX.Element;
+type IconComponent = (props: { size?: number; class?: string }) => import("@solidjs/web").JSX.Element;
 
 const CATEGORY_TONE: Record<
   string,
@@ -363,10 +364,9 @@ export default function TransactionForm(props: TransactionFormProps) {
   const [selectedPayee, setSelectedPayee] = createSignal<PayeeOption | null>(
     null
   );
-  createEffect(() => {
-    const name = props.payee;
-    const id = props.payeeId;
-    const sel = selectedPayee();
+  createEffect(
+    () => ({ name: props.payee, id: props.payeeId, sel: selectedPayee() }),
+    ({ name, id, sel }) => {
     if (id != null && name && !sel) {
       setSelectedPayee({ id, name, kind: "vendor" });
     } else if (sel && sel.name !== name) {
@@ -374,12 +374,14 @@ export default function TransactionForm(props: TransactionFormProps) {
     } else if (!name && sel) {
       setSelectedPayee(null);
     }
-  });
+  },
+  );
   // A payee picked from search already carries its tax ID; one restored from a
   // saved row does not, so load it before deciding what to show.
-  createEffect(() => {
-    const sel = selectedPayee();
-    if (!props.setPayeeTin || !sel || sel.tin !== undefined) return;
+  createEffect(
+    () => ({ sel: selectedPayee(), enabled: !!props.setPayeeTin }),
+    ({ sel, enabled }) => {
+    if (!enabled || !sel || sel.tin !== undefined) return;
     const id = sel.id;
     loadPayee(id)
       .then((rec) => {
@@ -388,7 +390,8 @@ export default function TransactionForm(props: TransactionFormProps) {
         setSelectedPayee({ ...cur, tin: rec.tin ?? null, address: rec.address ?? null });
       })
       .catch(() => {});
-  });
+  },
+  );
   const taxPayee = () =>
     props.setPayeeTin && props.category !== "sale" && catConfig().showPayee
       ? selectedPayee()
@@ -413,8 +416,9 @@ export default function TransactionForm(props: TransactionFormProps) {
     { id: number; name: string }[]
   >();
   let subcategoryRequestId = 0;
-  createEffect(() => {
-    const appliesTo = subcategoryAppliesTo();
+  createEffect(
+    subcategoryAppliesTo,
+    (appliesTo) => {
     const requestId = ++subcategoryRequestId;
     if (!appliesTo) {
       setSubcategoryOptions(undefined);
@@ -441,7 +445,8 @@ export default function TransactionForm(props: TransactionFormProps) {
         subcategoryCache.set(appliesTo, options);
         if (requestId === subcategoryRequestId) setSubcategoryOptions(options);
       });
-  });
+  },
+  );
 
   // True once the async resource has resolved at least once. Gates the
   // SearchableSelect mount so the loading-state placeholder shows while the
@@ -453,12 +458,20 @@ export default function TransactionForm(props: TransactionFormProps) {
     return props.allowPayable === false ? base : [...base, "payable"];
   };
 
-  createEffect(() => {
-    if (props.category !== "business" && props.transferFeeEnabled) {
-      props.setTransferFeeEnabled(false);
-      props.setTransferFeeAmount("");
+  createEffect(
+    () => ({
+      category: props.category,
+      enabled: props.transferFeeEnabled,
+      setEnabled: props.setTransferFeeEnabled,
+      setAmount: props.setTransferFeeAmount,
+    }),
+    ({ category, enabled, setEnabled, setAmount }) => {
+    if (category !== "business" && enabled) {
+      setEnabled(false);
+      setAmount("");
     }
-  });
+  },
+  );
 
   function addFiles(files: File[]) {
     const existing = new Set(
@@ -519,8 +532,8 @@ export default function TransactionForm(props: TransactionFormProps) {
 
   return (
     <div
-      class="relative flex flex-col flex-1 min-h-0"
-      classList={{ "ks-transaction-compact": compact(), "ks-transaction-compact-details": compact() && viewMode() === "advanced" }}
+      class={["relative flex flex-col flex-1 min-h-0", { "ks-transaction-compact": compact(), "ks-transaction-compact-details": compact() && viewMode() === "advanced" }]}
+
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -544,7 +557,7 @@ export default function TransactionForm(props: TransactionFormProps) {
               <Button
                 type="button"
                 role="tab"
-                aria-selected={props.category === cat}
+                aria-selected={ariaBool(props.category === cat)}
                 data-testid={`transactions-form-category-${cat}`}
                 intent="secondary"
                 variant="ghost"
@@ -552,8 +565,7 @@ export default function TransactionForm(props: TransactionFormProps) {
                 noGlow
                 noRipple
                 noScanline
-                class={`ks-transaction-type-button ks-transaction-type-${cat}`}
-                classList={{ "ks-transaction-type-active": props.category === cat }}
+                class={`ks-transaction-type-button ks-transaction-type-${cat}${props.category === cat ? " ks-transaction-type-active" : ""}`}
                 onClick={() => {
                   props.setCategory(cat);
                   props.setSourceAccount("");
@@ -587,8 +599,8 @@ export default function TransactionForm(props: TransactionFormProps) {
         }}
         class="flex flex-col flex-1 min-h-0"
       >
-        <div class="flex-1 overflow-x-hidden overflow-y-auto px-5 sm:px-6 py-5 space-y-4"
-          classList={{ "ks-transaction-compact-body": compact() }}>
+        <div class={["flex-1 overflow-x-hidden overflow-y-auto px-5 sm:px-6 py-5 space-y-4", { "ks-transaction-compact-body": compact() }]}
+          >
           <Show when={props.error}>
             <div
               class="rounded-lg border border-[color-mix(in_srgb,var(--ks-danger,#ef4444)_30%,transparent)] bg-[color-mix(in_srgb,var(--ks-danger,#ef4444)_10%,transparent)] px-3 py-2 text-sm text-[var(--ks-danger-fg,#f87171)]"
@@ -788,16 +800,14 @@ export default function TransactionForm(props: TransactionFormProps) {
                   icon={Store}
                   noun="payee"
                   placeholder={catConfig().payeePlaceholder!}
-                  onChange={(p) =>
-                    // One batch so the sync effect never sees the new name with the old id.
-                    batch(() => {
-                      setSelectedPayee(p);
-                      props.setPayee(p ? p.name : "");
-                      props.setPayeeId(p ? p.id : null);
-                      props.setPayeeTin?.("");
-                      props.setPayeeAddress?.("");
-                    })
-                  }
+                  onChange={(p) => {
+                    // Writes flush together, so the sync effect never sees the new name with the old id.
+                    setSelectedPayee(p);
+                    props.setPayee(p ? p.name : "");
+                    props.setPayeeId(p ? p.id : null);
+                    props.setPayeeTin?.("");
+                    props.setPayeeAddress?.("");
+                  }}
                 />
               </FormField>
               <FormField label={props.category === "sale" ? "Invoice ID" : "Receipt / Ref #"}>
@@ -1064,7 +1074,7 @@ export default function TransactionForm(props: TransactionFormProps) {
           </div>
 
           <Show when={!props.simpleMode}>
-            <div class="flex justify-center pt-2" classList={{ "ks-transaction-compact-details-toggle": compact() }}>
+            <div class={["flex justify-center pt-2", { "ks-transaction-compact-details-toggle": compact() }]} >
               <button
                 type="button"
                 onClick={() =>
@@ -1100,18 +1110,18 @@ export default function TransactionForm(props: TransactionFormProps) {
           </Show>
         </div>
 
-        <div class="px-5 sm:px-6 py-4 border-t border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] bg-[var(--ks-bg,#0a0a0a)] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0"
-          classList={{ "ks-transaction-compact-footer": compact() }}>
+        <div class={["px-5 sm:px-6 py-4 border-t border-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_60%,transparent)] bg-[var(--ks-bg,#0a0a0a)] flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0", { "ks-transaction-compact-footer": compact() }]}
+          >
           <div class="text-xs text-[var(--ks-fg-subtle,#71717a)]">
             <span class="text-[var(--ks-fg-subtle,#71717a)]">Will record as </span>
             <span
-              class="font-bold"
-              classList={{
+              class={["font-bold", {
                 "text-[var(--ks-success-fg,#34d399)]": props.category === "sale",
                 "text-[var(--ks-danger-fg,#f87171)]": props.category === "expense",
                 "text-[var(--ks-accent,#fbbf24)]": props.category === "payable",
                 "text-[var(--ks-info,#38bdf8)]": props.category === "business",
-              }}
+              }]}
+
             >
               {(CATEGORY_FORM[props.category] || CATEGORY_FORM.expense).label}
             </span>

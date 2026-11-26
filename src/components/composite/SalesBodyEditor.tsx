@@ -12,7 +12,7 @@ import {
   createEffect,
   For,
   Show,
-  onMount,
+  onSettled,
 } from "solid-js";
 import ComboBox from "./ComboBox";
 import type { ClientOption } from "./picker-types";
@@ -123,7 +123,8 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
   const [loadError, setLoadError] = createSignal<string | null>(null);
   const [pickerOpen, setPickerOpen] = createSignal(false);
 
-  onMount(async () => {
+  onSettled(() => {
+    void (async () => {
     try {
       const res = await fetch("/api/packages", { credentials: "include" });
       if (!res.ok)
@@ -139,6 +140,8 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
     } finally {
       setLoading(false);
     }
+
+    })();
   });
 
   function addVariant(pkg: Package, variant: Variant) {
@@ -207,19 +210,19 @@ export default function SalesBodyEditor(props: SalesBodyEditorProps) {
   const total = createMemo(() => Math.max(0, subtotal() - effectiveDiscount()));
   const cartPackageIds = createMemo(() => props.items.map((l) => l.package_id));
 
-  createEffect(() => {
-    const v = props.voucher;
+  createEffect(
+    () => ({ voucher: props.voucher, subtotal: subtotal(), cartIds: cartPackageIds() }),
+    ({ voucher: v, subtotal: sub, cartIds }) => {
     if (!v) return;
-    const sub = subtotal();
     const minOk = sub >= Number(v.minimum_purchase ?? 0);
     const allowed = v.applicable_packages;
-    const cartIds = cartPackageIds();
     const pkgsOk =
       !allowed ||
       allowed.length === 0 ||
       (cartIds.length > 0 && cartIds.every((id) => allowed.includes(id)));
     if (!minOk || !pkgsOk) props.setVoucher(null);
-  });
+  },
+  );
 
   return (
     <div class="rounded-lg border border-[color-mix(in_srgb,var(--ks-success,#10b981)_20%,transparent)] bg-[color-mix(in_srgb,var(--ks-success,#10b981)_5%,transparent)] p-3 space-y-3">

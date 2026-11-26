@@ -9,12 +9,14 @@
 
 import { Modal } from "../base/Modal";
 import { highlightMatch } from "../../utils/highlight";
-import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX } from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import Ticket from "../../icons/ticket";
 import X from "../../icons/x";
 import Search from "../../icons/search";
 import Loader2 from "../../icons/loader-2";
 import CalendarClock from "../../icons/calendar-clock";
+import { ariaBool } from "../../utils/aria";
 
 export interface VoucherOption {
   id: number;
@@ -262,20 +264,24 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
 
   // Debounce the keystrokes into a server-side search, so filtering spans the
   // whole table rather than only the pages already pulled down.
-  createEffect(() => {
-    const q = query();
-    if (!open()) return;
+  createEffect(
+    () => ({ q: query(), isOpen: open() }),
+    ({ q, isOpen }) => {
+    if (!isOpen) return;
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => setDebouncedQuery(q.trim()), SEARCH_DEBOUNCE_MS);
-  });
+  },
+  );
   onCleanup(() => clearTimeout(debounceTimer));
 
   // Refetch from page 1 whenever the dialog opens or the search term settles.
-  createEffect(() => {
-    if (!open()) return;
-    const search = debouncedQuery();
+  createEffect(
+    () => ({ isOpen: open(), search: debouncedQuery() }),
+    ({ isOpen, search }) => {
+    if (!isOpen) return;
     loadPage(1, search, false);
-  });
+  },
+  );
 
   const hasMore = createMemo(() => vouchers().length < total());
 
@@ -288,10 +294,10 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
   // Re-created after every append — an observer only reports a CHANGE in
   // intersection, so a sentinel that stays on screen (list still shorter than
   // the viewport) would never fire again and paging would stall.
-  createEffect(() => {
-    const loadedCount = vouchers().length;
-    if (!open() || loadedCount === 0) return;
-    const el = sentinel();
+  createEffect(
+    () => ({ loadedCount: vouchers().length, isOpen: open(), el: sentinel() }),
+    ({ loadedCount, isOpen, el }) => {
+    if (!isOpen || loadedCount === 0) return;
     if (!el || typeof IntersectionObserver === "undefined") return;
     const io = new IntersectionObserver(
       (entries) => {
@@ -300,8 +306,9 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
       { rootMargin: "120px" },
     );
     io.observe(el);
-    onCleanup(() => io.disconnect());
-  });
+    return () => io.disconnect();
+  },
+  );
 
   const today = () => new Date().toISOString().slice(0, 10);
 
@@ -386,10 +393,10 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
     if (e.key === "Escape") e.stopPropagation();
   };
 
-  createEffect(() => {
-    if (!open()) return;
+  createEffect(open, (isOpen) => {
+    if (!isOpen) return;
     document.addEventListener("keydown", swallowEscape, true);
-    onCleanup(() => document.removeEventListener("keydown", swallowEscape, true));
+    return () => document.removeEventListener("keydown", swallowEscape, true);
   });
 
   const metaLine = (v: VoucherOption): string =>
@@ -406,15 +413,17 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
 
   // The footer clamps the description to two lines; offer "More" only when the
   // text actually overflowed. Re-measured whenever the staged description changes.
-  createEffect(() => {
-    const notes = draftNotes();
+  createEffect(
+    () => draftNotes(),
+    (notes) => {
     const el = descEl;
     if (!notes || !el) {
       setDescOverflowing(false);
       return;
     }
     setDescOverflowing(el.scrollHeight > el.clientHeight);
-  });
+  },
+  );
 
   const expiresSoon = (v: VoucherOption): boolean => {
     if (!v.valid_until) return false;
@@ -436,7 +445,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
           props.compact ? "px-2.5 py-2" : "px-3 py-2.5"
         } rounded-lg bg-[color-mix(in_srgb,var(--ks-border,rgba(39,39,42,0.5))_30%,transparent)] border border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_50%,transparent)] hover:border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_5%,transparent)] transition-colors text-sm text-left cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
         aria-haspopup="dialog"
-        aria-expanded={open()}
+        aria-expanded={ariaBool(open())}
       >
         <Ticket size={16} class="shrink-0 text-[var(--ks-fg-muted,#a1a1aa)]" />
         <Show when={props.selected} fallback={<span class="text-[var(--ks-fg-subtle,#71717a)] italic">No voucher</span>}>
@@ -538,16 +547,16 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                 {(v) => {
                   const selected = () => draft()?.id === v.id;
                   return (
-                    <li role="option" aria-selected={selected()}>
+                    <li role="option" aria-selected={ariaBool(selected())}>
                       <button
                         type="button"
                         data-testid={`voucher-picker-result-${v.id}`}
                         onClick={() => stage(v)}
-                        class="w-full text-left px-3 py-3 mb-1 rounded-lg border transition-colors flex items-center gap-3 cursor-pointer border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_40%,transparent)] hover:border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_8%,transparent)]"
-                        classList={{
+                        class={["w-full text-left px-3 py-3 mb-1 rounded-lg border transition-colors flex items-center gap-3 cursor-pointer border-[color-mix(in_srgb,var(--ks-border-strong,#3f3f46)_40%,transparent)] hover:border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_8%,transparent)]", {
                           "border-[color-mix(in_srgb,var(--ks-primary,#c9a961)_60%,transparent)] bg-[color-mix(in_srgb,var(--ks-primary,#c9a961)_12%,transparent)]":
                             selected(),
-                        }}
+                        }]}
+
                       >
                         <span class="flex flex-col items-center gap-1 shrink-0">
                           <Ticket size={18} class="text-[var(--ks-success-fg,#34d399)]" aria-hidden="true" />
@@ -567,7 +576,7 @@ export default function VoucherPicker(props: VoucherPickerProps): JSX.Element {
                                 aria-hidden="true"
                               />
                             </Show>
-                            <span class="truncate" classList={{ "text-[var(--ks-warning-fg,#fbbf24)]": runningOut(v) }}>
+                            <span class={["truncate", { "text-[var(--ks-warning-fg,#fbbf24)]": runningOut(v) }]} >
                               {metaLine(v)}
                             </span>
                           </span>

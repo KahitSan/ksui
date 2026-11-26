@@ -9,7 +9,8 @@
 // fetches the SIBLING clients plugin at /api/clients/:id and degrades to a
 // non-hovering chip when that 404s.
 
-import { For, Show, createMemo, createSignal, createUniqueId, onCleanup, type JSX } from "solid-js";
+import { For, Show, createMemo, createSignal, createUniqueId, onCleanup } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { highlightMatch } from "../../utils/highlight";
 import { canAccess } from "../../utils/integration";
 

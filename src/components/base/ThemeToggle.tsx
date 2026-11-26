@@ -9,8 +9,8 @@
 // are injected once at runtime via a <style> tag — the same pattern ProgressBar
 // uses — and referenced by plain, unscoped class names.
 
-import type { JSX } from "solid-js";
-import { splitProps } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { omit } from "solid-js";
 import Sun from "../../icons/sun";
 import Moon from "../../icons/moon";
 import { injectCSS } from "../../utils/inject-css";
@@ -63,14 +63,8 @@ const defaultAriaLabel = (next: ThemeToggleValue): string => `Switch to ${next} 
 export default function ThemeToggle(props: ThemeToggleProps): JSX.Element {
   injectCSS(THEME_TOGGLE_STYLE_ID, THEME_TOGGLE_CSS);
 
-  const [local, rest] = splitProps(props, [
-    "value",
-    "onToggle",
-    "ariaLabel",
-    "testId",
-    "class",
-    "onClick",
-  ]);
+  const local = props;
+  const rest = omit(props, "value", "onToggle", "ariaLabel", "testId", "class", "onClick");
 
   const isLight = (): boolean => local.value === "light";
   const next = (): ThemeToggleValue => (isLight() ? "dark" : "light");
@@ -84,7 +78,7 @@ export default function ThemeToggle(props: ThemeToggleProps): JSX.Element {
   return (
     <button
       type="button"
-      class={cn("ks-theme-toggle", local.class)}
+      class={["ks-theme-toggle", local.class]}
       aria-label={label()}
       title={label()}
       data-testid={local.testId}

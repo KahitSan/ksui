@@ -14,15 +14,15 @@ import { createContext, useContext, type Accessor } from "solid-js";
 // both mean "mount to document.body", today's behavior.
 const ModalLayerContext = createContext<Accessor<HTMLElement | null>>(() => null);
 
-export const ModalLayerProvider = ModalLayerContext.Provider;
+export const ModalLayerProvider = ModalLayerContext;
 
 /**
  * Mount target for a Portal-based popover: the nearest ancestor dialog's
  * element when rendered inside a dialog-variant Modal, else document.body.
  * Called once per popover-open (the Portal itself only reads `mount` at
- * creation), so a plain `Node` accessor — not a reactive signal — is enough.
+ * creation), so a plain element accessor — not a reactive signal — is enough.
  */
-export function usePopoverMount(): () => Node {
+export function usePopoverMount(): () => HTMLElement {
   const layer = useContext(ModalLayerContext);
   return () => layer() ?? document.body;
 }

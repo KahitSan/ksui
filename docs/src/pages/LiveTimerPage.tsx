@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import LiveTimerBasic from "../examples/live-timer-basic";
 import liveTimerBasicSrc from "../examples/live-timer-basic.tsx?raw";
 import { Example } from "../components/Example";

@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import FormActionsBasic from "../examples/form-actions-basic";
 import formActionsBasicSrc from "../examples/form-actions-basic.tsx?raw";
 import { Example } from "../components/Example";

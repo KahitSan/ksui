@@ -6,7 +6,7 @@
 // <Show when={revealed()}>); this component holds no fetch, no plugin state.
 
 import type { Component } from "solid-js";
-import { Show, createSignal, splitProps } from "solid-js";
+import { Show, createSignal, omit } from "solid-js";
 import Copy from "../../icons/copy";
 
 export interface SecretRevealProps {
@@ -23,7 +23,7 @@ export interface SecretRevealProps {
 const DEFAULT_WARNING = "Save this now - it will not be shown again.";
 
 const SecretReveal: Component<SecretRevealProps> = (props) => {
-  const [local] = splitProps(props, ["secret", "warning", "caption", "testId"]);
+  const local = props;
   const [copied, setCopied] = createSignal(false);
 
   const copy = () => {

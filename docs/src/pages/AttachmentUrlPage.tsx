@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import AttachmentUrlBasic from "../examples/attachment-url-basic";
 import src from "../examples/attachment-url-basic.tsx?raw";
 import { Example } from "../components/Example";

@@ -4,7 +4,7 @@
 // remote UI atoms; behavior is unchanged.
 
 import { Show } from "solid-js";
-import type { JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 export default function FormField(props: { label: string; id?: string; children: JSX.Element; hint?: string }) {
   return (

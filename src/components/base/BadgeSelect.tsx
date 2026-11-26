@@ -1,7 +1,9 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX } from "solid-js";
-import { Portal } from "solid-js/web";
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
 import { useTopLayer } from "../../utils/top-layer";
 import { usePopoverMount } from "../../utils/modal-layer";
+import { ariaBool } from "../../utils/aria";
 
 export interface BadgeSelectOption {
   /** Stable identity of the option (what `value` matches and `onChange` emits). */
@@ -111,8 +113,8 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
     });
   };
 
-  createEffect(() => {
-    if (!open()) return;
+  createEffect(open, (isOpen) => {
+    if (!isOpen) return;
     setQuery("");
     updatePosition();
     if (showSearch()) queueMicrotask(() => searchRef?.focus());
@@ -132,12 +134,12 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
     document.addEventListener("keydown", onEsc);
     window.addEventListener("resize", onReflow);
     window.addEventListener("scroll", onReflow, true);
-    onCleanup(() => {
+    return () => {
       document.removeEventListener("mousedown", onDocClick);
       document.removeEventListener("keydown", onEsc);
       window.removeEventListener("resize", onReflow);
       window.removeEventListener("scroll", onReflow, true);
-    });
+    };
   });
 
   const handleSelect = async (next: string) => {
@@ -164,7 +166,7 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
         type="button"
         data-testid={props.testId}
         aria-haspopup="listbox"
-        aria-expanded={open()}
+        aria-expanded={ariaBool(open())}
         disabled={props.disabled || busy()}
         onClick={() => !props.disabled && setOpen((o) => !o)}
         class={`text-xs font-medium px-1.5 py-0.5 rounded cursor-pointer transition-colors hover:ring-1 hover:ring-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_40%,transparent)] ${badgeClass()} ${
@@ -179,7 +181,7 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
           <div
             ref={(el) => {
               popupRef = el;
-              onCleanup(useTopLayer(el));
+              useTopLayer(el);
             }}
             role="listbox"
             class="z-[100] rounded-md border border-[var(--ks-border-strong,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-surface-raised,#1a1a1a)_95%,transparent)] backdrop-blur shadow-xl overflow-hidden flex flex-col"
@@ -207,7 +209,7 @@ export default function BadgeSelect(props: BadgeSelectProps): JSX.Element {
                     <button
                       type="button"
                       role="option"
-                      aria-selected={opt.value === props.value}
+                      aria-selected={ariaBool(opt.value === props.value)}
                       onClick={() => handleSelect(opt.value)}
                       class={`w-full text-left px-3 py-2 text-xs hover:bg-[color-mix(in_srgb,var(--ks-accent,#fbbf24)_10%,transparent)] transition-colors flex items-center justify-between gap-2 ${
                         opt.value === props.value ? "text-[var(--ks-accent,#fbbf24)]" : "text-[var(--ks-fg,#ffffff)]"

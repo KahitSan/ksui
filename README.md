@@ -87,6 +87,16 @@ You also need a SolidJS app. If you are starting fresh, set one up with
 [`vite-plugin-solid`](https://github.com/solidjs/vite-plugin-solid), which is the
 tool that compiles Solid components.
 
+### Solid 2 prerelease
+
+The `solid2` dist-tag carries prereleases built for Solid 2 (`solid-js` and
+`@solidjs/web` `^2.0.0`, `vite-plugin-solid` 3, Vite 8). Pin an exact version;
+`latest` stays on Solid 1.
+
+```
+npm install @kahitsan/ksui@solid2
+```
+
 ## A tiny usage example
 
 ```tsx

@@ -1,5 +1,5 @@
 import { createSignal, For } from "solid-js";
-import { render } from "solid-js/web";
+import { render } from "@solidjs/web";
 import { isIconName, loadIcon } from "../src/icons/registry";
 import * as icons from "../src/icons";
 import contract from "../scripts/icon-artwork-contract.json";
@@ -26,7 +26,7 @@ function App() {
   const [selected, setSelected] = createSignal("");
   const [lookup, setLookup] = createSignal("");
   return (
-    <main classList={{ dark: dark() }}>
+    <main class={{ dark: dark() }}>
       <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; font: 14px system-ui, sans-serif; }

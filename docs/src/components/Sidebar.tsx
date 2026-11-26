@@ -1,5 +1,6 @@
-import { For, Show, type JSX } from "solid-js";
-import { A, useLocation } from "@solidjs/router";
+import { For, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { useLocation } from "@solidjs/router";
 import { ALL_ENTRIES, groupsForVersion, isObsoleteInVersion } from "../registry";
 import { selectedVersion } from "../versions";
 
@@ -25,10 +26,10 @@ export function Sidebar(): JSX.Element {
               <For each={group.items}>
                 {(item) => (
                   <li>
-                    <A
+                    <a
                       href={item.path}
-                      class="sidebar-link"
-                      classList={{ active: isActive(item.path) }}
+                      class={["sidebar-link", { active: isActive(item.path) }]}
+
                     >
                       <span>{item.label}</span>
                       <Show when={isObsoleteInVersion(item, selectedVersion())}>
@@ -36,7 +37,7 @@ export function Sidebar(): JSX.Element {
                           obsolete
                         </span>
                       </Show>
-                    </A>
+                    </a>
                   </li>
                 )}
               </For>

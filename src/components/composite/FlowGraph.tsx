@@ -11,8 +11,9 @@
 // layoutGraph. Connectors are drawn BEHIND the opaque cards so an edge never
 // visibly crosses a node block.
 
-import type { Component, JSX } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import type { Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Dynamic } from "@solidjs/web";
 import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import Database from "../../icons/database";
 import MousePointerClick from "../../icons/mouse-pointer-click";
@@ -261,9 +262,10 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
   // instead of leaving the view on the previous flow's now-empty region.
   const nodeSig = createMemo(() => props.nodes.map((n) => n.id).join("|"));
   let lastSig: string | null = null;
-  createEffect(() => {
-    const sig = nodeSig();
-    if (canvas() && sig !== lastSig && laid().nodes.length > 0 && svgRef) {
+  createEffect(
+    () => ({ sig: nodeSig(), canvas: canvas(), count: laid().nodes.length }),
+    ({ sig, canvas: hasCanvas, count }) => {
+    if (hasCanvas && sig !== lastSig && count > 0 && svgRef) {
       lastSig = sig;
       setOffsets({});
       requestAnimationFrame(() => {
@@ -278,7 +280,8 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
         setView({ x: vw / 2 - (minX + maxX) / 2, y: pad - minY, k: 1 });
       });
     }
-  });
+  },
+  );
 
   const clampK = (k: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, k));
   const zoomBy = (factor: number, cx?: number, cy?: number) => {
@@ -380,8 +383,8 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
 
   return (
     <div
-      class="ksui-fg-wrap"
-      classList={{ interactive: canvas(), scroll: vertical(), grabbing: grabbing() }}
+      class={["ksui-fg-wrap", { interactive: canvas(), scroll: vertical(), grabbing: grabbing() }]}
+
       style={
         canvas()
           ? { height: `${props.height ?? 360}px` }
@@ -450,7 +453,7 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
                       const m = () => mid(a(), b());
                       const lbl = () => clip(e.label ?? "", 18);
                       return (
-                        <g classList={{ "ksui-fg-dim": edgeDim(e) }}>
+                        <g class={{ "ksui-fg-dim": edgeDim(e) }}>
                           <path
                             class={`ksui-fg-edge ${e.accent ?? ""} ${e.dashed ? "dashed" : ""} ${
                               props.animated ? "flow" : ""
@@ -490,8 +493,8 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
                     y={n().y}
                     width={nodeW}
                     height={nodeH}
-                    class="ksui-fg-node"
-                    classList={{ clickable: clickable(), "ksui-fg-dim": nodeDim(base.id) }}
+                    class={["ksui-fg-node", { clickable: clickable(), "ksui-fg-dim": nodeDim(base.id) }]}
+
                     data-testid={tid(`node-${base.id}`)}
                     role={clickable() ? "button" : undefined}
                     tabindex={clickable() ? 0 : undefined}
@@ -532,7 +535,7 @@ export const FlowGraph: Component<FlowGraphProps> = (props) => {
                 const outs = () => ports().outBySource.get(base.id) ?? [];
                 const hasIn = () => ports().incoming.has(base.id);
                 return (
-                  <g classList={{ "ksui-fg-dim": nodeDim(base.id) }}>
+                  <g class={{ "ksui-fg-dim": nodeDim(base.id) }}>
                     {/* cx/cy are accessor-driven so handles follow a dragged node. */}
                     <Show when={hasIn()}>
                       <circle

@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import AddAttachmentTileBasic from "../examples/add-attachment-tile-basic";
 import src from "../examples/add-attachment-tile-basic.tsx?raw";
 import { Example } from "../components/Example";

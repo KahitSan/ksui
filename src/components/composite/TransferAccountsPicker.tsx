@@ -1,4 +1,5 @@
-import { Show, type JSX } from "solid-js";
+import { Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import ArrowRightLeft from "../../icons/arrow-right-left";
 import Plus from "../../icons/plus";
 import AccountAvatar from "../base/AccountAvatar";
@@ -38,15 +39,15 @@ function AccountTile(p: AccountTileProps): JSX.Element {
       type="button"
       data-testid={p.tileTestId}
       onClick={p.onEditRequest}
-      class={`group flex flex-1 min-w-0 items-center gap-3 border px-4 py-3 text-left transition-colors cursor-pointer ${p.clipClass}`}
-      classList={{
+      class={[`group flex flex-1 min-w-0 items-center gap-3 border px-4 py-3 text-left transition-colors cursor-pointer ${p.clipClass}`, {
         "border-[color-mix(in_srgb,var(--ks-info,#38bdf8)_40%,transparent)] bg-[color-mix(in_srgb,var(--ks-info,#38bdf8)_5%,transparent)] hover:bg-[color-mix(in_srgb,var(--ks-info,#38bdf8)_10%,transparent)]":
           isFilled() && isFrom(),
         "border-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_40%,transparent)] bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_5%,transparent)] hover:bg-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_10%,transparent)]":
           isFilled() && !isFrom(),
         "border-dashed border-[var(--ks-input-border,#3f3f46)] bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_40%,transparent)] hover:border-[color-mix(in_srgb,var(--ks-warning,#f59e0b)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--ks-overlay-surface,#18181b)_60%,transparent)]":
           !isFilled(),
-      }}
+      }]}
+
       aria-label={
         isFilled()
           ? `${isFrom() ? "Source" : "Destination"}: ${p.account!.name} — tap to change`
@@ -72,12 +73,12 @@ function AccountTile(p: AccountTileProps): JSX.Element {
       </Show>
       <div class="flex min-w-0 flex-col">
         <span
-          class="text-[10px] font-semibold uppercase tracking-widest"
-          classList={{
+          class={["text-[10px] font-semibold uppercase tracking-widest", {
             "text-[var(--ks-info,#38bdf8)]": isFilled() && isFrom(),
             "text-[var(--ks-accent-hover,#fcd34d)]": isFilled() && !isFrom(),
             "text-[var(--ks-fg-subtle,#71717a)]": !isFilled(),
-          }}
+          }]}
+
         >
           {isFrom() ? "From" : "To"}
         </span>
@@ -98,11 +99,11 @@ function AccountTile(p: AccountTileProps): JSX.Element {
                   <span class="truncate">{formatPHP(a.balance!)}</span>
                   <Show when={p.delta !== 0}>
                     <span
-                      class="whitespace-nowrap font-semibold"
-                      classList={{
+                      class={["whitespace-nowrap font-semibold", {
                         "text-[var(--ks-danger-fg,#f87171)]": p.delta < 0,
                         "text-[var(--ks-success-fg,#34d399)]": p.delta > 0,
-                      }}
+                      }]}
+
                       data-testid={`transactions-form-transfer-delta-${p.role}`}
                     >
                       ({p.delta > 0 ? "+" : ""}

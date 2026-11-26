@@ -1,9 +1,11 @@
-import { For, Show, createSignal, createUniqueId, onCleanup, onMount, type Component, type JSX } from "solid-js";
-import { Dynamic, Portal } from "solid-js/web";
+import { For, Show, createSignal, createUniqueId, onCleanup, onSettled, type Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Dynamic, Portal } from "@solidjs/web";
 import MoreHorizontal from "../../icons/more-horizontal";
 import { injectCSS } from "../../utils/inject-css";
 import { usePopoverMount } from "../../utils/modal-layer";
 import { useTopLayer } from "../../utils/top-layer";
+import { ariaBool } from "../../utils/aria";
 
 const STYLE_ID = "ksui-action-menu-style";
 const STYLE_CSS = `
@@ -117,7 +119,7 @@ export default function ActionMenu(props: ActionMenuProps): JSX.Element {
     event.preventDefault();
     items[next]?.focus();
   };
-  onMount(() => {
+  onSettled(() => {
     document.addEventListener("keydown", onDocumentKeyDown);
     document.addEventListener("mousedown", onDocumentPointerDown);
     window.addEventListener("resize", updatePosition);
@@ -136,7 +138,7 @@ export default function ActionMenu(props: ActionMenuProps): JSX.Element {
         type="button"
         aria-label={props.label}
         aria-haspopup="menu"
-        aria-expanded={open()}
+        aria-expanded={ariaBool(open())}
         aria-controls={open() ? menuId : undefined}
         data-testid={props.testId}
         class={`ksui-action-menu__trigger ${props.triggerClass ?? ""}`}
@@ -155,7 +157,7 @@ export default function ActionMenu(props: ActionMenuProps): JSX.Element {
           <div
             ref={(element) => {
               menu = element;
-              onCleanup(useTopLayer(element));
+              useTopLayer(element);
               queueMicrotask(updatePosition);
             }}
             id={menuId}

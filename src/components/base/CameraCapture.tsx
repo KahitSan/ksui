@@ -1,7 +1,7 @@
 // Vendored into plugin remotes.
 // getUserMedia camera capture modal. Button is ksui's own base primitive.
 
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, onCleanup, onSettled, Show } from "solid-js";
 import Button from "./Button";
 import Camera from "../../icons/camera";
 import X from "../../icons/x";
@@ -18,7 +18,8 @@ export default function CameraCapture(props: Props) {
   const [error, setError] = createSignal("");
   const [captured, setCaptured] = createSignal<string | null>(null);
 
-  onMount(async () => {
+  onSettled(() => {
+    void (async () => {
     stream()
       ?.getTracks()
       .forEach((t) => t.stop());
@@ -35,6 +36,8 @@ export default function CameraCapture(props: Props) {
     } catch {
       setError("Could not access camera. Check permissions or try the Browse button instead.");
     }
+
+    })();
   });
 
   onCleanup(() => {

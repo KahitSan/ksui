@@ -1,9 +1,16 @@
 // The picker pages the list in from the server (page/limit) and delegates the
 // search to it, so these assert the request contract as well as the rendering.
+import { flush } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 import { createSignal } from "solid-js";
 import { fireEvent, render, waitFor } from "@solidjs/testing-library";
 import VoucherPicker, { type VoucherOption } from "./VoucherPicker";
+
+// Solid 2 commits writes on a microtask; flush so the next assertion sees them.
+const click = (el: Element) => {
+  fireEvent.click(el);
+  flush();
+};
 
 /** Captures every requested URL and serves pages out of `rows`. */
 function mockPagedFetch(rows: VoucherOption[]) {
@@ -59,7 +66,7 @@ describe("VoucherPicker fetchUrl", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={100} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(calls.length).toBeGreaterThan(0));
     expect(calls[0]).toContain("/api/vouchers");
@@ -77,7 +84,7 @@ describe("VoucherPicker fetchUrl", () => {
         fetchUrl="/api/counter/vouchers"
       />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(calls.length).toBeGreaterThan(0));
     expect(calls[0]).toContain("/api/counter/vouchers");
@@ -88,7 +95,7 @@ describe("VoucherPicker fetchUrl", () => {
     const { getByTestId, getAllByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() =>
       expect(getAllByTestId(/^voucher-picker-result-/).length).toBeGreaterThan(0),
@@ -109,18 +116,18 @@ describe("VoucherPicker dialog", () => {
     ));
 
     expect(queryByTestId("voucher-picker-popup")).toBeNull();
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-1")).toBeTruthy());
     expect(getByTestId("voucher-picker-popup").closest("dialog")).not.toBeNull();
 
     // Staging a row must not reach the consumer yet; the footer no longer
     // repeats the code (it's in the listing), so the confirm enabling is the signal.
-    fireEvent.click(getByTestId("voucher-picker-result-1"));
+    click(getByTestId("voucher-picker-result-1"));
     expect(onChange).not.toHaveBeenCalled();
     expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(false);
 
-    fireEvent.click(getByTestId("voucher-picker-confirm"));
+    click(getByTestId("voucher-picker-confirm"));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: 1, code: "SAVE20" }));
     await waitFor(() => expect(queryByTestId("voucher-picker-popup")).toBeNull());
   });
@@ -131,11 +138,11 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId, queryByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={onChange} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-1")).toBeTruthy());
 
-    fireEvent.click(getByTestId("voucher-picker-result-1"));
-    fireEvent.click(getByTestId("voucher-picker-cancel"));
+    click(getByTestId("voucher-picker-result-1"));
+    click(getByTestId("voucher-picker-cancel"));
 
     expect(onChange).not.toHaveBeenCalled();
     await waitFor(() => expect(queryByTestId("voucher-picker-popup")).toBeNull());
@@ -146,13 +153,13 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-1")).toBeTruthy());
 
-    fireEvent.click(getByTestId("voucher-picker-result-1"));
+    click(getByTestId("voucher-picker-result-1"));
     expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(false);
 
-    fireEvent.click(getByTestId("voucher-picker-result-1"));
+    click(getByTestId("voucher-picker-result-1"));
     expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(true);
     expect(getByTestId("voucher-picker-draft-summary").textContent).toContain("No voucher selected");
   });
@@ -165,7 +172,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId, queryByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-1")).toBeTruthy());
 
     fireEvent.input(getByTestId("voucher-picker-search"), { target: { value: "partner" } });
@@ -186,14 +193,14 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-50")).toBeTruthy());
     expect(getByTestId("voucher-picker-result-50").textContent).toContain(
       "BISCAST ACES outreach discount",
     );
 
-    fireEvent.click(getByTestId("voucher-picker-result-50"));
+    click(getByTestId("voucher-picker-result-50"));
     // The footer shows the description under the summary, beside the buttons.
     expect(getByTestId("voucher-picker-draft-description").textContent).toContain(
       "BISCAST ACES outreach discount",
@@ -208,7 +215,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId, queryByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-51")).toBeTruthy());
 
     fireEvent.input(getByTestId("voucher-picker-search"), {
@@ -232,7 +239,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-53")).toBeTruthy());
     // Identical rows — a whitespace-only description must render nothing extra.
@@ -247,7 +254,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-9")).toBeTruthy());
     expect(getByTestId("voucher-picker-result-9").textContent).toContain("Expires in 3 days");
@@ -261,7 +268,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-10")).toBeTruthy());
     const text = getByTestId("voucher-picker-result-10").textContent ?? "";
@@ -276,7 +283,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-20")).toBeTruthy());
     expect(getByTestId("voucher-picker-result-20").textContent).toContain("3/10 used");
@@ -287,7 +294,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-21")).toBeTruthy());
     expect(getByTestId("voucher-picker-result-21").textContent).not.toContain("used");
@@ -300,7 +307,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId, queryByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-22")).toBeTruthy());
     // Never selectable — it would be rejected at charge time.
@@ -313,7 +320,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-7")).toBeTruthy());
     expect(getByTestId("voucher-picker-inapplicable-7").textContent).toContain("minimum");
@@ -330,7 +337,7 @@ describe("VoucherPicker dialog", () => {
         packageIds={[]}
       />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-3")).toBeTruthy());
     // 20% of 99 and of 118, both rounded the same way the server rounds.
@@ -348,7 +355,7 @@ describe("VoucherPicker dialog", () => {
         packageIds={[]}
       />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-result-4")).toBeTruthy());
     const text = getByTestId("voucher-picker-result-4").textContent ?? "";
@@ -369,7 +376,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[1]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-30")).toBeTruthy());
     expect(getByTestId("voucher-picker-inapplicable-30").textContent).toContain("minimum");
@@ -399,7 +406,7 @@ describe("VoucherPicker dialog", () => {
         packageLineages={["day-pass"]}
       />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-35")).toBeTruthy());
   });
 
@@ -420,7 +427,7 @@ describe("VoucherPicker dialog", () => {
         packageLineages={["day-pass", "single-use", "day-pass"]}
       />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-55")).toBeTruthy());
   });
 
@@ -442,7 +449,7 @@ describe("VoucherPicker dialog", () => {
         packageLineages={[null, "day-pass", "single-use"]}
       />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-56")).toBeTruthy());
     expect(queryByTestId("voucher-picker-result-56")).toBeNull();
     expect(getByTestId("voucher-picker-inapplicable-56").textContent).toContain(
@@ -468,12 +475,12 @@ describe("VoucherPicker dialog", () => {
       />
     ));
 
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-57")).toBeTruthy());
-    fireEvent.click(getByTestId("voucher-picker-cancel"));
+    click(getByTestId("voucher-picker-cancel"));
 
     setPackageLineage("single-use");
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-57")).toBeTruthy());
     expect(queryByTestId("voucher-picker-result-57")).toBeNull();
     expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(true);
@@ -492,11 +499,11 @@ describe("VoucherPicker dialog", () => {
       />
     ));
 
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-59")).toBeTruthy());
     expect(getByTestId("voucher-picker-confirm").hasAttribute("disabled")).toBe(true);
 
-    fireEvent.click(getByTestId("voucher-picker-confirm"));
+    click(getByTestId("voucher-picker-confirm"));
     expect(onChange).not.toHaveBeenCalled();
   });
 
@@ -514,7 +521,7 @@ describe("VoucherPicker dialog", () => {
         packageLineages={["day-pass"]}
       />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-37")).toBeTruthy());
     expect(queryByTestId("voucher-picker-inapplicable-37")).toBeNull();
     expect(getByTestId("voucher-picker-result-37").textContent).toContain("ENABLED_LINEAGE");
@@ -536,7 +543,7 @@ describe("VoucherPicker dialog", () => {
         packageLineages={["single-use"]}
       />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-39")).toBeTruthy());
     expect(queryByTestId("voucher-picker-result-39")).toBeNull();
     expect(getByTestId("voucher-picker-inapplicable-39").getAttribute("aria-disabled")).toBe("true");
@@ -562,7 +569,7 @@ describe("VoucherPicker dialog", () => {
         packageLineages={["single-use"]}
       />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-inapplicable-36")).toBeTruthy());
     expect(queryByTestId("voucher-picker-result-36")).toBeNull();
     expect(getByTestId("voucher-picker-inapplicable-36").textContent).toContain(
@@ -631,7 +638,7 @@ describe("VoucherPicker dialog", () => {
         packageLineages={packageLineages}
       />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() =>
       expect(
         result
@@ -649,7 +656,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId, queryByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
 
     await waitFor(() =>
       expect(getByTestId("voucher-picker-popup").textContent).toContain("Permission denied"),
@@ -665,7 +672,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() =>
       expect(getByTestId("voucher-picker-popup").textContent).toContain("network down"),
     );
@@ -678,7 +685,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={1000} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() =>
       expect(getByTestId("voucher-picker-popup").textContent).toContain(
         "Vouchers module isn't available",
@@ -692,12 +699,12 @@ describe("VoucherPicker dialog", () => {
       <VoucherPicker selected={null} onChange={onChange} subtotal={1000} packageIds={[]} />
     ));
 
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-40")).toBeTruthy());
-    fireEvent.click(getByTestId("voucher-picker-result-40"));
-    fireEvent.click(getByTestId("voucher-picker-cancel"));
+    click(getByTestId("voucher-picker-result-40"));
+    click(getByTestId("voucher-picker-cancel"));
 
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-result-40")).toBeTruthy());
     expect(getByTestId("voucher-picker-draft-summary").textContent).toContain("No voucher selected");
     expect(onChange).not.toHaveBeenCalled();
@@ -711,7 +718,7 @@ describe("VoucherPicker dialog", () => {
     const { getByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={vi.fn()} subtotal={100} packageIds={[]} />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     await waitFor(() => expect(getByTestId("voucher-picker-popup")).toBeTruthy());
 
     fireEvent.keyDown(getByTestId("voucher-picker-search"), { key: "Escape" });
@@ -728,9 +735,9 @@ describe("VoucherPicker applyOnSelect", () => {
     const { getByTestId, queryByTestId, findByTestId } = render(() => (
       <VoucherPicker selected={null} onChange={onChange} subtotal={100} packageIds={[]} applyOnSelect />
     ));
-    fireEvent.click(getByTestId("voucher-picker-trigger"));
+    click(getByTestId("voucher-picker-trigger"));
     expect(queryByTestId("voucher-picker-confirm")).toBeNull();
-    fireEvent.click(await findByTestId("voucher-picker-result-1"));
+    click(await findByTestId("voucher-picker-result-1"));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     await waitFor(() => expect(queryByTestId("voucher-picker-popup")).toBeNull());
   });

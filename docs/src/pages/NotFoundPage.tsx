@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import NotFoundBasic from "../examples/not-found-basic";
 import notFoundBasicSrc from "../examples/not-found-basic.tsx?raw";
 import { Example } from "../components/Example";
