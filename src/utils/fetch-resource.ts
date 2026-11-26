@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup, type Accessor } from "solid-js";
+import { createEffect, createSignal, onCleanup, untrack, type Accessor } from "solid-js";
 
 /**
  * Value accessor with load state, the shape `createResource` gave callers.
@@ -20,7 +20,8 @@ export function createFetchResource<S, T>(
   fetcher: (source: S) => Promise<T>,
 ): FetchResource<T> {
   const [value, setValue] = createSignal<T | undefined>(undefined);
-  const [loading, setLoading] = createSignal(false);
+  // Seeded from the source so an initial read matches createResource's loading=true.
+  const [loading, setLoading] = createSignal(!!untrack(source));
   const [error, setError] = createSignal<unknown>(undefined);
   let token = 0;
 
