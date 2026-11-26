@@ -1,0 +1,8 @@
+{
+  "mode": "pre",
+  "tag": "solid2",
+  "initialVersions": {
+    "@kahitsan/ksui": "0.50.0"
+  },
+  "changesets": []
+}
