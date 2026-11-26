@@ -5,6 +5,7 @@
     "@kahitsan/ksui": "0.50.0"
   },
   "changesets": [
+    "resourcepage-filter-refetch",
     "solid2-channel",
     "solid2-port"
   ]

@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.51.0-solid2.1
+
+### Patch Changes
+
+- a7a1825: Fix `ResourcePage` filters not refetching on Solid 2: the table fetches untracked, so filter changes are now part of its refetch key. Document the same rule on `DataTable`'s `refetchKey`.
+
 ## 0.51.0-solid2.0
 
 ### Minor Changes
