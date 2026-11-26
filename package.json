@@ -1,6 +1,6 @@
 {
   "name": "@kahitsan/ksui",
-  "version": "0.50.0",
+  "version": "0.51.0-solid2.0",
   "description": "Standalone SolidJS UI components with original owned icon artwork. Ships source for the consumer compiler and has no runtime dependency beyond solid-js.",
   "type": "module",
   "main": "./src/index.ts",
