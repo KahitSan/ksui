@@ -173,3 +173,23 @@ describe("ResourcePage permission gates and mutation failures", () => {
     expect(await screen.findByText("PATCH failed visibly")).toBeTruthy();
   });
 });
+
+describe("ResourcePage filters", () => {
+  // The table fetches untracked, so a filter change must refetch through the key.
+  it("refetches with the new value when a segmented filter changes", async () => {
+    const spec: ResourceUiSpec = {
+      ...SPEC,
+      filters: [
+        { type: "segmented", param: "state", options: ["active", "archived"], default: "active", testIdPrefix: "resources-state" },
+      ],
+    };
+    const fetchImpl = fetchFor([ACTIVE]);
+    render(() => <ResourcePage spec={spec} host={host(() => true)} fetchImpl={fetchImpl} />);
+    await screen.findByText(ACTIVE.name as string);
+    expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("state=active"), expect.anything());
+    fireEvent.click(screen.getByTestId("resources-state-archived"));
+    await vi.waitFor(() =>
+      expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("state=archived"), expect.anything()),
+    );
+  });
+});
