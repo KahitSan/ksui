@@ -1,6 +1,6 @@
 // example-start
 import { For } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { Dynamic } from "@solidjs/web";
 import { getAccountIcon, getAccountTone, ACCOUNT_ICON_SLUGS, ACCOUNT_ICON_LABELS } from "@kahitsan/ksui";
 
 export default function AccountIconsBasic() {

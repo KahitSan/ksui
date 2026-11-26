@@ -26,6 +26,6 @@ export default defineConfig({
     ],
     // One reactive runtime shared by the components. A duplicate
     // solid-js is the classic cause of dead reactivity.
-    dedupe: ["solid-js", "solid-js/web", "solid-js/store"],
+    dedupe: ["solid-js", "@solidjs/web"],
   },
 });

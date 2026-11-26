@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import ModalBasic from "../examples/modal-basic";
 import modalBasicSrc from "../examples/modal-basic.tsx?raw";
 import { Example } from "../components/Example";

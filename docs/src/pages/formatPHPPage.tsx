@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import FormatPHPBasic from "../examples/format-p-h-p-basic";
 import src from "../examples/format-p-h-p-basic.tsx?raw";
 import { Example } from "../components/Example";

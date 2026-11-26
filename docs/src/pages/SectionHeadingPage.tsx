@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import SectionHeadingBasic from "../examples/section-heading-basic";
 import sectionHeadingBasicSrc from "../examples/section-heading-basic.tsx?raw";
 import { Example } from "../components/Example";

@@ -1,6 +1,6 @@
 /* @refresh reload */
-import { render } from "solid-js/web";
-import { HashRouter, Route } from "@solidjs/router";
+import { render } from "@solidjs/web";
+import { createRouter, hashHistory } from "@solidjs/router";
 import { App } from "./App";
 import Home from "./pages/Home";
 import GettingStarted from "./pages/GettingStarted";
@@ -64,57 +64,60 @@ installDocsFetchMock();
 const root = document.getElementById("root");
 
 // Hash routing sidesteps the GitHub Pages deep link 404 problem entirely.
+const Router = createRouter({
+  history: hashHistory(),
+  routes: [
+    { path: "/", component: Home },
+    { path: "/getting-started", component: GettingStarted },
+    { path: "/components/button", component: ButtonHudPage },
+    { path: "/components/modal", component: ModalPage },
+    { path: "/components/entity-picker", component: EntityPickerPage },
+    { path: "/components/client-picker", component: ClientPickerPage },
+    { path: "/components/payee-picker", component: PayeePickerPage },
+    { path: "/components/combo-box", component: ComboBoxPage },
+    { path: "/components/markdown-notes", component: MarkdownNotesPage },
+    { path: "/components/mention-textarea", component: MentionTextareaPage },
+    { path: "/components/voucher-picker", component: VoucherPickerPage },
+    { path: "/components/camera-capture", component: CameraCapturePage },
+    { path: "/components/add-attachment-tile", component: AddAttachmentTilePage },
+    { path: "/components/payment-account-picker", component: PaymentAccountPickerPage },
+    { path: "/components/account-avatar", component: AccountAvatarPage },
+    { path: "/components/existing-attachment-tile", component: ExistingAttachmentTilePage },
+    { path: "/components/account-icons", component: AccountIconsPage },
+    { path: "/components/build-logo-src", component: BuildLogoSrcPage },
+    { path: "/components/attachment-url", component: AttachmentUrlPage },
+    { path: "/components/use-accounts-index", component: UseAccountsIndexPage },
+    { path: "/components/form-field", component: FormFieldPage },
+    { path: "/components/detail-row", component: DetailRowPage },
+    { path: "/components/date-tile", component: DateTilePage },
+    { path: "/components/tooltip", component: TooltipPage },
+    { path: "/components/image-cropper", component: ImageCropperPage },
+    { path: "/components/progress-bar", component: ProgressBarPage },
+    { path: "/components/chart-legend", component: ChartLegendPage },
+    { path: "/components/status-pill", component: StatusPillPage },
+    { path: "/components/segmented-filter", component: SegmentedFilterPage },
+    { path: "/components/copy-button", component: CopyButtonPage },
+    { path: "/components/kpi-card", component: KpiCardPage },
+    { path: "/components/radio-card-group", component: RadioCardGroupPage },
+    { path: "/components/form-error-banner", component: FormErrorBannerPage },
+    { path: "/components/tag-pill", component: TagPillPage },
+    { path: "/components/live-timer", component: LiveTimerPage },
+    { path: "/components/secret-reveal", component: SecretRevealPage },
+    { path: "/components/form-actions", component: FormActionsPage },
+    { path: "/utils/format-php", component: FormatPHPPage },
+    { path: "/utils/format-short-date", component: FormatShortDatePage },
+    { path: "/utils/format-full-date", component: FormatFullDatePage },
+    { path: "/components/theme-toggle", component: ThemeTogglePage },
+    { path: "/components/dropdown", component: DropdownPage },
+    { path: "/components/social-links-bar", component: SocialLinksBarPage },
+    { path: "/components/status-indicator", component: StatusIndicatorPage },
+    { path: "/components/section-heading", component: SectionHeadingPage },
+    { path: "/components/not-found", component: NotFoundPage },
+    { path: "/components/eyebrow-badge", component: EyebrowBadgePage },
+  ],
+});
+
 render(
-  () => (
-    <HashRouter root={App}>
-      <Route path="/" component={Home} />
-      <Route path="/getting-started" component={GettingStarted} />
-      <Route path="/components/button" component={ButtonHudPage} />
-      <Route path="/components/modal" component={ModalPage} />
-      <Route path="/components/entity-picker" component={EntityPickerPage} />
-      <Route path="/components/client-picker" component={ClientPickerPage} />
-      <Route path="/components/payee-picker" component={PayeePickerPage} />
-      <Route path="/components/combo-box" component={ComboBoxPage} />
-      <Route path="/components/markdown-notes" component={MarkdownNotesPage} />
-      <Route path="/components/mention-textarea" component={MentionTextareaPage} />
-      <Route path="/components/voucher-picker" component={VoucherPickerPage} />
-      <Route path="/components/camera-capture" component={CameraCapturePage} />
-      <Route path="/components/add-attachment-tile" component={AddAttachmentTilePage} />
-      <Route path="/components/payment-account-picker" component={PaymentAccountPickerPage} />
-      <Route path="/components/account-avatar" component={AccountAvatarPage} />
-      <Route path="/components/existing-attachment-tile" component={ExistingAttachmentTilePage} />
-      <Route path="/components/account-icons" component={AccountIconsPage} />
-      <Route path="/components/build-logo-src" component={BuildLogoSrcPage} />
-      <Route path="/components/attachment-url" component={AttachmentUrlPage} />
-      <Route path="/components/use-accounts-index" component={UseAccountsIndexPage} />
-      <Route path="/components/form-field" component={FormFieldPage} />
-      <Route path="/components/detail-row" component={DetailRowPage} />
-      <Route path="/components/date-tile" component={DateTilePage} />
-      <Route path="/components/tooltip" component={TooltipPage} />
-      <Route path="/components/image-cropper" component={ImageCropperPage} />
-      <Route path="/components/progress-bar" component={ProgressBarPage} />
-      <Route path="/components/chart-legend" component={ChartLegendPage} />
-      <Route path="/components/status-pill" component={StatusPillPage} />
-      <Route path="/components/segmented-filter" component={SegmentedFilterPage} />
-      <Route path="/components/copy-button" component={CopyButtonPage} />
-      <Route path="/components/kpi-card" component={KpiCardPage} />
-      <Route path="/components/radio-card-group" component={RadioCardGroupPage} />
-      <Route path="/components/form-error-banner" component={FormErrorBannerPage} />
-      <Route path="/components/tag-pill" component={TagPillPage} />
-      <Route path="/components/live-timer" component={LiveTimerPage} />
-      <Route path="/components/secret-reveal" component={SecretRevealPage} />
-      <Route path="/components/form-actions" component={FormActionsPage} />
-      <Route path="/utils/format-php" component={FormatPHPPage} />
-      <Route path="/utils/format-short-date" component={FormatShortDatePage} />
-      <Route path="/utils/format-full-date" component={FormatFullDatePage} />
-      <Route path="/components/theme-toggle" component={ThemeTogglePage} />
-      <Route path="/components/dropdown" component={DropdownPage} />
-      <Route path="/components/social-links-bar" component={SocialLinksBarPage} />
-      <Route path="/components/status-indicator" component={StatusIndicatorPage} />
-      <Route path="/components/section-heading" component={SectionHeadingPage} />
-      <Route path="/components/not-found" component={NotFoundPage} />
-      <Route path="/components/eyebrow-badge" component={EyebrowBadgePage} />
-    </HashRouter>
-  ),
+  () => <Router>{(props) => <App {...props} />}</Router>,
   root!,
 );

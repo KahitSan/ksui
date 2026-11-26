@@ -1,4 +1,5 @@
-import { createSignal, For, type JSX } from "solid-js";
+import { createSignal, For } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { CodeBlock } from "./CodeBlock";
 
 const MANAGERS = ["npm", "pnpm", "yarn", "bun"] as const;
@@ -25,8 +26,8 @@ export function PackageManagerTabs(props: { pkg: string }): JSX.Element {
         <For each={MANAGERS}>
           {(m) => (
             <button
-              class="pm-tab"
-              classList={{ active: active() === m }}
+              class={["pm-tab", { active: active() === m }]}
+              
               type="button"
               onClick={() => setActive(m)}
             >

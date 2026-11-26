@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import FormErrorBannerBasic from "../examples/form-error-banner-basic";
 import formErrorBannerBasicSrc from "../examples/form-error-banner-basic.tsx?raw";
 import { Example } from "../components/Example";

@@ -68,7 +68,7 @@ function statusColor(status?: DropdownItemStatus): string {
 // Presentational only and domain-free — no baked-in copy or business literals.
 export default function Dropdown(props: DropdownProps): JSX.Element {
   const [isOpen, setIsOpen] = createSignal(false);
-  const [selectedItem, setSelectedItem] = createSignal<DropdownItem | undefined>(
+  const [selectedItem, setSelectedItem] = createSignal<DropdownItem | undefined>(() =>
     props.items.find((item) => item.id === props.value),
   );
 

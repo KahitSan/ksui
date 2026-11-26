@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import ProgressBarBasic from "../examples/progress-bar-basic";
 import progressBarBasicSrc from "../examples/progress-bar-basic.tsx?raw";
 import { Example } from "../components/Example";

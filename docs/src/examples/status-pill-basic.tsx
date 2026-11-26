@@ -24,15 +24,15 @@ export default function StatusPillBasic() {
       </div>
 
       <div style={{ display: "flex", gap: "0.5rem", "flex-wrap": "wrap", "align-items": "center" }}>
-        <StatusPill tone="success" label="Active" dot />
-        <StatusPill tone="neutral" label="Inactive" dot />
-        <StatusPill tone="danger" label="Suspended" dot />
+        <StatusPill tone="success" label="Active" />
+        <StatusPill tone="neutral" label="Inactive" />
+        <StatusPill tone="danger" label="Suspended" />
       </div>
 
       <div style={{ display: "flex", gap: "0.5rem", "flex-wrap": "wrap", "align-items": "center" }}>
         <StatusPill tone="success" label="Redeemed" solid />
         <StatusPill tone="warning" label="Reserved" solid />
-        <StatusPill tone="info" label="Issued" solid dot />
+        <StatusPill tone="info" label="Issued" solid />
       </div>
     </div>
   );

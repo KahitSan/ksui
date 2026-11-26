@@ -1,4 +1,5 @@
-import { createSignal, createResource, Show, type JSX } from "solid-js";
+import { createMemo, createSignal, Loading, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import Copy from "@kahitsan/ksui/icons/copy";
 import Check from "@kahitsan/ksui/icons/check";
 import { highlight, stripExampleBoilerplate } from "../lib/highlight";
@@ -12,10 +13,8 @@ interface CodeBlockProps {
 
 export function CodeBlock(props: CodeBlockProps): JSX.Element {
   const source = () => (props.stripBoilerplate ? stripExampleBoilerplate(props.code) : props.code.trim());
-  const [html] = createResource(
-    () => ({ src: source(), lang: props.lang ?? "tsx" }),
-    (args) => highlight(args.src, args.lang),
-  );
+  // Async memo: reading it suspends to the <Loading> boundary below.
+  const html = createMemo(() => highlight(source(), props.lang ?? "tsx"));
   const [copied, setCopied] = createSignal(false);
 
   const copy = async () => {
@@ -35,9 +34,9 @@ export function CodeBlock(props: CodeBlockProps): JSX.Element {
           <Check size={15} />
         </Show>
       </button>
-      <Show when={html()} fallback={<pre class="code-pre-fallback">{source()}</pre>}>
+      <Loading fallback={<pre class="code-pre-fallback">{source()}</pre>}>
         <div innerHTML={html()} />
-      </Show>
+      </Loading>
     </div>
   );
 }

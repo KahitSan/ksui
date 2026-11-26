@@ -1,4 +1,5 @@
-import { createSignal, For, onCleanup, onMount, type JSX } from "solid-js";
+import { createSignal, For, onCleanup, onSettled } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import ChevronDown from "@kahitsan/ksui/icons/chevron-down";
 import Check from "@kahitsan/ksui/icons/check";
 import ExternalLink from "@kahitsan/ksui/icons/external-link";
@@ -23,7 +24,7 @@ export function VersionDropdown(): JSX.Element {
     if (e.key === "Escape") setOpen(false);
   }
 
-  onMount(() => {
+  onSettled(() => {
     document.addEventListener("click", onDocClick);
     document.addEventListener("keydown", onKeyDown);
   });
@@ -43,7 +44,7 @@ export function VersionDropdown(): JSX.Element {
         type="button"
         class="version-trigger"
         aria-haspopup="menu"
-        aria-expanded={open()}
+        aria-expanded={open() ? "true" : "false"}
         onClick={() => setOpen(!open())}
       >
         <span>v{selectedVersion()}</span>
@@ -55,12 +56,12 @@ export function VersionDropdown(): JSX.Element {
             {(entry) => {
               const isCurrent = () => entry.version === selectedVersion();
               return (
-                <div class="version-item" classList={{ current: isCurrent() }}>
+                <div class={["version-item", { current: isCurrent() }]} >
                   <button
                     type="button"
                     class="version-item-pick"
                     role="menuitemradio"
-                    aria-checked={isCurrent()}
+                    aria-checked={isCurrent() ? "true" : "false"}
                     onClick={() => pick(entry.version)}
                   >
                     <span>v{entry.version}</span>

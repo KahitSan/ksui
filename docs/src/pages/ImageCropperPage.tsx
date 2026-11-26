@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import ImageCropperBasic from "../examples/image-cropper-basic";
 import src from "../examples/image-cropper-basic.tsx?raw";
 import { Example } from "../components/Example";

@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import VoucherPickerBasic from "../examples/voucher-picker-basic";
 import src from "../examples/voucher-picker-basic.tsx?raw";
 import { Example } from "../components/Example";

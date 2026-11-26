@@ -1,4 +1,5 @@
-import { createSignal, Show, onMount, type JSX } from "solid-js";
+import { createSignal, Show, onSettled } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import Sun from "@kahitsan/ksui/icons/sun";
 import Moon from "@kahitsan/ksui/icons/moon";
 
@@ -48,7 +49,7 @@ export function ThemeToggle(): JSX.Element {
 
   // The pre-render bootstrap already set the class, but sync our signal to the
   // real DOM state on mount in case anything changed before hydration.
-  onMount(() => {
+  onSettled(() => {
     const current: Theme = document.documentElement.classList.contains("light")
       ? "light"
       : "dark";

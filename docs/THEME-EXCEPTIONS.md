@@ -79,13 +79,13 @@ recognized as exclusions.
   surface), documented in the file's own header comment; converting them to
   theme tokens would make the close button fade against a light theme's
   photo-viewer backdrop instead of staying a fixed overlay control.
-- `src/components/base/DataTable.tsx:101-111` — the card + filter-menu
+- `src/components/base/DataTable.tsx:91-101` — the card + filter-menu
   neutral elevation shadows (`0 1px 2px rgba(0,0,0,0.3)`, `0 8px 20px -10px
   rgba(0,0,0,0.5)`, `0 20px 25px -5px rgba(0,0,0,0.4)`, `0 8px 10px -6px
   rgba(0,0,0,0.4)`) don't match any `--ks-shadow-*` token as a whole value
   (rule 5); every surface/border/text color feeding these rules is already
   tokenized.
-- `src/components/base/Modal.tsx:48-50` — the dialog/sheet card box-shadow
+- `src/components/base/Modal.tsx:49-51` — the dialog/sheet card box-shadow
   (`0 25px 50px -12px rgba(0,0,0,0.6)`, both the sheet and dialog variants)
   doesn't match any `--ks-shadow-*` token as a whole value (rule 5); the
   backdrop scrim on the same block is tokenized (`--ks-overlay`).

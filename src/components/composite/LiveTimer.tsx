@@ -6,7 +6,7 @@
 
 import type { Component } from "solid-js";
 import type { JSX } from "@solidjs/web";
-import { Show, createMemo, createSignal, onCleanup, omit } from "solid-js";
+import { Show, createMemo, createSignal, onCleanup, omit, untrack } from "solid-js";
 import Clock from "../../icons/clock";
 import Play from "../../icons/play";
 import AlertTriangle from "../../icons/triangle-alert";
@@ -257,8 +257,9 @@ const LiveTimer: Component<LiveTimerProps> = (props) => {
   });
 
   // Subscribe to the shared tickers.
-  const { startSec, endSec } = timestamps();
-  const dynamicTick = getDynamicTick(startSec, endSec, local.overdue ?? false);
+  // The shared ticker picks its cadence once, from the first mounted timer.
+  const { startSec, endSec, overdue } = untrack(() => ({ ...timestamps(), overdue: local.overdue ?? false }));
+  const dynamicTick = getDynamicTick(startSec, endSec, overdue);
   const slowTick = getSlowTick();
 
   const scenario = createMemo<Scenario>(() => {

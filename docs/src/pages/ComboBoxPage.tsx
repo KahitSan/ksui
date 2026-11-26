@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import ComboBoxBasic from "../examples/combo-box-basic";
 import entityPickerSrc from "../examples/combo-box-basic.tsx?raw";
 import ComboBoxMulti from "../examples/combo-box-multi";

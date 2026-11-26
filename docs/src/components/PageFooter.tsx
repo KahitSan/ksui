@@ -1,5 +1,5 @@
-import { Show, type JSX } from "solid-js";
-import { A } from "@solidjs/router";
+import { Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { FLAT_NAV } from "./Sidebar";
 
 // Previous / Next footer links to walk the doc set sequentially. Pass the
@@ -19,20 +19,20 @@ export function PageFooter(props: { path: string }): JSX.Element {
       <div>
         <Show when={prev()}>
           {(p) => (
-            <A href={p().path} class="page-footer-link">
+            <a href={p().path} class="page-footer-link">
               {"<- "}
               {p().label}
-            </A>
+            </a>
           )}
         </Show>
       </div>
       <div>
         <Show when={next()}>
           {(n) => (
-            <A href={n().path} class="page-footer-link">
+            <a href={n().path} class="page-footer-link">
               {n().label}
               {" ->"}
-            </A>
+            </a>
           )}
         </Show>
       </div>

@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import EyebrowBadgeBasic from "../examples/eyebrow-badge-basic";
 import eyebrowBadgeBasicSrc from "../examples/eyebrow-badge-basic.tsx?raw";
 import { Example } from "../components/Example";

@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import KpiCardBasic from "../examples/kpi-card-basic";
 import kpiCardBasicSrc from "../examples/kpi-card-basic.tsx?raw";
 import { Example } from "../components/Example";

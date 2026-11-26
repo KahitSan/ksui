@@ -1,4 +1,4 @@
-import { type JSX } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import SocialLinksBarBasic from "../examples/social-links-bar-basic";
 import socialLinksBarBasicSrc from "../examples/social-links-bar-basic.tsx?raw";
 import { Example } from "../components/Example";
