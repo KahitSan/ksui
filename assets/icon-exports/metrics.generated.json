@@ -1,7 +1,7 @@
 {
   "edge": 144,
   "pipelineHash": "2b3e6a39d1d744eeffdf244395e4a0ccf01fd54c4f639f071f5e7adc79cd4d37",
-  "expectedCount": 131,
+  "expectedCount": 132,
   "complete": true,
   "icons": [
     {
@@ -22274,6 +22274,165 @@
             "threshold": 160,
             "pathBytes": 3834,
             "worstMeanAlphaError": 0.051606753812636165
+          }
+        ]
+      }
+    },
+    {
+      "name": "bir-croc",
+      "group": "bir-croc-v1",
+      "sourceSha256": "9d87102b7a0dd82351ba171166ae0760ae99db7a32ab159eff1dac22bfca2822",
+      "assignmentHash": "305dd6787ff6b4b0771edd1ec082da87044df6b9953aa70872592045c97b186f",
+      "originalCell": {
+        "left": 0,
+        "top": 0,
+        "right": 1254,
+        "bottom": 1254
+      },
+      "crop": {
+        "x0": 78,
+        "y0": 303,
+        "x1": 1175,
+        "y1": 1026
+      },
+      "width": 144,
+      "height": 144,
+      "bytes": 3636,
+      "paletteExact": true,
+      "decodedBytes": 82944,
+      "delivery": {
+        "format": "vector",
+        "threshold": 128,
+        "precision": 0,
+        "pathBytes": 412,
+        "worstMeanAlphaError": 0.02493872549019608,
+        "comparison": [
+          {
+            "size": 8,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.02493872549019608
+          },
+          {
+            "size": 8,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.016191789215686276
+          },
+          {
+            "size": 8,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.012295751633986928
+          },
+          {
+            "size": 12,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.019471677559912852
+          },
+          {
+            "size": 12,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.012295751633986928
+          },
+          {
+            "size": 12,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.011586177680948924
+          },
+          {
+            "size": 16,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.016191789215686276
+          },
+          {
+            "size": 16,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.012388939950980392
+          },
+          {
+            "size": 16,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.011523011982570806
+          },
+          {
+            "size": 24,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.012295751633986928
+          },
+          {
+            "size": 24,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.011523011982570806
+          },
+          {
+            "size": 24,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.010648904623577827
+          },
+          {
+            "size": 48,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.011523011982570806
+          },
+          {
+            "size": 48,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.010495812908496731
+          },
+          {
+            "size": 48,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.010214876845800048
+          },
+          {
+            "size": 54,
+            "dpr": 1,
+            "rotation": 0,
+            "meanAlphaError": 0.011314182737566906
+          },
+          {
+            "size": 54,
+            "dpr": 2,
+            "rotation": 0,
+            "meanAlphaError": 0.010536189784555797
+          },
+          {
+            "size": 54,
+            "dpr": 3,
+            "rotation": 0,
+            "meanAlphaError": 0.015099921998977917
+          }
+        ],
+        "candidates": [
+          {
+            "threshold": 128,
+            "pathBytes": 1345,
+            "worstMeanAlphaError": 0.026348039215686275
+          }
+        ],
+        "precisionCandidates": [
+          {
+            "precision": 1,
+            "pathBytes": 965,
+            "worstMeanAlphaError": 0.025980392156862746
+          },
+          {
+            "precision": 0,
+            "pathBytes": 412,
+            "worstMeanAlphaError": 0.02493872549019608
           }
         ]
       }
