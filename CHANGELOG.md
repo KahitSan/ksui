@@ -1,5 +1,11 @@
 # @kahitsan/ksui
 
+## 0.51.0
+
+### Minor Changes
+
+- c1f4712: Add the original `BirCroc` icon, a crocodile head with an open mouth, as the identity for BIR forms.
+
 ## 0.50.0
 
 ### Minor Changes
