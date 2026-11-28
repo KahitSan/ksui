@@ -169,6 +169,7 @@ export { default as Sales } from "./sales";
 export { default as BirForm2307 } from "./bir-form-2307";
 export { default as BirForm0619E } from "./bir-form-0619-e";
 export { default as BirForm1601Eq } from "./bir-form-1601-eq";
+export { default as BirCroc } from "./bir-croc";
 export { default as AlertCircle } from "./circle-alert";
 export { default as AlertTriangle } from "./triangle-alert";
 export { default as BarChart3 } from "./chart-column";

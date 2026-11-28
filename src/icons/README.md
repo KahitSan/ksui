@@ -27,3 +27,5 @@ Raster imports use Vite's `?url&no-inline` asset support. Vite 6 builds are veri
 Directional components share an original source design with an intrinsic rotation. The public component name keeps its direction, and caller SVG transforms still apply. Existing public exports outside the refreshed set remain available. `Sales` provides a revenue meaning; `ShoppingBag` retains its existing public artwork.
 
 BIR document identities are available as `BirForm2307`, `BirForm0619E`, and `BirForm1601Eq`, or their `bir-form-*` deep imports. Use a visible form label or accessible name with each document identity.
+
+`BirCroc` (`bir-croc`) is the section identity for BIR forms: a crocodile head with an open mouth. It is not a document identity, so pair it with a visible section label.

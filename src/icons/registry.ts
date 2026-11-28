@@ -172,6 +172,7 @@ const loaders = {
   "bir-form-2307": () => import("./bir-form-2307"),
   "bir-form-0619-e": () => import("./bir-form-0619-e"),
   "bir-form-1601-eq": () => import("./bir-form-1601-eq"),
+  "bir-croc": () => import("./bir-croc"),
   "bar-chart-3": () => import("./chart-column"),
   "loader-2": () => import("./loader-circle"),
   "alert-triangle": () => import("./triangle-alert"),

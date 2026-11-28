@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "expectedCount": 131,
+  "expectedCount": 132,
   "approvedContract": "scripts/icon-artwork-contract.json",
   "approvedStyle": "V4 Refined Solid",
   "groups": [
@@ -251,6 +251,17 @@
       "sha256": "f54063b903946be407ccdb598fd6b185eef00716d030bdbb5a7d87e31bd5d4b8",
       "provenance": "Original GPT Image document glyphs, retained unchanged",
       "status": "ready"
+    },
+    {
+      "id": "bir-croc-v1",
+      "columns": 1,
+      "rows": 1,
+      "names": [
+        "bir-croc"
+      ],
+      "sha256": "9d87102b7a0dd82351ba171166ae0760ae99db7a32ab159eff1dac22bfca2822",
+      "provenance": "Built-in GPT Image, variant 3 of 3; exact prompt and original master retained",
+      "status": "ready"
     }
   ],
   "expectedNames": [
@@ -384,6 +395,7 @@
     "circle-check-bold",
     "bir-form-2307",
     "bir-form-0619-e",
-    "bir-form-1601-eq"
+    "bir-form-1601-eq",
+    "bir-croc"
   ]
 }

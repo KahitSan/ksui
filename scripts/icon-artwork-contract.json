@@ -130,7 +130,8 @@
     "circle-check-bold",
     "bir-form-2307",
     "bir-form-0619-e",
-    "bir-form-1601-eq"
+    "bir-form-1601-eq",
+    "bir-croc"
   ],
   "runtime": [
     {
@@ -866,6 +867,11 @@
     {
       "name": "bir-form-1601-eq",
       "source": "bir-form-1601-eq",
+      "rotation": 0
+    },
+    {
+      "name": "bir-croc",
+      "source": "bir-croc",
       "rotation": 0
     }
   ],
